@@ -1,0 +1,141 @@
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background-color: #f5f5f7;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+    margin: 0;
+}
+
+.container {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+h1 {
+    margin-top: 0;
+    text-align: center;
+    color: #1a1a1a;
+}
+
+.description {
+    text-align: center;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.status-panel {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.status-item {
+    flex: 1;
+    padding: 1rem;
+    background: #eee;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.vad-idle {
+    background-color: #eee;
+    color: #999;
+}
+
+.vad-active {
+    background-color: #ff4757;
+    color: white;
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+    transform: scale(1.05);
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+button {
+    flex: 1;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#btn-start {
+    background-color: #2ed573;
+    color: white;
+}
+
+#btn-start:hover {
+    background-color: #26af61;
+}
+
+#btn-stop {
+    background-color: #ff4757;
+    color: white;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#btn-stop:enabled {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.keywords {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.keywords ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.keywords li {
+    padding: 0.5rem;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.buff { border-left: 4px solid #2ed573 !important; }
+.debuff { border-left: 4px solid #ff4757 !important; }
+
+.log-container {
+    background: #1e272e;
+    color: #00d2d3;
+    padding: 1rem;
+    border-radius: 8px;
+    height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+.log-entry {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.log-time { color: #808e9b; font-size: 0.8em; }
+.log-text { color: white; font-size: 1.1em; font-weight: bold; }
+.log-latency { color: #ffa502; font-size: 0.9em; float: right;}

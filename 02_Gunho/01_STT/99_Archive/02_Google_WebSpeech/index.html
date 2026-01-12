@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Whisper VAD Test</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎙️ Web Speech API Test (v2)</h1>
+        <p class="description">
+            "Google Chrome Built-in" 방식 테스트<br>
+            빠른 반응 속도와 높은 한국어 정확도 (인터넷 연결 필수)
+        </p>
+
+        <div class="status-panel">
+            <div id="status-indicator" class="status-item">준비 완료</div>
+            <div id="vad-indicator" class="status-item vad-idle">대기 중</div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-start">인식 시작</button>
+            <button id="btn-stop" disabled>중지</button>
+        </div>
+
+        <div class="keywords">
+            <h3>테스트 키워드</h3>
+            <ul>
+                <li class="buff">💖 뽀뽀 (공중부양)</li>
+                <li class="buff">👍 최고야 (방어)</li>
+                <li class="buff">❤️ 사랑해 (더블점프)</li>
+                <li class="debuff">😈 바보, 멍청이 (페널티)</li>
+            </ul>
+        </div>
+
+        <div class="log-container">
+            <h3>인식 로그</h3>
+            <div id="log-output"></div>
+        </div>
+    </div>
+
+    <!-- Switch to Web Speech API script -->
+    <script src="speech_api.js"></script>
+</body>
+
+</html>
