@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Server Test (v3)</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 2rem;
+            background: #222;
+            color: #0f0;
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        #log {
+            white-space: pre-wrap;
+            margin-top: 1rem;
+            border: 1px solid #444;
+            padding: 1rem;
+        }
+
+        .latency {
+            color: #fe0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐍 Python AI Server Test (v3)</h1>
+    <p>RTX 4050 GPU Power Check</p>
+
+    <button id="btnRec" onmousedown="startRec()" onmouseup="stopRec()">HOLD TO RECORD</button>
+    <div id="status">Ready</div>
+    <div id="log"></div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        async function init() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            mediaRecorder.onstop = sendAudio;
+        }
+
+        function startRec() {
+            audioChunks = [];
+            mediaRecorder.start();
+            document.getElementById('status').innerText = "Recording...";
+            document.getElementById('btnRec').style.background = "red";
+        }
+
+        function stopRec() {
+            mediaRecorder.stop();
+            document.getElementById('status').innerText = "Processing...";
+            document.getElementById('btnRec').style.background = "";
+        }
+
+        async function sendAudio() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append("file", audioBlob, "recording.webm");
+
+            const startTime = performance.now();
+            try {
+                // FastAPI 서버 주소 (기본 8000)
+                const response = await fetch("http://localhost:8000/transcribe", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+                const totalTime = (performance.now() - startTime).toFixed(0);
+
+                const log = document.getElementById('log');
+                const entry = `[${new Date().toLocaleTimeString()}] Text: "${result.text}" \n` +
+                    `Server Latency: ${result.latency_ms}ms | Total Round-Trip: ${totalTime}ms\n` +
+                    `Language: ${result.language} (${(result.probability * 100).toFixed(0)}%)\n` +
+                    `------------------------------------------------\n`;
+
+                log.innerText = entry + log.innerText;
+                document.getElementById('status').innerText = "Ready";
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').innerText = "Error: " + err.message;
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
