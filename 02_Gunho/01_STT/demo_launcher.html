@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>STT Version Demo Launcher</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f2f5;
+            /* Light Background */
+            color: #333;
+            /* Dark Text */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #2e7d32;
+            /* Strong Green */
+            margin-bottom: 2rem;
+        }
+
+        .container {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .card {
+            background: #ffffff;
+            /* White Card */
+            border-radius: 12px;
+            padding: 2rem;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(76, 175, 80, 0.2);
+            border-color: #4CAF50;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .v1 .badge {
+            background: #ff5252;
+            color: white;
+        }
+
+        .v2 .badge {
+            background: #ff9800;
+            color: white;
+        }
+
+        .v3 .badge {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            line-height: 1.4;
+        }
+
+        .status {
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🎙️ Voice Co-op Game: STT Tech Demo</h1>
+    <p style="color: #aaa; margin-bottom: 3rem;">프로젝트에 적합한 음성 인식 기술을 선정하기 위한 비교 시연</p>
+
+    <div class="container">
+        <!-- v1 Card -->
+        <a href="http://localhost:8080/99_Archive/01_Local_Whisper/index.html" target="_blank" class="card v1">
+            <div class="badge">v1. Local Whisper</div>
+            <h3>Client-Side JS</h3>
+            <p class="description">
+                브라우저 내부에서 AI 구동.<br>
+                서버 불필요하나 <strong>CPU 부하가 매우 높고 느림.</strong>
+            </p>
+            <div class="status">⚠️ Local Server(8080) 실행 필수</div>
+        </a>
+
+        <!-- v2 Card -->
+        <a href="http://localhost:8080/99_Archive/02_Google_WebSpeech/index.html" target="_blank" class="card v2">
+            <div class="badge">v2. Web Speech API</div>
+            <h3>Google Cloud</h3>
+            <p class="description">
+                크롬 내장 API 사용.<br>
+                <strong>성능은 좋으나 블랙박스(학습 불가).</strong>
+            </p>
+            <div class="status">📶 인터넷 연결 필수</div>
+        </a>
+
+        <!-- v3 Card -->
+        <a href="http://localhost:8080/03_FastAPI/test_client.html" target="_blank" class="card v3">
+            <div class="badge">v3. Python Server</div>
+            <h3>FastAPI + CUDA</h3>
+            <p class="description">
+                로컬 GPU 서버 활용.<br>
+                <strong>0.2초대 초저지연 및 고품질 인식.</strong>
+            </p>
+            <div class="status">🚀 Server 실행 필수 (uvicorn)</div>
+        </a>
+    </div>
+
+</body>
+
+</html>

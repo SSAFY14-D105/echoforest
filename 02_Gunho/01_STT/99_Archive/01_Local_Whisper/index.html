@@ -11,7 +11,25 @@
 <body>
     <div id="container">
         <h1>Local Whisper (Transformers.js)</h1>
+        <p class="description">
+            Client-side AI (ONNX) running in browser.<br>
+            No Server required, but heavy on CPU.
+        </p>
+
+        <div class="keywords">
+            <h3>Test Keywords (Pop-up Effect)</h3>
+            <ul>
+                <li class="buff">💖 뽀뽀 / 👍 최고야 (Healing)</li>
+                <li class="buff">❤️ 사랑 / 🚀 점프 (Double Jump)</li>
+                <li class="debuff">😈 바보 / 멍청이 (Penalty)</li>
+            </ul>
+        </div>
+
+        <div id="visualizer-container">
+            <div id="volume-bar"></div>
+        </div>
         <div id="status">Loading Model... (This is v1)</div>
+        <button id="btnRec" disabled>Wait for Model...</button>
         <div id="output"></div>
     </div>
     <script type="module" src="main.js"></script>
