@@ -4,65 +4,81 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Server Test (v3)</title>
-    <style>
-        body {
-            font-family: monospace;
-            padding: 2rem;
-            background: #222;
-            color: #0f0;
-        }
-
-        button {
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-
-        #log {
-            white-space: pre-wrap;
-            margin-top: 1rem;
-            border: 1px solid #444;
-            padding: 1rem;
-        }
-
-        .latency {
-            color: #fe0;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <h1>🐍 Python AI Server Test (v3)</h1>
-    <p>RTX 4050 GPU Power Check</p>
+    <div id="container">
+        <h1>Python AI Server (v3)</h1>
+        <p class="description">
+            FastAPI Server + Faster-Whisper (CUDA).<br>
+            Our Final Architecture (Customizable & Fast).
+        </p>
 
-    <button id="btnRec" onmousedown="startRec()" onmouseup="stopRec()">HOLD TO RECORD</button>
-    <div id="status">Ready</div>
-    <div id="log"></div>
+        <div class="keywords">
+            <h3>Test Keywords (Pop-up Effect)</h3>
+            <ul>
+                <li class="buff">💖 뽀뽀 / 👍 최고야 (Healing)</li>
+                <li class="buff">❤️ 사랑 / 🚀 점프 (Double Jump)</li>
+                <li class="debuff">😈 바보 / 멍청이 (Penalty)</li>
+            </ul>
+        </div>
+        <div id="status">Ready (Mic Connected)</div>
+        <button id="btnRec" onclick="toggleRec()">🎙️ Start Recording</button>
+        <div id="output"></div>
+    </div>
 
     <script>
+        const statusEl = document.getElementById('status');
+        const outputEl = document.getElementById('output');
+        const btnRec = document.getElementById('btnRec');
+
         let mediaRecorder;
         let audioChunks = [];
+        let isRecording = false;
 
         async function init() {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
 
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = sendAudio;
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = sendAudio;
+                statusEl.innerText = "Ready (v3 - FastAPI + CUDA)";
+            } catch (err) {
+                statusEl.innerText = "Mic Error: " + err.message;
+            }
+        }
+
+        function toggleRec() {
+            if (!isRecording) {
+                startRec();
+            } else {
+                stopRec();
+            }
         }
 
         function startRec() {
+            if (!mediaRecorder) return alert("마이크 권한이 필요합니다!");
             audioChunks = [];
             mediaRecorder.start();
-            document.getElementById('status').innerText = "Recording...";
-            document.getElementById('btnRec').style.background = "red";
+            isRecording = true;
+
+            // UI Updates
+            btnRec.innerText = "🛑 Stop Recording";
+            btnRec.classList.add("recording"); // Green theme via CSS
+            statusEl.innerText = "Recording... (Streaming to Server)";
         }
 
         function stopRec() {
+            if (!isRecording) return;
             mediaRecorder.stop();
-            document.getElementById('status').innerText = "Processing...";
-            document.getElementById('btnRec').style.background = "";
+            isRecording = false;
+
+            // UI Updates
+            btnRec.innerText = "⏳ Processing...";
+            btnRec.classList.remove("recording");
+            btnRec.disabled = true;
         }
 
         async function sendAudio() {
@@ -72,7 +88,7 @@
 
             const startTime = performance.now();
             try {
-                // FastAPI 서버 주소 (기본 8000)
+                // FastAPI Server URL
                 const response = await fetch("http://localhost:8000/transcribe", {
                     method: "POST",
                     body: formData
@@ -80,20 +96,70 @@
 
                 const result = await response.json();
                 const totalTime = (performance.now() - startTime).toFixed(0);
+                const now = new Date().toLocaleTimeString();
 
-                const log = document.getElementById('log');
-                const entry = `[${new Date().toLocaleTimeString()}] Text: "${result.text}" \n` +
-                    `Server Latency: ${result.latency_ms}ms | Total Round-Trip: ${totalTime}ms\n` +
-                    `Language: ${result.language} (${(result.probability * 100).toFixed(0)}%)\n` +
-                    `------------------------------------------------\n`;
+                outputEl.innerHTML += `
+                    <div class="log-item">
+                        <span class="timestamp">[${now}]</span>
+                        <span class="text">${result.text}</span>
+                        <span class="latency warning">Latency: ${result.latency_ms}ms (Server GPU)</span>
+                    </div>
+                `;
+                outputEl.scrollTop = outputEl.scrollHeight;
 
-                log.innerText = entry + log.innerText;
-                document.getElementById('status').innerText = "Ready";
+                // Game Logic Check
+                checkKeywords(result.text);
+
+                statusEl.innerText = "Ready";
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('status').innerText = "Error: " + err.message;
+                statusEl.innerText = "Error: " + err.message;
+                outputEl.innerHTML += `
+                    <div class="log-item">
+                        <span class="timestamp">[${new Date().toLocaleTimeString()}]</span>
+                        <span class="text" style="color:red">Server Error (Is uvicorn running?)</span>
+                    </div>
+                `;
+            } finally {
+                btnRec.disabled = false;
+                btnRec.innerText = "🎙️ Start Recording";
             }
+        }
+
+        // --- Game Logic (Shared) ---
+        let lastTriggerTime = 0;
+
+        function checkKeywords(text) {
+            if (!text) return;
+            const t = text.trim();
+            const now = Date.now();
+            if (now - lastTriggerTime < 1000) return;
+
+            if (t.includes("뽀뽀") || t.includes("최고")) {
+                highlightEffect("💖 힐링 버프 발동! (Healing)");
+                lastTriggerTime = now;
+            } else if (t.includes("사랑")) {
+                highlightEffect("🚀 더블 점프! (Double Jump)");
+                lastTriggerTime = now;
+            } else if (t.includes("바보") || t.includes("멍청") || t.includes("망해")) {
+                highlightEffect("⚡ 페널티! (Damage)");
+                lastTriggerTime = now;
+            }
+        }
+
+        function highlightEffect(msg) {
+            console.log(msg);
+            const toast = document.createElement('div');
+            Object.assign(toast.style, {
+                position: 'fixed', top: '20%', left: '50%', transform: 'translate(-50%, -50%)',
+                padding: '1rem 2rem', background: 'rgba(76, 175, 80, 0.9)', color: 'white', // Green Theme for v3
+                borderRadius: '50px', fontSize: '1.5rem', fontWeight: 'bold', zIndex: '9999',
+                boxShadow: '0 0 20px rgba(76, 175, 80, 0.5)'
+            });
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
         }
 
         init();
