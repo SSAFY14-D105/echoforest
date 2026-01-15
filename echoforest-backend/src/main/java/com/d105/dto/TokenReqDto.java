@@ -1,5 +1,6 @@
 package com.d105.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,12 +9,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TokenReqDto {
-    // 입장할 방 이름 (예: "game-room-1")
-    private String roomName;
 
-    // 유저 고유 ID (DB의 PK 또는 UUID)
+    @Schema(description = "입장할 게임 방 번호 (LiveKit 방 이름으로 사용됨)", example = "room_1")
+    private String roomId;
+
+    @Schema(description = "유저 고유 ID", example = "user_1234")
     private String userId;
 
-    // 게임에서 표시될 닉네임
+    @Schema(description = "닉네임", example = "철수")
     private String username;
 }
