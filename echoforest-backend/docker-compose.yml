@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # 1. LiveKit Server (화상 채팅)
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: echoforest-livekit
+    command: --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    environment:
+      - "LIVEKIT_KEYS=devkey: secret"  # 주의: devkey:(공백)secret
+    networks:
+      - echo-net
+
+  # 2. MySQL 8.0 (게임 데이터 DB)
+  mysql:
+    image: mysql:8.0
+    container_name: echoforest-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: echoforest
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql_data:/var/lib/mysql # 데이터 영구 저장 (프로젝트 폴더에 생김)
+    networks:
+      - echo-net
+
+  # 3. Redis (매칭 대기열, 세션 관리)
+  redis:
+    image: redis:alpine
+    container_name: echoforest-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - echo-net
+
+networks:
+  echo-net:
+    driver: bridge
