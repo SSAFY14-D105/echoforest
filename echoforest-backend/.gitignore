@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 개발 시 필요 ###
+src/main/java/com/d105/privateUtil/
