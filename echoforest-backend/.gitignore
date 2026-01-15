@@ -38,3 +38,7 @@ out/
 
 ### 개발 시 필요 ###
 src/main/java/com/d105/privateUtil/
+
+# .gitignore 파일 맨 아래에 추가
+mysql_data/
+**/*.sock
