@@ -1,9 +1,8 @@
 """
-🎯 Threshold Tuning 스크립트
-- 각 모델별 최적 threshold 찾기
-- 10% 단위로 먼저 탐색 후 1% 단위로 미세 조정
+🎯 Fine Threshold Tuning - 미세 조정
+- 쓸만한 모델 2개에 대해 0.1% 단위로 최적 threshold 찾기
 
-사용법: python find_optimal_threshold.py
+사용법: python fine_threshold_tuning.py
 """
 
 from transformers import pipeline
@@ -17,37 +16,30 @@ import torch
 # 📋 설정
 # ============================================================
 
-MODELS_TO_TEST = [
-    ("Korean Sentiment", "matthewburke/korean_sentiment"),
-    ("KoELECTRA Small", "monologg/koelectra-small-finetuned-sentiment"),
-    ("KoELECTRA Base", "monologg/koelectra-base-finetuned-sentiment"),
-    ("Multilingual", "nlptown/bert-base-multilingual-uncased-sentiment"),
-    ("UnSmile", "smilegate-ai/kor_unsmile"),
-    ("KcELECTRA v2", "beomi/KcELECTRA-base-v2022"),
+# 미세 조정할 모델들 (쓸만한 것만!)
+MODELS_TO_TUNE = [
+    {
+        "name": "Korean Sentiment",
+        "model_id": "matthewburke/korean_sentiment",
+        "range_start": 85.0,  # 85%
+        "range_end": 89.0,    # 89%
+        "step": 0.01           # 0.1%
+    },
+    {
+        "name": "UnSmile",
+        "model_id": "smilegate-ai/kor_unsmile",
+        "range_start": 15.0,  # 15%
+        "range_end": 19.0,    # 19%
+        "step": 0.01           # 0.1%
+    },
 ]
 
 # 🏷️ 모델별 "부정/욕설" 라벨 매핑
 MODEL_NEGATIVE_LABELS = {
-    # Korean Sentiment: LABEL_0 = 부정, LABEL_1 = 긍정
     "matthewburke/korean_sentiment": ["LABEL_0"],
-    
-    # KoELECTRA: negative = 부정
-    "monologg/koelectra-small-finetuned-sentiment": ["negative"],
-    "monologg/koelectra-base-finetuned-sentiment": ["negative"],
-    
-    # Multilingual: 1-2 stars = 부정
-    "nlptown/bert-base-multilingual-uncased-sentiment": ["1 star", "2 stars"],
-    
-    # UnSmile: 악플/욕설 등 = 부정
     "smilegate-ai/kor_unsmile": ["악플/욕설", "여성/가족", "남성", "성소수자", 
                                   "인종/국적", "연령", "지역", "종교", "기타 혐오", "악플"],
-    
-    # KcELECTRA v2: LABEL_1 = 부정
-    "beomi/KcELECTRA-base-v2022": ["LABEL_1"],
 }
-
-# Threshold 범위 (1% 단위: 1%~100%)
-THRESHOLDS = [i/100 for i in range(1, 101)]  # 0.01, 0.02, ... 1.00
 
 def load_test_sentences():
     """keywords.json에서 테스트 문장 로드"""
@@ -73,11 +65,9 @@ def get_negative_score(result, pred_label, model_id):
     """모델 출력에서 NEGATIVE 확률 추출"""
     score = result[0]['score']
     
-    # 모델별 라벨 매핑 사용
     negative_labels = MODEL_NEGATIVE_LABELS.get(model_id, [])
     is_negative_label = pred_label in negative_labels
     
-    # 매핑에 없으면 기본 로직 사용
     if not negative_labels:
         pred_upper = pred_label.upper()
         is_negative_label = (
@@ -88,16 +78,15 @@ def get_negative_score(result, pred_label, model_id):
         )
     
     if is_negative_label:
-        return score  # NEGATIVE 확률
+        return score
     else:
-        return 1 - score  # POSITIVE였으면 반전
+        return 1 - score
 
 def calculate_metrics(predictions, threshold):
     """주어진 threshold로 TP/TN/FP/FN 및 F1 계산"""
     tp, tn, fp, fn = 0, 0, 0, 0
     
     for p in predictions:
-        # threshold 기준으로 판단
         predicted = "NEGATIVE" if p["neg_score"] >= threshold else "POSITIVE"
         
         expected = p["expected"]
@@ -114,7 +103,6 @@ def calculate_metrics(predictions, threshold):
             else:
                 fp += 1
     
-    # F1 Score 계산
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
@@ -129,19 +117,33 @@ def calculate_metrics(predictions, threshold):
         "accuracy": accuracy * 100
     }
 
-def test_model_thresholds(model_name, model_id, sentences, thresholds):
-    """한 모델에 대해 여러 threshold 테스트"""
+def tune_model(config, sentences):
+    """한 모델에 대해 미세 조정 테스트"""
+    model_name = config["name"]
+    model_id = config["model_id"]
+    range_start = config["range_start"]
+    range_end = config["range_end"]
+    step = config["step"]
+    
+    # Threshold 범위 생성
+    thresholds = []
+    current = range_start
+    while current <= range_end + 0.001:  # 부동소수점 오차 보정
+        thresholds.append(current / 100)  # 퍼센트를 비율로
+        current += step
+    
     print(f"\n{'='*60}")
-    print(f"🧪 테스트: {model_name}")
+    print(f"🧪 미세 조정: {model_name}")
+    print(f"   범위: {range_start:.1f}% ~ {range_end:.1f}%")
+    print(f"   단위: {step}%")
+    print(f"   테스트 수: {len(thresholds)}개")
     print(f"{'='*60}")
     
     try:
-        # 모델 로드
         print("📥 모델 로딩...")
         classifier = pipeline("sentiment-analysis", model=model_id)
         print("✅ 로드 완료!")
         
-        # 모든 문장에 대해 예측 수집
         predictions = []
         print("🔄 예측 수집 중...")
         
@@ -160,27 +162,26 @@ def test_model_thresholds(model_name, model_id, sentences, thresholds):
         
         print(f"✅ {len(predictions)}개 예측 완료!")
         
-        # 각 threshold별 성능 계산
         results = []
         print("\n📊 Threshold별 성능:")
         print(f"{'Threshold':<12} {'F1':>8} {'Precision':>10} {'Recall':>8} {'Accuracy':>10}")
         print("-" * 55)
         
         best_f1 = 0
-        best_threshold = 0.5
+        best_threshold = thresholds[0]
         
         for threshold in thresholds:
             metrics = calculate_metrics(predictions, threshold)
             results.append(metrics)
             
-            print(f"{threshold:<12.0%} {metrics['f1']:>7.1f}% {metrics['precision']:>9.1f}% {metrics['recall']:>7.1f}% {metrics['accuracy']:>9.1f}%")
+            print(f"{threshold*100:<11.2f}% {metrics['f1']:>7.2f}% {metrics['precision']:>9.2f}% {metrics['recall']:>7.2f}% {metrics['accuracy']:>9.2f}%")
             
             if metrics['f1'] > best_f1:
                 best_f1 = metrics['f1']
                 best_threshold = threshold
         
         print("-" * 55)
-        print(f"🏆 최적 Threshold: {best_threshold:.0%} (F1: {best_f1:.1f}%)")
+        print(f"🏆 최적 Threshold: {best_threshold*100:.2f}% (F1: {best_f1:.2f}%)")
         
         return {
             "model_name": model_name,
@@ -188,7 +189,6 @@ def test_model_thresholds(model_name, model_id, sentences, thresholds):
             "best_threshold": best_threshold,
             "best_f1": best_f1,
             "all_results": results,
-            "predictions": predictions,
             "error": None
         }
         
@@ -209,37 +209,16 @@ def test_model_thresholds(model_name, model_id, sentences, thresholds):
 def save_results(all_results):
     """결과 저장"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_dir = "results/threshold_tuning"
+    results_dir = "results/fine_tuning"
     os.makedirs(results_dir, exist_ok=True)
     
-    # JSON 저장
-    json_path = os.path.join(results_dir, f"threshold_{timestamp}.json")
-    save_data = {
-        "timestamp": datetime.now().isoformat(),
-        "results": []
-    }
-    
-    for r in all_results:
-        if r.get("error"):
-            save_data["results"].append({"model": r["model_name"], "error": r["error"]})
-        else:
-            save_data["results"].append({
-                "model": r["model_name"],
-                "best_threshold": r["best_threshold"],
-                "best_f1": r["best_f1"],
-                "all_results": r["all_results"]
-            })
-    
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(save_data, f, ensure_ascii=False, indent=2)
-    
     # Markdown 저장
-    md_path = os.path.join(results_dir, f"threshold_{timestamp}.md")
+    md_path = os.path.join(results_dir, f"fine_tune_{timestamp}.md")
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write("# 🎯 Threshold Tuning 결과\n\n")
+        f.write("# 🎯 Fine Threshold Tuning 결과\n\n")
         f.write(f"- 실행 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         
-        f.write("## 📊 모델별 최적 Threshold\n\n")
+        f.write("## 📊 최적 Threshold 요약\n\n")
         f.write("| 모델 | 최적 Threshold | F1 Score |\n")
         f.write("|------|----------------|----------|\n")
         
@@ -247,7 +226,7 @@ def save_results(all_results):
             if r.get("error"):
                 f.write(f"| {r['model_name']} | 에러 | - |\n")
             else:
-                f.write(f"| {r['model_name']} | {r['best_threshold']:.0%} | {r['best_f1']:.1f}% |\n")
+                f.write(f"| {r['model_name']} | **{r['best_threshold']*100:.2f}%** | **{r['best_f1']:.2f}%** |\n")
         
         f.write("\n## 📈 상세 결과\n\n")
         
@@ -260,13 +239,12 @@ def save_results(all_results):
             f.write("|-----------|-----|-----------|--------|----------|\n")
             
             for m in r["all_results"]:
-                marker = "🏆" if m["threshold"] == r["best_threshold"] else ""
-                f.write(f"| {m['threshold']:.0%} {marker} | {m['f1']:.1f}% | {m['precision']:.1f}% | {m['recall']:.1f}% | {m['accuracy']:.1f}% |\n")
+                marker = "🏆" if abs(m["threshold"] - r["best_threshold"]) < 0.0001 else ""
+                f.write(f"| {m['threshold']*100:.2f}% {marker} | {m['f1']:.2f}% | {m['precision']:.2f}% | {m['recall']:.2f}% | {m['accuracy']:.2f}% |\n")
             
             f.write("\n")
     
     print(f"\n💾 결과 저장 완료:")
-    print(f"   📄 JSON: {json_path}")
     print(f"   📝 Markdown: {md_path}")
 
 # ============================================================
@@ -274,9 +252,8 @@ def save_results(all_results):
 # ============================================================
 
 if __name__ == "__main__":
-    print("🎯 Threshold Tuning 시작!")
-    print(f"📋 테스트 모델 수: {len(MODELS_TO_TEST)}")
-    print(f"📊 테스트 Threshold: {len(THRESHOLDS)}개 (30%~100%, 1% 단위)")
+    print("🎯 Fine Threshold Tuning 시작!")
+    print(f"📋 미세 조정 모델 수: {len(MODELS_TO_TUNE)}")
     
     sentences = load_test_sentences()
     if not sentences:
@@ -285,8 +262,8 @@ if __name__ == "__main__":
     
     all_results = []
     
-    for model_name, model_id in MODELS_TO_TEST:
-        result = test_model_thresholds(model_name, model_id, sentences, THRESHOLDS)
+    for config in MODELS_TO_TUNE:
+        result = tune_model(config, sentences)
         all_results.append(result)
     
     # 결과 요약
@@ -300,9 +277,8 @@ if __name__ == "__main__":
         if r.get("error"):
             print(f"{r['model_name']:<25} {'에러':>15} {'-':>10}")
         else:
-            print(f"{r['model_name']:<25} {r['best_threshold']:>14.0%} {r['best_f1']:>9.1f}%")
+            print(f"{r['model_name']:<25} {r['best_threshold']*100:>14.2f}% {r['best_f1']:>9.2f}%")
     
-    # 저장
     save_results(all_results)
     
-    print("\n✅ Threshold Tuning 완료!")
+    print("\n✅ Fine Threshold Tuning 완료!")

@@ -6,6 +6,17 @@
 from transformers import pipeline
 import time
 
+# 🏷️ 모델별 "부정/욕설" 라벨 매핑
+MODEL_NEGATIVE_LABELS = {
+    "matthewburke/korean_sentiment": ["LABEL_0"],  # LABEL_0 = 부정!
+    "monologg/koelectra-small-finetuned-sentiment": ["negative"],
+    "monologg/koelectra-base-finetuned-sentiment": ["negative"],
+    "nlptown/bert-base-multilingual-uncased-sentiment": ["1 star", "2 stars"],
+    "smilegate-ai/kor_unsmile": ["악플/욕설", "여성/가족", "남성", "성소수자", 
+                                  "인종/국적", "연령", "지역", "종교", "기타 혐오", "악플"],
+    "beomi/KcELECTRA-base-v2022": ["LABEL_1"],
+}
+
 # 테스트할 문장들
 test_sentences = [
     # 부정적 (욕설/비꼼)
@@ -39,6 +50,9 @@ def test_model(model_name, display_name):
         print("\n📊 추론 결과:")
         total_time = 0
         
+        # 모델별 부정 라벨 가져오기
+        negative_labels = MODEL_NEGATIVE_LABELS.get(model_name, [])
+        
         for sentence in test_sentences:
             start = time.time()
             result = classifier(sentence)
@@ -48,8 +62,12 @@ def test_model(model_name, display_name):
             label = result[0]['label']
             score = result[0]['score']
             
-            # 이모지로 결과 표시
-            emoji = "🔴" if "NEG" in label.upper() else "🟢"
+            # 모델별 라벨 매핑으로 판단
+            is_negative = label in negative_labels
+            if not negative_labels:  # 매핑 없으면 기본 로직
+                is_negative = "NEG" in label.upper() or "악플" in label or "욕설" in label
+            
+            emoji = "🔴" if is_negative else "🟢"
             print(f"  {emoji} [{elapsed:6.1f}ms] \"{sentence}\"")
             print(f"      → {label} ({score:.2%})")
         

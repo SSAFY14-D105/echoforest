@@ -40,6 +40,27 @@ MODELS_TO_TEST = [
     # ("XLM-RoBERTa Sentiment", "cardiffnlp/twitter-xlm-roberta-base-sentiment"),
 ]
 
+# 🏷️ 모델별 "부정/욕설" 라벨 매핑
+# 각 모델에서 어떤 라벨이 부정(욕설)을 의미하는지 명시
+MODEL_NEGATIVE_LABELS = {
+    # Korean Sentiment: LABEL_0 = 부정, LABEL_1 = 긍정
+    "matthewburke/korean_sentiment": ["LABEL_0"],
+    
+    # KoELECTRA: negative = 부정
+    "monologg/koelectra-small-finetuned-sentiment": ["negative"],
+    "monologg/koelectra-base-finetuned-sentiment": ["negative"],
+    
+    # Multilingual: 1-2 stars = 부정
+    "nlptown/bert-base-multilingual-uncased-sentiment": ["1 star", "2 stars"],
+    
+    # UnSmile: 악플/욕설 등 = 부정
+    "smilegate-ai/kor_unsmile": ["악플/욕설", "여성/가족", "남성", "성소수자", 
+                                  "인종/국적", "연령", "지역", "종교", "기타 혐오", "악플"],
+    
+    # KcELECTRA v2: LABEL_1 = 부정 (추정, Fine-tuning 안 됨)
+    "beomi/KcELECTRA-base-v2022": ["LABEL_1"],
+}
+
 # 테스트 문장들 (keywords.json에서 로드)
 def load_test_sentences():
     """keywords.json에서 테스트 문장 로드"""
@@ -137,17 +158,20 @@ def test_single_model(model_name, model_id):
                 
                 # 정확도 계산 (마지막 반복에서만)
                 if iteration == NUM_ITERATIONS - 1:
-                    # 다양한 모델 라벨 형식 처리
-                    # NEGATIVE, LABEL_1, 악플, 욕설, 1 star, 2 stars 등
-                    pred_upper = pred_label.upper()
-                    is_negative = (
-                        "NEG" in pred_upper or 
-                        pred_label == "LABEL_1" or
-                        "악플" in pred_label or
-                        "욕설" in pred_label or
-                        "혐오" in pred_label or
-                        pred_label in ["1 star", "2 stars"]  # Multilingual 1-5 stars
-                    )
+                    # 모델별 라벨 매핑 사용
+                    negative_labels = MODEL_NEGATIVE_LABELS.get(model_id, [])
+                    is_negative = pred_label in negative_labels
+                    
+                    # 매핑에 없으면 기본 로직 사용
+                    if not negative_labels:
+                        pred_upper = pred_label.upper()
+                        is_negative = (
+                            "NEG" in pred_upper or 
+                            "악플" in pred_label or
+                            "욕설" in pred_label or
+                            "혐오" in pred_label
+                        )
+                    
                     predicted = "NEGATIVE" if is_negative else "POSITIVE"
                     
                     # NEUTRAL은 POSITIVE로 취급 (욕설 탐지 목적)
@@ -162,12 +186,19 @@ def test_single_model(model_name, model_id):
                     print(f"  {emoji} [{elapsed:5.1f}ms] \"{sentence}\"")
                     print(f"      예측: {pred_label} ({score:.2%}) | 정답: {expected}")
                     
+                    # 욕설 확률 계산 (100% = 욕설, 0% = 칭찬으로 통일)
+                    if is_negative:
+                        curse_score = score  # 욕설 라벨이면 그대로
+                    else:
+                        curse_score = 1 - score  # 비욕설 라벨이면 반전
+                    
                     results["predictions"].append({
                         "sentence": sentence,
                         "expected": expected,
                         "predicted": predicted,
                         "raw_label": pred_label,
                         "score": score,
+                        "curse_score": curse_score,  # 욕설 확률 (통일)
                         "correct": is_correct,
                         "latency_ms": elapsed
                     })
@@ -397,12 +428,22 @@ def save_results(all_results):
             f.write(f"- TP: {r['tp']} | TN: {r['tn']} | FP: {r['fp']} | FN: {r['fn']}\n\n")
             
             f.write("### 전체 예측 결과\n\n")
-            f.write("| 결과 | 문장 | 실제 | 예측 | 라벨 | 신뢰도 |\n")
-            f.write("|------|------|------|------|------|--------|\n")
+            f.write("| 결과 | 문장 | 실제 | 욕설확률 | 모델판단 | 원본라벨 |\n")
+            f.write("|------|------|------|----------|----------|----------|\n")
             
             for p in r["predictions"]:
                 emoji = "✅" if p["correct"] else "❌"
-                f.write(f"| {emoji} | {p['sentence'][:20]}{'...' if len(p['sentence']) > 20 else ''} | {p['expected']} | {p['predicted']} | {p['raw_label']} | {p['score']:.1%} |\n")
+                
+                # 실제 라벨을 한국어로 통일
+                actual_kr = "욕설" if p["expected"] == "NEGATIVE" else ("중립" if p["expected"] == "NEUTRAL" else "칭찬")
+                
+                # 예측 라벨을 한국어로 통일 (욕설/비욕설)
+                predicted_kr = "🔴욕설" if p["predicted"] == "NEGATIVE" else "🟢비욕설"
+                
+                # 욕설 확률 (100% = 욕설, 0% = 칭찬)
+                curse_pct = p.get("curse_score", p["score"]) * 100
+                
+                f.write(f"| {emoji} | {p['sentence'][:25]}{'...' if len(p['sentence']) > 25 else ''} | {actual_kr} | **{curse_pct:.1f}%** | {predicted_kr} | {p['raw_label']} |\n")
             
             f.write("\n")
     
