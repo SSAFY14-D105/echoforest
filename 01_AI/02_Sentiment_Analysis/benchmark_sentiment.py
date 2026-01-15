@@ -11,6 +11,9 @@ from transformers import pipeline
 import time
 import gc
 import torch
+import json
+import os
+from datetime import datetime
 
 # ============================================================
 # 📋 설정
@@ -37,41 +40,39 @@ MODELS_TO_TEST = [
     # ("XLM-RoBERTa Sentiment", "cardiffnlp/twitter-xlm-roberta-base-sentiment"),
 ]
 
-# 테스트 문장들 (음성 STT 출력 스타일)
-# ⚠️ 초성체(ㅅㅂ, ㄹㅇ 등)는 STT에서 나오지 않으므로 제외!
-TEST_SENTENCES = [
-    # ===== 부정적 (명시적 욕설) =====
-    ("야 씨발 뭐하냐", "NEGATIVE"),
-    ("아 개짜증나", "NEGATIVE"),
-    ("진짜 못하네", "NEGATIVE"),
-    ("그것도 못해?", "NEGATIVE"),
-    ("아 씨발", "NEGATIVE"),
-    
-    # ===== 부정적 (비꼼/냉소) =====
-    ("와 진짜 잘하네", "NEGATIVE"),  # 비꼼
-    ("대단하다 진짜", "NEGATIVE"),   # 냉소
-    ("오 잘한다 잘해", "NEGATIVE"),  # 비꼼
-    
-    # ===== 부정적 (짜증/불만) =====
-    ("야 왜 그래", "NEGATIVE"),
-    ("하 답답해", "NEGATIVE"),
-    
-    # ===== 긍정적 (스킬용 키워드) =====
-    ("사랑해", "POSITIVE"),
-    ("뽀뽀", "POSITIVE"),
-    ("쪽쪽", "POSITIVE"),
-    ("최고야", "POSITIVE"),
-    
-    # ===== 긍정적 (칭찬/격려) =====
-    ("잘했어", "POSITIVE"),
-    ("고마워", "POSITIVE"),
-    ("멋있어", "POSITIVE"),
-    ("대박이야", "POSITIVE"),
-    
-    # ===== 긍정적 (감탄) =====
-    ("와 잘한다", "POSITIVE"),  # 진심 칭찬
-    ("오 대단해", "POSITIVE"),
-]
+# 테스트 문장들 (keywords.json에서 로드)
+def load_test_sentences():
+    """keywords.json에서 테스트 문장 로드"""
+    try:
+        with open("keywords.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        sentences = []
+        # 긍정 문장
+        for s in data.get("positive_sentences", []):
+            sentences.append((s, "POSITIVE"))
+        # 부정 문장
+        for s in data.get("negative_sentences", []):
+            sentences.append((s, "NEGATIVE"))
+        # 중립 문장 (저주 X, 스킬 X)
+        for s in data.get("neutral_sentences", []):
+            sentences.append((s, "NEUTRAL"))
+        
+        pos = len(data.get("positive_sentences", []))
+        neg = len(data.get("negative_sentences", []))
+        neu = len(data.get("neutral_sentences", []))
+        print(f"📂 keywords.json에서 {len(sentences)}개 문장 로드 완료")
+        print(f"   긍정: {pos}개 | 부정: {neg}개 | 중립: {neu}개")
+        return sentences
+    except FileNotFoundError:
+        print("⚠️ keywords.json 없음, 기본 문장 사용")
+        return [
+            ("사랑해", "POSITIVE"),
+            ("씨발", "NEGATIVE"),
+            ("일로 와", "NEUTRAL"),
+        ]
+
+TEST_SENTENCES = load_test_sentences()
 
 # 반복 측정 횟수 (정확한 레이턴시 측정용)
 NUM_ITERATIONS = 3
@@ -136,11 +137,24 @@ def test_single_model(model_name, model_id):
                 
                 # 정확도 계산 (마지막 반복에서만)
                 if iteration == NUM_ITERATIONS - 1:
-                    # POSITIVE/NEGATIVE 또는 LABEL_0/LABEL_1 등 다양한 형식 처리
-                    is_negative = "NEG" in pred_label.upper() or pred_label == "LABEL_1"
+                    # 다양한 모델 라벨 형식 처리
+                    # NEGATIVE, LABEL_1, 악플, 욕설, 1 star, 2 stars 등
+                    pred_upper = pred_label.upper()
+                    is_negative = (
+                        "NEG" in pred_upper or 
+                        pred_label == "LABEL_1" or
+                        "악플" in pred_label or
+                        "욕설" in pred_label or
+                        "혐오" in pred_label or
+                        pred_label in ["1 star", "2 stars"]  # Multilingual 1-5 stars
+                    )
                     predicted = "NEGATIVE" if is_negative else "POSITIVE"
                     
-                    is_correct = predicted == expected
+                    # NEUTRAL은 POSITIVE로 취급 (욕설 탐지 목적)
+                    # 욕설(NEGATIVE)인지 아닌지만 중요!
+                    expected_for_compare = "POSITIVE" if expected == "NEUTRAL" else expected
+                    
+                    is_correct = predicted == expected_for_compare
                     if is_correct:
                         results["correct"] += 1
                     
@@ -163,17 +177,22 @@ def test_single_model(model_name, model_id):
         results["accuracy"] = results["correct"] / results["total"] * 100
         
         # TP/TN/FP/FN 계산
+        # NEUTRAL은 POSITIVE로 취급 (욕설 탐지 목적)
         for pred in results["predictions"]:
-            if pred["expected"] == "NEGATIVE":
+            expected = pred["expected"]
+            # NEUTRAL → POSITIVE로 변환
+            expected_for_calc = "POSITIVE" if expected == "NEUTRAL" else expected
+            
+            if expected_for_calc == "NEGATIVE":
                 if pred["predicted"] == "NEGATIVE":
-                    results["tp"] += 1  # 부정을 부정으로 맞춤
+                    results["tp"] += 1  # 욕설을 욕설로 맞춤
                 else:
-                    results["fn"] += 1  # 부정을 긍정으로 틀림
-            else:  # expected == "POSITIVE"
+                    results["fn"] += 1  # 욕설을 비욕설로 틀림
+            else:  # expected == "POSITIVE" or "NEUTRAL"
                 if pred["predicted"] == "POSITIVE":
-                    results["tn"] += 1  # 긍정을 긍정으로 맞춤
+                    results["tn"] += 1  # 비욕설을 비욕설로 맞춤
                 else:
-                    results["fp"] += 1  # 긍정을 부정으로 틀림
+                    results["fp"] += 1  # 비욕설을 욕설로 틀림
         
         # Precision, Recall, F1 계산
         tp, fp, fn = results["tp"], results["fp"], results["fn"]
@@ -249,6 +268,150 @@ def print_summary(all_results):
         print(f"⚡ 최저 레이턴시: {best_latency['model_name']} ({best_latency['avg_latency']:.1f}ms)")
 
 # ============================================================
+# 💾 결과 저장 함수
+# ============================================================
+
+def save_results(all_results):
+    """결과를 JSON과 Markdown 파일로 저장"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_dir = "results/benchmark_history"
+    
+    # results 폴더 없으면 생성
+    os.makedirs(results_dir, exist_ok=True)
+    
+    # 저장할 데이터 정리
+    save_data = {
+        "timestamp": datetime.now().isoformat(),
+        "test_sentences_count": len(TEST_SENTENCES),
+        "num_iterations": NUM_ITERATIONS,
+        "results": []
+    }
+    
+    for r in all_results:
+        # predictions에서 직렬화 불가능한 항목 제거
+        clean_result = {
+            "model_name": r["model_name"],
+            "model_id": r["model_id"],
+            "load_time": r["load_time"],
+            "avg_latency": r["avg_latency"],
+            "accuracy": r["accuracy"],
+            "precision": r["precision"],
+            "recall": r["recall"],
+            "f1_score": r["f1_score"],
+            "tp": r["tp"],
+            "tn": r["tn"],
+            "fp": r["fp"],
+            "fn": r["fn"],
+            "error": r["error"],
+            "predictions": r["predictions"]  # 상세 예측 결과 저장
+        }
+        save_data["results"].append(clean_result)
+    
+    # JSON 저장
+    json_path = os.path.join(results_dir, f"benchmark_{timestamp}.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(save_data, f, ensure_ascii=False, indent=2)
+    
+    # 베스트 모델 찾기 (F1 Score 기준)
+    successful = [r for r in all_results if not r["error"]]
+    best_model = max(successful, key=lambda x: x["f1_score"]) if successful else None
+    
+    # Markdown 저장
+    md_path = os.path.join(results_dir, f"benchmark_{timestamp}.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(f"# 📊 벤치마크 결과\n\n")
+        f.write(f"- **실행 시간**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- **테스트 문장 수**: {len(TEST_SENTENCES)}\n")
+        f.write(f"- **반복 횟수**: {NUM_ITERATIONS}\n\n")
+        
+        f.write("## 결과 요약\n\n")
+        f.write("| 모델 | 정확도 | Precision | Recall | F1 | 레이턴시 | 로드시간 |\n")
+        f.write("|------|--------|-----------|--------|-----|----------|----------|\n")
+        
+        for r in all_results:
+            if r["error"]:
+                f.write(f"| {r['model_name']} | 에러 | - | - | - | - | - |\n")
+            else:
+                f.write(f"| {r['model_name']} | {r['accuracy']:.1f}% | {r['precision']:.1f}% | {r['recall']:.1f}% | {r['f1_score']:.1f}% | {r['avg_latency']:.1f}ms | {r['load_time']:.1f}s |\n")
+        
+        f.write("\n## Confusion Matrix\n\n")
+        f.write("| 모델 | TP | TN | FP | FN |\n")
+        f.write("|------|-----|-----|-----|-----|\n")
+        
+        for r in all_results:
+            if not r["error"]:
+                f.write(f"| {r['model_name']} | {r['tp']} | {r['tn']} | {r['fp']} | {r['fn']} |\n")
+        
+        # 베스트 모델 상세 분석
+        if best_model and best_model["predictions"]:
+            f.write(f"\n---\n\n## 🏆 베스트 모델 상세 분석: {best_model['model_name']}\n\n")
+            f.write(f"- F1 Score: {best_model['f1_score']:.1f}%\n")
+            f.write(f"- 정확도: {best_model['accuracy']:.1f}%\n\n")
+            
+            # 틀린 것 (FP: 비욕설을 욕설로, FN: 욕설을 비욕설로)
+            f.write("### ❌ 틀린 예측\n\n")
+            f.write("| 문장 | 실제 | 예측 | 신뢰도 | 유형 |\n")
+            f.write("|------|------|------|--------|------|\n")
+            
+            for p in best_model["predictions"]:
+                expected_adj = "POSITIVE" if p["expected"] == "NEUTRAL" else p["expected"]
+                if not p["correct"]:
+                    error_type = "FP (억울한 저주)" if expected_adj == "POSITIVE" else "FN (놓침)"
+                    f.write(f"| {p['sentence']} | {p['expected']} | {p['predicted']} | {p['score']:.1%} | {error_type} |\n")
+            
+            # 맞춘 것 요약
+            f.write("\n### ✅ 맞춘 예측 요약\n\n")
+            
+            # TP (욕설을 욕설로)
+            tp_list = [p for p in best_model["predictions"] if p["correct"] and p["expected"] == "NEGATIVE"]
+            f.write(f"#### TP (욕설 → 욕설): {len(tp_list)}개\n\n")
+            if tp_list[:10]:  # 처음 10개만
+                for p in tp_list[:10]:
+                    f.write(f"- \"{p['sentence']}\" ({p['score']:.1%})\n")
+                if len(tp_list) > 10:
+                    f.write(f"- ... 외 {len(tp_list) - 10}개\n")
+            
+            # TN (비욕설을 비욕설로)
+            tn_list = [p for p in best_model["predictions"] if p["correct"] and p["expected"] in ["POSITIVE", "NEUTRAL"]]
+            f.write(f"\n#### TN (비욕설 → 비욕설): {len(tn_list)}개\n\n")
+            if tn_list[:10]:  # 처음 10개만
+                for p in tn_list[:10]:
+                    f.write(f"- \"{p['sentence']}\" ({p['score']:.1%})\n")
+                if len(tn_list) > 10:
+                    f.write(f"- ... 외 {len(tn_list) - 10}개\n")
+    
+    # 모든 모델 상세 예측 결과 저장 (별도 파일)
+    detail_path = os.path.join(results_dir, f"predictions_detail_{timestamp}.md")
+    with open(detail_path, "w", encoding="utf-8") as f:
+        f.write("# 📋 모든 모델 상세 예측 결과\n\n")
+        f.write(f"- 실행 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- 테스트 문장 수: {len(TEST_SENTENCES)}\n\n")
+        
+        for r in all_results:
+            if r["error"]:
+                continue
+            
+            f.write(f"---\n\n## 🧪 {r['model_name']}\n\n")
+            f.write(f"- 정확도: {r['accuracy']:.1f}%\n")
+            f.write(f"- F1: {r['f1_score']:.1f}%\n")
+            f.write(f"- TP: {r['tp']} | TN: {r['tn']} | FP: {r['fp']} | FN: {r['fn']}\n\n")
+            
+            f.write("### 전체 예측 결과\n\n")
+            f.write("| 결과 | 문장 | 실제 | 예측 | 라벨 | 신뢰도 |\n")
+            f.write("|------|------|------|------|------|--------|\n")
+            
+            for p in r["predictions"]:
+                emoji = "✅" if p["correct"] else "❌"
+                f.write(f"| {emoji} | {p['sentence'][:20]}{'...' if len(p['sentence']) > 20 else ''} | {p['expected']} | {p['predicted']} | {p['raw_label']} | {p['score']:.1%} |\n")
+            
+            f.write("\n")
+    
+    print(f"\n💾 결과 저장 완료:")
+    print(f"   📄 JSON: {json_path}")
+    print(f"   📝 Markdown: {md_path}")
+    print(f"   📋 상세 예측: {detail_path}")
+
+# ============================================================
 # 🚀 메인 실행
 # ============================================================
 
@@ -268,4 +431,8 @@ if __name__ == "__main__":
     # 전체 요약 출력
     print_summary(all_results)
     
+    # 결과 자동 저장
+    save_results(all_results)
+    
     print("\n✅ 벤치마크 완료!")
+
