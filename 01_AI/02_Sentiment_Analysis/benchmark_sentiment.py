@@ -24,18 +24,17 @@ MODELS_TO_TEST = [
     ("KoELECTRA Small Sentiment", "monologg/koelectra-small-finetuned-sentiment"),
     ("KoELECTRA Base Sentiment", "monologg/koelectra-base-finetuned-sentiment"),
     
-    # 다국어/영어 기반 (한국어 테스트용)
-    ("XLM-RoBERTa Sentiment", "cardiffnlp/twitter-xlm-roberta-base-sentiment"),
+    # 다국어 (한국어 테스트용)
     ("Multilingual Sentiment", "nlptown/bert-base-multilingual-uncased-sentiment"),
     
-    # ===== 혐오 발언 탐지 (Hate Speech Detection) ===== ⭐ NEW!
+    # ===== 혐오 발언 탐지 (Hate Speech Detection) =====
     ("UnSmile (Smilegate)", "smilegate-ai/kor_unsmile"),
-    # ("KcELECTRA Hate", "beomi/KcELECTRA-base-v2022-hate"),  # 추가 테스트용
     
-    # 참고: 아래는 감정분류 fine-tuning 안 된 base 모델이라 제외
-    # ("DistilKoBERT", "monologg/distilkobert"),
-    # ("KcBERT", "beomi/kcbert-base"),
-    # ("KLUE RoBERTa", "klue/roberta-base"),
+    # ===== 🆕 최신 모델 =====
+    ("KcELECTRA v2 (댓글특화)", "beomi/KcELECTRA-base-v2022"),
+    
+    # 제외: XLM-RoBERTa (에러 발생)
+    # ("XLM-RoBERTa Sentiment", "cardiffnlp/twitter-xlm-roberta-base-sentiment"),
 ]
 
 # 테스트 문장들
