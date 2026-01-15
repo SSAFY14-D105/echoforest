@@ -115,14 +115,33 @@ yt-dlp -x --audio-format mp3 -a urls.txt
 
 ### 현재 벤치마크 모델 (6개)
 
-| 모델 | 용도 | 정확도 | 레이턴시 |
-|------|------|--------|----------|
-| Korean Sentiment | 감정 분류 | 30% | 9.8ms |
-| KoELECTRA Small | 감정 분류 | 50% | 9.1ms |
-| KoELECTRA Base | 감정 분류 | 50% | 8.9ms |
-| Multilingual | 다국어 | 50% | 7.4ms |
-| UnSmile | 혐오 탐지 | 50% | 7.9ms |
-| KcELECTRA v2 | 댓글 특화 | TBD | TBD |
+| 모델 | 정확도 | Precision | Recall | F1 | 레이턴시 | 로드시간 |
+|------|--------|-----------|--------|-----|----------|----------|
+| Korean Sentiment | 30.0% | 33.3% | 40.0% | 36.4% | 11.4ms | 1.9s |
+| KoELECTRA Small | 40.0% | 42.9% | 60.0% | 50.0% | 25.5ms | 1.3s |
+| KoELECTRA Base | 50.0% | 0.0% | 0.0% | 0.0% | 9.5ms | 2.2s |
+| Multilingual | 50.0% | 0.0% | 0.0% | 0.0% | 12.0ms | 1.7s |
+| UnSmile | 50.0% | 0.0% | 0.0% | 0.0% | 7.2ms | 1.6s |
+| **KcELECTRA v2** | **60.0%** | **55.6%** | **100.0%** | **71.4%** | 12.4ms | 2.0s |
+
+### Confusion Matrix 상세
+
+| 모델 | TP | TN | FP | FN |
+|------|-----|-----|-----|-----|
+| Korean Sentiment | 2 | 1 | 4 | 3 |
+| KoELECTRA Small | 3 | 1 | 4 | 2 |
+| KoELECTRA Base | 0 | 5 | 0 | 5 |
+| Multilingual | 0 | 5 | 0 | 5 |
+| UnSmile | 0 | 5 | 0 | 5 |
+| **KcELECTRA v2** | **5** | **1** | **4** | **0** |
+
+### 최고 성능 모델
+
+| 지표 | 모델 | 값 |
+|------|------|-----|
+| 🏆 최고 정확도 | KcELECTRA v2 | 60.0% |
+| 🎯 최고 F1 Score | KcELECTRA v2 | 71.4% |
+| ⚡ 최저 레이턴시 | UnSmile | 7.2ms |
 
 ### 정확도가 낮은 이유
 
@@ -132,8 +151,59 @@ yt-dlp -x --audio-format mp3 -a urls.txt
 
 ### 추천 모델
 
-- **즉시 사용**: UnSmile (혐오 탐지 특화)
+- **즉시 사용**: KcELECTRA v2 (F1 71.4%, Recall 100%)
 - **Fine-tuning 후**: KcELECTRA v2 (댓글 데이터로 학습)
+
+---
+
+## 📊 평가 지표 설명 (발표용)
+
+### Confusion Matrix (혼동 행렬)
+
+```
+                    예측
+                 Positive  Negative
+실제  Positive     TP        FN
+      Negative     FP        TN
+```
+
+| 용어 | 의미 | 예시 |
+|------|------|------|
+| **TP** (True Positive) | 부정을 부정으로 맞춤 | "씨발" → 부정 ✅ |
+| **TN** (True Negative) | 긍정을 긍정으로 맞춤 | "사랑해" → 긍정 ✅ |
+| **FP** (False Positive) | 긍정을 부정으로 틀림 | "사랑해" → 부정 ❌ |
+| **FN** (False Negative) | 부정을 긍정으로 틀림 | "씨발" → 긍정 ❌ |
+
+### 평가 지표 공식
+
+| 지표 | 공식 | 의미 |
+|------|------|------|
+| **Accuracy** | (TP + TN) / 전체 | 전체 정답률 |
+| **Precision** | TP / (TP + FP) | 부정이라고 한 것 중 진짜 부정 비율 |
+| **Recall** | TP / (TP + FN) | 실제 부정 중 찾아낸 비율 |
+| **F1 Score** | 2 × (P × R) / (P + R) | Precision과 Recall의 조화 평균 |
+
+### 게임에서 중요한 지표
+
+| 상황 | 중요 지표 | 이유 |
+|------|----------|------|
+| **저주 (부정)** | Recall ↑ | 욕설 놓치면 안 됨! |
+| **스킬 (긍정)** | Precision ↑ | 잘못 발동하면 안 됨! |
+
+### 예시 계산
+
+```
+테스트 결과:
+- TP = 4 (욕설 4개 맞춤)
+- TN = 4 (긍정 4개 맞춤)
+- FP = 1 (긍정을 욕설로 틀림)
+- FN = 1 (욕설을 긍정으로 틀림)
+
+Accuracy  = (4 + 4) / 10 = 80%
+Precision = 4 / (4 + 1) = 80%
+Recall    = 4 / (4 + 1) = 80%
+F1 Score  = 2 × (0.8 × 0.8) / (0.8 + 0.8) = 80%
+```
 
 ---
 
