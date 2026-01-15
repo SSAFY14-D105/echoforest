@@ -21,16 +21,16 @@ MODELS_TO_TUNE = [
     {
         "name": "Korean Sentiment",
         "model_id": "matthewburke/korean_sentiment",
-        "range_start": 85.0,  # 85%
-        "range_end": 89.0,    # 89%
-        "step": 0.01           # 0.1%
+        "range_start": 80.0,  # 80%
+        "range_end": 90.0,    # 90%
+        "step": 0.01          # 0.01%
     },
     {
         "name": "UnSmile",
         "model_id": "smilegate-ai/kor_unsmile",
-        "range_start": 15.0,  # 15%
-        "range_end": 19.0,    # 19%
-        "step": 0.01           # 0.1%
+        "range_start": 10.0,  # 10%
+        "range_end": 20.0,    # 20%
+        "step": 0.01          # 0.01%
     },
 ]
 
@@ -176,7 +176,8 @@ def tune_model(config, sentences):
             
             print(f"{threshold*100:<11.2f}% {metrics['f1']:>7.2f}% {metrics['precision']:>9.2f}% {metrics['recall']:>7.2f}% {metrics['accuracy']:>9.2f}%")
             
-            if metrics['f1'] > best_f1:
+            # F1이 같거나 높으면 업데이트 (동점 시 더 높은 threshold 선택)
+            if metrics['f1'] >= best_f1:
                 best_f1 = metrics['f1']
                 best_threshold = threshold
         
