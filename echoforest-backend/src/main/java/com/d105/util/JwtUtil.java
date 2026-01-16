@@ -3,6 +3,7 @@ package com.d105.util;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import org.springframework.stereotype.Component;
+
 import java.util.Date;
 
 @Component
@@ -21,20 +22,20 @@ public class JwtUtil {
     }
 
     ///  추후 검증 로직 추가시 주석 해제
-//    // 1. 토큰에서 아이디(Claim) 꺼내기
-//    public String getLoginId(String token) {
-//        return JWT.require(Algorithm.HMAC256(SECRET_KEY))
-//                .build().verify(token)
-//                .getSubject();
-//    }
-//
-//    // 2. 토큰이 유효한지 검사하기 (위조 여부, 만료 여부)
-//    public boolean validateToken(String token) {
-//        try {
-//            JWT.require(Algorithm.HMAC256(SECRET_KEY)).build().verify(token);
-//            return true;
-//        } catch (Exception e) {
-//            return false; // 유효하지 않음
-//        }
-//    }
+    // 1. 토큰에서 아이디(Claim) 꺼내기
+    public String getLoginId(String token) {
+        return JWT.require(Algorithm.HMAC256(SECRET_KEY))
+                .build().verify(token)
+                .getSubject();
+    }
+
+    // 2. 토큰이 유효한지 검사하기 (위조 여부, 만료 여부)
+    public boolean validateToken(String token) {
+        try {
+            JWT.require(Algorithm.HMAC256(SECRET_KEY)).build().verify(token);
+            return true;
+        } catch (Exception e) {
+            return false; // 유효하지 않음
+        }
+    }
 }
