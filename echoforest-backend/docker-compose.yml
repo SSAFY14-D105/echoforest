@@ -1,21 +1,51 @@
 version: '3.8'
 
 services:
-  # 1. LiveKit Server (화상 채팅)
+  # ==========================================
+  # 0. 게임 서버 (Spring Boot)
+  # ==========================================
+  game-server:
+    build: .                # 현재 폴더의 Dockerfile로 빌드
+    container_name: echoforest-server
+    ports:
+      - "9001:9001"         # 외부 접속 포트
+    environment:
+      # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - DB_URL=jdbc:mysql://mysql:3306/echoforest?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      - DB_USERNAME=user
+      - DB_PASSWORD=password
+      - DB_DRIVER=com.mysql.cj.jdbc.Driver
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - livekit
+      - mysql
+      - redis
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 1. LiveKit Server (기존 작성 내용 유지)
+  # ==========================================
   livekit:
     image: livekit/livekit-server:latest
     container_name: echoforest-livekit
     command: --dev
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7882:7882/udp"
+      - "7880:7880" # 시그널링 (TCP)
+      - "7881:7881" # (선택) HTTP API용, 보통 7880으로 다 됨
+      - "50000-50200:50000-50200/udp" # WebRTC 미디어 전송용 포트 범위
     environment:
       - "LIVEKIT_KEYS=devkey: secret"  # 주의: devkey:(공백)secret
     networks:
       - echo-net
 
-  # 2. MySQL 8.0 (게임 데이터 DB)
+  # ==========================================
+  # 2. MySQL (기존 작성 내용 유지)
+  # ==========================================
   mysql:
     image: mysql:8.0
     container_name: echoforest-mysql
@@ -36,7 +66,9 @@ services:
     networks:
       - echo-net
 
-  # 3. Redis (매칭 대기열, 세션 관리)
+  # ==========================================
+  # 3. Redis (기존 작성 내용 유지)
+  # ==========================================
   redis:
     image: redis:alpine
     container_name: echoforest-redis

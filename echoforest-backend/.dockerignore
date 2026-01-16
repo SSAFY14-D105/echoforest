@@ -1,0 +1,22 @@
+# 빌드 결과물 제외
+build
+.gradle
+out
+
+# IDE 설정 파일 제외
+.idea
+.vscode
+*.iml
+
+# Git 관련 제외
+.git
+.gitignore
+
+# [핵심] 로컬 데이터 폴더 제외 (빌드 에러 방지)
+mysql_data
+redis_data
+
+# 기타 도커 이미지에 포함할 필요 없는 파일
+docker-compose.yml
+Dockerfile
+README.md
