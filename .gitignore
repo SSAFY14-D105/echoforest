@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Package files (root level - 실수로 생성된 경우)
+package.json
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

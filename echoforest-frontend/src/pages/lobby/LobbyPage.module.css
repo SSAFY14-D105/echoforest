@@ -1,0 +1,78 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100vw; height: 100vh;
+  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+}
+
+.box {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px;
+  border-radius: 16px;
+  border: 4px solid var(--frog-dark);
+  box-shadow: 8px 8px 0px rgba(0,0,0,0.15);
+  text-align: center;
+  width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  position: relative;
+}
+
+.title {
+  color: var(--frog-dark);
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.input {
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-family: inherit;
+  outline: none;
+}
+.input:focus { border-color: var(--frog-green); }
+
+.btn {
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  color: white;
+  transition: transform 0.1s;
+}
+.btn:active { transform: translateY(2px); }
+
+.hostBtn { background-color: var(--frog-green); }
+.joinBtn { background-color: var(--scarf-red); }
+.backBtn { background-color: #888; margin-top: 10px; }
+
+.topBar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+
+.settingsBtn {
+  background: none; border: none; font-size: 1.5rem; cursor: pointer;
+}
+
+/* 설정 모달 */
+.modalOverlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); border-radius: 12px;
+  display: flex; justify-content: center; align-items: center;
+}
+.modalContent {
+  width: 90%; padding: 20px; text-align: left;
+}
+.testBox {
+  width: 100%; height: 100px; background: #eee; 
+  display: flex; justify-content: center; align-items: center;
+  margin: 10px 0; border: 2px dashed #ccc; color: #888;
+}

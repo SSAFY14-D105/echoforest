@@ -1,35 +1,22 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useGameStore } from './store/useGameStore';
+import LoginPage from './pages/LoginPage/LoginPage';
+import LobbyPage from './pages/lobby/LobbyPage';
+import GamePage from './pages/game/GamePage';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  // 전역 상태(Store)에서 nickname, roomId 가져오기
+  const { nickname, roomId, setNickname } = useGameStore();
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  // 1. 닉네임이 없으면 -> 로그인 페이지
+  if (!nickname) {
+    return <LoginPage onLogin={(id) => setNickname(id)} />;
+  }
+
+  // 2. 닉네임은 있지만 방 번호가 없으면 -> 로비 화면
+  if (!roomId) {
+    return <LobbyPage />;
+  }
+
+  // 3. 방 번호가 있으면 -> 게임 화면
+  return <GamePage />;
 }
-
-export default App
