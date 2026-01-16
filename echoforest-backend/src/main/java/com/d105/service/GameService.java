@@ -12,6 +12,8 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
@@ -22,6 +24,9 @@ public class GameService {
     private static final int MAX_PLAYERS = 4;
     private final GameRepository gameRepository;
     private final ObjectMapper objectMapper;
+    // 가상 스레드 전용 실행기 (Java 21+)
+    // 작업 하나당 가벼운 가상 스레드를 무제한으로 새로 생성하여 처리합니다.
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * 방 생성 (CREATE)
@@ -81,7 +86,8 @@ public class GameService {
     }
 
     /**
-     * 이동 처리 (좌표 동기화)
+     * 이동 처리 (비동기 브로드캐스팅)
+     * - 가상 스레드를 통해 좌표 동기화 메시지를 병렬로 전송합니다.
      */
     public void handleMove(WebSocketSession session, GameMessageDto message) throws IOException {
         String roomId = message.getRoomId();
@@ -89,7 +95,8 @@ public class GameService {
         // 방에 없는 유저가 이동하려 하면 무시
         if (roomId == null || !gameRepository.roomExists(roomId)) return;
 
-        broadcastToOthers(roomId, message, session);
+        // 비동기 방식으로 변경
+        broadcastAsync(roomId, message, session);
     }
 
     /**
@@ -117,15 +124,26 @@ public class GameService {
     // Private Helpers
     // =========================================================
 
-    private void broadcastToOthers(String roomId, GameMessageDto message, WebSocketSession sender) {
+    /**
+     * 비동기 브로드캐스팅 (Virtual Threads 활용)
+     * - 각 전송 작업을 별도의 가상 스레드에 맡겨 병렬 처리합니다.
+     */
+    private void broadcastAsync(String roomId, GameMessageDto message, WebSocketSession sender) {
         Set<WebSocketSession> sessions = gameRepository.getSessions(roomId);
-        sessions.stream()
-                .filter(s -> s.isOpen() && !s.getId().equals(sender.getId()))
-                .forEach(s -> sendMessage(s, message));
+
+        for (WebSocketSession s : sessions) {
+            // 본인을 제외한 참가자에게 전송
+            if (s.isOpen() && !s.getId().equals(sender.getId())) {
+                // 가상 스레드에 전송 작업 위임 (Non-blocking)
+                executor.submit(() -> sendMessage(s, message));
+            }
+        }
     }
 
+    // sendMessage는 기존과 동일하지만, 이제 가상 스레드 내부에서 실행됨
     private void sendMessage(WebSocketSession session, Object message) {
         try {
+            // WebSocketSession은 내부적으로 동기화 처리가 되어 있어 스레드 안전하게 전송 가능
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         } catch (IOException e) {
             log.error("Error sending message", e);
