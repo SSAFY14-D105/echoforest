@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎛️ 제스처 튜닝 대시보드</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a1a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* 왼쪽: 카메라 + 랜드마크 */
+        .camera-section {
+            flex: 0 0 640px;
+        }
+
+        .camera-wrapper {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        video,
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        video {
+            transform: scaleX(-1);
+        }
+
+        canvas {
+            transform: scaleX(-1);
+            pointer-events: none;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+        }
+
+        /* 현재 감지 결과 */
+        .detection-result {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .detection-emoji {
+            font-size: 48px;
+        }
+
+        .detection-label {
+            font-size: 18px;
+            margin-top: 5px;
+        }
+
+        .detection-score {
+            color: #888;
+        }
+
+        /* 오른쪽: 패널들 */
+        .panel-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .panel h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        /* 슬라이더 */
+        .slider-group {
+            margin-bottom: 12px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .slider-label span:last-child {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* 실시간 수치 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .metric {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .metric-label {
+            color: #888;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        /* 손가락 상태 */
+        .fingers-status {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .finger {
+            text-align: center;
+        }
+
+        .finger-icon {
+            font-size: 24px;
+            opacity: 0.3;
+        }
+
+        .finger-icon.extended {
+            opacity: 1;
+        }
+
+        .finger-name {
+            font-size: 10px;
+            color: #888;
+        }
+
+        /* 로그 */
+        .log {
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 10px;
+            background: #000;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .log p {
+            margin: 2px 0;
+            color: #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 왼쪽: 카메라 -->
+    <div class="camera-section">
+        <div class="camera-wrapper">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls-bar">
+            <button class="btn" id="btnInit">1️⃣ 초기화</button>
+            <button class="btn" id="btnCamera" disabled>2️⃣ 카메라</button>
+            <button class="btn" id="btnStart" disabled>3️⃣ 시작</button>
+            <span id="fps" style="margin-left:auto;color:#888">0 FPS</span>
+        </div>
+
+        <div class="detection-result">
+            <div class="detection-emoji" id="emoji">🤚</div>
+            <div class="detection-label" id="label">대기중</div>
+            <div class="detection-score" id="score">-</div>
+        </div>
+    </div>
+
+    <!-- 오른쪽: 패널들 -->
+    <div class="panel-section">
+        <!-- 임계값 슬라이더 -->
+        <div class="panel">
+            <h3>🎚️ 임계값 조정</h3>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>✊ 주먹 (손가락 접힘 배율)</span>
+                    <span id="valFist">1.10</span>
+                </div>
+                <input type="range" id="sliderFist" min="1.0" max="1.5" step="0.05" value="1.1">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>👌 OK (거리 임계값)</span>
+                    <span id="valOK">0.18</span>
+                </div>
+                <input type="range" id="sliderOK" min="0.1" max="0.4" step="0.02" value="0.18">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>✌️ V (펴짐 배율)</span>
+                    <span id="valV">1.05</span>
+                </div>
+                <input type="range" id="sliderV" min="1.0" max="1.3" step="0.05" value="1.05">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>🎯 최소 신뢰도</span>
+                    <span id="valConf">0.70</span>
+                </div>
+                <input type="range" id="sliderConf" min="0.5" max="0.95" step="0.05" value="0.7">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>💋 뽀뽀 (입술 비율 임계값)</span>
+                    <span id="valKiss">0.15</span>
+                </div>
+                <input type="range" id="sliderKiss" min="0.08" max="0.25" step="0.01" value="0.15">
+            </div>
+        </div>
+
+        <!-- 실시간 수치 -->
+        <div class="panel">
+            <h3>📊 실시간 수치</h3>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">엄지-검지 거리</div>
+                    <div class="metric-value" id="metricThumbIndex">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">손바닥 크기</div>
+                    <div class="metric-value" id="metricPalm">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">정규화 거리</div>
+                    <div class="metric-value" id="metricNorm">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">접힌 손가락</div>
+                    <div class="metric-value" id="metricClosed">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 손가락 상태 -->
+        <div class="panel">
+            <h3>🖐️ 손가락 상태</h3>
+            <div class="fingers-status">
+                <div class="finger">
+                    <div class="finger-icon" id="fingerThumb">👍</div>
+                    <div class="finger-name">엄지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="fingerIndex">☝️</div>
+                    <div class="finger-name">검지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="fingerMiddle">🖕</div>
+                    <div class="finger-name">중지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="fingerRing">💍</div>
+                    <div class="finger-name">약지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="fingerPinky">🤙</div>
+                    <div class="finger-name">새끼</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 입술 수치 -->
+        <div class="panel">
+            <h3>💋 입술 수치</h3>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">입술 세로</div>
+                    <div class="metric-value" id="metricLipV">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">입술 가로</div>
+                    <div class="metric-value" id="metricLipH">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">세로/가로 비율</div>
+                    <div class="metric-value" id="metricLipRatio">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">얼굴 감지</div>
+                    <div class="metric-value" id="metricFace">❌</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 랜드마크 원시 데이터 -->
+        <div class="panel">
+            <h3>📍 랜드마크 좌표 (선택)</h3>
+            <select id="landmarkSelect" style="width:100%;padding:5px;margin-bottom:10px">
+                <option value="0">0: WRIST</option>
+                <option value="4">4: THUMB_TIP</option>
+                <option value="8" selected>8: INDEX_TIP</option>
+                <option value="12">12: MIDDLE_TIP</option>
+                <option value="16">16: RING_TIP</option>
+                <option value="20">20: PINKY_TIP</option>
+            </select>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">X</div>
+                    <div class="metric-value" id="lmX">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Y</div>
+                    <div class="metric-value" id="lmY">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Z</div>
+                    <div class="metric-value" id="lmZ">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 로그 -->
+        <div class="panel">
+            <h3>📝 감지 로그</h3>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { FilesetResolver, HandLandmarker, FaceLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest';
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let handLandmarker = null;
+        let faceLandmarker = null;
+        let isRunning = false;
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // 슬라이더 값들
+        const thresholds = {
+            fist: 1.1,
+            ok: 0.18,
+            v: 1.05,
+            conf: 0.7,
+            kiss: 0.15
+        };
+
+        // 슬라이더 이벤트
+        document.getElementById('sliderFist').addEventListener('input', e => {
+            thresholds.fist = parseFloat(e.target.value);
+            document.getElementById('valFist').textContent = thresholds.fist.toFixed(2);
+        });
+        document.getElementById('sliderOK').addEventListener('input', e => {
+            thresholds.ok = parseFloat(e.target.value);
+            document.getElementById('valOK').textContent = thresholds.ok.toFixed(2);
+        });
+        document.getElementById('sliderV').addEventListener('input', e => {
+            thresholds.v = parseFloat(e.target.value);
+            document.getElementById('valV').textContent = thresholds.v.toFixed(2);
+        });
+        document.getElementById('sliderConf').addEventListener('input', e => {
+            thresholds.conf = parseFloat(e.target.value);
+            document.getElementById('valConf').textContent = thresholds.conf.toFixed(2);
+        });
+        document.getElementById('sliderKiss').addEventListener('input', e => {
+            thresholds.kiss = parseFloat(e.target.value);
+            document.getElementById('valKiss').textContent = thresholds.kiss.toFixed(2);
+        });
+
+        function log(msg) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            const logEl = document.getElementById('log');
+            logEl.insertBefore(p, logEl.firstChild);
+            if (logEl.children.length > 10) logEl.lastChild.remove();
+        }
+
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + ((p1.z || 0) - (p2.z || 0)) ** 2);
+        }
+
+        function isFingerClosed(landmarks, tipIdx, mcpIdx) {
+            const wrist = landmarks[0];
+            return distance(landmarks[tipIdx], wrist) < distance(landmarks[mcpIdx], wrist) * thresholds.fist;
+        }
+
+        function isFingerExtended(landmarks, tipIdx, pipIdx) {
+            const wrist = landmarks[0];
+            return distance(landmarks[tipIdx], wrist) > distance(landmarks[pipIdx], wrist) * thresholds.v;
+        }
+
+        function detectGesture(landmarks) {
+            // 손가락 상태
+            const fingers = {
+                thumb: { closed: isFingerClosed(landmarks, 4, 2), extended: isFingerExtended(landmarks, 4, 3) },
+                index: { closed: isFingerClosed(landmarks, 8, 5), extended: isFingerExtended(landmarks, 8, 7) },
+                middle: { closed: isFingerClosed(landmarks, 12, 9), extended: isFingerExtended(landmarks, 12, 11) },
+                ring: { closed: isFingerClosed(landmarks, 16, 13), extended: isFingerExtended(landmarks, 16, 15) },
+                pinky: { closed: isFingerClosed(landmarks, 20, 17), extended: isFingerExtended(landmarks, 20, 19) },
+            };
+
+            // UI 업데이트 - 손가락 상태
+            document.getElementById('fingerThumb').classList.toggle('extended', fingers.thumb.extended);
+            document.getElementById('fingerIndex').classList.toggle('extended', fingers.index.extended);
+            document.getElementById('fingerMiddle').classList.toggle('extended', fingers.middle.extended);
+            document.getElementById('fingerRing').classList.toggle('extended', fingers.ring.extended);
+            document.getElementById('fingerPinky').classList.toggle('extended', fingers.pinky.extended);
+
+            // 수치 계산
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const wrist = landmarks[0];
+            const middleMcp = landmarks[9];
+            const palmSize = distance(wrist, middleMcp);
+            const thumbIndexDist = distance(thumbTip, indexTip);
+            const normalizedDist = thumbIndexDist / palmSize;
+            const closedCount = [fingers.thumb, fingers.index, fingers.middle, fingers.ring, fingers.pinky]
+                .filter(f => f.closed).length;
+
+            // UI 업데이트 - 수치
+            document.getElementById('metricThumbIndex').textContent = thumbIndexDist.toFixed(3);
+            document.getElementById('metricPalm').textContent = palmSize.toFixed(3);
+            document.getElementById('metricNorm').textContent = normalizedDist.toFixed(3);
+            document.getElementById('metricClosed').textContent = closedCount + '/5';
+
+            // 선택된 랜드마크
+            const lmIdx = parseInt(document.getElementById('landmarkSelect').value);
+            const lm = landmarks[lmIdx];
+            document.getElementById('lmX').textContent = lm.x.toFixed(3);
+            document.getElementById('lmY').textContent = lm.y.toFixed(3);
+            document.getElementById('lmZ').textContent = (lm.z || 0).toFixed(3);
+
+            // 제스처 판정
+            // 주먹
+            if (closedCount >= 4) {
+                return { type: 'fist', score: closedCount >= 5 ? 0.95 : 0.8, emoji: '✊', label: '주먹' };
+            }
+
+            // OK
+            if (normalizedDist < thresholds.ok) {
+                const score = normalizedDist < 0.12 ? 0.95 : 0.8;
+                return { type: 'ok', score, emoji: '👌', label: 'OK' };
+            }
+
+            // V
+            if (fingers.thumb.closed && fingers.index.extended && fingers.middle.extended &&
+                fingers.ring.closed && fingers.pinky.closed) {
+                return { type: 'V', score: 0.9, emoji: '✌️', label: 'V' };
+            }
+
+            // L
+            if (fingers.thumb.extended && fingers.index.extended &&
+                fingers.middle.closed && fingers.ring.closed && fingers.pinky.closed) {
+                return { type: 'L', score: 0.85, emoji: '👆', label: 'L' };
+            }
+
+            return { type: 'none', score: 0, emoji: '🤚', label: '인식 안됨' };
+        }
+
+        function drawLandmarks(landmarks) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 연결선
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4], // 엄지
+                [0, 5], [5, 6], [6, 7], [7, 8], // 검지
+                [0, 9], [9, 10], [10, 11], [11, 12], // 중지
+                [0, 13], [13, 14], [14, 15], [15, 16], // 약지
+                [0, 17], [17, 18], [18, 19], [19, 20], // 새끼
+                [5, 9], [9, 13], [13, 17] // 손바닥
+            ];
+
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            connections.forEach(([a, b]) => {
+                const p1 = landmarks[a];
+                const p2 = landmarks[b];
+                ctx.beginPath();
+                ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                ctx.stroke();
+            });
+
+            // 점
+            landmarks.forEach((lm, i) => {
+                const x = lm.x * canvas.width;
+                const y = lm.y * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = [0, 4, 8, 12, 16, 20].includes(i) ? '#ff6b9d' : '#4ade80';
+                ctx.fill();
+            });
+        }
+
+        // 버튼 이벤트
+        document.getElementById('btnInit').addEventListener('click', async () => {
+            log('초기화 중...');
+            const vision = await FilesetResolver.forVisionTasks(
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+            );
+            handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+                    delegate: 'GPU'
+                },
+                runningMode: 'VIDEO',
+                numHands: 1
+            });
+            log('✅ Hand OK');
+
+            faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+                    delegate: 'GPU'
+                },
+                runningMode: 'VIDEO',
+                numFaces: 1
+            });
+            log('✅ Face OK');
+
+            document.getElementById('btnInit').disabled = true;
+            document.getElementById('btnCamera').disabled = false;
+        });
+
+        document.getElementById('btnCamera').addEventListener('click', async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            video.srcObject = stream;
+            await video.play();
+            log('✅ 카메라 시작');
+            document.getElementById('btnCamera').disabled = true;
+            document.getElementById('btnStart').disabled = false;
+        });
+
+        document.getElementById('btnStart').addEventListener('click', () => {
+            isRunning = true;
+            document.getElementById('btnStart').disabled = true;
+            log('🎯 감지 시작');
+            detectFrame();
+        });
+
+        function detectFrame() {
+            if (!isRunning) return;
+
+            const now = performance.now();
+            const handResults = handLandmarker.detectForVideo(video, now);
+            const faceResults = faceLandmarker.detectForVideo(video, now);
+
+            // FPS
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                document.getElementById('fps').textContent = frameCount + ' FPS';
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            let gesture = { type: 'none', score: 0, emoji: '🤚', label: '대기' };
+
+            // 손 감지
+            if (handResults.landmarks?.length > 0) {
+                const landmarks = handResults.landmarks[0];
+                drawLandmarks(landmarks);
+                gesture = detectGesture(landmarks);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // 얼굴/입술 감지
+            if (faceResults.faceLandmarks?.length > 0) {
+                const face = faceResults.faceLandmarks[0];
+                document.getElementById('metricFace').textContent = '✅';
+
+                // 입술 랜드마크: 상순 13, 하순 14, 좌 61, 우 291
+                const upperLip = face[13];
+                const lowerLip = face[14];
+                const leftLip = face[61];
+                const rightLip = face[291];
+
+                const lipV = distance(upperLip, lowerLip);
+                const lipH = distance(leftLip, rightLip);
+                const lipRatio = lipV / lipH;
+
+                document.getElementById('metricLipV').textContent = lipV.toFixed(4);
+                document.getElementById('metricLipH').textContent = lipH.toFixed(4);
+                document.getElementById('metricLipRatio').textContent = lipRatio.toFixed(4);
+
+                // 뽀뽀 감지
+                if (lipRatio < thresholds.kiss) {
+                    const kissScore = lipRatio < 0.10 ? 0.95 : 0.8;
+                    if (kissScore > gesture.score) {
+                        gesture = { type: 'kiss', score: kissScore, emoji: '💋', label: '뽀뽀!' };
+                    }
+                }
+
+                // 입술 시각화
+                drawLips(face);
+            } else {
+                document.getElementById('metricFace').textContent = '❌';
+                document.getElementById('metricLipV').textContent = '-';
+                document.getElementById('metricLipH').textContent = '-';
+                document.getElementById('metricLipRatio').textContent = '-';
+            }
+
+            // 결과 표시
+            document.getElementById('emoji').textContent = gesture.emoji;
+            document.getElementById('label').textContent = gesture.label;
+            document.getElementById('score').textContent = gesture.score > 0 ?
+                `신뢰도: ${(gesture.score * 100).toFixed(0)}%` : '-';
+
+            if (gesture.type !== 'none' && gesture.score >= thresholds.conf) {
+                log(`${gesture.emoji} ${gesture.label} (${(gesture.score * 100).toFixed(0)}%)`);
+            }
+
+            requestAnimationFrame(detectFrame);
+        }
+
+        function drawLips(face) {
+            // 입술 주요 포인트
+            const lipPoints = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146];
+            ctx.strokeStyle = '#ff6b9d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            lipPoints.forEach((idx, i) => {
+                const p = face[idx];
+                const x = p.x * canvas.width;
+                const y = p.y * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.stroke();
+        }
+    </script>
+</body>
+
+</html>
