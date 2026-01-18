@@ -1,73 +1,184 @@
-# React + TypeScript + Vite
+# 뽀뽀뽀 (가제) - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+픽셀 개구리가 되어 숲속을 탐험하는 웹 기반 멀티플레이어 플랫폼 게임입니다.
+게임 화면과 화상 채팅(LiveKit)이 결합된 하이브리드 레이아웃을 제공합니다.
 
-Currently, two official plugins are available:
+## 🛠 Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework:** React + TypeScript + Vite
+- **Styling:** CSS Modules (Standard CSS)
+- **State Management:** Zustand
+- **Game Engine:** Phaser 3 + Matter.js
+- **Video Chat:** LiveKit (연동 예정)
+- **Communication:** WebSocket
 
-## React Compiler
+---
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+## 📅 개발 진행 상황 (2026-01-18 업데이트)
 
-## Expanding the ESLint configuration
+### ✅ 완료된 기능
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+#### 1. 인증 시스템
+- **로그인/회원가입 API 연동**
+  - `POST /api/auth/signup` - 회원가입
+  - `POST /api/auth/login` - 로그인
+  - `POST /api/auth/check-id/:loginId` - ID 중복 체크
+- **입력 검증**
+  - ID: 영문+숫자, 4-20자
+  - 비밀번호: 최소 8자
+  - 이메일: 유효성 검사
+- **실시간 ID 중복 체크** (500ms debounce)
+- **HTTP 에러 처리** (400, 401, 403, 404, 500 등)
+- **JWT 토큰 저장** (localStorage)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+#### 2. 로비 시스템
+- **방 만들기 (Host)**
+  - 6자리 랜덤 방 코드 생성
+  - 자동 HOST 권한 부여
+- **방 참가하기 (Join)**
+  - 6자리 코드 입력 및 검증
+  - 방 존재 여부 확인 (백엔드 연동 대기)
+- **설정 (Settings)**
+  - 닉네임 변경
+  - 마이크 볼륨 조절 (UI)
+  - 카메라 미리보기 (UI)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+#### 3. 게임 엔진 (Phaser 3 + Matter.js)
+- **물리 엔진**
+  - 중력, 점프, 가속/감속
+  - 회전 고정 (피코파크 스타일) - 머리 밟기 가능
+  - 확장 가능한 물리 파라미터 구조
+- **멀티플레이어 시스템**
+  - 4명 플레이어 지원
+  - 플레이어별 색상 테마
+    - P1: 녹색 (#4CAF50)
+    - P2: 파란색 (#2196F3)
+    - P3: 주황색 (#FF9800)
+    - P4: 보라색 (#9C27B0)
+- **횡스크롤 카메라**
+  - 3000px 맵 너비
+  - 4명 플레이어 동시 추적
+  - 플레이어는 카메라 밖으로 이동 불가
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### 4. 인게임 UI
+- **카메라 컨트롤** (Discord 스타일)
+  - 본인: 마이크/카메라 on/off 버튼
+  - 타인: 스피커 (볼륨 조절)
+  - 세로 볼륨 슬라이더 (클릭 방식)
+- **4분할 화상 영역**
+  - 플레이어별 색상 테두리
+  - 카메라 off 시 검은 화면
+
+#### 5. 반응형 UI
+- **로그인/로비/인게임 모두 반응형 처리**
+  - box-sizing으로 오버플로우 해결
+  - 미디어 쿼리 적용
+  - 창 크기 변경 시 자동 조정
+
+#### 6. WebSocket 기본 구조
+- **GameWebSocket 클래스 구현**
+  - JOIN/MOVE/LEAVE 메시지 타입
+  - 연결/해제 관리
+  - 엔드포인트: `ws://localhost:9001/ws/game`
+
+---
+
+## 📂 Project Structure
+
+```bash
+src/
+├── apis/
+│   └── authApi.ts           # 인증 API (signup, login, checkId)
+├── components/              # 공통 컴포넌트
+├── game/
+│   ├── scenes/
+│   │   └── MainScene.ts     # [NEW] Phaser 게임 로직
+│   ├── websocket/
+│   │   └── GameWebSocket.ts # [NEW] WebSocket 통신
+│   └── PhaserGame.tsx       # [NEW] Phaser 설정
+├── pages/
+│   ├── LoginPage/           # 로그인/회원가입
+│   ├── lobby/
+│   │   ├── LobbyPage.tsx    # 로비 (Host/Join/Settings)
+│   │   └── LobbyPage.module.css
+│   └── game/
+│       ├── GamePage.tsx     # 인게임 (Phaser + 카메라 UI)
+│       └── GamePage.module.css
+├── store/
+│   └── useGameStore.ts      # Zustand 전역 상태
+├── App.tsx                  # 라우팅
+└── main.tsx
+```
+# 2026-01-18 로그인-로비-게임 페이지 구현
+---
+
+## 🚀 실행 방법
+
+### 1. 설치
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. 개발 서버 실행
+```bash
+npm run dev
 ```
+
+### 3. 접속
+```
+http://localhost:5173
+```
+
+---
+
+## 🔗 백엔드 연동 현황
+
+### ✅ 연동 가능 (테스트 필요)
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/check-id/:loginId`
+
+### ⏳ 대기 중
+- `GET /api/rooms/:roomId` - 방 존재 여부 확인
+- `WebSocket ws://localhost:9001/ws/game` - 게임 통신
+- `POST /api/livekit/token` - LiveKit 토큰 발급
+
+---
+
+## 📝 다음 작업 예정
+
+- [ ] 백엔드 WebSocket 서버 연동 테스트
+- [ ] Tiled 맵 에디터 JSON 로드
+- [ ] LiveKit 화상 채팅 연동
+- [ ] 플레이어 애니메이션 (스프라이트)
+
+---
+
+## 🐛 알려진 이슈
+
+1. **방 참가 시 방 존재 여부 확인**
+   - 현재: 모든 코드를 "방 없음"으로 처리
+   - 해결: 백엔드 API `GET /api/rooms/:roomId` 연동 필요
+
+2. **WebSocket 연결 테스트**
+   - 백엔드 WebSocket 서버 준비 대기 중
+
+3. **LiveKit 카메라 테스트**
+   - LiveKit 토큰 API 연동 후 테스트 가능
+
+---
+
+## 💡 개발 참고사항
+
+### Phaser 게임 엔진
+- **물리 파라미터 수정**: `src/game/scenes/MainScene.ts`의 `PHYSICS` 객체
+- **맵 크기 변경**: `worldWidth` 변수 (기본 3000px)
+- **플레이어 이미지 교체**: `createPlayer()` 메서드의 Graphics를 이미지 로드로 교체
+
+### 반응형 처리
+- **전체 화면 사용**: Phaser가 카메라 영역 제외한 전체 화면 사용
+- **창 크기 변경**: 자동 리사이즈 (`Phaser.Scale.RESIZE`)
+
+### WebSocket 통신
+- **메시지 타입**: JOIN, MOVE, LEAVE
+- **좌표 보간**: Tweens 사용 권장 (부드러운 이동)
