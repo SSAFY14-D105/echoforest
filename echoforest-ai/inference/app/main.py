@@ -25,20 +25,37 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="EchoForest AI Server",
     description="""
-    ## 감정 분석 API
-    
-    Smilegate unSmile 모델을 사용한 혐오 발언 탐지 서비스
-    
-    ### 기능
-    - 단일 텍스트 감정 분석
-    - 배치 텍스트 감정 분석
-    - 혐오 카테고리 분류 (여성/가족, 남성, 성소수자, 인종/국적, 연령, 지역, 종교, 기타 혐오, 악플/욕설)
-    
-    ### Threshold
-    - 최적 threshold: 17.4%
+## 🎮 EchoForest 감정 분석 API
+
+Smilegate unSmile 모델을 사용한 **혐오 발언 탐지 서비스**
+
+---
+
+### 🎚️ 심각도 단계 (Severity Level)
+
+| severity | label | Confidence | 게임 패널티 |
+|----------|-------|------------|-------------|
+| **1** | `critical` | 80% 이상 | 🔴 최강 저주 |
+| **2** | `severe` | 50~80% | 🟠 강한 저주 |
+| **3** | `mild` | 17.4~50% | 🟡 약한 저주 |
+| **0** | `clean` | 17.4% 미만 | ✅ 정상 |
+
+---
+
+### 📊 혐오 카테고리
+여성/가족, 남성, 성소수자, 인종/국적, 연령, 지역, 종교, 기타 혐오, 악플/욕설
+
+### ⚙️ Threshold
+최적 threshold: **17.4%**
     """,
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "sentiment",
+            "description": "텍스트 감정 분석 API"
+        }
+    ]
 )
 
 # CORS 설정
