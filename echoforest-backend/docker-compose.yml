@@ -18,12 +18,15 @@ services:
       - DB_USERNAME=user
       - DB_PASSWORD=password
       - DB_DRIVER=com.mysql.cj.jdbc.Driver
+      - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
       - livekit
       - mysql
       - redis
+    volumes:
+      - ./uploads:/app/uploads
     networks:
       - echo-net
 
@@ -57,7 +60,7 @@ services:
       MYSQL_PASSWORD: password
       TZ: Asia/Seoul
     ports:
-      - "3306:3306"
+      - "3307:3306" # 포트 충돌 방지
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
