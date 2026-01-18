@@ -36,8 +36,8 @@
             background: #000;
         }
 
-        video,
-        canvas {
+        .camera-wrapper video,
+        .camera-wrapper canvas {
             position: absolute;
             top: 0;
             left: 0;
@@ -45,11 +45,11 @@
             height: 100%;
         }
 
-        video {
+        .camera-wrapper video {
             transform: scaleX(-1);
         }
 
-        canvas {
+        .camera-wrapper canvas {
             transform: scaleX(-1);
             pointer-events: none;
         }
@@ -285,9 +285,17 @@
             <div class="slider-group">
                 <div class="slider-label">
                     <span>💋 뽀뽀 (입술 비율 임계값)</span>
-                    <span id="valKiss">0.15</span>
+                    <span id="valKiss">0.50</span>
                 </div>
-                <input type="range" id="sliderKiss" min="0.08" max="0.25" step="0.01" value="0.15">
+                <input type="range" id="sliderKiss" min="0.08" max="1.0" step="0.01" value="0.5">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>👄 입술 최소 크기</span>
+                    <span id="valKissSize">0.10</span>
+                </div>
+                <input type="range" id="sliderKissSize" min="0.02" max="0.5" step="0.01" value="0.1">
             </div>
         </div>
 
@@ -338,6 +346,86 @@
                     <div class="finger-icon" id="fingerPinky">🤙</div>
                     <div class="finger-name">새끼</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 커스텀 거리 측정 -->
+        <div class="panel">
+            <h3>📏 손 랜드마크 거리 측정</h3>
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+                <select id="pointA" style="flex:1;padding:5px">
+                    <option value="0">0: WRIST</option>
+                    <option value="1">1: THUMB_CMC</option>
+                    <option value="2">2: THUMB_MCP</option>
+                    <option value="3">3: THUMB_IP</option>
+                    <option value="4" selected>4: THUMB_TIP</option>
+                    <option value="5">5: INDEX_MCP</option>
+                    <option value="6">6: INDEX_PIP</option>
+                    <option value="7">7: INDEX_DIP</option>
+                    <option value="8">8: INDEX_TIP</option>
+                    <option value="9">9: MIDDLE_MCP</option>
+                    <option value="10">10: MIDDLE_PIP</option>
+                    <option value="11">11: MIDDLE_DIP</option>
+                    <option value="12">12: MIDDLE_TIP</option>
+                    <option value="13">13: RING_MCP</option>
+                    <option value="14">14: RING_PIP</option>
+                    <option value="15">15: RING_DIP</option>
+                    <option value="16">16: RING_TIP</option>
+                    <option value="17">17: PINKY_MCP</option>
+                    <option value="18">18: PINKY_PIP</option>
+                    <option value="19">19: PINKY_DIP</option>
+                    <option value="20">20: PINKY_TIP</option>
+                </select>
+                <span style="color:#888">↔</span>
+                <select id="pointB" style="flex:1;padding:5px">
+                    <option value="0">0: WRIST</option>
+                    <option value="1">1: THUMB_CMC</option>
+                    <option value="2">2: THUMB_MCP</option>
+                    <option value="3">3: THUMB_IP</option>
+                    <option value="4">4: THUMB_TIP</option>
+                    <option value="5">5: INDEX_MCP</option>
+                    <option value="6">6: INDEX_PIP</option>
+                    <option value="7">7: INDEX_DIP</option>
+                    <option value="8" selected>8: INDEX_TIP</option>
+                    <option value="9">9: MIDDLE_MCP</option>
+                    <option value="10">10: MIDDLE_PIP</option>
+                    <option value="11">11: MIDDLE_DIP</option>
+                    <option value="12">12: MIDDLE_TIP</option>
+                    <option value="13">13: RING_MCP</option>
+                    <option value="14">14: RING_PIP</option>
+                    <option value="15">15: RING_DIP</option>
+                    <option value="16">16: RING_TIP</option>
+                    <option value="17">17: PINKY_MCP</option>
+                    <option value="18">18: PINKY_PIP</option>
+                    <option value="19">19: PINKY_DIP</option>
+                    <option value="20">20: PINKY_TIP</option>
+                </select>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">현재 거리</div>
+                    <div class="metric-value" id="customDist">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">정규화 거리</div>
+                    <div class="metric-value" id="customDistNorm">-</div>
+                </div>
+            </div>
+            <div class="slider-group" style="margin-top:10px">
+                <div class="slider-label">
+                    <span>임계값</span>
+                    <span id="valCustomThresh">0.20</span>
+                </div>
+                <input type="range" id="sliderCustomThresh" min="0.05" max="0.5" step="0.01" value="0.2">
+            </div>
+            <div style="text-align:center;margin-top:10px;padding:8px;background:rgba(0,0,0,0.3);border-radius:4px">
+                <span id="customResult">거리 &lt; 임계값: ❓</span>
+            </div>
+            <!-- 손 스켈레톤 미리보기 -->
+            <div style="margin-top:10px;text-align:center">
+                <canvas id="skeletonPreview" width="600" height="600
+                " style="background:#111;border-radius:8px"></canvas>
+                <div style="font-size:10px;color:#888;margin-top:4px">선택한 점 연결선 표시</div>
             </div>
         </div>
 
@@ -417,7 +505,8 @@
             ok: 0.18,
             v: 1.05,
             conf: 0.7,
-            kiss: 0.15
+            kiss: 0.5,
+            kissMinSize: 0.1
         };
 
         // 슬라이더 이벤트
@@ -440,6 +529,13 @@
         document.getElementById('sliderKiss').addEventListener('input', e => {
             thresholds.kiss = parseFloat(e.target.value);
             document.getElementById('valKiss').textContent = thresholds.kiss.toFixed(2);
+        });
+        document.getElementById('sliderKissSize').addEventListener('input', e => {
+            thresholds.kissMinSize = parseFloat(e.target.value);
+            document.getElementById('valKissSize').textContent = thresholds.kissMinSize.toFixed(2);
+        });
+        document.getElementById('sliderCustomThresh').addEventListener('input', e => {
+            document.getElementById('valCustomThresh').textContent = parseFloat(e.target.value).toFixed(2);
         });
 
         function log(msg) {
@@ -532,11 +628,7 @@
             return { type: 'none', score: 0, emoji: '🤚', label: '인식 안됨' };
         }
 
-        function drawLandmarks(landmarks) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+        function drawLandmarks(landmarks, lineColor = '#667eea') {
             // 연결선
             const connections = [
                 [0, 1], [1, 2], [2, 3], [3, 4], // 엄지
@@ -547,7 +639,7 @@
                 [5, 9], [9, 13], [13, 17] // 손바닥
             ];
 
-            ctx.strokeStyle = '#667eea';
+            ctx.strokeStyle = lineColor;
             ctx.lineWidth = 2;
             connections.forEach(([a, b]) => {
                 const p1 = landmarks[a];
@@ -569,6 +661,76 @@
             });
         }
 
+        function drawSkeletonPreview(landmarks, pointAIdx, pointBIdx, isClose) {
+            const previewCanvas = document.getElementById('skeletonPreview');
+            const pctx = previewCanvas.getContext('2d');
+            const w = previewCanvas.width;
+            const h = previewCanvas.height;
+
+            pctx.clearRect(0, 0, w, h);
+
+            // 손 중심 계산 (손목과 중지 MCP 사이)
+            const cx = (landmarks[0].x + landmarks[9].x) / 2;
+            const cy = (landmarks[0].y + landmarks[9].y) / 2;
+
+            // 스케일 계산 (손 크기에 맞춤)
+            const scale = 1.0;
+
+            const toCanvas = (lm) => ({
+                x: w - (w / 2 + (lm.x - cx) * w * scale),
+                y: h / 2 + (lm.y - cy) * h * scale * 0.9
+            });
+
+            // 연결선 그리기
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],
+                [0, 5], [5, 6], [6, 7], [7, 8],
+                [0, 9], [9, 10], [10, 11], [11, 12],
+                [0, 13], [13, 14], [14, 15], [15, 16],
+                [0, 17], [17, 18], [18, 19], [19, 20],
+                [5, 9], [9, 13], [13, 17]
+            ];
+
+            pctx.strokeStyle = '#444';
+            pctx.lineWidth = 1;
+            connections.forEach(([a, b]) => {
+                const p1 = toCanvas(landmarks[a]);
+                const p2 = toCanvas(landmarks[b]);
+                pctx.beginPath();
+                pctx.moveTo(p1.x, p1.y);
+                pctx.lineTo(p2.x, p2.y);
+                pctx.stroke();
+            });
+
+            // 선택된 두 점 연결선 (빨간/초록)
+            const pA = toCanvas(landmarks[pointAIdx]);
+            const pB = toCanvas(landmarks[pointBIdx]);
+            pctx.strokeStyle = isClose ? '#4ade80' : '#ff6b6b';
+            pctx.lineWidth = 3;
+            pctx.beginPath();
+            pctx.moveTo(pA.x, pA.y);
+            pctx.lineTo(pB.x, pB.y);
+            pctx.stroke();
+
+            // 모든 점 그리기
+            landmarks.forEach((lm, i) => {
+                const p = toCanvas(lm);
+                const isSelected = i === pointAIdx || i === pointBIdx;
+                pctx.beginPath();
+                pctx.arc(p.x, p.y, isSelected ? 12 : 6, 0, 2 * Math.PI);
+                pctx.fillStyle = i === pointAIdx ? '#667eea' :
+                    i === pointBIdx ? '#ff6b9d' : '#555';
+                pctx.fill();
+
+                // 모든 점에 번호 표시
+                pctx.fillStyle = '#fff';
+                pctx.font = isSelected ? 'bold 10px sans-serif' : '8px sans-serif';
+                pctx.textAlign = 'center';
+                pctx.textBaseline = 'middle';
+                pctx.fillText(i.toString(), p.x, p.y);
+            });
+        }
+
         // 버튼 이벤트
         document.getElementById('btnInit').addEventListener('click', async () => {
             log('초기화 중...');
@@ -581,7 +743,7 @@
                     delegate: 'GPU'
                 },
                 runningMode: 'VIDEO',
-                numHands: 1
+                numHands: 2
             });
             log('✅ Hand OK');
 
@@ -632,13 +794,42 @@
 
             let gesture = { type: 'none', score: 0, emoji: '🤚', label: '대기' };
 
-            // 손 감지
+            // 캔버스 초기화
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 모든 손 감지 및 시각화
             if (handResults.landmarks?.length > 0) {
+                // 모든 손 그리기
+                handResults.landmarks.forEach((landmarks, handIdx) => {
+                    const color = handIdx === 0 ? '#667eea' : '#ff6b9d';
+                    drawLandmarks(landmarks, color);
+                });
+
+                // 첫 번째 손으로 제스처 감지
                 const landmarks = handResults.landmarks[0];
-                drawLandmarks(landmarks);
                 gesture = detectGesture(landmarks);
-            } else {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 커스텀 거리 측정
+                const pointAIdx = parseInt(document.getElementById('pointA').value);
+                const pointBIdx = parseInt(document.getElementById('pointB').value);
+                const pointA = landmarks[pointAIdx];
+                const pointB = landmarks[pointBIdx];
+                const customDist = distance(pointA, pointB);
+                const palmSize = distance(landmarks[0], landmarks[9]);
+                const customDistNorm = customDist / palmSize;
+                const customThresh = parseFloat(document.getElementById('sliderCustomThresh').value);
+
+                document.getElementById('customDist').textContent = customDist.toFixed(4);
+                document.getElementById('customDistNorm').textContent = customDistNorm.toFixed(4);
+
+                const isClose = customDistNorm < customThresh;
+                document.getElementById('customResult').innerHTML =
+                    `거리 &lt; 임계값: ${isClose ? '✅ YES' : '❌ NO'}`;
+
+                // 스켈레톤 미리보기 그리기
+                drawSkeletonPreview(landmarks, pointAIdx, pointBIdx, isClose);
             }
 
             // 얼굴/입술 감지
@@ -660,9 +851,10 @@
                 document.getElementById('metricLipH').textContent = lipH.toFixed(4);
                 document.getElementById('metricLipRatio').textContent = lipRatio.toFixed(4);
 
-                // 뽀뽀 감지
-                if (lipRatio < thresholds.kiss) {
-                    const kissScore = lipRatio < 0.10 ? 0.95 : 0.8;
+                // 뽀뽀 감지 (비율 + 크기 조건)
+                // 입술 오므림 = 가로 줄어듦 = 비율 증가 → 비율이 임계값보다 크면 뽀뽀
+                if (lipRatio > thresholds.kiss && lipH >= thresholds.kissMinSize) {
+                    const kissScore = lipRatio > 0.5 ? 0.95 : 0.8;
                     if (kissScore > gesture.score) {
                         gesture = { type: 'kiss', score: kissScore, emoji: '💋', label: '뽀뽀!' };
                     }
