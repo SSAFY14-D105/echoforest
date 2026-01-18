@@ -38,9 +38,15 @@ LABELS = [
     "종교",
     "기타 혐오",
     "악플/욕설",
-    "clean"  # 정상 발화
+    "clean"
 ]
 
+# 사용자 정의 키워드 사전 (모델보다 우선 적용)
+CUSTOM_KEYWORDS = {
+    1: ["씨발", "개새끼", "니미", "좆", "좃"],  # Level 1: Critical (매우 심함)
+    2: ["개빡", "닥쳐", "꺼져", "졸라", "존나", "미친", "돌았", "병신"],  # Level 2: Severe (심함)
+    3: ["킹받", "멍청", "바보", "짜증", "화나", "빡치", "열받"],  # Level 3: Mild (경미)
+}
 
 class UnSmileModel:
     """unSmile 감정 분석 모델"""
@@ -79,15 +85,30 @@ class UnSmileModel:
             text: 분석할 텍스트
             
         Returns:
-            dict: {
-                'is_negative': bool,  # 부정적(혐오) 발화인지
-                'label': str,         # 가장 높은 레이블
-                'confidence': float,  # 해당 레이블 확률
-                'all_scores': dict    # 모든 레이블별 점수
-            }
+            dict
         """
         if not self._loaded:
             self.load()
+        
+        # 1. Rule-based 필터링 (사용자 정의 키워드 우선 확인)
+        for level, keywords in CUSTOM_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in text:
+                    # 키워드 발견 시 즉시 해당 레벨로 판정
+                    severity = level
+                    severity_label = SEVERITY_DESCRIPTIONS[severity]
+                    print(f"🔍 Custom Keyword Detected: '{keyword}' -> Level {level}")
+                    
+                    return {
+                        'is_negative': True,
+                        'label': '악플/욕설 (Custom Rule)',
+                        'confidence': 0.99, # 강제 확신
+                        'severity': severity,
+                        'severity_label': severity_label,
+                        'all_scores': {"custom_rule": 0.99}
+                    }
+
+        # 2. AI 모델 기반 분석
         
         # 토큰화
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
@@ -109,7 +130,10 @@ class UnSmileModel:
         max_hate_label = max(hate_scores, key=hate_scores.get)
         max_hate_score = hate_scores[max_hate_label]
         
-        # threshold 기준으로 판단
+        # threshold 기준으로 판단 (Confidence)
+        # 중요: 신조어나 어미 변형으로 인해 점수가 낮게 나올 수 있으므로, 
+        # 특정 수준 이상이면 무조건 3단계라도 주는 보정 로직을 추가할 수도 있음.
+        
         is_negative = max_hate_score >= self.threshold
         
         # 심각도 단계 계산
