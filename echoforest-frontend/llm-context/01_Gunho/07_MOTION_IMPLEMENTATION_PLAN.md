@@ -54,3 +54,12 @@ if (window.location.hash === '#motion-test') {
   "payload": { "label": "hand_heart", "score": 0.95 }
 }
 ```
+
+---
+
+## 📚 관련 가이드 문서
+- [06_GESTURE_DETECTION_GUIDE.md](./06_GESTURE_DETECTION_GUIDE.md) : 제스처 감지 원리
+- [07_MOTION_IMPLEMENTATION_PLAN.md](./07_MOTION_IMPLEMENTATION_PLAN.md) : 현재 구현 계획
+- [08_GAME_INTEGRATION_GUIDE.md](./08_GAME_INTEGRATION_GUIDE.md) : 게임 페이지 통합 방법
+- [09_CAMERA_ADJUSTMENT_GUIDE.md](./09_CAMERA_ADJUSTMENT_GUIDE.md) : 카메라 조정 가이드
+- [10_CONFLICT_AND_MERGE_GUIDE.md](./10_CONFLICT_AND_MERGE_GUIDE.md) : **Git 충돌 및 머지 가이드 (필독)**
