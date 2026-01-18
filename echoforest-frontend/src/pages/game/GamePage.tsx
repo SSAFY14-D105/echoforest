@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import PhaserGame from '../../game/PhaserGame';
+import PhaserGame from '../../components/game/PhaserGame';
 import styles from './GamePage.module.css';
 
 // 플레이어별 색상 테마
