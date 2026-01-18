@@ -12,8 +12,8 @@
 
 ### 1단계: import 추가
 `
-파일 맨 위에 추가:
-```tsx
+app.tsx 파일 맨 위에 추가:
+```
 import { MotionCamera } from '../../components/MotionCamera';
 ```
 

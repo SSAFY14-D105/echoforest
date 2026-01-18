@@ -74,6 +74,22 @@
             opacity: 0.5;
         }
 
+        .preset-btn {
+            padding: 4px 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #222;
+            color: #fff;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
         /* 현재 감지 결과 */
         .detection-result {
             margin-top: 15px;
@@ -322,9 +338,12 @@
             </div>
         </div>
 
-        <!-- 손가락 상태 -->
+        <!-- 손가락 상태 (양손) -->
         <div class="panel">
-            <h3>🖐️ 손가락 상태</h3>
+            <h3>🖐️ 손가락 상태 (양손)</h3>
+
+            <!-- 손 1 -->
+            <div style="margin-bottom:8px;font-size:12px;color:#888">🫲 손1 (첫번째)</div>
             <div class="fingers-status">
                 <div class="finger">
                     <div class="finger-icon" id="fingerThumb">👍</div>
@@ -346,12 +365,75 @@
                     <div class="finger-icon" id="fingerPinky">🤙</div>
                     <div class="finger-name">새끼</div>
                 </div>
+                <div class="finger" style="border-left:1px solid #333;padding-left:8px">
+                    <div class="finger-icon" id="hand1Count" style="font-size:20px;opacity:1">0</div>
+                    <div class="finger-name">개</div>
+                </div>
+            </div>
+
+            <!-- 손 2 -->
+            <div style="margin-top:12px;margin-bottom:8px;font-size:12px;color:#888">🫱 손2 (두번째)</div>
+            <div class="fingers-status">
+                <div class="finger">
+                    <div class="finger-icon" id="finger2Thumb">👍</div>
+                    <div class="finger-name">엄지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="finger2Index">☝️</div>
+                    <div class="finger-name">검지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="finger2Middle">🖕</div>
+                    <div class="finger-name">중지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="finger2Ring">💍</div>
+                    <div class="finger-name">약지</div>
+                </div>
+                <div class="finger">
+                    <div class="finger-icon" id="finger2Pinky">🤙</div>
+                    <div class="finger-name">새끼</div>
+                </div>
+                <div class="finger" style="border-left:1px solid #333;padding-left:8px">
+                    <div class="finger-icon" id="hand2Count" style="font-size:20px;opacity:1">0</div>
+                    <div class="finger-name">개</div>
+                </div>
+            </div>
+
+            <!-- 합계 (이심전심용) -->
+            <div
+                style="margin-top:15px;text-align:center;padding:12px;background:linear-gradient(135deg,#667eea22,#764ba222);border-radius:8px">
+                <div style="font-size:12px;color:#888;margin-bottom:4px">🎯 양손 합계 (이심전심!)</div>
+                <div id="totalFingers" style="font-size:32px;font-weight:bold;color:#4ade80">0</div>
             </div>
         </div>
 
         <!-- 커스텀 거리 측정 -->
         <div class="panel">
             <h3>📏 손 랜드마크 거리 측정</h3>
+
+            <!-- 빠른 프리셋 버튼 -->
+            <div style="margin-bottom:12px">
+                <div style="font-size:11px;color:#888;margin-bottom:6px">🎯 빠른 측정</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    <button class="preset-btn" data-a="4" data-b="8">👍↔☝️</button>
+                    <button class="preset-btn" data-a="4" data-b="12">👍↔🖕</button>
+                    <button class="preset-btn" data-a="4" data-b="16">👍↔💍</button>
+                    <button class="preset-btn" data-a="4" data-b="20">👍↔🤙</button>
+                    <button class="preset-btn" data-a="8" data-b="12">☝️↔🖕</button>
+                    <button class="preset-btn" data-a="12" data-b="16">🖕↔💍</button>
+                    <button class="preset-btn" data-a="16" data-b="20">💍↔🤙</button>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+                    <button class="preset-btn" data-a="0" data-b="9">손바닥</button>
+                    <button class="preset-btn" data-a="0" data-b="4">손목↔엄지</button>
+                    <button class="preset-btn" data-a="0" data-b="8">손목↔검지</button>
+                    <button class="preset-btn" data-a="0" data-b="12">손목↔중지</button>
+                    <button class="preset-btn" data-a="5" data-b="8">검지펴짐</button>
+                    <button class="preset-btn" data-a="9" data-b="12">중지펴짐</button>
+                </div>
+            </div>
+
             <div style="display:flex;gap:10px;margin-bottom:10px">
                 <select id="pointA" style="flex:1;padding:5px">
                     <option value="0">0: WRIST</option>
@@ -423,9 +505,72 @@
             </div>
             <!-- 손 스켈레톤 미리보기 -->
             <div style="margin-top:10px;text-align:center">
-                <canvas id="skeletonPreview" width="600" height="600
+                <canvas id="skeletonPreview" width="900" height="600
                 " style="background:#111;border-radius:8px"></canvas>
                 <div style="font-size:10px;color:#888;margin-top:4px">선택한 점 연결선 표시</div>
+            </div>
+        </div>
+
+        <!-- 양손 간 거리 측정 -->
+        <div class="panel">
+            <h3>🤝 양손 간 거리 측정</h3>
+            <div style="font-size:11px;color:#888;margin-bottom:8px">손1의 점 ↔ 손2의 점 거리</div>
+
+            <!-- 프리셋 버튼 -->
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+                <button class="preset-btn cross-preset" data-a="4" data-b="4">엄지↔엄지 (탈모빔)</button>
+                <button class="preset-btn cross-preset" data-a="8" data-b="8">검지↔검지</button>
+                <button class="preset-btn cross-preset" data-a="4" data-b="8">엄지↔검지 (하트)</button>
+                <button class="preset-btn cross-preset" data-a="12" data-b="12">중지↔중지</button>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+                <div style="flex:1;text-align:center">
+                    <div style="font-size:10px;color:#667eea;margin-bottom:4px">손1 🫲</div>
+                    <select id="crossPointA" style="width:100%;padding:5px">
+                        <option value="4" selected>4: THUMB_TIP</option>
+                        <option value="8">8: INDEX_TIP</option>
+                        <option value="12">12: MIDDLE_TIP</option>
+                        <option value="16">16: RING_TIP</option>
+                        <option value="20">20: PINKY_TIP</option>
+                        <option value="0">0: WRIST</option>
+                    </select>
+                </div>
+                <span style="color:#888">↔</span>
+                <div style="flex:1;text-align:center">
+                    <div style="font-size:10px;color:#ff6b9d;margin-bottom:4px">손2 🫱</div>
+                    <select id="crossPointB" style="width:100%;padding:5px">
+                        <option value="4" selected>4: THUMB_TIP</option>
+                        <option value="8">8: INDEX_TIP</option>
+                        <option value="12">12: MIDDLE_TIP</option>
+                        <option value="16">16: RING_TIP</option>
+                        <option value="20">20: PINKY_TIP</option>
+                        <option value="0">0: WRIST</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">거리 (raw)</div>
+                    <div class="metric-value" id="crossDistRaw">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">정규화</div>
+                    <div class="metric-value" id="crossDistNorm">-</div>
+                </div>
+            </div>
+
+            <div class="slider-group" style="margin-top:10px">
+                <div class="slider-label">
+                    <span>임계값</span>
+                    <span id="valCrossThresh">0.15</span>
+                </div>
+                <input type="range" id="sliderCrossThresh" min="0.05" max="0.4" step="0.01" value="0.15">
+            </div>
+
+            <div style="text-align:center;margin-top:10px;padding:12px;background:rgba(0,0,0,0.3);border-radius:4px">
+                <span id="crossResult" style="font-size:18px">🤝 양손 필요</span>
             </div>
         </div>
 
@@ -449,6 +594,48 @@
                     <div class="metric-label">얼굴 감지</div>
                     <div class="metric-value" id="metricFace">❌</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 볼콕 감지 -->
+        <div class="panel">
+            <h3>👆😊 볼콕 감지</h3>
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+                <select id="pokeFingerSelect" style="flex:1;padding:5px">
+                    <option value="4">4: THUMB_TIP (엄지)</option>
+                    <option value="8" selected>8: INDEX_TIP (검지)</option>
+                    <option value="12">12: MIDDLE_TIP (중지)</option>
+                    <option value="16">16: RING_TIP (약지)</option>
+                    <option value="20">20: PINKY_TIP (새끼)</option>
+                </select>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">왼볼 거리</div>
+                    <div class="metric-value" id="metricLeftCheek">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">오른볼 거리</div>
+                    <div class="metric-value" id="metricRightCheek">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">얼굴 크기</div>
+                    <div class="metric-value" id="metricFaceSize">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">정규화 거리</div>
+                    <div class="metric-value" id="metricCheekNorm">-</div>
+                </div>
+            </div>
+            <div class="slider-group" style="margin-top:10px">
+                <div class="slider-label">
+                    <span>볼콕 임계값</span>
+                    <span id="valCheekThresh">0.25</span>
+                </div>
+                <input type="range" id="sliderCheekThresh" min="0.1" max="0.5" step="0.01" value="0.25">
+            </div>
+            <div style="text-align:center;margin-top:10px;padding:12px;background:rgba(0,0,0,0.3);border-radius:4px">
+                <span id="cheekPokeResult" style="font-size:20px">👆😊 대기중...</span>
             </div>
         </div>
 
@@ -506,7 +693,8 @@
             v: 1.05,
             conf: 0.7,
             kiss: 0.5,
-            kissMinSize: 0.1
+            kissMinSize: 0.1,
+            cheekPoke: 0.25
         };
 
         // 슬라이더 이벤트
@@ -537,6 +725,35 @@
         document.getElementById('sliderCustomThresh').addEventListener('input', e => {
             document.getElementById('valCustomThresh').textContent = parseFloat(e.target.value).toFixed(2);
         });
+        document.getElementById('sliderCheekThresh').addEventListener('input', e => {
+            thresholds.cheekPoke = parseFloat(e.target.value);
+            document.getElementById('valCheekThresh').textContent = thresholds.cheekPoke.toFixed(2);
+        });
+
+        // 프리셋 버튼 클릭 이벤트 (한 손 내 거리)
+        document.querySelectorAll('.preset-btn:not(.cross-preset)').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const a = btn.dataset.a;
+                const b = btn.dataset.b;
+                document.getElementById('pointA').value = a;
+                document.getElementById('pointB').value = b;
+            });
+        });
+
+        // 양손 프리셋 버튼 클릭 이벤트
+        document.querySelectorAll('.cross-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const a = btn.dataset.a;
+                const b = btn.dataset.b;
+                document.getElementById('crossPointA').value = a;
+                document.getElementById('crossPointB').value = b;
+            });
+        });
+
+        // 양손 거리 슬라이더 이벤트
+        document.getElementById('sliderCrossThresh').addEventListener('input', e => {
+            document.getElementById('valCrossThresh').textContent = parseFloat(e.target.value).toFixed(2);
+        });
 
         function log(msg) {
             const p = document.createElement('p');
@@ -561,28 +778,41 @@
         }
 
         function detectGesture(landmarks) {
+            // 손바닥 크기 (정규화용)
+            const palmSize = distance(landmarks[0], landmarks[9]);
+
+            // 엄지 특수 처리
+            // 방법1: 엄지 끝이 검지 MCP에서 멀리 있음 (L자 등)
+            // 방법2: 엄지 끝이 손목에서 충분히 멀리 있음 (손 펼침)
+            const thumbTipToIndexMcp = distance(landmarks[4], landmarks[5]) / palmSize;
+            const thumbTipToWrist = distance(landmarks[4], landmarks[0]) / palmSize;
+            const thumbReallyExtended = isFingerExtended(landmarks, 4, 3) &&
+                (thumbTipToIndexMcp > 0.5 || thumbTipToWrist > 1.2);
+
             // 손가락 상태
             const fingers = {
-                thumb: { closed: isFingerClosed(landmarks, 4, 2), extended: isFingerExtended(landmarks, 4, 3) },
+                thumb: { closed: isFingerClosed(landmarks, 4, 2), extended: thumbReallyExtended },
                 index: { closed: isFingerClosed(landmarks, 8, 5), extended: isFingerExtended(landmarks, 8, 7) },
                 middle: { closed: isFingerClosed(landmarks, 12, 9), extended: isFingerExtended(landmarks, 12, 11) },
                 ring: { closed: isFingerClosed(landmarks, 16, 13), extended: isFingerExtended(landmarks, 16, 15) },
                 pinky: { closed: isFingerClosed(landmarks, 20, 17), extended: isFingerExtended(landmarks, 20, 19) },
             };
 
-            // UI 업데이트 - 손가락 상태
+            // UI 업데이트 - 손가락 상태 (손1)
             document.getElementById('fingerThumb').classList.toggle('extended', fingers.thumb.extended);
             document.getElementById('fingerIndex').classList.toggle('extended', fingers.index.extended);
             document.getElementById('fingerMiddle').classList.toggle('extended', fingers.middle.extended);
             document.getElementById('fingerRing').classList.toggle('extended', fingers.ring.extended);
             document.getElementById('fingerPinky').classList.toggle('extended', fingers.pinky.extended);
 
-            // 수치 계산
+            // 펴진 손가락 개수 (손1)
+            const extendedCount = [fingers.thumb, fingers.index, fingers.middle, fingers.ring, fingers.pinky]
+                .filter(f => f.extended).length;
+            document.getElementById('hand1Count').textContent = extendedCount;
+
+            // 수치 계산 (palmSize는 위에서 이미 계산됨)
             const thumbTip = landmarks[4];
             const indexTip = landmarks[8];
-            const wrist = landmarks[0];
-            const middleMcp = landmarks[9];
-            const palmSize = distance(wrist, middleMcp);
             const thumbIndexDist = distance(thumbTip, indexTip);
             const normalizedDist = thumbIndexDist / palmSize;
             const closedCount = [fingers.thumb, fingers.index, fingers.middle, fingers.ring, fingers.pinky]
@@ -661,7 +891,7 @@
             });
         }
 
-        function drawSkeletonPreview(landmarks, pointAIdx, pointBIdx, isClose) {
+        function drawSkeletonPreview(allHands, pointAIdx, pointBIdx, isClose) {
             const previewCanvas = document.getElementById('skeletonPreview');
             const pctx = previewCanvas.getContext('2d');
             const w = previewCanvas.width;
@@ -669,11 +899,12 @@
 
             pctx.clearRect(0, 0, w, h);
 
-            // 손 중심 계산 (손목과 중지 MCP 사이)
+            if (!allHands || allHands.length === 0) return;
+
+            // 첫 번째 손 기준으로 중심 계산
+            const landmarks = allHands[0];
             const cx = (landmarks[0].x + landmarks[9].x) / 2;
             const cy = (landmarks[0].y + landmarks[9].y) / 2;
-
-            // 스케일 계산 (손 크기에 맞춤)
             const scale = 1.0;
 
             const toCanvas = (lm) => ({
@@ -681,7 +912,6 @@
                 y: h / 2 + (lm.y - cy) * h * scale * 0.9
             });
 
-            // 연결선 그리기
             const connections = [
                 [0, 1], [1, 2], [2, 3], [3, 4],
                 [0, 5], [5, 6], [6, 7], [7, 8],
@@ -691,15 +921,51 @@
                 [5, 9], [9, 13], [13, 17]
             ];
 
-            pctx.strokeStyle = '#444';
-            pctx.lineWidth = 1;
-            connections.forEach(([a, b]) => {
-                const p1 = toCanvas(landmarks[a]);
-                const p2 = toCanvas(landmarks[b]);
-                pctx.beginPath();
-                pctx.moveTo(p1.x, p1.y);
-                pctx.lineTo(p2.x, p2.y);
-                pctx.stroke();
+            // 모든 손 그리기
+            const handColors = ['#667eea', '#ff6b9d'];
+            allHands.forEach((hand, handIdx) => {
+                const color = handColors[handIdx] || '#888';
+
+                // 연결선
+                pctx.strokeStyle = color + '88';
+                pctx.lineWidth = handIdx === 0 ? 2 : 1;
+                connections.forEach(([a, b]) => {
+                    const p1 = toCanvas(hand[a]);
+                    const p2 = toCanvas(hand[b]);
+                    pctx.beginPath();
+                    pctx.moveTo(p1.x, p1.y);
+                    pctx.lineTo(p2.x, p2.y);
+                    pctx.stroke();
+                });
+
+                // 점
+                hand.forEach((lm, i) => {
+                    const p = toCanvas(lm);
+                    const isSelected = handIdx === 0 && (i === pointAIdx || i === pointBIdx);
+                    pctx.beginPath();
+                    pctx.arc(p.x, p.y, isSelected ? 12 : (handIdx === 0 ? 6 : 5), 0, 2 * Math.PI);
+                    if (handIdx === 0) {
+                        pctx.fillStyle = i === pointAIdx ? '#667eea' :
+                            i === pointBIdx ? '#ff6b9d' : '#555';
+                    } else {
+                        pctx.fillStyle = '#ff6b9d';
+                    }
+                    pctx.fill();
+
+                    // 번호 (양손 모두)
+                    pctx.fillStyle = '#fff';
+                    pctx.font = isSelected ? 'bold 10px sans-serif' : '7px sans-serif';
+                    pctx.textAlign = 'center';
+                    pctx.textBaseline = 'middle';
+                    pctx.fillText(i.toString(), p.x, p.y);
+                });
+
+                // 손 라벨 표시 (손목 위치에)
+                const wristPos = toCanvas(hand[0]);
+                pctx.fillStyle = color;
+                pctx.font = 'bold 14px sans-serif';
+                pctx.textAlign = 'center';
+                pctx.fillText(handIdx === 0 ? '손1 🫲' : '손2 🫱', wristPos.x, wristPos.y + 25);
             });
 
             // 선택된 두 점 연결선 (빨간/초록)
@@ -711,24 +977,6 @@
             pctx.moveTo(pA.x, pA.y);
             pctx.lineTo(pB.x, pB.y);
             pctx.stroke();
-
-            // 모든 점 그리기
-            landmarks.forEach((lm, i) => {
-                const p = toCanvas(lm);
-                const isSelected = i === pointAIdx || i === pointBIdx;
-                pctx.beginPath();
-                pctx.arc(p.x, p.y, isSelected ? 12 : 6, 0, 2 * Math.PI);
-                pctx.fillStyle = i === pointAIdx ? '#667eea' :
-                    i === pointBIdx ? '#ff6b9d' : '#555';
-                pctx.fill();
-
-                // 모든 점에 번호 표시
-                pctx.fillStyle = '#fff';
-                pctx.font = isSelected ? 'bold 10px sans-serif' : '8px sans-serif';
-                pctx.textAlign = 'center';
-                pctx.textBaseline = 'middle';
-                pctx.fillText(i.toString(), p.x, p.y);
-            });
         }
 
         // 버튼 이벤트
@@ -811,6 +1059,47 @@
                 const landmarks = handResults.landmarks[0];
                 gesture = detectGesture(landmarks);
 
+                // 두 번째 손 손가락 상태 감지
+                let hand2ExtendedCount = 0;
+                if (handResults.landmarks.length >= 2) {
+                    const lm2 = handResults.landmarks[1];
+                    const palmSize2 = distance(lm2[0], lm2[9]);
+                    const thumbTipToIndexMcp2 = distance(lm2[4], lm2[5]) / palmSize2;
+                    const thumbTipToWrist2 = distance(lm2[4], lm2[0]) / palmSize2;
+                    const thumb2Extended = isFingerExtended(lm2, 4, 3) &&
+                        (thumbTipToIndexMcp2 > 0.5 || thumbTipToWrist2 > 1.2);
+
+                    const fingers2 = {
+                        thumb: { extended: thumb2Extended },
+                        index: { extended: isFingerExtended(lm2, 8, 7) },
+                        middle: { extended: isFingerExtended(lm2, 12, 11) },
+                        ring: { extended: isFingerExtended(lm2, 16, 15) },
+                        pinky: { extended: isFingerExtended(lm2, 20, 19) },
+                    };
+
+                    // UI 업데이트 - 손가락 상태 (손2)
+                    document.getElementById('finger2Thumb').classList.toggle('extended', fingers2.thumb.extended);
+                    document.getElementById('finger2Index').classList.toggle('extended', fingers2.index.extended);
+                    document.getElementById('finger2Middle').classList.toggle('extended', fingers2.middle.extended);
+                    document.getElementById('finger2Ring').classList.toggle('extended', fingers2.ring.extended);
+                    document.getElementById('finger2Pinky').classList.toggle('extended', fingers2.pinky.extended);
+
+                    hand2ExtendedCount = [fingers2.thumb, fingers2.index, fingers2.middle, fingers2.ring, fingers2.pinky]
+                        .filter(f => f.extended).length;
+                    document.getElementById('hand2Count').textContent = hand2ExtendedCount;
+                } else {
+                    // 두 번째 손 없으면 초기화
+                    ['finger2Thumb', 'finger2Index', 'finger2Middle', 'finger2Ring', 'finger2Pinky'].forEach(id => {
+                        document.getElementById(id).classList.remove('extended');
+                    });
+                    document.getElementById('hand2Count').textContent = '0';
+                }
+
+                // 양손 합계 (이심전심!)
+                const hand1Count = parseInt(document.getElementById('hand1Count').textContent) || 0;
+                const total = hand1Count + hand2ExtendedCount;
+                document.getElementById('totalFingers').textContent = total;
+
                 // 커스텀 거리 측정
                 const pointAIdx = parseInt(document.getElementById('pointA').value);
                 const pointBIdx = parseInt(document.getElementById('pointB').value);
@@ -828,8 +1117,72 @@
                 document.getElementById('customResult').innerHTML =
                     `거리 &lt; 임계값: ${isClose ? '✅ YES' : '❌ NO'}`;
 
-                // 스켈레톤 미리보기 그리기
-                drawSkeletonPreview(landmarks, pointAIdx, pointBIdx, isClose);
+                // 스켈레톤 미리보기 그리기 (양손)
+                drawSkeletonPreview(handResults.landmarks, pointAIdx, pointBIdx, isClose);
+
+                // 양손 간 거리 측정
+                if (handResults.landmarks.length >= 2) {
+                    const hand1 = handResults.landmarks[0];
+                    const hand2 = handResults.landmarks[1];
+                    const crossAIdx = parseInt(document.getElementById('crossPointA').value);
+                    const crossBIdx = parseInt(document.getElementById('crossPointB').value);
+
+                    const crossDist = distance(hand1[crossAIdx], hand2[crossBIdx]);
+                    // 정규화: 두 손의 평균 손바닥 크기 사용
+                    const palm1 = distance(hand1[0], hand1[9]);
+                    const palm2 = distance(hand2[0], hand2[9]);
+                    const avgPalm = (palm1 + palm2) / 2;
+                    const crossDistNorm = crossDist / avgPalm;
+                    const crossThresh = parseFloat(document.getElementById('sliderCrossThresh').value);
+
+                    document.getElementById('crossDistRaw').textContent = crossDist.toFixed(4);
+                    document.getElementById('crossDistNorm').textContent = crossDistNorm.toFixed(4);
+
+                    const isCrossClose = crossDistNorm < crossThresh;
+
+                    // 손하트 감지: 엄지끝 가까움 + 검지끝 가까움
+                    const thumbDist = distance(hand1[4], hand2[4]) / avgPalm;
+                    const indexDist = distance(hand1[8], hand2[8]) / avgPalm;
+                    const isHeart = thumbDist < 0.3 && indexDist < 0.4;
+
+                    // 탈모빔 감지: 엄지끝 가까움 + 양손 L자
+                    const palmSize1 = distance(hand1[0], hand1[9]);
+                    const thumbToIndexMcp1 = distance(hand1[4], hand1[5]) / palmSize1;
+                    const thumbToWrist1 = distance(hand1[4], hand1[0]) / palmSize1;
+                    const thumb1Ext = isFingerExtended(hand1, 4, 3) && (thumbToIndexMcp1 > 0.5 || thumbToWrist1 > 1.2);
+                    const index1Ext = isFingerExtended(hand1, 8, 7);
+
+                    const thumbToIndexMcp2 = distance(hand2[4], hand2[5]) / palm2;
+                    const thumbToWrist2 = distance(hand2[4], hand2[0]) / palm2;
+                    const thumb2Ext = isFingerExtended(hand2, 4, 3) && (thumbToIndexMcp2 > 0.5 || thumbToWrist2 > 1.2);
+                    const index2Ext = isFingerExtended(hand2, 8, 7);
+
+                    const isLShape1 = thumb1Ext && index1Ext;
+                    const isLShape2 = thumb2Ext && index2Ext;
+                    const isTalmoBeam = thumbDist < 1 && isLShape1 && isLShape2;
+
+                    if (isTalmoBeam) {
+                        document.getElementById('crossResult').innerHTML =
+                            '<span style="color:#ff6b9d;font-size:22px">⚡ 탈모빔! ⚡</span>';
+                        gesture = { type: 'talmoBeam', score: 0.95, emoji: '⚡', label: '탈모빔!' };
+                        // 탈모빔 효과 플래그 (얼굴 감지에서 사용)
+                        window.talmoBeamActive = true;
+                    } else if (isHeart) {
+                        document.getElementById('crossResult').innerHTML =
+                            '<span style="color:#ff6b9d;font-size:22px">💕 손하트! 💕</span>';
+                        gesture = { type: 'handHeart', score: 0.95, emoji: '💕', label: '손하트!' };
+                    } else if (isCrossClose) {
+                        document.getElementById('crossResult').innerHTML =
+                            `<span style="color:#4ade80">✅ 가까움! (${crossDistNorm.toFixed(3)})</span>`;
+                    } else {
+                        document.getElementById('crossResult').innerHTML =
+                            `<span style="color:#888">❌ 거리: ${crossDistNorm.toFixed(3)}</span>`;
+                    }
+                } else {
+                    document.getElementById('crossDistRaw').textContent = '-';
+                    document.getElementById('crossDistNorm').textContent = '-';
+                    document.getElementById('crossResult').innerHTML = '🤝 양손 필요';
+                }
             }
 
             // 얼굴/입술 감지
@@ -862,11 +1215,176 @@
 
                 // 입술 시각화
                 drawLips(face);
+
+                // 🎯 탈모빔 효과: 대머리 오버레이!
+                if (window.talmoBeamActive) {
+                    const glabella = face[9]; // 미간 (눈썹 사이)
+                    const leftTemple = face[70]; // 왼쪽 관자놀이
+                    const rightTemple = face[300]; // 오른쪽 관자놀이
+
+                    const fx = glabella.x * canvas.width;
+                    const fy = glabella.y * canvas.height;
+                    const faceWidth = Math.abs((rightTemple.x - leftTemple.x) * canvas.width);
+
+                    // 피부색 샘플링 (비디오에서 이마 부분 색상 추출)
+                    let skinColor = '#e8c4a0'; // 기본값
+                    try {
+                        // 비디오를 임시 캔버스에 그려서 픽셀 색상 추출
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCanvas.width = video.videoWidth;
+                        tempCanvas.height = video.videoHeight;
+                        tempCtx.drawImage(video, 0, 0);
+
+                        // 볼 위치에서 피부색 가져오기 (머리카락 방지)
+                        const cheek = face[116]; // 왼쪽 볼
+                        const sampleX = Math.floor(video.videoWidth - cheek.x * video.videoWidth);
+                        const sampleY = Math.floor(cheek.y * video.videoHeight);
+                        const pixel = tempCtx.getImageData(sampleX, sampleY, 1, 1).data;
+                        skinColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+                    } catch (e) { }
+
+                    // 그라데이션으로 자연스러운 대머리 효과
+                    ctx.save();
+
+                    // 메인 대머리 (그라데이션 테두리)
+                    const baldGrad = ctx.createRadialGradient(
+                        fx, fy - faceWidth * 0.3, 0,
+                        fx, fy - faceWidth * 0.3, faceWidth * 1.0
+                    );
+                    baldGrad.addColorStop(0, skinColor);
+                    baldGrad.addColorStop(0.7, skinColor);
+                    baldGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+                    ctx.beginPath();
+                    ctx.ellipse(fx, fy, faceWidth * 1, faceWidth * 0.9, 0, Math.PI, 0);
+                    ctx.fillStyle = baldGrad;
+                    ctx.fill();
+                    ctx.restore();
+
+                    // 플래그 초기화 (다음 프레임을 위해)
+                    window.talmoBeamActive = false;
+                }
+
+                // 볼콕 감지 (손 + 얼굴 필요)
+                if (handResults.landmarks?.length > 0) {
+                    const handLandmarks = handResults.landmarks[0];
+                    const pokeFingerIdx = parseInt(document.getElementById('pokeFingerSelect').value);
+                    const fingerTip = handLandmarks[pokeFingerIdx];
+
+                    // 볼 영역 랜드마크 (여러 점 → 가장 가까운 것 사용)
+                    // 왼볼: 187, 147, 116, 123, 50
+                    // 오른볼: 411, 376, 345, 352, 280
+                    const leftCheekPoints = [187, 147, 116, 123, 50].map(i => face[i]);
+                    const rightCheekPoints = [411, 376, 345, 352, 280].map(i => face[i]);
+
+                    // 가장 가까운 볼 점 찾기
+                    const findClosest = (points) => {
+                        let min = Infinity;
+                        let closest = points[0];
+                        points.forEach(p => {
+                            const d = distance(fingerTip, p);
+                            if (d < min) { min = d; closest = p; }
+                        });
+                        return { point: closest, dist: min };
+                    };
+
+                    const leftResult = findClosest(leftCheekPoints);
+                    const rightResult = findClosest(rightCheekPoints);
+                    const leftCheek = leftResult.point;
+                    const rightCheek = rightResult.point;
+
+                    // 얼굴 크기 (정규화용): 이마~턱
+                    const faceTop = face[10];
+                    const faceBottom = face[152];
+                    const faceSize = distance(faceTop, faceBottom);
+
+                    const distLeft = distance(fingerTip, leftCheek);
+                    const distRight = distance(fingerTip, rightCheek);
+                    const minDist = Math.min(distLeft, distRight);
+                    const normDistLeft = distLeft / faceSize;
+                    const normDistRight = distRight / faceSize;
+                    const normDist = minDist / faceSize;
+
+                    document.getElementById('metricLeftCheek').textContent = normDistLeft.toFixed(4);
+                    document.getElementById('metricRightCheek').textContent = normDistRight.toFixed(4);
+                    document.getElementById('metricFaceSize').textContent = faceSize.toFixed(4);
+                    document.getElementById('metricCheekNorm').textContent = normDist.toFixed(4);
+
+                    // 볼콕 판정 (미러링 고려: 화면상 왼쪽 = 실제 오른쪽)
+                    const isLeftPoke = normDistLeft < thresholds.cheekPoke;
+                    const isRightPoke = normDistRight < thresholds.cheekPoke;
+
+                    // 양손 감지 (두 번째 손이 있으면 양볼콕 체크)
+                    let isBothPoke = false;
+                    let hand2LeftPoke = false;
+                    let hand2RightPoke = false;
+
+                    if (handResults.landmarks.length >= 2) {
+                        const hand2 = handResults.landmarks[1];
+                        const finger2Tip = hand2[pokeFingerIdx];
+                        const dist2Left = distance(finger2Tip, leftCheek) / faceSize;
+                        const dist2Right = distance(finger2Tip, rightCheek) / faceSize;
+                        hand2LeftPoke = dist2Left < thresholds.cheekPoke;
+                        hand2RightPoke = dist2Right < thresholds.cheekPoke;
+
+                        // 양볼 콕: 한 손이 왼볼, 다른 손이 오른볼
+                        isBothPoke = (isLeftPoke && hand2RightPoke) || (isRightPoke && hand2LeftPoke);
+                    }
+
+                    // 결과 표시 (미러링 반전: left→오른쪽, right→왼쪽)
+                    if (isBothPoke) {
+                        document.getElementById('cheekPokeResult').innerHTML =
+                            `<span style="color:#ff6b9d;font-size:24px">💕 양볼콕! 💕</span>`;
+                        gesture = { type: 'bothCheekPoke', score: 0.95, emoji: '💕', label: '양볼콕!' };
+                    } else if (isRightPoke || hand2RightPoke) {
+                        // 미러링: MediaPipe의 right = 화면상 왼쪽 = 사용자 오른볼
+                        document.getElementById('cheekPokeResult').innerHTML =
+                            `<span style="color:#4ade80">✅ 왼볼 콕! (${normDistRight.toFixed(3)})</span>`;
+                        if (gesture.score < 0.85) {
+                            gesture = { type: 'cheekPoke', score: 0.9, emoji: '👆😊', label: '왼볼콕!' };
+                        }
+                    } else if (isLeftPoke || hand2LeftPoke) {
+                        // 미러링: MediaPipe의 left = 화면상 오른쪽 = 사용자 왼볼
+                        document.getElementById('cheekPokeResult').innerHTML =
+                            `<span style="color:#4ade80">✅ 오른볼 콕! (${normDistLeft.toFixed(3)})</span>`;
+                        if (gesture.score < 0.85) {
+                            gesture = { type: 'cheekPoke', score: 0.9, emoji: '👆😊', label: '오른볼콕!' };
+                        }
+                    } else {
+                        document.getElementById('cheekPokeResult').innerHTML =
+                            `<span style="color:#888">❌ 대기중 (${normDist.toFixed(3)})</span>`;
+                    }
+
+                    // 볼 랜드마크 시각화
+                    const leftPokeActive = isLeftPoke || hand2LeftPoke;
+                    const rightPokeActive = isRightPoke || hand2RightPoke;
+                    [leftCheek, rightCheek].forEach((cheek, i) => {
+                        const x = cheek.x * canvas.width;
+                        const y = cheek.y * canvas.height;
+                        const isActive = (i === 0 && leftPokeActive) || (i === 1 && rightPokeActive);
+                        ctx.beginPath();
+                        ctx.arc(x, y, isActive ? 15 : 8, 0, 2 * Math.PI);
+                        ctx.fillStyle = isBothPoke ? '#ff6b9d' : (isActive ? '#4ade80' : '#ff6b9d');
+                        ctx.fill();
+                    });
+                } else {
+                    document.getElementById('metricLeftCheek').textContent = '-';
+                    document.getElementById('metricRightCheek').textContent = '-';
+                    document.getElementById('metricFaceSize').textContent = '-';
+                    document.getElementById('metricCheekNorm').textContent = '-';
+                    document.getElementById('cheekPokeResult').innerHTML = '👆😊 손 필요';
+                }
             } else {
                 document.getElementById('metricFace').textContent = '❌';
                 document.getElementById('metricLipV').textContent = '-';
                 document.getElementById('metricLipH').textContent = '-';
                 document.getElementById('metricLipRatio').textContent = '-';
+                document.getElementById('metricLeftCheek').textContent = '-';
+                document.getElementById('metricRightCheek').textContent = '-';
+                document.getElementById('metricFaceSize').textContent = '-';
+                document.getElementById('metricCheekNorm').textContent = '-';
+                document.getElementById('cheekPokeResult').innerHTML = '👆😊 얼굴 필요';
             }
 
             // 결과 표시
