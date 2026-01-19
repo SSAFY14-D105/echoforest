@@ -8,6 +8,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -23,7 +27,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable) // JWT 쓸 때는 CSRF 필요 없음
-                .cors(AbstractHttpConfigurer::disable) // 일단 CORS 모두 허용 (개발 편의)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .formLogin(AbstractHttpConfigurer::disable) // 기본 로그인 폼 끄기
                 .httpBasic(AbstractHttpConfigurer::disable) // HTTP Basic 인증 끄기
                 .authorizeHttpRequests(auth -> auth
@@ -35,6 +39,33 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 1. 허용할 도메인 목록 (개발용 + 배포용 미리 추가)
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",       // 프론트엔드 로컬
+                "http://localhost:5174",       // 프론트엔드 로컬 (포트 바뀔 경우 대비)
+                "https://i14d105.p.ssafy.io",  // ⭐ 실제 배포 도메인 (HTTPS)
+                "http://i14d105.p.ssafy.io"    // (혹시 모를 HTTP)
+        ));
+
+        // 2. 허용할 메서드 (OPTIONS 필수)
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // 3. 허용할 헤더
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // 4. 자격 증명 허용 (로그인 시 쿠키/헤더 전송을 위해 필수)
+        configuration.setAllowCredentials(true);
+
+        // 5. 설정 적용 경로
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
 
 
@@ -45,7 +76,7 @@ public class SecurityConfig {
 
 package com.d105.config;
 
-// [IMPORT 주의] JwtAuthenticationFilter를 만든 후 경로에 맞게 임포트해야 합니다.
+// [IMPORT 주의] JwtAuthenticationFsilter를 만든 후 경로에 맞게 임포트해야 합니다.
 // import com.d105.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
