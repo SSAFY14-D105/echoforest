@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController
@@ -28,8 +27,10 @@ public class AuthController {
     @Operation(summary = "로그인 (JWT 토큰 + 닉네임 반환)")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginReqDto req) {
-        // AuthService가 Map을 반환하도록 수정했다고 가정
+        // AuthService에서 Map<String, String> 형태로 반환받음
         Map<String, String> result = authService.login(req);
+
+        // 프론트엔드로 전송: {"token": "...", "nickname": "..."}
         return ResponseEntity.ok(result);
     }
 
