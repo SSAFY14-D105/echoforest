@@ -25,11 +25,12 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "회원가입 성공"));
     }
 
-    @Operation(summary = "로그인 (JWT 토큰 발급)")
+    @Operation(summary = "로그인 (JWT 토큰 + 닉네임 반환)")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginReqDto req) {
-        String token = authService.login(req);
-        return ResponseEntity.ok(Map.of("token", token));
+        // AuthService가 Map을 반환하도록 수정했다고 가정
+        Map<String, String> result = authService.login(req);
+        return ResponseEntity.ok(result);
     }
 
     @Operation(summary = "아이디 중복 확인 (true: 중복, false: 사용 가능)")
