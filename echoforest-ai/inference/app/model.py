@@ -41,12 +41,7 @@ LABELS = [
     "clean"
 ]
 
-# 사용자 정의 키워드 사전 (모델보다 우선 적용)
-CUSTOM_KEYWORDS = {
-    1: ["씨발", "개새끼", "니미", "좆", "좃"],  # Level 1: Critical (매우 심함)
-    2: ["개빡", "닥쳐", "꺼져", "졸라", "존나", "미친", "돌았", "병신"],  # Level 2: Severe (심함)
-    3: ["킹받", "멍청", "바보", "짜증", "화나", "빡치", "열받"],  # Level 3: Mild (경미)
-}
+
 
 class UnSmileModel:
     """unSmile 감정 분석 모델"""
@@ -90,25 +85,7 @@ class UnSmileModel:
         if not self._loaded:
             self.load()
         
-        # 1. Rule-based 필터링 (사용자 정의 키워드 우선 확인)
-        for level, keywords in CUSTOM_KEYWORDS.items():
-            for keyword in keywords:
-                if keyword in text:
-                    # 키워드 발견 시 즉시 해당 레벨로 판정
-                    severity = level
-                    severity_label = SEVERITY_DESCRIPTIONS[severity]
-                    print(f"🔍 Custom Keyword Detected: '{keyword}' -> Level {level}")
-                    
-                    return {
-                        'is_negative': True,
-                        'label': '악플/욕설 (Custom Rule)',
-                        'confidence': 0.99, # 강제 확신
-                        'severity': severity,
-                        'severity_label': severity_label,
-                        'all_scores': {"custom_rule": 0.99}
-                    }
-
-        # 2. AI 모델 기반 분석
+        # AI 모델 기반 분석
         
         # 토큰화
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
