@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
-  const { nickname, setNickname, joinGame } = useGameStore();
+  const { nickname, setNickname, joinGame, startSoloGame } = useGameStore();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -15,6 +15,11 @@ export default function LobbyPage() {
   const handleHost = () => {
     const newRoomCode = Math.floor(100000 + Math.random() * 900000).toString();
     joinGame(newRoomCode, true);
+  };
+
+  // 혼자하기 (테스트 모드)
+  const handleSoloPlay = () => {
+    startSoloGame();
   };
 
   // 방 참가하기
@@ -79,6 +84,15 @@ export default function LobbyPage() {
             <div className={styles.btnContent}>
               <div className={styles.btnTitle}>방 참가하기</div>
               <div className={styles.btnDesc}>코드로 입장</div>
+            </div>
+          </button>
+
+          {/* 혼자하기 버튼 */}
+          <button className={`${styles.actionBtn} ${styles.soloBtn}`} onClick={handleSoloPlay}>
+            <span className={styles.btnIcon}>🧪</span>
+            <div className={styles.btnContent}>
+              <div className={styles.btnTitle}>혼자하기</div>
+              <div className={styles.btnDesc}>테스트 모드</div>
             </div>
           </button>
         </div>
