@@ -59,6 +59,7 @@ export interface AuthResponse {
 
 export interface LoginResponse {
     token: string;
+    nickname: string;  // 백엔드에서 반환하는 닉네임
 }
 
 export interface SignupResponse {
@@ -80,6 +81,20 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
     });
 
     if (!res.ok) {
+        // 에러 응답 body에서 메시지 추출 시도
+        try {
+            const errorData = await res.json();
+            if (errorData.message) {
+                throw new Error(errorData.message);
+            }
+        } catch {
+            // JSON 파싱 실패 시 기본 에러 메시지 사용
+        }
+
+        // 로그인 실패 시 더 명확한 메시지
+        if (res.status === 500) {
+            throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+        }
         throw new Error(getErrorMessage(res.status));
     }
 
