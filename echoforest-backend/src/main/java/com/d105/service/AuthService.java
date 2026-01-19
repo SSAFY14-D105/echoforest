@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Map;
 
 @Service
@@ -45,15 +44,19 @@ public class AuthService {
 
     // 로그인
     public Map<String, String> login(LoginReqDto req) {
+        // 1. 아이디로 유저 조회 (Member가 아니라 User입니다)
         User user = userRepository.findByLoginId(req.getLoginId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
 
+        // 2. 비밀번호 검증
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
+        // 3. 토큰 생성
         String token = jwtUtil.createToken(user.getId(), user.getLoginId());
 
+        // 4. 토큰과 닉네임을 Map에 담아서 반환
         return Map.of(
                 "token", token,
                 "nickname", user.getNickname()
