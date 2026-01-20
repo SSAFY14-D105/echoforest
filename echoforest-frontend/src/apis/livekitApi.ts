@@ -4,10 +4,7 @@
  */
 
 // 환경별 설정
-// 개발 환경: Vite 프록시를 사용하기 위해 상대 경로 사용
-// 프로덕션 환경: 절대 URL 사용
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
-    (import.meta.env.DEV ? '' : 'https://i14d105.p.ssafy.io');
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
 export const LIVEKIT_SERVER_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
 
 /**
@@ -30,18 +27,13 @@ export interface LiveKitTokenResponse {
  * API 에러 클래스
  */
 export class LiveKitApiError extends Error {
-    statusCode?: number;
-    originalError?: unknown;
-
     constructor(
         message: string,
-        statusCode?: number,
-        originalError?: unknown
+        public statusCode?: number,
+        public originalError?: unknown
     ) {
         super(message);
         this.name = 'LiveKitApiError';
-        this.statusCode = statusCode;
-        this.originalError = originalError;
     }
 }
 

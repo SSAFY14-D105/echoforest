@@ -392,6 +392,7 @@ export default function GamePage() {
 
       {/* 카메라 영역 */}
       <CameraArea />
+
       {/* 하단 버튼 영역 */}
       <div className={styles.bottomActions}>
         {/* TODO: 백엔드 WebSocket 연동 후 삭제 - 테스트용 버튼 시작 */}
