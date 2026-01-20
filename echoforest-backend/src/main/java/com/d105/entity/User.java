@@ -33,7 +33,7 @@ public class User {
     @Column(nullable = false, length = 20)
     private String nickname;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String email;
 
     // 게임 데이터 필드 추가
