@@ -3,7 +3,7 @@
  * 백엔드 연동 시 BASE_URL과 실제 API 엔드포인트를 수정하세요.
  */
 
-const BASE_URL = 'http://localhost:9001/api'; // 백엔드 서버 주소
+const BASE_URL = 'https://i14d105.p.ssafy.io/api'; // 배포 서버 주소
 
 /**
  * HTTP 상태 코드별 에러 메시지 반환
