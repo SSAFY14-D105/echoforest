@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { Player } from '../../store/useGameStore';
+import { liveKitService } from '../../socket/LiveKitService';
 import PhaserGame from '../../components/game/PhaserGame';
 import styles from './GamePage.module.css';
 
@@ -26,10 +27,14 @@ export default function GamePage() {
     leaveGame
   } = useGameStore();
 
-  const [micVolume, setMicVolume] = useState(70);
-  const [cameraOn, setCameraOn] = useState(true);
   const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
   const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
+
+  // LiveKit 상태
+  const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
+  const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [isCameraEnabled, setIsCameraEnabled] = useState(true);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
 
   // 본인을 플레이어 목록에 추가 (방 입장 시)
   // 솔로 모드는 startSoloGame에서 이미 추가되므로 건너뜀
@@ -47,6 +52,53 @@ export default function GamePage() {
     };
     addPlayer(myPlayer);
   }, [isSoloMode]);
+
+  // LiveKit 연결 (방 입장 시)
+  useEffect(() => {
+    if (isSoloMode) return; // 솔로 모드는 LiveKit 사용 안 함
+    if (!roomId || !nickname) return;
+    if (isLiveKitConnecting || liveKitService.isConnected) return;
+
+    const connectLiveKit = async () => {
+      setIsLiveKitConnecting(true);
+      try {
+        // 로컬 비디오 엘리먼트 설정
+        liveKitService.setLocalVideoElement(localVideoRef.current);
+
+        // userId는 localStorage에서 가져오기
+        const userId = localStorage.getItem('loginId') || nickname;
+
+        console.log('🎥 LiveKit 연결 시도...');
+        await liveKitService.connect(roomId, userId, nickname);
+
+        // 초기 상태 동기화
+        setIsMicEnabled(liveKitService.isMicEnabled);
+        setIsCameraEnabled(liveKitService.isCameraEnabled);
+      } catch (error) {
+        console.error('LiveKit 연결 실패:', error);
+      } finally {
+        setIsLiveKitConnecting(false);
+      }
+    };
+
+    connectLiveKit();
+
+    return () => {
+      liveKitService.disconnect();
+    };
+  }, [roomId, nickname, isSoloMode]);
+
+  // 마이크 토글 핸들러
+  const handleToggleMic = async () => {
+    const newState = await liveKitService.toggleMic();
+    setIsMicEnabled(newState);
+  };
+
+  // 카메라 토글 핸들러
+  const handleToggleCamera = async () => {
+    const newState = await liveKitService.toggleCamera();
+    setIsCameraEnabled(newState);
+  };
 
   // 플레이어 수 확인
   const isGameReady = players.length >= MAX_PLAYERS;
@@ -115,10 +167,21 @@ export default function GamePage() {
             className={`pixel-box ${styles.cameraBox} ${styles.active}`}
             style={{ borderColor: PLAYER_COLORS[index] }}
           >
-            <div className={isMe && cameraOn ? styles.cameraContent : styles.cameraOff}>
-              {isMe && cameraOn ? `P${index + 1} (나: ${player.nickname})` :
-                isMe ? '📹' : `P${index + 1}: ${player.nickname}`}
-            </div>
+            {/* 비디오 영역 */}
+            {isMe ? (
+              <div className={styles.cameraContent}>
+                {isCameraEnabled ? (
+                  <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} />
+                ) : (
+                  <div className={styles.cameraOff}>📹 카메라 OFF</div>
+                )}
+                <span className={styles.playerLabel}>P{index + 1} (나)</span>
+              </div>
+            ) : (
+              <div className={styles.cameraContent}>
+                P{index + 1}: {player.nickname}
+              </div>
+            )}
 
             {/* 본인 컨트롤 버튼 */}
             {isMe && (
@@ -126,23 +189,13 @@ export default function GamePage() {
                 <div className={styles.controlBtn}>
                   <button
                     className={styles.btn}
-                    onClick={() => setShowVolumeSlider(showVolumeSlider === index ? null : index)}
+                    onClick={handleToggleMic}
                   >
-                    <div className={styles.micIcon}></div>
+                    <div className={isMicEnabled ? styles.micIcon : styles.micOffIcon}></div>
                   </button>
-                  {showVolumeSlider === index && (
-                    <div className={styles.volumeSliderContainer} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="range" min="0" max="100" value={micVolume}
-                        onChange={(e) => setMicVolume(Number(e.target.value))}
-                        className={styles.verticalSlider}
-                      />
-                      <span className={styles.volumeText}>{micVolume}%</span>
-                    </div>
-                  )}
                 </div>
-                <button className={styles.btn} onClick={() => setCameraOn(!cameraOn)}>
-                  <div className={cameraOn ? styles.cameraIcon : styles.cameraOffIcon}></div>
+                <button className={styles.btn} onClick={handleToggleCamera}>
+                  <div className={isCameraEnabled ? styles.cameraIcon : styles.cameraOffIcon}></div>
                 </button>
               </div>
             )}
