@@ -103,6 +103,46 @@ public class GameRoom implements Runnable {
     }
 
     /**
+     * 강제 퇴장 (방장이 특정 유저를 내보냄)
+     */
+    public void kickPlayer(String username) {
+        // username으로 세션 찾기
+        String targetSessionId = findSessionIdByUsername(username);
+        if (targetSessionId == null) {
+            return;
+        }
+
+        WebSocketSession targetSession = sessions.get(targetSessionId);
+
+        // 퇴장 처리
+        sessions.remove(targetSessionId);
+        players.remove(targetSessionId);
+
+        // 강퇴된 유저에게 알림
+        if (targetSession != null && targetSession.isOpen()) {
+            try {
+                GameMessageDto kickedMsg = new GameMessageDto();
+                kickedMsg.setType("KICKED");
+                kickedMsg.setRoomId(roomId);
+                kickedMsg.setContent("You have been kicked from the room");
+                targetSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(kickedMsg)));
+            } catch (Exception e) {
+                log.error("Failed to send kick message to {}", username, e);
+            }
+        }
+
+        // 다른 플레이어들에게 알림
+        GameMessageDto leaveMsg = new GameMessageDto();
+        leaveMsg.setType("PLAYER_LEFT");
+        leaveMsg.setRoomId(roomId);
+        leaveMsg.setUsername(username);
+        leaveMsg.setContent("Kicked by host");
+        broadcast(leaveMsg, null);
+
+        log.info("Player {} kicked from room {}", username, roomId);
+    }
+
+    /**
      * 방 내의 참가자들에게 메시지를 전송하는 기능 (Broadcasting)
      * Service 계층에서 세션 목록을 직접 순회하지 않도록 캡슐화함.
      * * @param message 전송할 메시지 객체
@@ -122,6 +162,30 @@ public class GameRoom implements Runnable {
             }
         } catch (Exception e) {
             log.error("Broadcast Error in Room {}", roomId, e);
+        }
+    }
+
+    /**
+     * 방 폭파 알림 (방장 퇴장 시)
+     */
+    public void broadcastRoomClosed() {
+        try {
+            GameMessageDto closeMsg = new GameMessageDto();
+            closeMsg.setType("ROOM_CLOSED");
+            closeMsg.setRoomId(roomId);
+            closeMsg.setContent("Host left the room");
+
+            TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(closeMsg));
+            for (WebSocketSession s : sessions.values()) {
+                if (s.isOpen()) {
+                    s.sendMessage(textMsg);
+                }
+            }
+
+            // 게임 루프 종료
+            this.isRunning = false;
+        } catch (Exception e) {
+            log.error("Broadcast Room Closed Error in Room {}", roomId, e);
         }
     }
 
