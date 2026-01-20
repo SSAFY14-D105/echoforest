@@ -1,0 +1,166 @@
+/**
+ * LiveKit 비디오 그리드 스타일
+ */
+
+/* 기본 컨테이너 */
+.livekit-container {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: white;
+    height: 100%;
+    width: 100%;
+}
+
+/* LiveKit 기본 컨테이너 강제 높이 */
+.livekit-container .lk-room-container {
+    height: 100% !important;
+    min-height: 400px;
+}
+
+.livekit-container .lk-grid-layout {
+    height: 100% !important;
+    min-height: 350px;
+}
+
+/* 로딩 상태 */
+.livekit-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 16px;
+}
+
+.livekit-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.livekit-loading p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* 에러 상태 */
+.livekit-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.livekit-error p {
+    color: #ff6b6b;
+    font-size: 16px;
+    margin: 0;
+}
+
+.livekit-error small {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+}
+
+/* 그리드 레이아웃 */
+.livekit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 8px;
+    height: calc(100% - 60px);
+    /* 컨트롤바 높이 제외 */
+}
+
+/* 사이드바 변형 */
+.livekit-sidebar .livekit-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+}
+
+/* 오버레이 변형 */
+.livekit-overlay .livekit-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, minmax(80px, 1fr));
+    max-height: 300px;
+}
+
+/* 참가자 타일 커스터마이징 */
+.livekit-container [data-lk-participant-tile] {
+    border-radius: 8px;
+    overflow: hidden;
+    background: #2d2d44;
+}
+
+.livekit-container [data-lk-participant-name] {
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* 컨트롤바 커스터마이징 */
+.livekit-container [data-lk-control-bar] {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px;
+}
+
+.livekit-container [data-lk-control-bar] button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.livekit-container [data-lk-control-bar] button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.livekit-container [data-lk-control-bar] button[data-lk-source="camera"][data-lk-enabled="false"],
+.livekit-container [data-lk-control-bar] button[data-lk-source="microphone"][data-lk-enabled="false"] {
+    background: rgba(255, 68, 68, 0.3);
+}
+
+/* 전체화면 변형 */
+.livekit-fullscreen .lk-video-conference {
+    height: 100%;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .livekit-sidebar {
+        width: 100% !important;
+        height: 40vh !important;
+        bottom: 0;
+        top: auto;
+    }
+
+    .livekit-sidebar .livekit-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+    }
+
+    .livekit-overlay {
+        width: 90% !important;
+        max-width: 300px;
+        right: 5% !important;
+    }
+}
