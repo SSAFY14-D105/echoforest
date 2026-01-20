@@ -56,7 +56,7 @@ export class GameWebSocket {
         return new Promise((resolve, reject) => {
             try {
                 // JWT 토큰을 쿼리 파라미터로 전달 (백엔드 JwtHandshakeInterceptor 요구)
-                const wsUrl = `ws://localhost:9001/ws/game?token=${this.token}`;
+                const wsUrl = `wss://i14d105.p.ssafy.io/ws/game?token=${this.token}`;
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {

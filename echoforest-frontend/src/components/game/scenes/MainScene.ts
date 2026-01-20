@@ -74,6 +74,26 @@ export default class MainScene extends Phaser.Scene {
         storePlayers.forEach((storePlayer, index) => {
             if (!this.players.has(storePlayer.id)) {
                 this.addPlayer(storePlayer, index, currentNickname);
+            } else {
+                // 이미 있는 원격 플레이어 - 좌표 업데이트 (tweens로 부드럽게)
+                const player = this.players.get(storePlayer.id);
+                if (player && !player.isLocalPlayer && storePlayer.x !== undefined && storePlayer.y !== undefined) {
+                    const currentPos = player.getPosition();
+                    // 위치가 변경된 경우만 tween 적용
+                    if (Math.abs(currentPos.x - storePlayer.x) > 1 || Math.abs(currentPos.y - storePlayer.y) > 1) {
+                        // Tweens로 부드럽게 이동 (백엔드 명세서 권장사항)
+                        this.tweens.add({
+                            targets: { x: currentPos.x, y: currentPos.y },
+                            x: storePlayer.x,
+                            y: storePlayer.y,
+                            duration: 50, // 50ms 동안 부드럽게 이동
+                            onUpdate: (tween) => {
+                                const value = tween.targets[0] as { x: number; y: number };
+                                player.setPosition(value.x, value.y);
+                            }
+                        });
+                    }
+                }
             }
         });
 
@@ -145,6 +165,7 @@ export default class MainScene extends Phaser.Scene {
         if (!myPlayer || !this.cursors) return;
 
         const velocity = myPlayer.getVelocity();
+        let moved = false;
 
         // 좌우 이동
         if (this.cursors.left.isDown) {
@@ -152,11 +173,13 @@ export default class MainScene extends Phaser.Scene {
                 Math.max(velocity.x - PHYSICS.ACCELERATION, -PHYSICS.MOVE_SPEED),
                 velocity.y
             );
+            moved = true;
         } else if (this.cursors.right.isDown) {
             myPlayer.setVelocity(
                 Math.min(velocity.x + PHYSICS.ACCELERATION, PHYSICS.MOVE_SPEED),
                 velocity.y
             );
+            moved = true;
         } else {
             // 감속
             myPlayer.setVelocity(velocity.x * PHYSICS.DECELERATION, velocity.y);
@@ -165,6 +188,14 @@ export default class MainScene extends Phaser.Scene {
         // 점프
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up) && Math.abs(velocity.y) < 0.5) {
             myPlayer.setVelocity(velocity.x, PHYSICS.JUMP_POWER);
+            moved = true;
+        }
+
+        // 이동했으면 WebSocket으로 위치 브로드캐스트 (60fps 중 매 5프레임마다)
+        if (moved || Math.abs(velocity.x) > 0.1) {
+            const pos = myPlayer.getPosition();
+            // Store를 통해 WebSocket으로 전송
+            useGameStore.getState().broadcastMove(pos.x, pos.y);
         }
     }
 
