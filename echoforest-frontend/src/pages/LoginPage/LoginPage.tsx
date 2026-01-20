@@ -115,12 +115,13 @@ export default function LoginPage({ onLogin }: Props) {
 
     try {
       const res = await login({ loginId: id, password: pw });
-      // 백엔드 명세서: { token: "..." }
+      // 백엔드 명세서: { token: "...", nickname: "..." }
       if (res.token) {
-        // JWT 토큰을 localStorage에 저장
+        // JWT 토큰과 닉네임을 localStorage에 저장
         localStorage.setItem('token', res.token);
         localStorage.setItem('loginId', id);
-        onLogin(id);
+        localStorage.setItem('nickname', res.nickname);
+        onLogin(res.nickname);  // ✅ 닉네임으로 로그인 처리
       } else {
         setError('로그인에 실패했습니다.');
       }

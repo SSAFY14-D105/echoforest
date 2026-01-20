@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { Player } from '../../store/useGameStore';
+import { GameWebSocket, type GameMessage } from '../../socket/GameWebSocket';
 import PhaserGame from '../../components/game/PhaserGame';
 import styles from './GamePage.module.css';
 
@@ -20,6 +21,8 @@ export default function GamePage() {
     currentStage,
     clearedStages,
     addPlayer,
+    removePlayerByNickname,
+    updatePlayerPosition,
     startGame,
     selectStage,
     clearStage,
@@ -30,6 +33,9 @@ export default function GamePage() {
   const [cameraOn, setCameraOn] = useState(true);
   const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
   const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
+
+  // WebSocket 인스턴스
+  const wsRef = useRef<GameWebSocket | null>(null);
 
   // 본인을 플레이어 목록에 추가 (방 입장 시)
   // 솔로 모드는 startSoloGame에서 이미 추가되므로 건너뜀
@@ -48,8 +54,96 @@ export default function GamePage() {
     addPlayer(myPlayer);
   }, [isSoloMode]);
 
+  // WebSocket 연결 및 메시지 처리
+  useEffect(() => {
+    if (isSoloMode) return; // 솔로 모드는 WebSocket 사용 안 함
+    if (!roomId || !nickname) return;
+
+    // WebSocket 인스턴스 생성 및 연결
+    const ws = new GameWebSocket(nickname);
+    wsRef.current = ws;
+
+    ws.onMessage((msg: GameMessage) => {
+      console.log('📩 WebSocket 메시지:', msg);
+
+      switch (msg.type) {
+        case 'JOIN':
+          // 다른 플레이어 입장
+          if (msg.username && msg.username !== nickname) {
+            const newPlayer: Player = {
+              id: `player-${Date.now()}-${msg.username}`,
+              nickname: msg.username,
+              isHost: false,
+              x: msg.x,
+              y: msg.y
+            };
+            addPlayer(newPlayer);
+            console.log(`👋 ${msg.username} 입장`);
+          }
+          break;
+
+        case 'MOVE':
+          // 다른 플레이어 이동
+          if (msg.username && msg.username !== nickname && msg.x !== undefined && msg.y !== undefined) {
+            updatePlayerPosition(msg.username, msg.x, msg.y, msg.anim);
+          }
+          break;
+
+        case 'LEAVE':
+          // 다른 플레이어 퇴장
+          if (msg.username) {
+            removePlayerByNickname(msg.username);
+            console.log(`👋 ${msg.username} 퇴장`);
+          }
+          break;
+
+        case 'ERROR':
+          console.error('❌ WebSocket 에러:', msg.content);
+          break;
+      }
+    });
+
+    ws.onConnect(() => {
+      console.log('✅ WebSocket 연결됨 - 방 참가 메시지 전송');
+      // 이미 LobbyPage에서 JOIN을 보냈으므로 여기서는 별도 전송 안 함
+    });
+
+    ws.onError((error) => {
+      console.error('❌ WebSocket 에러:', error);
+    });
+
+    ws.connect().catch(err => {
+      console.error('WebSocket 연결 실패:', err);
+    });
+
+    // 컴포넌트 언마운트 시 연결 종료
+    return () => {
+      ws.disconnect();
+      wsRef.current = null;
+    };
+  }, [roomId, nickname, isSoloMode]);
+
   // 플레이어 수 확인
   const isGameReady = players.length >= MAX_PLAYERS;
+
+  // 로컬 플레이어 이동 시 WebSocket으로 MOVE 전송하는 콜백 등록
+  const { setOnMoveCallback } = useGameStore.getState();
+
+  useEffect(() => {
+    if (isSoloMode) return;
+
+    const sendMove = (x: number, y: number, anim?: string) => {
+      if (wsRef.current && wsRef.current.isConnected() && roomId) {
+        wsRef.current.move(roomId, x, y, anim);
+      }
+    };
+
+    setOnMoveCallback(sendMove);
+
+    return () => {
+      setOnMoveCallback(null);
+    };
+  }, [roomId, isSoloMode]);
 
   const handlePlayerVolumeChange = (playerIndex: number, volume: number) => {
     const newVolumes = [...playerVolumes];

@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { GameWebSocket } from '../../socket/GameWebSocket';
+import type { GameMessage } from '../../socket/GameWebSocket';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
@@ -10,11 +12,48 @@ export default function LobbyPage() {
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [joinError, setJoinError] = useState('');
   const [micVolume, setMicVolume] = useState(50);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  // 방 만들기 (6자리 랜덤 코드)
-  const handleHost = () => {
-    const newRoomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    joinGame(newRoomCode, true);
+  // 설정 모달용 임시 닉네임 (빈 문자열 방지)
+  const [tempNickname, setTempNickname] = useState(nickname);
+
+  // WebSocket 인스턴스 참조
+  const wsRef = useRef<GameWebSocket | null>(null);
+
+  // 방 만들기 (WebSocket CREATE 메시지 전송)
+  const handleHost = async () => {
+    if (isConnecting) return;
+    setIsConnecting(true);
+    setJoinError('');
+
+    try {
+      const ws = new GameWebSocket(nickname);
+      wsRef.current = ws;
+
+      // 메시지 핸들러 설정
+      ws.onMessage((message: GameMessage) => {
+        if (message.type === 'ROOM_CREATED') {
+          // 백엔드가 생성한 방 코드 사용
+          const roomCode = message.content || '';
+          console.log('✅ 방 생성됨:', roomCode);
+          joinGame(roomCode, true);
+        }
+      });
+
+      ws.onError((error: string) => {
+        setJoinError(error);
+        setIsConnecting(false);
+      });
+
+      // WebSocket 연결 후 CREATE 메시지 전송
+      await ws.connect();
+      ws.createRoom();  // roomId 없이 보내면 백엔드가 생성
+
+    } catch (error) {
+      console.error('방 생성 실패:', error);
+      setJoinError('서버 연결에 실패했습니다.');
+      setIsConnecting(false);
+    }
   };
 
   // 혼자하기 (테스트 모드)
@@ -22,27 +61,62 @@ export default function LobbyPage() {
     startSoloGame();
   };
 
-  // 방 참가하기
-  const handleJoinSubmit = () => {
+  // 방 참가하기 (WebSocket JOIN 메시지 전송)
+  const handleJoinSubmit = async () => {
     setJoinError('');
 
-    if (!/^\d{6}$/.test(roomCodeInput)) {
-      setJoinError('6자리 숫자 코드를 입력해주세요.');
+    if (!/^[A-Za-z0-9]{6}$/.test(roomCodeInput)) {
+      setJoinError('6자리 코드를 입력해주세요. (영문+숫자)');
       return;
     }
 
-    // 백엔드 API로 방 존재 여부 확인
-    // TODO: 실제 API 연동 시 수정 필요
-    // 임시: 랜덤으로 방이 없다고 가정 (테스트용)
-    const roomExists = false; // 실제로는 백엔드 API 호출 결과
+    if (isConnecting) return;
+    setIsConnecting(true);
 
-    if (!roomExists) {
-      setJoinError('해당하는 방을 찾을 수 없습니다.');
-      return;
+    try {
+      const ws = new GameWebSocket(nickname);
+      wsRef.current = ws;
+
+      let hasError = false;  // 에러 발생 여부 추적
+
+      // 메시지 핸들러 - ERROR 응답 처리
+      ws.onMessage((message: GameMessage) => {
+        if (message.type === 'ERROR') {
+          hasError = true;
+          // "Room not found" 에러를 한글로 변환
+          const errorMsg = message.content?.includes('Room not found')
+            ? '해당하는 방을 찾을 수 없습니다.'
+            : message.content?.includes('Room is full')
+              ? '방이 가득 찼습니다.'
+              : message.content || '알 수 없는 오류';
+          setJoinError(errorMsg);
+          setIsConnecting(false);
+          ws.disconnect();
+        }
+      });
+
+      ws.onError((error: string) => {
+        hasError = true;
+        setJoinError(error);
+        setIsConnecting(false);
+      });
+
+      // WebSocket 연결 후 JOIN 메시지 전송
+      await ws.connect();
+      ws.joinRoom(roomCodeInput.toUpperCase());
+
+      // 에러 응답 대기 후 성공 판단 (에러 없으면 입장)
+      setTimeout(() => {
+        if (!hasError) {
+          joinGame(roomCodeInput.toUpperCase(), false);
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('방 참가 실패:', error);
+      setJoinError('서버 연결에 실패했습니다.');
+      setIsConnecting(false);
     }
-
-    // 방이 존재하면 참가 (isHost = false)
-    joinGame(roomCodeInput, false);
   };
 
   const openJoinModal = () => {
@@ -60,7 +134,10 @@ export default function LobbyPage() {
             <div className={styles.avatar}>{nickname.charAt(0).toUpperCase()}</div>
             <span className={styles.username}>{nickname}</span>
           </div>
-          <button className={styles.settingsIcon} onClick={() => setShowSettings(true)}>
+          <button className={styles.settingsIcon} onClick={() => {
+            setTempNickname(nickname);  // 설정 열 때 현재 닉네임으로 초기화
+            setShowSettings(true);
+          }}>
             ⚙️
           </button>
         </div>
@@ -71,10 +148,14 @@ export default function LobbyPage() {
 
         {/* 액션 버튼들 */}
         <div className={styles.actions}>
-          <button className={`${styles.actionBtn} ${styles.hostBtn}`} onClick={handleHost}>
+          <button
+            className={`${styles.actionBtn} ${styles.hostBtn}`}
+            onClick={handleHost}
+            disabled={isConnecting}
+          >
             <span className={styles.btnIcon}>👑</span>
             <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>방 만들기</div>
+              <div className={styles.btnTitle}>{isConnecting ? '연결중...' : '방 만들기'}</div>
               <div className={styles.btnDesc}>새로운 게임 시작</div>
             </div>
           </button>
@@ -97,19 +178,22 @@ export default function LobbyPage() {
           </button>
         </div>
 
+        {/* 에러 메시지 표시 */}
+        {joinError && <p className={styles.error}>{joinError}</p>}
+
         {/* 참가 모달 */}
         {showJoinModal && (
           <div className={styles.modalOverlay} onClick={() => setShowJoinModal(false)}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
               <h3>방 코드 입력</h3>
-              <p className={styles.modalDesc}>6자리 숫자 코드를 입력하세요</p>
+              <p className={styles.modalDesc}>6자리 코드를 입력하세요 (영문+숫자)</p>
 
               <input
                 className={styles.codeInput}
-                placeholder="000000"
+                placeholder="ABC123"
                 maxLength={6}
                 value={roomCodeInput}
-                onChange={(e) => setRoomCodeInput(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => setRoomCodeInput(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
                 autoFocus
               />
 
@@ -119,8 +203,12 @@ export default function LobbyPage() {
                 <button className={styles.btnSecondary} onClick={() => setShowJoinModal(false)}>
                   취소
                 </button>
-                <button className={styles.btnPrimary} onClick={handleJoinSubmit}>
-                  입장
+                <button
+                  className={styles.btnPrimary}
+                  onClick={handleJoinSubmit}
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? '연결중...' : '입장'}
                 </button>
               </div>
             </div>
@@ -138,8 +226,8 @@ export default function LobbyPage() {
                 <label className={styles.settingLabel}>닉네임</label>
                 <input
                   className={styles.input}
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
+                  value={tempNickname}
+                  onChange={(e) => setTempNickname(e.target.value)}
                   placeholder="닉네임 입력"
                 />
               </div>
@@ -170,7 +258,18 @@ export default function LobbyPage() {
                 </div>
               </div>
 
-              <button className={styles.btnPrimary} onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: '20px' }}>
+              <button
+                className={styles.btnPrimary}
+                onClick={() => {
+                  // 닉네임이 비어있지 않을 때만 저장
+                  if (tempNickname.trim()) {
+                    setNickname(tempNickname.trim());
+                    localStorage.setItem('nickname', tempNickname.trim());
+                  }
+                  setShowSettings(false);
+                }}
+                style={{ width: '100%', marginTop: '20px' }}
+              >
                 완료
               </button>
             </div>

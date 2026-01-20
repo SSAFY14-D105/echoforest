@@ -182,3 +182,41 @@ http://localhost:5173
 ### WebSocket 통신
 - **메시지 타입**: JOIN, MOVE, LEAVE
 - **좌표 보간**: Tweens 사용 권장 (부드러운 이동)
+
+---
+
+## 🆕 feature/fe/Websocket 브랜치 작업 내용 (2026-01-19 ~ 01-20)
+
+### 1. WebSocket 백엔드 연동
+- **GameWebSocket.ts 리팩토링**
+  - 백엔드 `GameMessageDto`와 동일한 메시지 형식 적용
+  - JWT 토큰 인증 지원 (`?token=xxx` 쿼리 파라미터)
+  - 메시지 타입: `CREATE`, `JOIN`, `MOVE`, `PING`, `PONG`, `ERROR`, `ROOM_CREATED`, `LEAVE`
+  - 콜백 패턴: `onMessage()`, `onConnect()`, `onError()`, `onClose()`
+  - 편의 메서드: `createRoom()`, `joinRoom()`, `move()`, `disconnect()`
+
+### 2. 방 생성/참가 WebSocket 연동
+- **방 만들기 (CREATE)**
+  - 프론트 → 백엔드: `CREATE` 메시지 전송
+  - 백엔드 → 프론트: `ROOM_CREATED` 응답에서 방 코드 수신
+  - 백엔드가 생성한 영문+숫자 6자리 코드 사용
+- **방 참가하기 (JOIN)**
+  - 영문+숫자 6자리 코드 입력 지원 (숫자만 → 영문+숫자)
+  - 자동 대문자 변환
+  - 에러 처리: "Room not found" → "해당하는 방을 찾을 수 없습니다."
+  - 에러 처리: "Room is full" → "방이 가득 찼습니다."
+
+### 3. 로그인 닉네임 처리
+- **authApi.ts**
+  - `LoginResponse`에 `nickname` 필드 추가
+  - 로그인 실패 시 에러 메시지 개선 (500 에러 → "아이디/비밀번호 확인")
+- **LoginPage.tsx**
+  - 로그인 성공 시 `res.nickname` 사용 (기존: loginId)
+  - localStorage에 nickname 저장
+
+### 4. 로비 닉네임 설정 개선
+- **LobbyPage.tsx**
+  - 닉네임 변경 시 localStorage에도 저장
+  - 빈 닉네임으로는 저장 불가
+
+
