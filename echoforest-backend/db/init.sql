@@ -13,7 +13,7 @@ CREATE TABLE users (
                        login_id VARCHAR(50) NOT NULL UNIQUE COMMENT '로그인 아이디',
                        password VARCHAR(255) NOT NULL COMMENT '암호화된 비밀번호',
                        nickname VARCHAR(20) NOT NULL UNIQUE COMMENT '닉네임',
-                       email VARCHAR(100) NOT NULL UNIQUE COMMENT '이메일',
+                       email VARCHAR(100) NOT NULL COMMENT '이메일',
 
     -- 추가된 게임 데이터
                        level INT DEFAULT 1 COMMENT '유저 레벨',
