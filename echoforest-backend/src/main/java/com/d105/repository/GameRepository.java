@@ -1,51 +1,62 @@
 package com.d105.repository;
 
+import com.d105.game.GameRoom;
 import org.springframework.stereotype.Repository;
-import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 게임 방과 세션 정보를 저장하는 인메모리 저장소
- * 나중에 Redis로 교체하기 좋은 위치입니다.
+ * 게임 방(GameRoom) 인스턴스를 관리하는 저장소
+ * - 방 생성/조회/삭제
+ * - 나중에 Redis로 교체하기 좋은 위치
  */
 @Repository
 public class GameRepository {
 
-    // key: roomId, value: 세션 목록
-    private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    // 활성 게임 방 (roomId -> GameRoom)
+    private final Map<String, GameRoom> rooms = new ConcurrentHashMap<>();
 
     /**
      * 방 존재 여부 확인
-     * - CREATE: 중복 방지용
-     * - JOIN: 입장 가능 여부 확인용
      */
     public boolean roomExists(String roomId) {
         return rooms.containsKey(roomId);
     }
 
-    public Set<WebSocketSession> getSessions(String roomId) {
-        return rooms.getOrDefault(roomId, Set.of());
+    /**
+     * 방 조회 (없으면 null)
+     */
+    public GameRoom getRoom(String roomId) {
+        return rooms.get(roomId);
     }
 
-    public void addSession(String roomId, WebSocketSession session) {
-        rooms.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(session);
+    /**
+     * 방 등록
+     */
+    public void addRoom(String roomId, GameRoom room) {
+        rooms.put(roomId, room);
     }
 
-    public void removeSession(String roomId, WebSocketSession session) {
-        Set<WebSocketSession> sessions = rooms.get(roomId);
-        if (sessions != null) {
-            sessions.remove(session);
-            if (sessions.isEmpty()) {
-                rooms.remove(roomId);
-            }
-        }
+    /**
+     * 방 삭제
+     */
+    public void removeRoom(String roomId) {
+        rooms.remove(roomId);
     }
 
-    public int getRoomSize(String roomId) {
-        Set<WebSocketSession> sessions = rooms.get(roomId);
-        return sessions == null ? 0 : sessions.size();
+    /**
+     * 방의 현재 플레이어 수 조회
+     */
+    public int getPlayerCount(String roomId) {
+        GameRoom room = rooms.get(roomId);
+        return room == null ? 0 : room.getPlayerCount();
+    }
+
+    /**
+     * 활성 방 개수
+     */
+    public int getActiveRoomCount() {
+        return rooms.size();
     }
 }
