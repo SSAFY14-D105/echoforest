@@ -1,5 +1,6 @@
 package com.d105.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "게임 웹소켓 통신용 메시지 규격")
 public class GameMessageDto {
     @Schema(description = "메시지 타입", example = "JOIN", allowableValues = {"CREATE", "JOIN", "MOVE", "PING", "ERROR", "ROOM_CREATED"})

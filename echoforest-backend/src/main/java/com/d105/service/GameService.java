@@ -99,6 +99,17 @@ public class GameService {
         room.addPlayer(session, username);
 
         log.info("User joined room: {}, User: {}", roomId, username);
+
+        // 입장 메시지 생성
+        GameMessageDto joinMsg = new GameMessageDto();
+        joinMsg.setType("JOIN");
+        joinMsg.setRoomId(roomId);
+        joinMsg.setUsername(username);
+        joinMsg.setX(100.0); // 초기 좌표
+        joinMsg.setY(100.0);
+        joinMsg.setAnim("idle_down");
+
+        room.broadcast(joinMsg, session.getId());
     }
 
     /**

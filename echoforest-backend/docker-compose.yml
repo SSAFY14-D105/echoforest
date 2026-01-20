@@ -7,8 +7,8 @@ services:
   game-server:
     build: .                # 현재 폴더의 Dockerfile로 빌드
     container_name: echoforest-server
-    #    ports:
-    #      - "9001:9001"         # 외부 접속 포트
+    ports:
+      - "9001:9001"         # 외부 접속 포트
     environment:
       # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
       - LIVEKIT_URL=wss://i14d105.p.ssafy.io:7880
@@ -40,7 +40,7 @@ services:
     ports:
       - "7880:7880" # 시그널링 (TCP)
       - "7881:7881" # (선택) HTTP API용, 보통 7880으로 다 됨
-      - "50000-50200:50000-50200/udp" # WebRTC 미디어 전송용 포트 범위
+      - "60000-60200:60000-60200/udp" # WebRTC 미디어 전송용 포트 범위
     environment:
       - "LIVEKIT_KEYS=devkey: secret"  # 주의: devkey:(공백)secret
     networks:
