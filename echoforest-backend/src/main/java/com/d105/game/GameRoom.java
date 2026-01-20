@@ -15,32 +15,26 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Slf4j
 public class GameRoom implements Runnable {
 
+    // 60 TPS (약 16ms)
+    private static final double TICK_DURATION = 1.0 / 60.0;
+    // 브로드캐스트 빈도 (20 TPS - 네트워크 최적화)
+    private static final double BROADCAST_INTERVAL = 1.0 / 20.0;
     @Getter
     private final String roomId;
     private final ObjectMapper objectMapper;
-
     // 타일맵 충돌 처리 매니저
     private final TileCollisionManager collisionManager;
-
     // 세션 관리 및 플레이어 상태 관리
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, PlayerState> players = new ConcurrentHashMap<>();
-
     // 입력 큐 (Thread-Safe)
     private final Queue<InputEvent> inputQueue = new ConcurrentLinkedQueue<>();
-
     private volatile boolean isRunning = true;
-
-    // 60 TPS (약 16ms)
-    private static final double TICK_DURATION = 1.0 / 60.0;
-
-    // 브로드캐스트 빈도 (20 TPS - 네트워크 최적화)
-    private static final double BROADCAST_INTERVAL = 1.0 / 20.0;
     private double broadcastAccumulator = 0;
 
     /**
      * GameRoom 생성자
-     * 
+     *
      * @param roomId       방 ID
      * @param objectMapper JSON 직렬화용
      * @param mapData      타일맵 데이터 (null이면 기본 맵 사용)
@@ -106,6 +100,29 @@ public class GameRoom implements Runnable {
         sessions.put(session.getId(), session);
         // 초기 시작 위치 (100, 100)
         players.put(session.getId(), new PlayerState(username, 100, 100));
+    }
+
+    /**
+     * 방 내의 참가자들에게 메시지를 전송하는 기능 (Broadcasting)
+     * Service 계층에서 세션 목록을 직접 순회하지 않도록 캡슐화함.
+     * * @param message 전송할 메시지 객체
+     *
+     * @param excludeSessionId 전송에서 제외할 세션 ID (본인 등) - null이면 전원 전송
+     */
+    public void broadcast(GameMessageDto message, String excludeSessionId) {
+        try {
+            TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(message));
+            for (WebSocketSession s : sessions.values()) {
+                if (s.isOpen()) {
+                    // 제외 대상이 아니거나, 제외 대상이 없으면 전송
+                    if (excludeSessionId == null || !s.getId().equals(excludeSessionId)) {
+                        s.sendMessage(textMsg);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Broadcast Error in Room {}", roomId, e);
+        }
     }
 
     // 입력 처리
