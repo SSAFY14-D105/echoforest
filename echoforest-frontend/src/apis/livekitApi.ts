@@ -1,104 +1,57 @@
 /**
- * LiveKit 관련 API 서비스
- * 백엔드에서 토큰을 발급받아 LiveKit 서버에 연결합니다.
+ * LiveKit API 서비스
+ * 백엔드에서 토큰을 발급받는 공통 함수
  */
 
-// 환경별 설정
+// 환경 설정 (환경변수로 관리 추천)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
 export const LIVEKIT_SERVER_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
 
 /**
- * LiveKit 토큰 발급 요청 타입
+ * 토큰 발급 요청 타입
  */
 export interface LiveKitTokenRequest {
-    roomName: string;      // 방 이름 (roomId)
-    userId: string;        // 사용자 고유 ID
-    username: string;      // 표시될 사용자 이름
+    roomName: string;   // 방 이름
+    userId: string;     // 유저 고유 ID
+    username: string;   // 닉네임
 }
 
 /**
- * LiveKit 토큰 발급 응답 타입
+ * 토큰 발급 응답 타입
  */
 export interface LiveKitTokenResponse {
-    token: string;         // LiveKit 접속 토큰
+    token: string;
 }
 
 /**
- * API 에러 클래스
- */
-export class LiveKitApiError extends Error {
-    constructor(
-        message: string,
-        public statusCode?: number,
-        public originalError?: unknown
-    ) {
-        super(message);
-        this.name = 'LiveKitApiError';
-    }
-}
-
-/**
- * LiveKit 토큰 발급 API
- * 
- * @param request - 토큰 발급 요청 데이터
- * @returns LiveKit 접속 토큰
- * @throws LiveKitApiError - API 요청 실패 시
+ * LiveKit 토큰 발급 API 호출
  * 
  * @example
- * ```ts
  * const { token } = await fetchLiveKitToken({
- *   roomName: 'room_123',
- *   userId: 'user_456',
- *   username: '홍길동'
+ *   roomName: 'room_1',
+ *   userId: 'user_123',
+ *   username: '철수'
  * });
- * ```
  */
 export async function fetchLiveKitToken(
     request: LiveKitTokenRequest
 ): Promise<LiveKitTokenResponse> {
-    try {
-        const response = await fetch(`${API_BASE_URL}/livekit/token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(request),
-        });
+    const response = await fetch(`${API_BASE_URL}/livekit/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    });
 
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => '');
-            throw new LiveKitApiError(
-                `토큰 발급 실패: ${response.status} ${response.statusText}`,
-                response.status,
-                errorText
-            );
-        }
-
-        const data = await response.json();
-
-        if (!data.token) {
-            throw new LiveKitApiError('응답에 토큰이 없습니다.');
-        }
-
-        return data as LiveKitTokenResponse;
-    } catch (error) {
-        if (error instanceof LiveKitApiError) {
-            throw error;
-        }
-        throw new LiveKitApiError(
-            '토큰 발급 중 네트워크 오류가 발생했습니다.',
-            undefined,
-            error
-        );
+    if (!response.ok) {
+        throw new Error(`토큰 발급 실패: ${response.status}`);
     }
+
+    return response.json();
 }
 
 /**
- * 고유 사용자 ID 생성 유틸리티
- * 
- * @param prefix - ID 접두사 (기본값: 'user')
- * @returns 고유 사용자 ID
+ * 고유 사용자 ID 생성
  */
-export function generateUserId(prefix: string = 'user'): string {
+export function generateUserId(prefix = 'user'): string {
     return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
