@@ -182,7 +182,7 @@ export default function GamePage() {
       <div className={styles.gameContainer}>
         {/* 게임 캔버스 (전체 화면) */}
         <div className={`pixel-box ${styles.canvasWrapper}`} style={{ marginBottom: 0, flex: 1 }}>
-          <PhaserGame />
+          <PhaserGame startScene="SoloScene" />
           <div className={styles.gameInfo}>
             🧪 혼자하기 모드 | {nickname}
           </div>
@@ -204,7 +204,7 @@ export default function GamePage() {
       <div className={styles.gameContainer}>
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
-          <PhaserGame />
+          <PhaserGame startScene={`Stage${currentStage}Scene`} />
           <div className={styles.gameInfo}>
             🎮 Stage {currentStage} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
           </div>
@@ -289,7 +289,7 @@ export default function GamePage() {
     <div className={styles.gameContainer}>
       {/* 게임 캔버스 (대기 화면) */}
       <div className={`pixel-box ${styles.canvasWrapper}`}>
-        <PhaserGame />
+        <PhaserGame startScene="LobbyScene" />
         <div className={styles.gameInfo}>
           🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span> |
           👥 {players.length}/{MAX_PLAYERS}
