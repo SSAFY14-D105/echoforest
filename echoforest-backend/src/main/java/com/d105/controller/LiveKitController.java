@@ -4,10 +4,12 @@ import com.d105.dto.TokenReqDto;
 import com.d105.dto.TokenResDto;
 import com.d105.service.LiveKitService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "LiveKit", description = "화상 채팅 API (토큰 발급)")
 @CrossOrigin(origins = "*")  // 테스트용, 실제 배포 시에는 지워야함
 @RestController
 @RequestMapping("/api/livekit")
