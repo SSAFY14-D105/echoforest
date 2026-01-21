@@ -563,20 +563,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 const player = this.players.get(storePlayer.nickname);
                 if (player && !player.isLocalPlayer && storePlayer.x !== undefined && storePlayer.y !== undefined) {
                     const currentPos = player.getPosition();
-                    // 위치가 의미있게 변경된 경우만 tween 적용 (1픽셀 이상 차이)
-                    if (Math.abs(currentPos.x - storePlayer.x) > 1 || Math.abs(currentPos.y - storePlayer.y) > 1) {
-                        // Tweens로 부드럽게 이동 (서버 업데이트 주기 50ms에 맞춤)
-                        this.tweens.add({
-                            targets: { x: currentPos.x, y: currentPos.y },
-                            x: storePlayer.x,
-                            y: storePlayer.y,
-                            duration: 50, // 50ms 동안 부드럽게 보간
-                            onUpdate: (tween) => {
-                                const value = tween.targets[0] as { x: number; y: number };
-                                player.setPosition(value.x, value.y);
-                            }
-                        });
+                    const dx = Math.abs(currentPos.x - storePlayer.x);
+                    const dy = Math.abs(currentPos.y - storePlayer.y);
+
+                    // 위치가 크게 변경된 경우 (순간이동)
+                    if (dx > 100 || dy > 100) {
+                        // 순간이동: 바로 위치 설정
+                        player.setPosition(storePlayer.x, storePlayer.y);
+                    } else if (dx > 1 || dy > 1) {
+                        // 작은 이동: 직접 위치 설정 (Tween 대신 - 더 반응성 있게)
+                        player.setPosition(storePlayer.x, storePlayer.y);
                     }
+                    // 차이가 1픽셀 이하면 무시 (떨림 방지)
                 }
             }
         });

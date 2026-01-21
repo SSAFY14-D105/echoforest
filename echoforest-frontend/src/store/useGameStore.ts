@@ -90,48 +90,55 @@ export const useGameStore = create<GameState>((set, get) => ({
     syncPlayersFromServer: (serverPlayers) => set((state) => {
         // 서버에서 받은 플레이어 상태를 기존 목록과 병합
         // 백엔드의 sp.id = username (닉네임과 동일)
-        const updatedPlayers = serverPlayers.map(sp => {
-            // nickname으로 기존 플레이어 찾기 (서버의 id = username = nickname)
-            const existing = state.players.find(p => p.nickname === sp.id);
-            if (existing) {
-                // 기존 플레이어 정보 업데이트 (서버 데이터 우선)
-                return {
-                    ...existing,
-                    x: sp.x,
-                    y: sp.y,
-                    vx: sp.vx,
-                    vy: sp.vy,
-                    width: sp.width,
-                    height: sp.height,
-                    hp: sp.hp,
-                    isDead: sp.isDead,
-                    curses: sp.curses
-                };
-            } else {
-                // 새로운 플레이어 추가 (서버의 username을 id와 nickname 둘 다에 사용)
-                return {
-                    id: sp.id,  // 서버의 username 그대로 사용 (player- 접두사 제거)
-                    nickname: sp.id,
-                    isHost: false,  // 호스트 여부는 JOIN/Redis에서 관리
-                    x: sp.x,
-                    y: sp.y,
-                    vx: sp.vx,
-                    vy: sp.vy,
-                    width: sp.width,
-                    height: sp.height,
-                    hp: sp.hp,
-                    isDead: sp.isDead,
-                    curses: sp.curses
-                } as Player;
-            }
-        });
 
-        // 서버에 없는 플레이어 제거 (퇴장 처리)
-        // 단, 이미 존재하는 기존 플레이어(본인 등)는 유지
+        // 1. 기존 플레이어들의 순서와 isHost 정보 보존
+        const existingByNickname = new Map(state.players.map(p => [p.nickname, p]));
+
+        // 2. 서버에 있는 플레이어만 업데이트 (기존 플레이어 우선, 새 플레이어 추가)
         const serverNicknames = new Set(serverPlayers.map(sp => sp.id));
-        const finalPlayers = updatedPlayers.filter(p => serverNicknames.has(p.nickname));
 
-        return { players: finalPlayers };
+        // 3. 기존 플레이어 중 서버에도 있는 것들 업데이트
+        const updatedExisting = state.players
+            .filter(p => serverNicknames.has(p.nickname))
+            .map(existingPlayer => {
+                const serverData = serverPlayers.find(sp => sp.id === existingPlayer.nickname);
+                if (serverData) {
+                    return {
+                        ...existingPlayer,  // isHost, id 등 기존 정보 유지
+                        x: serverData.x,
+                        y: serverData.y,
+                        vx: serverData.vx,
+                        vy: serverData.vy,
+                        width: serverData.width,
+                        height: serverData.height,
+                        hp: serverData.hp,
+                        isDead: serverData.isDead,
+                        curses: serverData.curses
+                    };
+                }
+                return existingPlayer;
+            });
+
+        // 4. 서버에는 있지만 기존에 없는 새 플레이어 추가
+        const newPlayers = serverPlayers
+            .filter(sp => !existingByNickname.has(sp.id))
+            .map(sp => ({
+                id: sp.id,
+                nickname: sp.id,
+                isHost: false,  // 새로 들어온 사람은 무조건 isHost: false
+                x: sp.x,
+                y: sp.y,
+                vx: sp.vx,
+                vy: sp.vy,
+                width: sp.width,
+                height: sp.height,
+                hp: sp.hp,
+                isDead: sp.isDead,
+                curses: sp.curses
+            } as Player));
+
+        // 5. 기존 순서 유지 + 새 플레이어는 뒤에 추가
+        return { players: [...updatedExisting, ...newPlayers] };
     }),
     removePlayerByNickname: (nickname) => set((state) => ({
         players: state.players.filter(p => p.nickname !== nickname),
