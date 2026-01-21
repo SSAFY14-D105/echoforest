@@ -594,14 +594,26 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const xPos = storePlayer.x ?? (100 + (index * 100));
         const yPos = storePlayer.y ?? (this.gameHeight - 40 - PHYSICS.PLAYER_SIZE);
 
+        // colorIndex 결정: Host는 항상 0 (P1), 나머지는 순서대로
+        // isHost가 true면 P1, 아니면 index 기반
+        let colorIndex = index;
+        if (storePlayer.isHost) {
+            colorIndex = 0;  // Host는 항상 P1 (초록색)
+        } else if (index === 0) {
+            // 만약 index가 0인데 Host가 아니면, P2로 할당
+            colorIndex = 1;
+        }
+
         const config: PlayerConfig = {
             id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
             nickname: storePlayer.nickname,
             x: xPos,
             y: yPos,
-            colorIndex: index,
+            colorIndex: colorIndex,
             isLocalPlayer
         };
+
+        console.log(`[${this.getSceneKey()}] Adding player: ${storePlayer.nickname}, isHost: ${storePlayer.isHost}, colorIndex: ${colorIndex}, isLocal: ${isLocalPlayer}`);
 
         try {
             const player = new Player(this, config);
