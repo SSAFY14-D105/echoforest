@@ -47,6 +47,10 @@ export class Player {
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
 
+    // 목표 위치 (원격 플레이어 보간용)
+    private targetPos: { x: number, y: number } | null = null;
+    private readonly LERP_FACTOR = 0.2; // 보간 계수 (높을수록 빠름), 0.1~0.3 권장
+
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
         this.id = config.id;
@@ -54,7 +58,7 @@ export class Player {
         this.color = PLAYER_COLORS[config.colorIndex % PLAYER_COLORS.length];
         this.isLocalPlayer = config.isLocalPlayer;
 
-        // TODO: 씬 준비 상태 체크 로직 개선 필요 - 임시 가드
+        // 임시 가드
         if (!this.scene.matter) {
             console.warn('[Player] Scene matter physics not ready, skipping player creation:', config.id);
             throw new Error('Scene matter physics not initialized');
@@ -62,6 +66,11 @@ export class Player {
 
         // 물리 바디 생성
         this.body = this.createBody(config.x, config.y);
+
+        // 초기 목표 위치 설정 (원격 플레이어용)
+        if (!this.isLocalPlayer) {
+            this.targetPos = { x: config.x, y: config.y };
+        }
 
         // 플레이어 그래픽 생성
         this.graphics = this.scene.add.graphics();
@@ -95,7 +104,7 @@ export class Player {
             this.graphics.strokeRect(-size / 2 - 2, -size / 2 - 2, size + 4, size + 4);
         }
 
-        // 스턴 상태 시 시각적 효과 (예: 빨간색 필터 느낌)
+        // 스턴 상태 시 시각적 효과
         if (this._isStunned) {
             this.graphics.fillStyle(0xff5555, 1);
         } else {
@@ -105,6 +114,20 @@ export class Player {
     }
 
     public update(): void {
+        // 원격 플레이어 보간 이동
+        if (!this.isLocalPlayer && this.targetPos) {
+            const currentX = this.body.position.x;
+            const currentY = this.body.position.y;
+
+            // 선형 보간 (Lerp)
+            const newX = Phaser.Math.Linear(currentX, this.targetPos.x, this.LERP_FACTOR);
+            const newY = Phaser.Math.Linear(currentY, this.targetPos.y, this.LERP_FACTOR);
+
+            // 위치 변경
+            this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 }); // 속도 제거 (떨림 방지)
+        }
+
         // 그래픽 위치를 물리 바디에 맞춤
         this.graphics.setPosition(this.body.position.x, this.body.position.y);
 
@@ -112,6 +135,13 @@ export class Player {
         if (this.hpBarGraphics) {
             this.drawHPBar();
         }
+    }
+
+    /**
+     * 목표 위치 설정 (원격 플레이어 보간용)
+     */
+    public setTargetPosition(x: number, y: number): void {
+        this.targetPos = { x, y };
     }
 
     /**
@@ -128,11 +158,11 @@ export class Player {
 
         this.hpBarGraphics.clear();
 
-        // 배경 (어두운 빨강)
+        // 배경
         this.hpBarGraphics.fillStyle(0x333333, 0.8);
         this.hpBarGraphics.fillRect(x, y, barWidth, barHeight);
 
-        // HP (초록 → 빨강 그라데이션 효과)
+        // HP
         const hpRatio = this.curseHP / 100;
         const hpColor = hpRatio > 0.5 ? 0x00ff00 : (hpRatio > 0.25 ? 0xffff00 : 0xff0000);
         this.hpBarGraphics.fillStyle(hpColor, 1);
@@ -145,10 +175,6 @@ export class Player {
 
     // ===== 저주 시스템 =====
 
-    /**
-     * 저주 적용
-     * @param curseId 저주 ID (curseConfig.ts에 정의된 ID)
-     */
     public applyCurse(curseId: string): void {
         const curse = CURSES[curseId];
         if (!curse) {
@@ -180,9 +206,6 @@ export class Player {
         this.drawPlayer();
     }
 
-    /**
-     * HP 감소 타이머 시작
-     */
     private startHPDrain(): void {
         // 기존 타이머 제거
         this.stopHPDrain();
@@ -192,145 +215,101 @@ export class Player {
             this.hpBarGraphics = this.scene.add.graphics();
         }
 
-        // 1초마다 HP 20% 감소 (5초 후 좽음)
+        // 1초마다 HP 20% 감소 (5초 후 죽음)
         this.hpDrainTimer = this.scene.time.addEvent({
             delay: 1000,
             repeat: 4,  // 5회 실행 (0, 1, 2, 3, 4)
             callback: () => {
                 this.curseHP -= 20;
-                console.log(`[Player] ${this.id} HP: ${this.curseHP}%`);
-
                 if (this.curseHP <= 0) {
                     this.curseHP = 0;
-                    this.onCurseDeath();
+                    if (this.onDeathCallback) {
+                        this.onDeathCallback();
+                    }
                 }
             }
         });
     }
 
-    /**
-     * HP 감소 타이머 정지
-     */
     private stopHPDrain(): void {
         if (this.hpDrainTimer) {
-            this.hpDrainTimer.destroy();
+            this.hpDrainTimer.remove();
             this.hpDrainTimer = null;
         }
         if (this.hpBarGraphics) {
+            this.hpBarGraphics.clear();
             this.hpBarGraphics.destroy();
             this.hpBarGraphics = null;
         }
-        this.curseHP = 100;
     }
 
-    /**
-     * 저주로 인한 좽음 처리
-     */
-    private onCurseDeath(): void {
-        console.log(`[Player] ${this.id} died from curse!`);
-        this.stopHPDrain();
-        if (this.onDeathCallback) {
-            this.onDeathCallback();
-        }
-    }
-
-    /**
-     * 좽음 콜백 설정 (BaseGameScene에서 설정)
-     */
-    public setOnDeathCallback(callback: () => void): void {
-        this.onDeathCallback = callback;
-    }
-
-    /**
-     * 저주 해제
-     */
     public removeCurse(): void {
         if (!this.currentCurseId) return;
 
         console.log(`[Player] Removing curse from ${this.id}`);
-
-        // HP 타이머 정지
-        this.stopHPDrain();
-
         this.currentCurseId = null;
         this.sizeMultiplier = 1;
         this.speedMultiplier = 1;
         this.reverseControls = false;
 
-        // 물리 바디 재생성 (원래 크기)
+        this.stopHPDrain();
+
+        // 물리 바디 재생성
         const pos = this.body.position;
         const vel = this.body.velocity;
         this.scene.matter.world.remove(this.body);
         this.body = this.createBody(pos.x, pos.y);
         this.scene.matter.body.setVelocity(this.body, vel);
 
-        // 그래픽 다시 그리기
         this.drawPlayer();
     }
 
-    /**
-     * 속도 수정자 반환 (이동 로직에서 사용)
-     */
-    public getSpeedMultiplier(): number {
-        return this.speedMultiplier;
-    }
-
-    /**
-     * 저주 상태 확인
-     */
     public hasCurse(): boolean {
         return this.currentCurseId !== null;
     }
 
-    /**
-     * 현재 저주 ID 반환
-     */
-    public getCurrentCurseId(): string | null {
-        return this.currentCurseId;
+    public setOnDeathCallback(callback: () => void): void {
+        this.onDeathCallback = callback;
     }
 
-    /**
-     * 조작 반전 여부 반환
-     */
-    public isControlReversed(): boolean {
+    public getSpeedMultiplier(): number {
+        return this.speedMultiplier;
+    }
+
+    public get isControlReversed(): boolean {
         return this.reverseControls;
     }
 
-    /**
-     * 현재 HP 반환 (0~100)
-     */
-    public getCurseHP(): number {
-        return this.curseHP;
+    public applyKnockback(forceX: number, forceY: number, duration: number): void {
+        this.scene.matter.body.applyForce(this.body, { x: 0, y: 0 }, { x: forceX, y: forceY });
+        this.stun(duration);
     }
 
-    // ===== 밀치기 및 스턴 시스템 =====
+    // ===== 스턴 시스템 =====
 
-    /**
-     * 밀치기 적용 및 스턴 상태 돌입
-     * @param forceX X측 힘
-     * @param forceY Y측 힘
-     * @param duration 스턴 지속 시간 (ms)
-     */
-    public applyKnockback(forceX: number, forceY: number, duration: number = 300): void {
-        if (this._isHidden) return;
+    public stun(duration: number): void {
+        if (this._isStunned) return;
 
-        // 힘 적용 (경량화를 위해 setVelocity 사용)
-        this.setVelocity(forceX, forceY);
-
-        // 스턴 상태 돌입
         this._isStunned = true;
-        this.drawPlayer(); // 색상 변경을 위해 즉시 다시 그리기
+        this.drawPlayer(); // 색상 변경 등 시각적 효과
 
-        // 기존 타이머 제거
-        if (this.stunTimer) {
-            this.stunTimer.destroy();
-        }
+        // 일정 시간 후 스턴 해제
+        if (this.stunTimer) this.stunTimer.destroy();
 
-        // 지속 시간 후 스턴 해제
-        this.stunTimer = this.scene.time.delayedCall(duration, () => {
-            this._isStunned = false;
-            this.stunTimer = null;
-            this.drawPlayer(); // 원래 색상으로 복구
+        this.stunTimer = this.scene.time.addEvent({
+            delay: duration,
+            callback: () => {
+                this._isStunned = false;
+                this.drawPlayer();
+            }
+        });
+
+        this.stunTimer = this.scene.time.addEvent({
+            delay: duration,
+            callback: () => {
+                this._isStunned = false;
+                this.drawPlayer();
+            }
         });
     }
 
@@ -354,6 +333,7 @@ export class Player {
 
     public setPosition(x: number, y: number): void {
         this.scene.matter.body.setPosition(this.body, { x, y });
+        this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
     }
 
     // Goal 입장 시 플레이어 숨기기
@@ -397,4 +377,3 @@ export class Player {
         this.graphics?.destroy();
     }
 }
-

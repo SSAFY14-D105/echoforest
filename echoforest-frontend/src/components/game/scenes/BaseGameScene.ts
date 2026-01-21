@@ -571,8 +571,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         // 순간이동: 바로 위치 설정
                         player.setPosition(storePlayer.x, storePlayer.y);
                     } else if (dx > 1 || dy > 1) {
-                        // 작은 이동: 직접 위치 설정 (Tween 대신 - 더 반응성 있게)
-                        player.setPosition(storePlayer.x, storePlayer.y);
+                        // 작은 이동: 보간 목표 위치 설정 (부드러운 이동)
+                        player.setTargetPosition(storePlayer.x, storePlayer.y);
                     }
                     // 차이가 1픽셀 이하면 무시 (떨림 방지)
                 }
@@ -943,7 +943,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         const velocity = myPlayer.getVelocity();
         const moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
-        const isReversed = myPlayer.isControlReversed();
+        const isReversed = myPlayer.isControlReversed;
 
         // 좌우 이동 (반전 저주 적용)
         if (!myPlayer.isHidden) {
