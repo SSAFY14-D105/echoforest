@@ -99,6 +99,25 @@ services:
     networks:
       - echo-net
 
+    # ==========================================
+    # 5. Jenkins (CI/CD)
+    # ==========================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: echoforest-jenkins
+    user: root
+    privileged: true
+    environment:
+      # Nginx 뒤에서 /jenkins 경로로 접속하기 위한 필수 설정
+      - JENKINS_OPTS="--prefix=/jenkins"
+      - JENKINS_ARGS="--prefix=/jenkins"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - ./jenkins_home:/var/jenkins_home # 데이터 영구 저장 (현재 폴더에 저장)
+    networks:
+      - echo-net
+
 networks:
   echo-net:
     driver: bridge
