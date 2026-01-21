@@ -35,7 +35,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "CREATE": // 방 생성
                     gameService.handleCreate(session, messageDto);
                     break;
-                case "JOIN":   // 방 참가 (없으면 에러)
+                case "JOIN": // 방 참가
                     gameService.handleJoin(session, messageDto);
                     break;
                 case "MOVE":
@@ -43,6 +43,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     break;
                 case "PING":
                     gameService.handlePing(session, messageDto);
+                    break;
+                case "READY": // Ready 상태 변경
+                    gameService.handleReady(session, messageDto);
+                    break;
+                case "START_GAME": // 게임 시작 (방장)
+                    gameService.handleStartGame(session, messageDto);
+                    break;
+                case "NEXT_STAGE": // 다음 스테이지 (방장)
+                    gameService.handleNextStage(session, messageDto);
                     break;
                 default:
                     log.warn("Unknown message type: {}", messageDto.getType());
