@@ -27,7 +27,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
      */
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                   WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+            WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
 
         // 1. 토큰 추출 (헤더 또는 쿼리 파라미터)
         String token = extractToken(request);
@@ -40,19 +40,20 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         // 3. 토큰에서 유저 정보(ID) 추출
-        String loginId = jwtUtil.getLoginId(token);
+        String username = jwtUtil.getUsername(token);
 
         // 4. 웹소켓 세션(attributes)에 저장
-        // 이렇게 저장하면 나중에 GameWebSocketHandler에서 session.getAttributes().get("loginId")로 꺼낼 수 있습니다.
-        attributes.put("loginId", loginId);
+        // 이렇게 저장하면 나중에 GameWebSocketHandler에서 session.getAttributes().get("username")로
+        // 꺼낼 수 있습니다.
+        attributes.put("username", username);
 
-        log.info("[WebSocket Handshake Success] User: {}", loginId);
+        log.info("[WebSocket Handshake Success] User: {}", username);
         return true;
     }
 
     @Override
     public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                               WebSocketHandler wsHandler, Exception exception) {
+            WebSocketHandler wsHandler, Exception exception) {
         // 핸드셰이크 이후 로직 (필요 없음)
     }
 

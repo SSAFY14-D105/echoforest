@@ -1,71 +1,106 @@
 package com.d105.controller;
 
+import com.d105.dto.ImageResponseDto;
+import com.d105.entity.Image;
+import com.d105.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
-@Tag(name = "Image Upload", description = "이미지 업로드 API")
+@Tag(name = "Image", description = "이미지 업로드/조회 API")
 @RestController
 @RequestMapping("/api/images")
+@RequiredArgsConstructor
 public class ImageController {
 
-    @Value("${file.upload-dir:./uploads/}")
-    private String uploadDir;
+    private final ImageService imageService;
 
-    @Operation(summary = "이미지 업로드", description = "이미지 파일을 업로드하고 접근 가능한 URL을 반환합니다.")
+    /**
+     * 이미지 업로드 (파일 + DB 저장)
+     */
+    @Operation(summary = "이미지 업로드", description = "이미지 파일을 업로드하고 DB에 저장합니다. participantUserIds는 함께 찍은 유저 ID 목록 (최대 3명)")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam Long userId,
+            @RequestParam(required = false) Long mapId,
+            @RequestParam(required = false) Integer stageNumber,
+            @RequestParam(required = false) List<Long> participantUserIds,
+            @RequestParam(required = false) String roomCode,
+            @RequestParam(required = false, defaultValue = "MOTION") String imageType) {
+
         try {
-            // 1. 저장할 폴더가 없으면 생성
-            File directory = new File(uploadDir);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
+            Image image = imageService.uploadImage(
+                    file, userId, mapId, stageNumber, participantUserIds, roomCode, imageType);
 
-            // 2. 파일명 중복 방지를 위한 UUID 생성
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".png"; // 확장자가 없으면 기본 .png
-
-            String savedFileName = UUID.randomUUID() + extension;
-            Path filePath = Paths.get(uploadDir + savedFileName);
-
-            // 3. 파일 저장
-            Files.write(filePath, file.getBytes());
-
-            // 4. 접근 URL 생성 (WebMvcConfig에서 매핑한 경로)
-            // 예: /images/550e8400-e29b-41d4-a716-446655440000.png
-            String fileUrl = "/images/" + savedFileName;
-
-            log.info("Image uploaded successfully: {}", savedFileName);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("url", fileUrl);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ImageResponseDto.from(image));
 
         } catch (IOException e) {
             log.error("Image upload failed", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "이미지 업로드 실패"));
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "이미지 업로드 실패"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 내 이미지 목록 조회
+     */
+    @Operation(summary = "내 이미지 목록", description = "내가 업로드한 이미지 목록을 조회합니다.")
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyImages(@RequestParam Long userId) {
+        try {
+            List<Image> images = imageService.getMyImages(userId);
+            List<ImageResponseDto> response = images.stream()
+                    .map(ImageResponseDto::from)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 특정 방의 이미지 목록 조회
+     */
+    @Operation(summary = "방 이미지 목록", description = "특정 방에서 찍힌 이미지 목록을 조회합니다.")
+    @GetMapping("/room/{roomCode}")
+    public ResponseEntity<List<ImageResponseDto>> getRoomImages(@PathVariable String roomCode) {
+        List<Image> images = imageService.getRoomImages(roomCode);
+        List<ImageResponseDto> response = images.stream()
+                .map(ImageResponseDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 이미지 삭제
+     */
+    @Operation(summary = "이미지 삭제", description = "본인의 이미지를 삭제합니다.")
+    @DeleteMapping("/{imageId}")
+    public ResponseEntity<?> deleteImage(
+            @PathVariable Long imageId,
+            @RequestParam Long userId) {
+        try {
+            imageService.deleteImage(imageId, userId);
+            return ResponseEntity.ok(Map.of("message", "이미지 삭제 완료"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }
