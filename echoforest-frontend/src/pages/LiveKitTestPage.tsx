@@ -6,9 +6,10 @@ import { useState } from 'react';
 import { LiveKitVideoGrid } from '../components/livekit';
 
 export default function LiveKitTestPage() {
-    // 테스트용 기본값
-    const [roomId, setRoomId] = useState('test_room_001');
-    const [username, setUsername] = useState(() => `Player_${Math.floor(Math.random() * 1000)}`);
+    // 테스트용 기본값 (사용자 요청 반영)
+    const [roomId, setRoomId] = useState('room_1');
+    const [username, setUsername] = useState('qetuo13579');
+    const [userId, setUserId] = useState('qetuo13579');
     const [isJoined, setIsJoined] = useState(false);
     const [variant, setVariant] = useState<'grid' | 'sidebar' | 'overlay' | 'fullscreen'>('grid');
 
@@ -48,6 +49,17 @@ export default function LiveKitTestPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="예: 홍길동"
+                            style={styles.input}
+                        />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>사용자 ID</label>
+                        <input
+                            type="text"
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            placeholder="예: user_123"
                             style={styles.input}
                         />
                     </div>
@@ -96,6 +108,7 @@ export default function LiveKitTestPage() {
                 <LiveKitVideoGrid
                     roomId={roomId}
                     username={username}
+                    userId={userId}
                     variant={variant}
                     showControls={true}
                     onConnected={() => console.log('✅ 화상 연결 성공!')}
