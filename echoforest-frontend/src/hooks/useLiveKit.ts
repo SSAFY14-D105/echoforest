@@ -10,10 +10,13 @@ import {
 } from '../apis/livekitApi';
 
 export interface UseLiveKitOptions {
-    roomId: string;
+    roomName: string;           // roomId -> roomName으로 통일
     username: string;
     userId?: string;
     autoConnect?: boolean;
+    onConnected?: () => void;
+    onDisconnected?: () => void;
+    onError?: (error: Error) => void;
 }
 
 export interface UseLiveKitResult {
@@ -30,12 +33,12 @@ export interface UseLiveKitResult {
  * 
  * @example
  * const { token, serverUrl, isLoading, error } = useLiveKit({
- *   roomId: 'room_1',
+ *   roomName: 'room_1',
  *   username: '철수',
  * });
  */
 export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
-    const { roomId, username, userId, autoConnect = true } = options;
+    const { roomName, username, userId, autoConnect = true, onError } = options;
 
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -43,27 +46,41 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
     // 토큰 발급
     const connect = useCallback(async () => {
-        if (!roomId || !username) return;
+        console.log('🔵 LiveKit 연결 시도:', { roomName, username, userId });
+
+        if (!roomName || !username) {
+            console.log('⚠️ roomName 또는 username이 없습니다:', { roomName, username });
+            return;
+        }
 
         setIsLoading(true);
         setError(null);
 
         try {
             const finalUserId = userId || generateUserId();
+            console.log('📡 토큰 요청 중...', { roomName, userId: finalUserId, username });
+
             const response = await fetchLiveKitToken({
-                roomName: roomId,
+                roomName,
                 userId: finalUserId,
                 username,
             });
+            console.log('✅ 토큰 발급 성공:', response.token.substring(0, 30) + '...');
             setToken(response.token);
         } catch (err) {
             const error = err instanceof Error ? err : new Error('토큰 발급 실패');
             setError(error);
-            console.error('❌ LiveKit 토큰 발급 실패:', error);
+            console.error('❌ LiveKit 토큰 발급 실패 상세:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack,
+                originalError: err
+            });
+            onError?.(error);
         } finally {
             setIsLoading(false);
         }
-    }, [roomId, username, userId]);
+    }, [roomName, username, userId, onError]);
 
     // 연결 해제
     const disconnect = useCallback(() => {
@@ -72,10 +89,11 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
     // 자동 연결
     useEffect(() => {
-        if (autoConnect && roomId && username) {
+        console.log('🟢 useLiveKit 마운트됨:', { autoConnect, roomName, username });
+        if (autoConnect && roomName && username) {
             connect();
         }
-    }, [autoConnect, roomId, username, connect]);
+    }, [autoConnect, roomName, username, connect]);
 
     return {
         token,
