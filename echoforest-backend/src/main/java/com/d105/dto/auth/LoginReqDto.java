@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class LoginReqDto {
     @Schema(example = "ssafy123")
-    private String loginId;
+    private String username;
     @Schema(example = "password123!")
     private String password;
 }

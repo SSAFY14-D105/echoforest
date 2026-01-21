@@ -38,8 +38,15 @@ public class AuthController {
 
     @Operation(summary = "아이디 중복 확인 (true: 중복, false: 사용 가능)")
     @GetMapping("/check-id")
-    public ResponseEntity<?> checkId(@RequestParam String loginId) {
-        boolean exists = authService.checkIdDuplicate(loginId);
+    public ResponseEntity<?> checkId(@RequestParam String username) {
+        boolean exists = authService.checkIdDuplicate(username);
+        return ResponseEntity.ok(Map.of("isDuplicate", exists));
+    }
+
+    @Operation(summary = "닉네임 중복 확인 (true: 중복, false: 사용 가능)")
+    @GetMapping("/check-nickname")
+    public ResponseEntity<?> checkNickname(@RequestParam String nickname) {
+        boolean exists = authService.checkNicknameDuplicate(nickname);
         return ResponseEntity.ok(Map.of("isDuplicate", exists));
     }
 }

@@ -23,7 +23,7 @@ public class AuthService {
     // 회원가입
     @Transactional
     public Long signUp(SignUpReqDto req) {
-        if (userRepository.existsByLoginId(req.getLoginId())) {
+        if (userRepository.existsByUsername(req.getUsername())) {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
         if (userRepository.existsByNickname(req.getNickname())) {
@@ -33,7 +33,7 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(req.getPassword());
 
         User user = User.builder()
-                .loginId(req.getLoginId())
+                .username(req.getUsername())
                 .password(encodedPassword)
                 .nickname(req.getNickname())
                 .email(req.getEmail())
@@ -44,8 +44,8 @@ public class AuthService {
 
     // 로그인
     public Map<String, String> login(LoginReqDto req) {
-        // 1. 아이디로 유저 조회 (Member가 아니라 User입니다)
-        User user = userRepository.findByLoginId(req.getLoginId())
+        // 1. 아이디로 유저 조회
+        User user = userRepository.findByUsername(req.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
 
         // 2. 비밀번호 검증
@@ -54,17 +54,21 @@ public class AuthService {
         }
 
         // 3. 토큰 생성
-        String token = jwtUtil.createToken(user.getId(), user.getLoginId());
+        String token = jwtUtil.createToken(user.getId(), user.getUsername());
 
         // 4. 토큰과 닉네임을 Map에 담아서 반환
         return Map.of(
                 "token", token,
-                "nickname", user.getNickname()
-        );
+                "nickname", user.getNickname());
     }
 
     // 아이디 중복 확인
-    public boolean checkIdDuplicate(String loginId) {
-        return userRepository.existsByLoginId(loginId);
+    public boolean checkIdDuplicate(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    // 닉네임 중복 확인
+    public boolean checkNicknameDuplicate(String nickname) {
+        return userRepository.existsByNickname(nickname);
     }
 }
