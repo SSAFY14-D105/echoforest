@@ -11,7 +11,7 @@ WORKDIR /app
 COPY . .
 
 # 윈도우 줄바꿈 문자(\r) 제거
-RUN sed -i 's/\r$//' ./gradlew
+RUN gradle clean build -x test --no-daemon
 
 # Gradle 빌드 실행 (테스트 생략, 권한 부여)
 RUN chmod +x ./gradlew
