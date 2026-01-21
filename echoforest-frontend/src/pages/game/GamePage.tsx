@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { Player } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
-import type { GameMessage, PlayerInfo } from '../../socket/GameWebSocket';
+import type { GameMessage, ServerPlayerState } from '../../socket/GameWebSocket';
 import { liveKitService } from '../../socket/LiveKitService';
 import PhaserGame from '../../components/game/PhaserGame';
 import styles from './GamePage.module.css';
@@ -18,16 +18,19 @@ export default function GamePage() {
     roomId,
     isHost,
     players,
+    readyPlayers,
     isGameStarted,
     isSoloMode,
     currentStage,
     clearedStages,
     addPlayer,
-    setPlayers,
+    syncPlayersFromServer,
     removePlayerByNickname,
-    updatePlayerPosition,
+    setPlayerReady,
     startGame,
+    startGameFromServer,
     selectStage,
+    setCurrentStageFromServer,
     clearStage,
     leaveGame
   } = useGameStore();
@@ -118,23 +121,15 @@ export default function GamePage() {
       }
 
       switch (msg.type) {
-        case 'ROOM_STATE':
-          // 기존 플레이어 목록 수신 (입장 시)
-          if (msg.players && msg.players.length > 0) {
-            const existingPlayers: Player[] = msg.players.map((p: PlayerInfo, idx: number) => ({
-              id: `player-remote-${Date.now()}-${idx}`,
-              nickname: p.username,
-              isHost: p.isHost,
-              x: p.x,
-              y: p.y
-            }));
-            // 본인이 이미 추가되어 있을 수 있으므로 필터링
-            const myPlayer = players.find(p => p.nickname === nickname);
-            const finalPlayers = myPlayer
-              ? [myPlayer, ...existingPlayers.filter(p => p.nickname !== nickname)]
-              : existingPlayers;
-            setPlayers(finalPlayers);
-            console.log('📋 기존 플레이어 목록 동기화:', finalPlayers.map(p => p.nickname));
+        case 'UPDATE':
+          // 백엔드에서 20 TPS로 전송하는 전체 플레이어 상태
+          if (msg.content) {
+            try {
+              const serverPlayers: ServerPlayerState[] = JSON.parse(msg.content);
+              syncPlayersFromServer(serverPlayers);
+            } catch (e) {
+              console.error('UPDATE 메시지 파싱 오류:', e);
+            }
           }
           break;
 
@@ -153,14 +148,8 @@ export default function GamePage() {
           }
           break;
 
-        case 'MOVE':
-          // 다른 플레이어 이동
-          if (msg.username && msg.username !== nickname && msg.x !== undefined && msg.y !== undefined) {
-            updatePlayerPosition(msg.username, msg.x, msg.y, msg.anim);
-          }
-          break;
-
         case 'LEAVE':
+        case 'PLAYER_LEFT':
           // 다른 플레이어 퇴장
           if (msg.username) {
             removePlayerByNickname(msg.username);
@@ -168,28 +157,45 @@ export default function GamePage() {
           }
           break;
 
-        case 'START':
-          // 게임 시작 (호스트가 보낸 신호)
-          if (!isHost) {
-            startGame();
-            console.log('🚀 게임 시작 (호스트로부터 신호 수신)');
+        case 'READY_STATUS':
+          // 플레이어 Ready 상태 변경
+          if (msg.username) {
+            const isReady = msg.content === 'true';
+            setPlayerReady(msg.username, isReady);
+            console.log(`✅ ${msg.username} Ready: ${isReady}`);
           }
           break;
 
-        case 'STAGE_SELECT':
-          // 스테이지 선택 동기화 (호스트가 보낸 신호)
-          if (!isHost && msg.stage !== undefined) {
-            selectStage(msg.stage);
-            console.log(`🎯 스테이지 ${msg.stage} 선택됨 (호스트로부터)`);
+        case 'GAME_START':
+          // 게임 시작 (서버에서 브로드캐스트)
+          {
+            const stage = msg.content ? parseInt(msg.content, 10) : 1;
+            startGameFromServer(stage);
+            console.log(`🚀 게임 시작! 스테이지: ${stage}`);
           }
           break;
 
-        case 'STAGE_CLEAR':
-          // 스테이지 클리어 동기화 (호스트가 보낸 신호)
-          if (!isHost && msg.stage !== undefined) {
-            clearStage(msg.stage);
-            console.log(`🏆 스테이지 ${msg.stage} 클리어됨 (호스트로부터)`);
+        case 'STAGE_CHANGE':
+          // 스테이지 변경 (서버에서 브로드캐스트)
+          {
+            const stage = msg.content ? parseInt(msg.content, 10) : 1;
+            setCurrentStageFromServer(stage);
+            console.log(`🎯 스테이지 변경: ${stage}`);
           }
+          break;
+
+        case 'ROOM_CLOSED':
+          // 방 폭파 (방장 퇴장)
+          console.log('🚨 방장이 방을 나갔습니다.');
+          leaveGame();
+          alert('방장이 방을 나가 게임이 종료되었습니다.');
+          break;
+
+        case 'KICKED':
+          // 강제 퇴장됨
+          console.log('🚨 방에서 강제 퇴장되었습니다.');
+          leaveGame();
+          alert('방장에 의해 강제 퇴장되었습니다.');
           break;
 
         case 'ERROR':
@@ -215,19 +221,77 @@ export default function GamePage() {
     // cleanup: 언마운트 시에도 싱글톤 연결은 유지 (leaveGame에서 정리)
   }, [roomId, nickname, isSoloMode, isHost]);
 
-  // 플레이어 수 확인
-  const isGameReady = players.length >= MAX_PLAYERS;
+  // 키보드 입력을 서버로 전송 (멀티플레이 동기화)
+  // 백엔드는 LEFT_DOWN, RIGHT_DOWN, LEFT_UP, RIGHT_UP, JUMP 입력 타입을 기대함
+  useEffect(() => {
+    if (isSoloMode) return;
+    if (!roomId || !gameWebSocket.isConnected()) return;
 
-  // 로컬 플레이어 이동 시 WebSocket으로 MOVE 전송하는 콜백 등록
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 중복 입력 방지 (key repeat)
+      if (e.repeat) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          gameWebSocket.sendInput(roomId, 'LEFT_DOWN');
+          break;
+        case 'ArrowRight':
+          gameWebSocket.sendInput(roomId, 'RIGHT_DOWN');
+          break;
+        case 'ArrowUp':
+          gameWebSocket.sendInput(roomId, 'JUMP');
+          break;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          gameWebSocket.sendInput(roomId, 'LEFT_UP');
+          break;
+        case 'ArrowRight':
+          gameWebSocket.sendInput(roomId, 'RIGHT_UP');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [roomId, isSoloMode]);
+
+  // 전원 Ready 상태 확인 (방장 제외)
+  const { isAllReady } = useGameStore.getState();
+  const allReady = isAllReady();
+
+  // 본인의 Ready 상태
+  const [myReady, setMyReady] = useState(false);
+
+  // Ready 버튼 핸들러 (비방장용)
+  const handleToggleReady = () => {
+    if (!roomId || isSoloMode) return;
+    const newReady = !myReady;
+    setMyReady(newReady);
+    gameWebSocket.sendReady(roomId, newReady);
+    console.log(`✅ Ready 상태 변경: ${newReady}`);
+  };
+
+
+  // 로컬 플레이어 이동 시 콜백 등록 (솔로 모드용 - 멀티는 키보드 이벤트 핸들러 사용)
   const { setOnMoveCallback } = useGameStore.getState();
 
   useEffect(() => {
     if (isSoloMode) return;
 
-    const sendMove = (x: number, y: number, anim?: string) => {
-      if (gameWebSocket.isConnected() && roomId) {
-        gameWebSocket.move(roomId, x, y, anim);
-      }
+    // 멀티플레이에서는 키보드 이벤트 핸들러가 입력을 서버로 전송
+    // 이 콜백은 솔로 모드 호환성을 위해 유지
+    const sendMove = (x: number, y: number) => {
+      // 멀티플레이에서는 별도 처리 없음 (키보드 이벤트로 처리)
+      console.log('Move callback (unused in multiplayer):', x, y);
     };
 
     setOnMoveCallback(sendMove);
@@ -243,14 +307,22 @@ export default function GamePage() {
     setPlayerVolumes(newVolumes);
   };
 
-  // 게임 시작 핸들러 (호스트만, WebSocket 브로드캐스트)
+  // 게임 시작 핸들러 (호스트만)
   const handleStartGame = () => {
-    if (isHost && isGameReady) {
+    if (!isHost) return;
+
+    if (isSoloMode) {
+      // 솔로 모드: 로컬에서 바로 시작
       startGame();
-      // 다른 플레이어들에게 게임 시작 알림
-      if (roomId) {
-        gameWebSocket.startGame(roomId);
+      console.log('🚀 솔로 게임 시작');
+    } else {
+      // 멀티플레이: 서버에 게임 시작 요청
+      if (!allReady && players.length > 1) {
+        alert('모든 플레이어가 Ready 상태여야 시작할 수 있습니다.');
+        return;
       }
+      gameWebSocket.sendStartGame(roomId);
+      console.log('🚀 게임 시작 요청 전송');
     }
   };
 
@@ -260,24 +332,20 @@ export default function GamePage() {
     return clearedStages.includes(stageNum - 1); // 이전 스테이지 클리어 시 열림
   };
 
-  // 스테이지 선택 핸들러 (호스트만, WebSocket 브로드캐스트)
+  // 스테이지 선택 핸들러
+  // 현재 백엔드에 스테이지 선택 메시지가 없으므로 로컬에서만 처리
   const handleSelectStage = (stageNum: number) => {
     if (isStageUnlocked(stageNum)) {
       selectStage(stageNum);
-      // 다른 플레이어들에게 스테이지 선택 알림
-      if (isHost && roomId) {
-        gameWebSocket.selectStage(roomId, stageNum);
-      }
+      console.log(`🎯 스테이지 ${stageNum} 선택됨 (로컬)`);
     }
   };
 
-  // 스테이지 클리어 핸들러 (호스트만, WebSocket 브로드캐스트)
+  // 스테이지 클리어 핸들러
+  // 현재 백엔드에 스테이지 클리어 메시지가 없으므로 로컬에서만 처리
   const handleClearStage = (stageNum: number) => {
     clearStage(stageNum);
-    // 다른 플레이어들에게 클리어 알림
-    if (isHost && roomId) {
-      gameWebSocket.clearStageSync(roomId, stageNum);
-    }
+    console.log(`🏆 스테이지 ${stageNum} 클리어됨 (로컬)`);
   };
 
   // TODO: 백엔드 WebSocket 연동 후 삭제 - 테스트용 가상 플레이어 추가 함수 시작
@@ -519,22 +587,44 @@ export default function GamePage() {
         </button>
         {/* TODO: 백엔드 WebSocket 연동 후 삭제 - 테스트용 버튼 끝 */}
 
-        {/* 게임 시작 버튼 - 4명이 모이고 호스트일 때만 */}
-        {isGameReady && isHost && (
-          <button className={styles.startGameBtn} onClick={handleStartGame}>
+        {/* Ready 버튼 - 비방장만 표시 */}
+        {!isSoloMode && !isHost && (
+          <button
+            className={`${styles.readyBtn} ${myReady ? styles.readyActive : ''}`}
+            onClick={handleToggleReady}
+          >
+            {myReady ? '✅ Ready!' : '⏳ Ready'}
+          </button>
+        )}
+
+        {/* Ready 상태 표시 (멀티플레이) */}
+        {!isSoloMode && players.length > 1 && (
+          <div className={styles.readyStatus}>
+            Ready: {readyPlayers.length}/{players.filter(p => !p.isHost).length}
+            {allReady && <span style={{ marginLeft: 8, color: '#4CAF50' }}>✓ 전원 준비완료!</span>}
+          </div>
+        )}
+
+        {/* 게임 시작 버튼 - 호스트일 때만 */}
+        {isHost && (
+          <button
+            className={styles.startGameBtn}
+            onClick={handleStartGame}
+            disabled={!isSoloMode && players.length > 1 && !allReady}
+          >
             🚀 게임 시작!
           </button>
         )}
 
         {/* 대기 메시지 */}
-        {!isGameReady && (
+        {players.length < 2 && !isSoloMode && (
           <span className={styles.waitingMessage}>
-            {MAX_PLAYERS - players.length}명 더 필요합니다...
+            다른 플레이어를 기다리는 중...
           </span>
         )}
 
         {/* 호스트 아닌 경우 대기 */}
-        {isGameReady && !isHost && (
+        {!isHost && players.length >= 2 && (
           <span className={styles.waitingMessage}>
             호스트가 게임을 시작하길 기다리는 중...
           </span>

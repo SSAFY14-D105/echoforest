@@ -32,8 +32,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     create() {
-        // 캔버스의 실제 크기 사용
-        const gameWidth = this.scale.width;
+        // 캔버스의 실제 높이 사용
         const gameHeight = this.scale.height;
 
         // Matter.js 물리 world 설정 (캔버스 크기에 맞춤)

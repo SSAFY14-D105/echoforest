@@ -114,7 +114,7 @@ export default function LoginPage({ onLogin }: Props) {
     setError('');
 
     try {
-      const res = await login({ loginId: id, password: pw });
+      const res = await login({ username: id, password: pw });
       // 백엔드 명세서: { token: "...", nickname: "..." }
       if (res.token) {
         // JWT 토큰과 닉네임을 localStorage에 저장
@@ -141,7 +141,7 @@ export default function LoginPage({ onLogin }: Props) {
 
     try {
       const res = await signup({
-        loginId: id,
+        username: id,
         password: pw,
         nickname,
         email

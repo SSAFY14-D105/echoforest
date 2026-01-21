@@ -3,7 +3,7 @@
  * 백엔드에서 LiveKit 접속 토큰을 발급받습니다.
  */
 
-const BASE_URL = 'http://localhost:9001/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
 
 export interface TokenRequest {
     roomName: string;

@@ -6,35 +6,50 @@ export interface Player {
     isHost: boolean;
     x?: number;      // WebSocket 좌표 동기화용
     y?: number;      // WebSocket 좌표 동기화용
-    anim?: string;   // 애니메이션 상태
+    vx?: number;     // X축 속도
+    vy?: number;     // Y축 속도
+    width?: number;  // 플레이어 너비 (저주로 변할 수 있음)
+    height?: number; // 플레이어 높이 (저주로 변할 수 있음)
+    hp?: number;     // 체력
+    isDead?: boolean; // 사망 여부
+    curses?: string[]; // 적용된 저주 목록
 }
+
 
 interface GameState {
     nickname: string;
     roomId: string;
     isHost: boolean;
     players: Player[];
+    readyPlayers: string[];  // Ready 상태인 플레이어 닉네임 목록
     isGameStarted: boolean;
     isSoloMode: boolean; // 혼자하기 모드
     currentStage: number | null; // null = 스테이지 선택 화면, 1~3 = 해당 스테이지 플레이 중
     clearedStages: number[]; // 클리어한 스테이지 목록
-    onMoveCallback: ((x: number, y: number, anim?: string) => void) | null;  // 로컬 플레이어 이동 콜백
+    onMoveCallback: ((x: number, y: number) => void) | null;  // 로컬 플레이어 이동 콜백
 
     // 액션(함수)들
     setNickname: (name: string) => void;
     joinGame: (roomId: string, isHost: boolean) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
-    setPlayers: (players: Player[]) => void;  // ROOM_STATE용 전체 플레이어 설정
+    setPlayers: (players: Player[]) => void;  // 전체 플레이어 설정
+    syncPlayersFromServer: (serverPlayers: { id: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; curses?: string[] }[]) => void;  // UPDATE 메시지용
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
-    updatePlayerPosition: (nickname: string, x: number, y: number, anim?: string) => void;  // WebSocket MOVE 처리용
+    updatePlayerPosition: (nickname: string, x: number, y: number) => void;  // 위치 업데이트용
+    // Ready 상태 관리
+    setPlayerReady: (nickname: string, isReady: boolean) => void;
+    clearReadyPlayers: () => void;
+    isAllReady: () => boolean;
     startGame: () => void;
+    startGameFromServer: (stage: number) => void;  // 서버에서 게임 시작 알림 받음
     startSoloGame: () => void; // 혼자하기 모드 시작
     selectStage: (stage: number) => void;
+    setCurrentStageFromServer: (stage: number) => void;  // 서버에서 스테이지 변경 알림 받음
     clearStage: (stage: number) => void;
     backToStageSelect: () => void;
-    setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
-    broadcastMove: (x: number, y: number, anim?: string) => void;  // 로컬 플레이어 이동 브로드캐스트
+    setOnMoveCallback: (callback: ((x: number, y: number) => void) | null) => void;
+    broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -42,6 +57,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     roomId: '',
     isHost: false,
     players: [],
+    readyPlayers: [],  // Ready 상태인 플레이어 닉네임 목록
     isGameStarted: false,
     isSoloMode: false,
     currentStage: null,
@@ -59,7 +75,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             roomId,
             isHost,
-            players: [newPlayer],  // 방 입장 시 본인을 플레이어 목록에 추가
+            players: [newPlayer],
+            readyPlayers: [],  // 방 입장 시 Ready 상태 초기화
             isSoloMode: false
         });
     },
@@ -69,18 +86,83 @@ export const useGameStore = create<GameState>((set, get) => ({
             ? state.players
             : [...state.players, player]
     })),
-    setPlayers: (players) => set({ players }),  // ROOM_STATE용 전체 덮어쓰기
+    setPlayers: (players) => set({ players }),
+    syncPlayersFromServer: (serverPlayers) => set((state) => {
+        // 서버에서 받은 플레이어 상태를 기존 목록과 병합
+        const updatedPlayers = serverPlayers.map(sp => {
+            const existing = state.players.find(p => p.nickname === sp.id);
+            if (existing) {
+                // 기존 플레이어 정보 업데이트 (서버 데이터 우선)
+                return {
+                    ...existing,
+                    x: sp.x,
+                    y: sp.y,
+                    vx: sp.vx,
+                    vy: sp.vy,
+                    width: sp.width,
+                    height: sp.height,
+                    hp: sp.hp,
+                    isDead: sp.isDead,
+                    curses: sp.curses
+                };
+            } else {
+                // 새로운 플레이어 추가
+                return {
+                    id: `player-${sp.id}`,
+                    nickname: sp.id,
+                    isHost: false,  // 호스트 여부는 JOIN/Redis에서 관리
+                    x: sp.x,
+                    y: sp.y,
+                    vx: sp.vx,
+                    vy: sp.vy,
+                    width: sp.width,
+                    height: sp.height,
+                    hp: sp.hp,
+                    isDead: sp.isDead,
+                    curses: sp.curses
+                } as Player;
+            }
+        });
+
+        // 서버에 없는 플레이어 제거 (퇴장 처리)
+        const serverIds = serverPlayers.map(sp => sp.id);
+        const filteredPlayers = updatedPlayers.filter(p => serverIds.includes(p.nickname));
+
+        return { players: filteredPlayers };
+    }),
     removePlayerByNickname: (nickname) => set((state) => ({
-        players: state.players.filter(p => p.nickname !== nickname)
+        players: state.players.filter(p => p.nickname !== nickname),
+        readyPlayers: state.readyPlayers.filter(n => n !== nickname)  // Ready 목록에서도 제거
     })),
-    updatePlayerPosition: (nickname, x, y, anim) => set((state) => ({
+    updatePlayerPosition: (nickname, x, y) => set((state) => ({
         players: state.players.map(p =>
             p.nickname === nickname
-                ? { ...p, x, y, anim: anim ?? p.anim }
+                ? { ...p, x, y }
                 : p
         )
     })),
-    startGame: () => set({ isGameStarted: true, currentStage: null }),
+    // Ready 상태 관리
+    setPlayerReady: (nickname, isReady) => set((state) => ({
+        readyPlayers: isReady
+            ? state.readyPlayers.includes(nickname)
+                ? state.readyPlayers
+                : [...state.readyPlayers, nickname]
+            : state.readyPlayers.filter(n => n !== nickname)
+    })),
+    clearReadyPlayers: () => set({ readyPlayers: [] }),
+    isAllReady: () => {
+        const { players, readyPlayers, nickname } = get();
+        // 방장 제외한 모든 플레이어가 Ready 상태인지 확인
+        const nonHostPlayers = players.filter(p => !p.isHost && p.nickname !== nickname);
+        if (nonHostPlayers.length === 0) return false; // 혼자면 시작 불가
+        return nonHostPlayers.every(p => readyPlayers.includes(p.nickname));
+    },
+    startGame: () => set({ isGameStarted: true, currentStage: null, readyPlayers: [] }),
+    startGameFromServer: (stage) => set({
+        isGameStarted: true,
+        currentStage: stage,
+        readyPlayers: []  // 게임 시작 시 Ready 상태 초기화
+    }),
     startSoloGame: () => {
         const { nickname } = get();
         const soloRoomCode = `SOLO-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -94,23 +176,25 @@ export const useGameStore = create<GameState>((set, get) => ({
             isHost: true,
             isSoloMode: true,
             players: [soloPlayer],
+            readyPlayers: [],
             isGameStarted: true,
-            currentStage: 1 // 바로 맵으로 이동 (스테이지 선택 생략)
+            currentStage: 1
         });
     },
     selectStage: (stage) => set({ currentStage: stage }),
+    setCurrentStageFromServer: (stage) => set({ currentStage: stage }),
     clearStage: (stage) => set((state) => ({
         clearedStages: state.clearedStages.includes(stage)
             ? state.clearedStages
             : [...state.clearedStages, stage],
-        currentStage: null // 스테이지 선택 화면으로 돌아감
+        currentStage: null
     })),
     backToStageSelect: () => set({ currentStage: null }),
     setOnMoveCallback: (callback) => set({ onMoveCallback: callback }),
-    broadcastMove: (x, y, anim) => {
+    broadcastMove: (x: number, y: number) => {
         const { onMoveCallback } = get();
         if (onMoveCallback) {
-            onMoveCallback(x, y, anim);
+            onMoveCallback(x, y);
         }
     }
 }));

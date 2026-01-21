@@ -543,7 +543,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const storePlayers = state.players;
         const currentNickname = state.nickname;
 
-        // Store에 있는데 게임에 없는 플레이어 추가
+        // Store에 있는데 게임에 없는 플레이어 추가 또는 위치 동기화
         storePlayers.forEach((storePlayer, index) => {
             const existingPlayer = this.players.get(storePlayer.id);
 
@@ -557,6 +557,26 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (!this.players.has(storePlayer.id)) {
                 // TODO: TMJ에서 파싱한 스폰 지점이 있다면 거기서 시작하도록 수정 가능
                 this.addPlayer(storePlayer, index, currentNickname);
+            } else {
+                // 원격 플레이어 위치 동기화 (서버에서 받은 좌표로 업데이트)
+                const player = this.players.get(storePlayer.id);
+                if (player && !player.isLocalPlayer && storePlayer.x !== undefined && storePlayer.y !== undefined) {
+                    const currentPos = player.getPosition();
+                    // 위치가 의미있게 변경된 경우만 tween 적용 (1픽셀 이상 차이)
+                    if (Math.abs(currentPos.x - storePlayer.x) > 1 || Math.abs(currentPos.y - storePlayer.y) > 1) {
+                        // Tweens로 부드럽게 이동 (서버 업데이트 주기 50ms에 맞춤)
+                        this.tweens.add({
+                            targets: { x: currentPos.x, y: currentPos.y },
+                            x: storePlayer.x,
+                            y: storePlayer.y,
+                            duration: 50, // 50ms 동안 부드럽게 보간
+                            onUpdate: (tween) => {
+                                const value = tween.targets[0] as { x: number; y: number };
+                                player.setPosition(value.x, value.y);
+                            }
+                        });
+                    }
+                }
             }
         });
 
@@ -616,7 +636,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
-    update(time: number, delta: number) {
+    update(time: number, _delta: number) {
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
