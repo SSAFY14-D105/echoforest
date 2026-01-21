@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { Player } from '../../store/useGameStore';
-import { GameWebSocket, type GameMessage } from '../../socket/GameWebSocket';
+import { gameWebSocket } from '../../socket/GameWebSocket';
+import type { GameMessage, PlayerInfo } from '../../socket/GameWebSocket';
+import { liveKitService } from '../../socket/LiveKitService';
 import PhaserGame from '../../components/game/PhaserGame';
 import styles from './GamePage.module.css';
 
@@ -21,6 +23,7 @@ export default function GamePage() {
     currentStage,
     clearedStages,
     addPlayer,
+    setPlayers,
     removePlayerByNickname,
     updatePlayerPosition,
     startGame,
@@ -29,13 +32,14 @@ export default function GamePage() {
     leaveGame
   } = useGameStore();
 
-  const [micVolume, setMicVolume] = useState(70);
-  const [cameraOn, setCameraOn] = useState(true);
+  // LiveKit 상태
+  const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
+  const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [isCameraEnabled, setIsCameraEnabled] = useState(true);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+
   const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
   const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
-
-  // WebSocket 인스턴스
-  const wsRef = useRef<GameWebSocket | null>(null);
 
   // 본인을 플레이어 목록에 추가 (방 입장 시)
   // 솔로 모드는 startSoloGame에서 이미 추가되므로 건너뜀
@@ -54,19 +58,86 @@ export default function GamePage() {
     addPlayer(myPlayer);
   }, [isSoloMode]);
 
-  // WebSocket 연결 및 메시지 처리
+  // LiveKit 연결 (방 입장 시)
+  useEffect(() => {
+    if (isSoloMode) return; // 솔로 모드는 LiveKit 사용 안 함
+    if (!roomId || !nickname) return;
+    if (isLiveKitConnecting || liveKitService.isConnected) return;
+
+    const connectLiveKit = async () => {
+      setIsLiveKitConnecting(true);
+      try {
+        // 로컬 비디오 엘리먼트 설정
+        liveKitService.setLocalVideoElement(localVideoRef.current);
+
+        // userId는 localStorage에서 가져오기
+        const userId = localStorage.getItem('loginId') || nickname;
+
+        console.log('🎥 LiveKit 연결 시도...');
+        await liveKitService.connect(roomId, userId, nickname);
+
+        // 초기 상태 동기화
+        setIsMicEnabled(liveKitService.isMicEnabled);
+        setIsCameraEnabled(liveKitService.isCameraEnabled);
+      } catch (error) {
+        console.error('LiveKit 연결 실패:', error);
+      } finally {
+        setIsLiveKitConnecting(false);
+      }
+    };
+
+    connectLiveKit();
+
+    return () => {
+      liveKitService.disconnect();
+    };
+  }, [roomId, nickname, isSoloMode]);
+
+  // 마이크 토글 핸들러
+  const handleToggleMic = async () => {
+    const newState = await liveKitService.toggleMic();
+    setIsMicEnabled(newState);
+  };
+
+  // 카메라 토글 핸들러
+  const handleToggleCamera = async () => {
+    const newState = await liveKitService.toggleCamera();
+    setIsCameraEnabled(newState);
+  };
+
+  // WebSocket 메시지 핸들러 설정 (싱글톤 사용)
   useEffect(() => {
     if (isSoloMode) return; // 솔로 모드는 WebSocket 사용 안 함
     if (!roomId || !nickname) return;
 
-    // WebSocket 인스턴스 생성 및 연결
-    const ws = new GameWebSocket(nickname);
-    wsRef.current = ws;
-
-    ws.onMessage((msg: GameMessage) => {
-      console.log('📩 WebSocket 메시지:', msg);
+    // 싱글톤 WS에 메시지 핸들러 설정
+    gameWebSocket.onMessage((msg: GameMessage) => {
+      // 'MOVE' 메시지는 너무 빈번하므로 로그에서 제외
+      if (msg.type !== 'MOVE') {
+        console.log('📩 WebSocket 메시지:', msg);
+      }
 
       switch (msg.type) {
+        case 'ROOM_STATE':
+          // 기존 플레이어 목록 수신 (입장 시)
+          if (msg.players && msg.players.length > 0) {
+            const existingPlayers: Player[] = msg.players.map((p: PlayerInfo, idx: number) => ({
+              id: `player-remote-${Date.now()}-${idx}`,
+              nickname: p.username,
+              isHost: p.isHost,
+              x: p.x,
+              y: p.y
+            }));
+            // 본인이 이미 추가되어 있을 수 있으므로 필터링
+            const myPlayer = players.find(p => p.nickname === nickname);
+            const finalPlayers = myPlayer
+              ? [myPlayer, ...existingPlayers.filter(p => p.nickname !== nickname)]
+              : existingPlayers;
+            setPlayers(finalPlayers);
+            console.log('📋 기존 플레이어 목록 동기화:', finalPlayers.map(p => p.nickname));
+          }
+          break;
+
         case 'JOIN':
           // 다른 플레이어 입장
           if (msg.username && msg.username !== nickname) {
@@ -97,31 +168,52 @@ export default function GamePage() {
           }
           break;
 
+        case 'START':
+          // 게임 시작 (호스트가 보낸 신호)
+          if (!isHost) {
+            startGame();
+            console.log('🚀 게임 시작 (호스트로부터 신호 수신)');
+          }
+          break;
+
+        case 'STAGE_SELECT':
+          // 스테이지 선택 동기화 (호스트가 보낸 신호)
+          if (!isHost && msg.stage !== undefined) {
+            selectStage(msg.stage);
+            console.log(`🎯 스테이지 ${msg.stage} 선택됨 (호스트로부터)`);
+          }
+          break;
+
+        case 'STAGE_CLEAR':
+          // 스테이지 클리어 동기화 (호스트가 보낸 신호)
+          if (!isHost && msg.stage !== undefined) {
+            clearStage(msg.stage);
+            console.log(`🏆 스테이지 ${msg.stage} 클리어됨 (호스트로부터)`);
+          }
+          break;
+
         case 'ERROR':
           console.error('❌ WebSocket 에러:', msg.content);
           break;
       }
     });
 
-    ws.onConnect(() => {
-      console.log('✅ WebSocket 연결됨 - 방 참가 메시지 전송');
-      // 이미 LobbyPage에서 JOIN을 보냈으므로 여기서는 별도 전송 안 함
-    });
-
-    ws.onError((error) => {
+    gameWebSocket.onError((error) => {
       console.error('❌ WebSocket 에러:', error);
     });
 
-    ws.connect().catch(err => {
-      console.error('WebSocket 연결 실패:', err);
-    });
+    // 이미 LobbyPage에서 연결되어 있으므로 재연결 불필요
+    // 연결이 끊어진 경우에만 재연결
+    if (!gameWebSocket.isConnected()) {
+      console.log('🔌 GamePage: WebSocket 재연결 시도...');
+      gameWebSocket.setUser(nickname);
+      gameWebSocket.connect().catch(err => {
+        console.error('WebSocket 재연결 실패:', err);
+      });
+    }
 
-    // 컴포넌트 언마운트 시 연결 종료
-    return () => {
-      ws.disconnect();
-      wsRef.current = null;
-    };
-  }, [roomId, nickname, isSoloMode]);
+    // cleanup: 언마운트 시에도 싱글톤 연결은 유지 (leaveGame에서 정리)
+  }, [roomId, nickname, isSoloMode, isHost]);
 
   // 플레이어 수 확인
   const isGameReady = players.length >= MAX_PLAYERS;
@@ -133,8 +225,8 @@ export default function GamePage() {
     if (isSoloMode) return;
 
     const sendMove = (x: number, y: number, anim?: string) => {
-      if (wsRef.current && wsRef.current.isConnected() && roomId) {
-        wsRef.current.move(roomId, x, y, anim);
+      if (gameWebSocket.isConnected() && roomId) {
+        gameWebSocket.move(roomId, x, y, anim);
       }
     };
 
@@ -151,9 +243,14 @@ export default function GamePage() {
     setPlayerVolumes(newVolumes);
   };
 
+  // 게임 시작 핸들러 (호스트만, WebSocket 브로드캐스트)
   const handleStartGame = () => {
     if (isHost && isGameReady) {
       startGame();
+      // 다른 플레이어들에게 게임 시작 알림
+      if (roomId) {
+        gameWebSocket.startGame(roomId);
+      }
     }
   };
 
@@ -163,10 +260,23 @@ export default function GamePage() {
     return clearedStages.includes(stageNum - 1); // 이전 스테이지 클리어 시 열림
   };
 
-  // 스테이지 선택 핸들러
+  // 스테이지 선택 핸들러 (호스트만, WebSocket 브로드캐스트)
   const handleSelectStage = (stageNum: number) => {
     if (isStageUnlocked(stageNum)) {
       selectStage(stageNum);
+      // 다른 플레이어들에게 스테이지 선택 알림
+      if (isHost && roomId) {
+        gameWebSocket.selectStage(roomId, stageNum);
+      }
+    }
+  };
+
+  // 스테이지 클리어 핸들러 (호스트만, WebSocket 브로드캐스트)
+  const handleClearStage = (stageNum: number) => {
+    clearStage(stageNum);
+    // 다른 플레이어들에게 클리어 알림
+    if (isHost && roomId) {
+      gameWebSocket.clearStageSync(roomId, stageNum);
     }
   };
 
@@ -209,10 +319,22 @@ export default function GamePage() {
             className={`pixel-box ${styles.cameraBox} ${styles.active}`}
             style={{ borderColor: PLAYER_COLORS[index] }}
           >
-            <div className={isMe && cameraOn ? styles.cameraContent : styles.cameraOff}>
-              {isMe && cameraOn ? `P${index + 1} (나: ${player.nickname})` :
-                isMe ? '📹' : `P${index + 1}: ${player.nickname}`}
-            </div>
+            {/* 비디오 영역 */}
+            {isMe ? (
+              <div className={styles.cameraContent}>
+                {isCameraEnabled ? (
+                  <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div className={styles.cameraOff}>📹</div>
+                )}
+                <span className={styles.playerLabel} style={{ position: 'absolute', bottom: 5, left: 5, color: 'white', fontSize: 10, background: 'rgba(0,0,0,0.5)', padding: '2px 4px', borderRadius: 4 }}>나</span>
+              </div>
+            ) : (
+              <div className={styles.cameraContent}>
+                {/* 원격 플레이어 비디오는 추가 작업 필요, 일단 이름 표시 */}
+                P{index + 1}: {player.nickname}
+              </div>
+            )}
 
             {/* 본인 컨트롤 버튼 */}
             {isMe && (
@@ -220,23 +342,13 @@ export default function GamePage() {
                 <div className={styles.controlBtn}>
                   <button
                     className={styles.btn}
-                    onClick={() => setShowVolumeSlider(showVolumeSlider === index ? null : index)}
+                    onClick={handleToggleMic}
                   >
-                    <div className={styles.micIcon}></div>
+                    <div className={isMicEnabled ? styles.micIcon : styles.micOffIcon}></div>
                   </button>
-                  {showVolumeSlider === index && (
-                    <div className={styles.volumeSliderContainer} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="range" min="0" max="100" value={micVolume}
-                        onChange={(e) => setMicVolume(Number(e.target.value))}
-                        className={styles.verticalSlider}
-                      />
-                      <span className={styles.volumeText}>{micVolume}%</span>
-                    </div>
-                  )}
                 </div>
-                <button className={styles.btn} onClick={() => setCameraOn(!cameraOn)}>
-                  <div className={cameraOn ? styles.cameraIcon : styles.cameraOffIcon}></div>
+                <button className={styles.btn} onClick={handleToggleCamera}>
+                  <div className={isCameraEnabled ? styles.cameraIcon : styles.cameraOffIcon}></div>
                 </button>
               </div>
             )}
@@ -305,7 +417,7 @@ export default function GamePage() {
           {/* TODO: 스테이지 클리어 테스트 버튼 - 나중에 삭제 */}
           <button
             className={styles.testClearBtn}
-            onClick={() => clearStage(currentStage)}
+            onClick={() => handleClearStage(currentStage)}
           >
             🏆 테스트: 스테이지 클리어
           </button>
@@ -339,14 +451,14 @@ export default function GamePage() {
                   key={stageNum}
                   className={`${styles.stageCard} ${isUnlocked ? styles.unlocked : styles.locked} ${isCleared ? styles.cleared : ''}`}
                   onClick={() => handleSelectStage(stageNum)}
-                  disabled={!isUnlocked}
+                  disabled={!isUnlocked || !isHost}
                 >
                   <div className={styles.stageIcon}>
                     {isUnlocked ? (isCleared ? '⭐' : `${stageNum}`) : '🔒'}
                   </div>
                   <div className={styles.stageLabel}>Stage {stageNum}</div>
                   <div className={styles.stageStatus}>
-                    {isCleared ? '클리어!' : isUnlocked ? '도전 가능' : '잠김'}
+                    {isCleared ? '클리어!' : isUnlocked ? (isHost ? '도전 가능' : '호스트 대기') : '잠김'}
                   </div>
                 </button>
               );
@@ -354,22 +466,24 @@ export default function GamePage() {
           </div>
 
           {/* TODO: 테스트용 스테이지 해금 버튼 - 나중에 삭제 */}
-          <div className={styles.testButtons}>
-            <button
-              className={styles.testBtn}
-              onClick={() => clearStage(1)}
-              disabled={clearedStages.includes(1)}
-            >
-              🧪 Stage 1 클리어 처리
-            </button>
-            <button
-              className={styles.testBtn}
-              onClick={() => clearStage(2)}
-              disabled={!clearedStages.includes(1) || clearedStages.includes(2)}
-            >
-              🧪 Stage 2 클리어 처리
-            </button>
-          </div>
+          {isHost && (
+            <div className={styles.testButtons}>
+              <button
+                className={styles.testBtn}
+                onClick={() => handleClearStage(1)}
+                disabled={clearedStages.includes(1)}
+              >
+                🧪 Stage 1 클리어 처리
+              </button>
+              <button
+                className={styles.testBtn}
+                onClick={() => handleClearStage(2)}
+                disabled={!clearedStages.includes(1) || clearedStages.includes(2)}
+              >
+                🧪 Stage 2 클리어 처리
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 카메라 영역 (항상 표시) */}

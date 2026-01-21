@@ -19,6 +19,10 @@ export default class MainScene extends Phaser.Scene {
     private worldWidth: number = 3000;
     private storeUnsubscribe?: () => void;
 
+    // 네트워크 최적화용 변수
+    private lastBroadcastTime: number = 0;
+    private lastBroadcastPos: { x: number, y: number } = { x: 0, y: 0 };
+
     constructor() {
         super({ key: 'MainScene' });
     }
@@ -191,11 +195,27 @@ export default class MainScene extends Phaser.Scene {
             moved = true;
         }
 
-        // 이동했으면 WebSocket으로 위치 브로드캐스트 (60fps 중 매 5프레임마다)
-        if (moved || Math.abs(velocity.x) > 0.1) {
-            const pos = myPlayer.getPosition();
+        // 이동했으면 WebSocket으로 위치 브로드캐스트 (최적화 적용)
+        // 1. 쓰로틀링: 50ms (초당 20회) 제한
+        const now = this.time.now;
+        if (now - this.lastBroadcastTime < 50) return;
+
+        const pos = myPlayer.getPosition();
+        const dist = Phaser.Math.Distance.Between(
+            pos.x, pos.y,
+            this.lastBroadcastPos.x, this.lastBroadcastPos.y
+        );
+
+        // 2. 델타 체크: 키 입력이 있거나(moved), 실제 움직임이 1픽셀 이상일 때만 전송
+        // 속도가 0.1 이상인 경우에만 움직임으로 간주 (미세 떨림 방지)
+        const isMoving = Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1;
+
+        if (moved || (isMoving && dist > 1)) {
             // Store를 통해 WebSocket으로 전송
             useGameStore.getState().broadcastMove(pos.x, pos.y);
+
+            this.lastBroadcastTime = now;
+            this.lastBroadcastPos = { x: pos.x, y: pos.y };
         }
     }
 
