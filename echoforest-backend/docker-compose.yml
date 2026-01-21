@@ -41,6 +41,8 @@ services:
       - "7880:7880" # 시그널링 (TCP)
       - "7881:7881" # (선택) HTTP API용, 보통 7880으로 다 됨
       - "60000-60200:60000-60200/udp" # WebRTC 미디어 전송용 포트 범위
+      - "3478:3478/udp"  # TURN 서버용 (UDP)
+      - "3478:3478/tcp"  # TURN 서버용 (TCP)
     environment:
       - "LIVEKIT_KEYS=devkey: secret"  # 주의: devkey:(공백)secret
     networks:
