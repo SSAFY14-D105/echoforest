@@ -544,22 +544,23 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const currentNickname = state.nickname;
 
         // Store에 있는데 게임에 없는 플레이어 추가 또는 위치 동기화
+        // 핵심: nickname을 키로 사용 (서버와 일치)
         storePlayers.forEach((storePlayer, index) => {
-            const existingPlayer = this.players.get(storePlayer.id);
+            const existingPlayer = this.players.get(storePlayer.nickname);
 
             // 본인 여부가 바뀌었는지 확인 (닉네임 설정 시점 차이 대응)
             const isLocal = storePlayer.nickname === currentNickname;
             if (existingPlayer && existingPlayer.isLocalPlayer !== isLocal) {
                 console.log(`[${this.getSceneKey()}] Player ${storePlayer.nickname} local status changed, recreating...`);
-                this.removePlayer(storePlayer.id);
+                this.removePlayer(storePlayer.nickname);
             }
 
-            if (!this.players.has(storePlayer.id)) {
-                // TODO: TMJ에서 파싱한 스폰 지점이 있다면 거기서 시작하도록 수정 가능
+            if (!this.players.has(storePlayer.nickname)) {
+                // 새 플레이어 추가
                 this.addPlayer(storePlayer, index, currentNickname);
             } else {
                 // 원격 플레이어 위치 동기화 (서버에서 받은 좌표로 업데이트)
-                const player = this.players.get(storePlayer.id);
+                const player = this.players.get(storePlayer.nickname);
                 if (player && !player.isLocalPlayer && storePlayer.x !== undefined && storePlayer.y !== undefined) {
                     const currentPos = player.getPosition();
                     // 위치가 의미있게 변경된 경우만 tween 적용 (1픽셀 이상 차이)
@@ -581,23 +582,25 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         });
 
         // 게임에 있는데 Store에 없는 플레이어 제거
-        const storePlayerIds = new Set(storePlayers.map(p => p.id));
-        this.players.forEach((_, playerId) => {
-            if (!storePlayerIds.has(playerId)) {
-                this.removePlayer(playerId);
+        const storeNicknames = new Set(storePlayers.map(p => p.nickname));
+        this.players.forEach((_, playerNickname) => {
+            if (!storeNicknames.has(playerNickname)) {
+                this.removePlayer(playerNickname);
             }
         });
     }
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {
         const isLocalPlayer = storePlayer.nickname === currentNickname;
-        const xPos = 100 + (index * 100);
+        // 서버에서 받은 x, y가 있으면 사용, 없으면 기본 위치
+        const xPos = storePlayer.x ?? (100 + (index * 100));
+        const yPos = storePlayer.y ?? (this.gameHeight - 40 - PHYSICS.PLAYER_SIZE);
 
         const config: PlayerConfig = {
-            id: storePlayer.id,
+            id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
             nickname: storePlayer.nickname,
             x: xPos,
-            y: this.gameHeight - 40 - PHYSICS.PLAYER_SIZE,
+            y: yPos,
             colorIndex: index,
             isLocalPlayer
         };
@@ -605,34 +608,35 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         try {
             const player = new Player(this, config);
 
-            // 좽음 콜백 설정 (저주 HP 0 등)
+            // 죽음 콜백 설정 (저주 HP 0 등)
             player.setOnDeathCallback(() => this.triggerDeath('curse'));
 
             // 저장된 저주가 있다면 복구 (drain 제외)
-            const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.id);
+            const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.nickname);
             if (savedCurseId) {
                 console.log(`[Curse] Restoring saved curse '${savedCurseId}' for ${storePlayer.nickname}`);
                 player.applyCurse(savedCurseId);
             }
 
-            this.players.set(storePlayer.id, player);
+            // nickname을 키로 저장 (서버와 일치)
+            this.players.set(storePlayer.nickname, player);
 
             if (isLocalPlayer) {
-                this.myPlayerId = storePlayer.id;
+                this.myPlayerId = storePlayer.nickname;
             }
-            console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname}`);
+            console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname} at (${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
         } catch (error) {
             console.warn(`[${this.getSceneKey()}] Failed to add player:`, error);
         }
     }
 
-    private removePlayer(playerId: string): void {
-        const player = this.players.get(playerId);
+    private removePlayer(nickname: string): void {
+        const player = this.players.get(nickname);
         if (player) {
             player.destroy();
-            this.players.delete(playerId);
-            BaseGameScene.persistentCurses.delete(playerId);
-            console.log(`[${this.getSceneKey()}] Player removed: ${playerId}`);
+            this.players.delete(nickname);
+            BaseGameScene.persistentCurses.delete(nickname);
+            console.log(`[${this.getSceneKey()}] Player removed: ${nickname}`);
         }
     }
 

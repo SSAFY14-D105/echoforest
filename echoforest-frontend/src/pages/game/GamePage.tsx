@@ -54,7 +54,7 @@ export default function GamePage() {
     if (alreadyExists) return;
 
     const myPlayer: Player = {
-      id: `player-${Date.now()}`,
+      id: nickname,  // nickname을 id로 사용 (서버와 일치)
       nickname: nickname,
       isHost: isHost
     };

@@ -68,7 +68,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     joinGame: (roomId, isHost) => {
         const { nickname } = get();
         const newPlayer: Player = {
-            id: `player-${Date.now()}`,
+            id: nickname,  // nickname을 id로 사용 (서버와 일치)
             nickname: nickname,
             isHost: isHost
         };
@@ -89,7 +89,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
         // 서버에서 받은 플레이어 상태를 기존 목록과 병합
+        // 백엔드의 sp.id = username (닉네임과 동일)
         const updatedPlayers = serverPlayers.map(sp => {
+            // nickname으로 기존 플레이어 찾기 (서버의 id = username = nickname)
             const existing = state.players.find(p => p.nickname === sp.id);
             if (existing) {
                 // 기존 플레이어 정보 업데이트 (서버 데이터 우선)
@@ -106,9 +108,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                     curses: sp.curses
                 };
             } else {
-                // 새로운 플레이어 추가
+                // 새로운 플레이어 추가 (서버의 username을 id와 nickname 둘 다에 사용)
                 return {
-                    id: `player-${sp.id}`,
+                    id: sp.id,  // 서버의 username 그대로 사용 (player- 접두사 제거)
                     nickname: sp.id,
                     isHost: false,  // 호스트 여부는 JOIN/Redis에서 관리
                     x: sp.x,
@@ -125,10 +127,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         // 서버에 없는 플레이어 제거 (퇴장 처리)
-        const serverIds = serverPlayers.map(sp => sp.id);
-        const filteredPlayers = updatedPlayers.filter(p => serverIds.includes(p.nickname));
+        // 단, 이미 존재하는 기존 플레이어(본인 등)는 유지
+        const serverNicknames = new Set(serverPlayers.map(sp => sp.id));
+        const finalPlayers = updatedPlayers.filter(p => serverNicknames.has(p.nickname));
 
-        return { players: filteredPlayers };
+        return { players: finalPlayers };
     }),
     removePlayerByNickname: (nickname) => set((state) => ({
         players: state.players.filter(p => p.nickname !== nickname),
