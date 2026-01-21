@@ -10,6 +10,9 @@ WORKDIR /app
 # 프로젝트 소스 전체를 도커 안으로 복사
 COPY . .
 
+# 윈도우 줄바꿈 문자(\r) 제거
+RUN sed -i 's/\r$//' ./gradlew
+
 # Gradle 빌드 실행 (테스트 생략, 권한 부여)
 RUN chmod +x ./gradlew
 RUN ./gradlew clean build -x test --no-daemon
