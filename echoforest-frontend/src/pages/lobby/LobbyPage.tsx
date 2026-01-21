@@ -134,12 +134,14 @@ export default function LobbyPage() {
             <div className={styles.avatar}>{nickname.charAt(0).toUpperCase()}</div>
             <span className={styles.username}>{nickname}</span>
           </div>
-          <button className={styles.settingsIcon} onClick={() => {
-            setTempNickname(nickname);
-            setShowSettings(true);
-          }}>
-            ⚙️
-          </button>
+          <div className={styles.headerActions}>
+            <button className={styles.settingsIcon} title="설정" onClick={() => {
+              setTempNickname(nickname);
+              setShowSettings(true);
+            }}>
+              ⚙️
+            </button>
+          </div>
         </div>
 
         {/* Title */}
@@ -149,18 +151,29 @@ export default function LobbyPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className={styles.actionButtons}>
-          <button className={styles.hostBtn} onClick={handleHost} disabled={isConnecting}>
-            <span className={styles.btnEmoji}>🏠</span>
-            <span className={styles.btnText}>방 만들기</span>
+        <div className={styles.actions}>
+          <button className={`${styles.actionBtn} ${styles.hostBtn}`} onClick={handleHost} disabled={isConnecting}>
+            <span className={styles.btnIcon}>🏠</span>
+            <div className={styles.btnContent}>
+              <div className={styles.btnTitle}>방 만들기</div>
+              <div className={styles.btnDesc}>새로운 게임 세션을 시작합니다</div>
+            </div>
           </button>
-          <button className={styles.joinBtn} onClick={openJoinModal} disabled={isConnecting}>
-            <span className={styles.btnEmoji}>🚪</span>
-            <span className={styles.btnText}>방 참가하기</span>
+
+          <button className={`${styles.actionBtn} ${styles.joinBtn}`} onClick={openJoinModal} disabled={isConnecting}>
+            <span className={styles.btnIcon}>🚪</span>
+            <div className={styles.btnContent}>
+              <div className={styles.btnTitle}>방 참가하기</div>
+              <div className={styles.btnDesc}>초대 코드로 친구의 방에 입장합니다</div>
+            </div>
           </button>
-          <button className={styles.soloBtn} onClick={handleSoloPlay}>
-            <span className={styles.btnEmoji}>🧪</span>
-            <span className={styles.btnText}>혼자하기(테스트)</span>
+
+          <button className={`${styles.actionBtn} ${styles.soloBtn}`} onClick={handleSoloPlay}>
+            <span className={styles.btnIcon}>🧪</span>
+            <div className={styles.btnContent}>
+              <div className={styles.btnTitle}>혼자하기(테스트)</div>
+              <div className={styles.btnDesc}>스테이지 기믹을 혼자 연습해봅니다</div>
+            </div>
           </button>
         </div>
 
@@ -172,22 +185,23 @@ export default function LobbyPage() {
       {showJoinModal && (
         <div className={styles.modalOverlay} onClick={() => setShowJoinModal(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2>방 코드 입력</h2>
+            <h3>방 코드 입력</h3>
+            <p className={styles.modalDesc}>공유받은 6자리 코드를 입력하세요</p>
             <input
               type="text"
               maxLength={6}
               value={roomCodeInput}
               onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-              placeholder="6자리 코드"
+              placeholder="ABC123"
               className={styles.codeInput}
               autoFocus
             />
-            {joinError && <p className={styles.modalError}>{joinError}</p>}
+            {joinError && <p className={styles.error}>{joinError}</p>}
             <div className={styles.modalActions}>
-              <button onClick={() => setShowJoinModal(false)} className={styles.cancelBtn}>취소</button>
+              <button onClick={() => setShowJoinModal(false)} className={styles.btnSecondary}>취소</button>
               <button
                 onClick={handleJoinSubmit}
-                className={styles.confirmBtn}
+                className={styles.btnPrimary}
                 disabled={isConnecting}
               >
                 {isConnecting ? '연결 중...' : '입장'}
@@ -200,47 +214,44 @@ export default function LobbyPage() {
       {/* 설정 모달 */}
       {showSettings && (
         <div className={styles.modalOverlay} onClick={() => setShowSettings(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2>⚙️ 설정</h2>
+          <div className={`${styles.modal} ${styles.settingsModal}`} onClick={(e) => e.stopPropagation()}>
+            <h3>⚙️ 설정</h3>
 
             {/* 1. 닉네임 변경 */}
-            <div className={styles.settingsSection}>
-              <label className={styles.settingsLabel}>닉네임</label>
+            <div className={styles.settingSection}>
+              <label className={styles.settingLabel}>닉네임</label>
               <input
                 type="text"
                 value={tempNickname}
                 onChange={(e) => setTempNickname(e.target.value)}
                 placeholder="닉네임 입력"
-                className={styles.nicknameInput}
+                className={styles.input}
                 maxLength={12}
               />
             </div>
 
             {/* 2. 카메라 프리뷰 자리 */}
-            <div className={styles.settingsSection}>
-              <label className={styles.settingsLabel}>카메라 미리보기</label>
+            <div className={styles.settingSection}>
+              <label className={styles.settingLabel}>카메라 미리보기</label>
               <div className={styles.cameraPreview}>
-                <span className={styles.cameraPlaceholder}>📹 카메라 미리보기</span>
+                <p>📹 카메라 미리보기</p>
+                <span className={styles.cameraNote}>LiveKit 연동 시 활성화됩니다</span>
               </div>
             </div>
 
-            {/* 3. 마이크 볼륨 */}
-            <div className={styles.settingsSection}>
-              <label className={styles.settingsLabel}>마이크 볼륨</label>
-              <div className={styles.volumeContainer}>
-                <div className={styles.volumeBarContainer}>
-                  <div
-                    className={styles.volumeBar}
-                    style={{ width: `${micVolume}%` }}
-                  />
-                </div>
+
+            {/* 4. 마이크 볼륨 */}
+            <div className={styles.settingSection}>
+              <label className={styles.settingLabel}>마이크 볼륨</label>
+              <div className={styles.volumeControl}>
+                <span>🎙️</span>
                 <input
                   type="range"
                   min={0}
                   max={100}
                   value={micVolume}
                   onChange={(e) => setMicVolume(Number(e.target.value))}
-                  className={styles.volumeSlider}
+                  className={styles.slider}
                 />
                 <span className={styles.volumeValue}>{micVolume}%</span>
               </div>
@@ -248,7 +259,7 @@ export default function LobbyPage() {
 
             {/* 모달 액션 */}
             <div className={styles.modalActions}>
-              <button onClick={() => setShowSettings(false)} className={styles.cancelBtn}>취소</button>
+              <button onClick={() => setShowSettings(false)} className={styles.btnSecondary}>취소</button>
               <button
                 onClick={() => {
                   if (tempNickname.trim()) {
@@ -256,14 +267,15 @@ export default function LobbyPage() {
                   }
                   setShowSettings(false);
                 }}
-                className={styles.confirmBtn}
+                className={styles.btnPrimary}
               >
-                완료
+                저장
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
