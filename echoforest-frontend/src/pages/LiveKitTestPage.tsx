@@ -85,7 +85,7 @@ export default function LiveKitTestPage() {
                     <div style={styles.infoBox}>
                         <p><strong>서버 정보:</strong></p>
                         <p>API: https://i14d105.p.ssafy.io/api/livekit/token</p>
-                        <p>LiveKit: wss://i14d105.p.ssafy.io:7880</p>
+                        <p>LiveKit: wss://i14d105.p.ssafy.io</p>
                     </div>
                 </div>
             </div>
