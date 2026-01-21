@@ -308,4 +308,39 @@ public class GameService {
         msg.setContent(content);
         sendMessage(session, msg);
     }
+
+    /**
+     * 다음 스테이지로 진행 (방장만 가능)
+     */
+    public void handleNextStage(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 방장 확인
+        String hostId = redisRoomService.getHostId(roomId);
+        if (!username.equals(hostId)) {
+            sendError(session, "Only host can advance stage");
+            return;
+        }
+
+        // Redis에서 스테이지 진행
+        int nextStage = redisRoomService.nextStage(roomId);
+
+        // 모든 플레이어에게 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto stageMsg = new GameMessageDto();
+            stageMsg.setType("STAGE_CHANGE");
+            stageMsg.setRoomId(roomId);
+            stageMsg.setContent(String.valueOf(nextStage));
+            room.broadcast(stageMsg, null);
+        }
+
+        log.info("Room {} advanced to stage {}", roomId, nextStage);
+    }
 }
