@@ -219,4 +219,54 @@ http://localhost:5173
   - 닉네임 변경 시 localStorage에도 저장
   - 빈 닉네임으로는 저장 불가
 
+---
+
+## 📸 CaptureConsentModal 컴포넌트
+
+게임 종료 후 카메라 화면 캡처 및 이미지 합성에 대한 사용자 동의를 받는 모달 컴포넌트입니다.
+
+### 파일 위치
+```
+src/components/CaptureConsentModal/
+├── CaptureConsentModal.tsx       # 메인 컴포넌트
+├── CaptureConsentModal.module.css # 스타일 (프리미엄 다크 디자인)
+└── index.ts                       # export
+```
+
+### 사용법 예시 (기본)
+
+```tsx
+import { useState } from 'react';
+import CaptureConsentModal from '../components/CaptureConsentModal';
+
+function YourPage() {
+  const [showConsentModal, setShowConsentModal] = useState(false);
+
+  return (
+    <CaptureConsentModal
+      isOpen={showConsentModal}
+      onAgree={() => {
+        setShowConsentModal(false);
+        // 동의 로직 진행
+      }}
+      onDecline={() => {
+        setShowConsentModal(false);
+        // 거부 로직 진행
+      }}
+    />
+  );
+}
+```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `isOpen` | `boolean` | 모달 표시 여부 |
+| `onAgree` | `() => void` | 동의 버튼 클릭 시 호출 |
+| `onDecline` | `() => void` | 거부 버튼 클릭 시 호출 |
+
+### ⏳ 백엔드 연동 가이드
+추후 백엔드에서 캡처/합성 트리거가 구현될 때, 해당 신호를 수신하는 위치에서 이 모달을 띄우고 결과(`onAgree`/`onDecline`)를 서버로 전송하면 됩니다.
+
 

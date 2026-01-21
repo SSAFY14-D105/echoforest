@@ -1,11 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { GameWebSocket } from '../../socket/GameWebSocket';
+import { gameWebSocket } from '../../socket/GameWebSocket';
 import type { GameMessage } from '../../socket/GameWebSocket';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
-  const { nickname, setNickname, joinGame, startSoloGame } = useGameStore();
+  const {
+    nickname, setNickname,
+    joinGame, startSoloGame
+  } = useGameStore();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -17,21 +20,18 @@ export default function LobbyPage() {
   // 설정 모달용 임시 닉네임 (빈 문자열 방지)
   const [tempNickname, setTempNickname] = useState(nickname);
 
-  // WebSocket 인스턴스 참조
-  const wsRef = useRef<GameWebSocket | null>(null);
-
-  // 방 만들기 (WebSocket CREATE 메시지 전송)
+  // 방 만들기 (WebSocket CREATE 메시지 전송) - 싱글톤 사용
   const handleHost = async () => {
     if (isConnecting) return;
     setIsConnecting(true);
     setJoinError('');
 
     try {
-      const ws = new GameWebSocket(nickname);
-      wsRef.current = ws;
+      // 싱글톤 WS에 유저 정보 설정
+      gameWebSocket.setUser(nickname);
 
       // 메시지 핸들러 설정
-      ws.onMessage((message: GameMessage) => {
+      gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           // 백엔드가 생성한 방 코드 사용
           const roomCode = message.content || '';
@@ -40,14 +40,14 @@ export default function LobbyPage() {
         }
       });
 
-      ws.onError((error: string) => {
+      gameWebSocket.onError((error: string) => {
         setJoinError(error);
         setIsConnecting(false);
       });
 
       // WebSocket 연결 후 CREATE 메시지 전송
-      await ws.connect();
-      ws.createRoom();  // roomId 없이 보내면 백엔드가 생성
+      await gameWebSocket.connect();
+      gameWebSocket.createRoom();  // roomId 없이 보내면 백엔드가 생성
 
     } catch (error) {
       console.error('방 생성 실패:', error);
@@ -61,7 +61,7 @@ export default function LobbyPage() {
     startSoloGame();
   };
 
-  // 방 참가하기 (WebSocket JOIN 메시지 전송)
+  // 방 참가하기 (WebSocket JOIN 메시지 전송) - 싱글톤 사용
   const handleJoinSubmit = async () => {
     setJoinError('');
 
@@ -74,13 +74,13 @@ export default function LobbyPage() {
     setIsConnecting(true);
 
     try {
-      const ws = new GameWebSocket(nickname);
-      wsRef.current = ws;
+      // 싱글톤 WS에 유저 정보 설정
+      gameWebSocket.setUser(nickname);
 
       let hasError = false;  // 에러 발생 여부 추적
 
       // 메시지 핸들러 - ERROR 응답 처리
-      ws.onMessage((message: GameMessage) => {
+      gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ERROR') {
           hasError = true;
           // "Room not found" 에러를 한글로 변환
@@ -91,19 +91,19 @@ export default function LobbyPage() {
               : message.content || '알 수 없는 오류';
           setJoinError(errorMsg);
           setIsConnecting(false);
-          ws.disconnect();
+          gameWebSocket.disconnect();
         }
       });
 
-      ws.onError((error: string) => {
+      gameWebSocket.onError((error: string) => {
         hasError = true;
         setJoinError(error);
         setIsConnecting(false);
       });
 
       // WebSocket 연결 후 JOIN 메시지 전송
-      await ws.connect();
-      ws.joinRoom(roomCodeInput.toUpperCase());
+      await gameWebSocket.connect();
+      gameWebSocket.joinRoom(roomCodeInput.toUpperCase());
 
       // 에러 응답 대기 후 성공 판단 (에러 없으면 입장)
       setTimeout(() => {
@@ -128,154 +128,142 @@ export default function LobbyPage() {
   return (
     <div className={styles.container}>
       <div className={styles.lobbyCard}>
-        {/* 헤더 */}
+        {/* Header */}
         <div className={styles.header}>
           <div className={styles.userInfo}>
             <div className={styles.avatar}>{nickname.charAt(0).toUpperCase()}</div>
             <span className={styles.username}>{nickname}</span>
           </div>
           <button className={styles.settingsIcon} onClick={() => {
-            setTempNickname(nickname);  // 설정 열 때 현재 닉네임으로 초기화
+            setTempNickname(nickname);
             setShowSettings(true);
           }}>
             ⚙️
           </button>
         </div>
 
-        {/* 타이틀 */}
-        <h1 className={styles.title}>게임 로비</h1>
-        <p className={styles.subtitle}>방을 만들거나 참가하세요</p>
+        {/* Title */}
+        <div className={styles.titleSection}>
+          <h1 className={styles.title}>🌲 에코 포레스트</h1>
+          <p className={styles.subtitle}>친구들과 함께 숲을 탐험하세요!</p>
+        </div>
 
-        {/* 액션 버튼들 */}
-        <div className={styles.actions}>
-          <button
-            className={`${styles.actionBtn} ${styles.hostBtn}`}
-            onClick={handleHost}
-            disabled={isConnecting}
-          >
-            <span className={styles.btnIcon}>👑</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>{isConnecting ? '연결중...' : '방 만들기'}</div>
-              <div className={styles.btnDesc}>새로운 게임 시작</div>
-            </div>
+        {/* Action Buttons */}
+        <div className={styles.actionButtons}>
+          <button className={styles.hostBtn} onClick={handleHost} disabled={isConnecting}>
+            <span className={styles.btnEmoji}>🏠</span>
+            <span className={styles.btnText}>방 만들기</span>
           </button>
-
-          <button className={`${styles.actionBtn} ${styles.joinBtn}`} onClick={openJoinModal}>
-            <span className={styles.btnIcon}>🚪</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>방 참가하기</div>
-              <div className={styles.btnDesc}>코드로 입장</div>
-            </div>
+          <button className={styles.joinBtn} onClick={openJoinModal} disabled={isConnecting}>
+            <span className={styles.btnEmoji}>🚪</span>
+            <span className={styles.btnText}>방 참가하기</span>
           </button>
-
-          {/* 혼자하기 버튼 */}
-          <button className={`${styles.actionBtn} ${styles.soloBtn}`} onClick={handleSoloPlay}>
-            <span className={styles.btnIcon}>🧪</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>혼자하기</div>
-              <div className={styles.btnDesc}>테스트 모드</div>
-            </div>
+          <button className={styles.soloBtn} onClick={handleSoloPlay}>
+            <span className={styles.btnEmoji}>🧪</span>
+            <span className={styles.btnText}>혼자하기(테스트)</span>
           </button>
         </div>
 
-        {/* 에러 메시지 표시 */}
-        {joinError && <p className={styles.error}>{joinError}</p>}
+        {/* Error display */}
+        {joinError && <p className={styles.errorMessage}>{joinError}</p>}
+      </div>
 
-        {/* 참가 모달 */}
-        {showJoinModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowJoinModal(false)}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>방 코드 입력</h3>
-              <p className={styles.modalDesc}>6자리 코드를 입력하세요 (영문+숫자)</p>
-
-              <input
-                className={styles.codeInput}
-                placeholder="ABC123"
-                maxLength={6}
-                value={roomCodeInput}
-                onChange={(e) => setRoomCodeInput(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
-                autoFocus
-              />
-
-              {joinError && <p className={styles.error}>{joinError}</p>}
-
-              <div className={styles.modalActions}>
-                <button className={styles.btnSecondary} onClick={() => setShowJoinModal(false)}>
-                  취소
-                </button>
-                <button
-                  className={styles.btnPrimary}
-                  onClick={handleJoinSubmit}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? '연결중...' : '입장'}
-                </button>
-              </div>
+      {/* 방 코드 입력 모달 */}
+      {showJoinModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowJoinModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2>방 코드 입력</h2>
+            <input
+              type="text"
+              maxLength={6}
+              value={roomCodeInput}
+              onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+              placeholder="6자리 코드"
+              className={styles.codeInput}
+              autoFocus
+            />
+            {joinError && <p className={styles.modalError}>{joinError}</p>}
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowJoinModal(false)} className={styles.cancelBtn}>취소</button>
+              <button
+                onClick={handleJoinSubmit}
+                className={styles.confirmBtn}
+                disabled={isConnecting}
+              >
+                {isConnecting ? '연결 중...' : '입장'}
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* 설정 모달 */}
-        {showSettings && (
-          <div className={styles.modalOverlay} onClick={() => setShowSettings(false)}>
-            <div className={`${styles.modal} ${styles.settingsModal}`} onClick={(e) => e.stopPropagation()}>
-              <h3>설정</h3>
+      {/* 설정 모달 */}
+      {showSettings && (
+        <div className={styles.modalOverlay} onClick={() => setShowSettings(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2>⚙️ 설정</h2>
 
-              {/* 닉네임 변경 */}
-              <div className={styles.settingSection}>
-                <label className={styles.settingLabel}>닉네임</label>
-                <input
-                  className={styles.input}
-                  value={tempNickname}
-                  onChange={(e) => setTempNickname(e.target.value)}
-                  placeholder="닉네임 입력"
-                />
+            {/* 1. 닉네임 변경 */}
+            <div className={styles.settingsSection}>
+              <label className={styles.settingsLabel}>닉네임</label>
+              <input
+                type="text"
+                value={tempNickname}
+                onChange={(e) => setTempNickname(e.target.value)}
+                placeholder="닉네임 입력"
+                className={styles.nicknameInput}
+                maxLength={12}
+              />
+            </div>
+
+            {/* 2. 카메라 프리뷰 자리 */}
+            <div className={styles.settingsSection}>
+              <label className={styles.settingsLabel}>카메라 미리보기</label>
+              <div className={styles.cameraPreview}>
+                <span className={styles.cameraPlaceholder}>📹 카메라 미리보기</span>
               </div>
+            </div>
 
-              {/* 마이크 볼륨 */}
-              <div className={styles.settingSection}>
-                <label className={styles.settingLabel}>마이크 볼륨</label>
-                <div className={styles.volumeControl}>
-                  <span>🎤</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={micVolume}
-                    onChange={(e) => setMicVolume(Number(e.target.value))}
-                    className={styles.slider}
+            {/* 3. 마이크 볼륨 */}
+            <div className={styles.settingsSection}>
+              <label className={styles.settingsLabel}>마이크 볼륨</label>
+              <div className={styles.volumeContainer}>
+                <div className={styles.volumeBarContainer}>
+                  <div
+                    className={styles.volumeBar}
+                    style={{ width: `${micVolume}%` }}
                   />
-                  <span className={styles.volumeValue}>{micVolume}%</span>
                 </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={micVolume}
+                  onChange={(e) => setMicVolume(Number(e.target.value))}
+                  className={styles.volumeSlider}
+                />
+                <span className={styles.volumeValue}>{micVolume}%</span>
               </div>
+            </div>
 
-              {/* 카메라 미리보기 */}
-              <div className={styles.settingSection}>
-                <label className={styles.settingLabel}>카메라</label>
-                <div className={styles.cameraPreview}>
-                  <p>📹 카메라 미리보기</p>
-                  <span className={styles.cameraNote}>(백엔드 연동 후 활성화)</span>
-                </div>
-              </div>
-
+            {/* 모달 액션 */}
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowSettings(false)} className={styles.cancelBtn}>취소</button>
               <button
-                className={styles.btnPrimary}
                 onClick={() => {
-                  // 닉네임이 비어있지 않을 때만 저장
                   if (tempNickname.trim()) {
                     setNickname(tempNickname.trim());
-                    localStorage.setItem('nickname', tempNickname.trim());
                   }
                   setShowSettings(false);
                 }}
-                style={{ width: '100%', marginTop: '20px' }}
+                className={styles.confirmBtn}
               >
                 완료
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
