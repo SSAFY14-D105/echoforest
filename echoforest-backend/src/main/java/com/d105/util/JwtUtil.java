@@ -13,17 +13,17 @@ public class JwtUtil {
     private static final long ACCESS_TIME = 60 * 60 * 1000L; // 1시간
 
     // 토큰 생성 (로그인 성공 시)
-    public String createToken(Long userId, String loginId) {
+    public String createToken(Long userId, String username) {
         return JWT.create()
-                .withSubject(loginId) // 토큰 제목 (아이디)
+                .withSubject(username) // 토큰 제목 (아이디)
                 .withClaim("userId", userId) // PK값도 넣어둠
                 .withExpiresAt(new Date(System.currentTimeMillis() + ACCESS_TIME)) // 만료 시간
                 .sign(Algorithm.HMAC256(SECRET_KEY)); // 서명
     }
 
-    ///  추후 검증 로직 추가시 주석 해제
+    /// 추후 검증 로직 추가시 주석 해제
     // 1. 토큰에서 아이디(Claim) 꺼내기
-    public String getLoginId(String token) {
+    public String getUsername(String token) {
         return JWT.require(Algorithm.HMAC256(SECRET_KEY))
                 .build().verify(token)
                 .getSubject();

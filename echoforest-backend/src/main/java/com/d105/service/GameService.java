@@ -11,7 +11,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,6 +25,7 @@ public class GameService {
 
     // 의존성 주입
     private final GameRepository gameRepository;
+    private final RedisRoomService redisRoomService;
     private final ObjectMapper objectMapper;
 
     // 가상 스레드 실행기 (각 GameRoom의 Tick Loop를 돌리기 위함)
@@ -34,32 +35,24 @@ public class GameService {
      * 방 생성 (CREATE)
      */
     public void handleCreate(WebSocketSession session, GameMessageDto message) throws IOException {
-        String roomId = message.getRoomId();
+        String username = message.getUsername();
 
-        // 1. 방 번호 자동 생성
-        if (roomId == null || roomId.trim().isEmpty()) {
-            roomId = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-        }
+        // 1. Redis에 방 생성 (방 코드 자동 생성)
+        String roomId = redisRoomService.createRoom(username);
 
-        // 2. 중복 체크
-        if (gameRepository.roomExists(roomId)) {
-            sendError(session, "Room ID already exists: " + roomId);
-            return;
-        }
-
-        // 3. GameRoom 생성 (null: 기본 맵 사용)
+        // 2. GameRoom 생성 (null: 기본 맵 사용)
         GameRoom newRoom = new GameRoom(roomId, objectMapper, null);
         gameRepository.addRoom(roomId, newRoom);
 
-        // 4. 별도의 가상 스레드에서 게임 루프 실행
+        // 3. 별도의 가상 스레드에서 게임 루프 실행
         executor.submit(newRoom);
 
-        // 5. 플레이어 입장 처리
-        joinProcess(session, newRoom, message.getUsername());
+        // 4. 플레이어 입장 처리
+        joinProcess(session, newRoom, username);
 
-        // 6. 방 생성 완료 알림
+        // 5. 방 생성 완료 알림 (방 코드 전송)
         sendSystemMessage(session, "ROOM_CREATED", roomId);
-        log.info("Created GameRoom: {}", roomId);
+        log.info("Created GameRoom: {} by host: {}", roomId, username);
     }
 
     /**
@@ -67,22 +60,33 @@ public class GameService {
      */
     public void handleJoin(WebSocketSession session, GameMessageDto message) throws IOException {
         String roomId = message.getRoomId();
+        String username = message.getUsername();
 
-        // 1. 방 존재 여부 체크
-        GameRoom room = gameRepository.getRoom(roomId);
-        if (room == null) {
+        // 1. Redis에서 방 존재 여부 체크
+        if (!redisRoomService.roomExists(roomId)) {
             sendError(session, "Room not found: " + roomId);
             return;
         }
 
         // 2. 인원 제한 검사
-        if (room.getPlayerCount() >= MAX_PLAYERS) {
+        if (redisRoomService.getPlayerCount(roomId) >= MAX_PLAYERS) {
             sendError(session, "Room is full");
             return;
         }
 
-        // 3. 입장 처리
-        joinProcess(session, room, message.getUsername());
+        // 3. Redis에 플레이어 추가
+        redisRoomService.joinRoom(roomId, username);
+
+        // 4. GameRoom 에도 추가 (없으면 생성)
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            room = new GameRoom(roomId, objectMapper, null);
+            gameRepository.addRoom(roomId, room);
+            executor.submit(room);
+        }
+
+        // 5. 입장 처리
+        joinProcess(session, room, username);
     }
 
     /**
@@ -174,19 +178,111 @@ public class GameService {
      */
     public void handleLeave(WebSocketSession session) {
         String roomId = (String) session.getAttributes().get("roomId");
-        if (roomId != null) {
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId != null && username != null) {
+            // Redis에서 퇴장 처리 (방장이면 방 폭파)
+            boolean roomDestroyed = redisRoomService.leaveRoom(roomId, username);
+
+            // GameRoom에서도 제거
             GameRoom room = gameRepository.getRoom(roomId);
             if (room != null) {
-                room.removePlayer(session);
-
-                // 방에 사람이 없으면 방 삭제 (게임 루프는 GameRoom 내부에서 자동 종료)
-                if (room.getPlayerCount() == 0) {
+                if (roomDestroyed) {
+                    // 방 폭파: 남은 플레이어들에게 알림
+                    room.broadcastRoomClosed();
                     gameRepository.removeRoom(roomId);
-                    log.info("Room destroyed: {}", roomId);
+                    log.info("Room {} destroyed (host left)", roomId);
+                } else {
+                    room.removePlayer(session);
+
+                    // 방에 사람이 없으면 방 삭제
+                    if (room.getPlayerCount() == 0) {
+                        redisRoomService.deleteRoom(roomId);
+                        gameRepository.removeRoom(roomId);
+                        log.info("Room {} destroyed (empty)", roomId);
+                    }
                 }
             }
-            log.info("User left room: {}", roomId);
+            log.info("User {} left room {}", username, roomId);
         }
+    }
+
+    /**
+     * Ready 상태 변경
+     */
+    public void handleReady(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 방장은 Ready 불필요
+        String hostId = redisRoomService.getHostId(roomId);
+        if (hostId != null && hostId.equals(username)) {
+            sendError(session, "Host cannot ready, use start button");
+            return;
+        }
+
+        // Ready 상태 토글 또는 설정
+        boolean isReady = "true".equals(message.getContent());
+        redisRoomService.setReady(roomId, username, isReady);
+
+        // Ready 상태 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto readyMsg = new GameMessageDto();
+            readyMsg.setType("READY_STATUS");
+            readyMsg.setRoomId(roomId);
+            readyMsg.setUsername(username);
+            readyMsg.setContent(String.valueOf(isReady));
+            room.broadcast(readyMsg, null);
+        }
+
+        log.info("User {} ready: {} in room {}", username, isReady, roomId);
+    }
+
+    /**
+     * 게임 시작 (방장만 가능)
+     */
+    public void handleStartGame(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 게임 시작 시도
+        boolean started = redisRoomService.startGame(roomId, username);
+
+        if (!started) {
+            // 실패 이유 확인
+            String hostId = redisRoomService.getHostId(roomId);
+            if (!username.equals(hostId)) {
+                sendError(session, "Only host can start the game");
+            } else if (!redisRoomService.isAllReady(roomId)) {
+                sendError(session, "Not all players are ready");
+            } else {
+                sendError(session, "Cannot start game");
+            }
+            return;
+        }
+
+        // 게임 시작 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto startMsg = new GameMessageDto();
+            startMsg.setType("GAME_START");
+            startMsg.setRoomId(roomId);
+            startMsg.setContent("1"); // 스테이지 1
+            room.broadcast(startMsg, null);
+        }
+
+        log.info("Game started in room {} by host {}", roomId, username);
     }
 
     // =========================================================

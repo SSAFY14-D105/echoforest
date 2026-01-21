@@ -4,105 +4,88 @@
 CREATE DATABASE IF NOT EXISTS echoforest DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE echoforest;
 
--- ==========================================
--- 1. Users (기존 Member 엔티티 확장)
--- 담당: 회원 정보 및 기본 스탯
--- ==========================================
+-- Users
 CREATE TABLE users (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       login_id VARCHAR(50) NOT NULL UNIQUE COMMENT '로그인 아이디',
-                       password VARCHAR(255) NOT NULL COMMENT '암호화된 비밀번호',
-                       nickname VARCHAR(20) NOT NULL UNIQUE COMMENT '닉네임',
-                       email VARCHAR(100) NOT NULL UNIQUE COMMENT '이메일',
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT '로그인 아이디',
+    password VARCHAR(255) NOT NULL,
+    nickname VARCHAR(20) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL,
 
-    -- 추가된 게임 데이터
-                       level INT DEFAULT 1 COMMENT '유저 레벨',
-                       manner_score DECIMAL(4,1) DEFAULT 36.5 COMMENT '매너 점수 (기본 36.5)',
-                       kiss_count INT DEFAULT 0 COMMENT '뽀뽀 횟수 (성공 횟수)',
+    -- 게임 통계
+    kiss_count INT DEFAULT 0 COMMENT '누적 뽀뽀 횟수',
+    curse_count INT DEFAULT 0 COMMENT '누적 저주 횟수',
+    manner_score DECIMAL(4,1) DEFAULT 36.5 COMMENT '매너점수 = 36.5 + (kiss * 0.1) - (curse * 0.2)',
 
-                       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
--- ==========================================
--- 2. Maps (맵 데이터)
--- 담당: 맵 메타데이터 및 타일 정보 (JSON)
--- ==========================================
+-- Maps
 CREATE TABLE maps (
-                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                      map_name VARCHAR(100) NOT NULL COMMENT '맵 이름',
-                      creator_id BIGINT COMMENT '맵 제작자 ID (User FK)',
-
-    -- 맵 데이터는 구조가 복잡하므로 JSON 타입 권장
-                      tile_data JSON NOT NULL COMMENT '타일 배치 데이터 (2차원 배열 or 객체)',
-
-    -- 이미지는 URL(경로)만 저장
-                      thumbnail_url VARCHAR(255) COMMENT '맵 썸네일 이미지 경로',
-
-                      is_official BOOLEAN DEFAULT FALSE COMMENT '공식 맵 여부',
-                      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-                      FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    map_name VARCHAR(100) NOT NULL,
+    tile_data JSON NOT NULL,
+    bgm_path VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==========================================
--- 3. Gimmicks (기믹 정보)
--- 담당: 맵 내 상호작용 요소 (함정, 포탈 등)
--- ==========================================
-CREATE TABLE gimmicks (
-                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                          map_id BIGINT NOT NULL,
-
-                          gimmick_type VARCHAR(50) NOT NULL COMMENT 'TRAP, PORTAL, NPC, ITEM',
-
-    -- 위치 정보 (그리드 좌표 또는 실수 좌표)
-                          pos_x DECIMAL(10,2) NOT NULL,
-                          pos_y DECIMAL(10,2) NOT NULL,
-
-    -- 트리거 조건 및 추가 속성 (JSON으로 유연하게 저장)
-    -- 예: { "damage": 10, "target_map_id": 5 }
-                          attributes JSON COMMENT '기믹별 상세 속성 및 트리거 조건',
-
-                          FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+-- Images (모션 인식 캡처 사진)
+CREATE TABLE images (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '사진을 찍은 유저 (업로더)',
+    file_name VARCHAR(100) NOT NULL,
+    
+    -- 확장 필드
+    map_id BIGINT NULL COMMENT '어느 맵에서 찍었는지',
+    stage_number INT NULL COMMENT '몇 번째 스테이지에서 찍었는지',
+    room_code VARCHAR(10) NULL COMMENT '어느 방에서 찍었는지',
+    image_type VARCHAR(20) DEFAULT 'MOTION' COMMENT 'MOTION(모션인식), RESULT(결과화면) 등',
+    
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE SET NULL
 );
 
--- ==========================================
--- 4. GameSessions (게임 기록)
--- 담당: 종료된 게임의 로그 저장 (실시간 상태는 Redis 권장)
--- ==========================================
-CREATE TABLE game_sessions (
-                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                               room_id VARCHAR(50) NOT NULL COMMENT 'UUID 또는 방 코드',
-                               map_id BIGINT,
-
-    -- 참여자 목록을 JSON 배열로 저장 (예: [1, 5, 8])
-                               player_ids JSON COMMENT '참여한 유저 ID 목록',
-
-                               status VARCHAR(20) DEFAULT 'ENDED' COMMENT 'PLAYING, ENDED, ABORTED',
-                               started_at DATETIME,
-                               ended_at DATETIME,
-
-                               FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE SET NULL
-);
-
--- ==========================================
--- 5. CringeStats (오글거림/욕설 통계)
--- 담당: 유저별 상호작용 카운트 로그
--- ==========================================
-CREATE TABLE cringe_stats (
-                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                              user_id BIGINT NOT NULL,
-                              session_id BIGINT COMMENT '어떤 게임에서 발생했는지 (선택)',
-
-                              stat_type VARCHAR(20) NOT NULL COMMENT 'AFFECTION(애정표현), CURSE(욕설)',
-                              count_value INT DEFAULT 1 COMMENT '발생 횟수',
-
-                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-                              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                              FOREIGN KEY (session_id) REFERENCES game_sessions(id) ON DELETE SET NULL
+-- Image Participants (함께 찍은 유저들, 최대 3명)
+CREATE TABLE image_participants (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    image_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- 인덱스 설정 (조회 성능 최적화)
 CREATE INDEX idx_users_nickname ON users(nickname);
-CREATE INDEX idx_cringe_user ON cringe_stats(user_id, stat_type);
+CREATE INDEX idx_images_user ON images(user_id);
+CREATE INDEX idx_images_room ON images(room_code);
+CREATE INDEX idx_participants_image ON image_participants(image_id);
+
+-- ==========================================
+-- 더미 데이터 (개발/테스트용)
+-- ==========================================
+
+-- 유저 (비밀번호: BCrypt 해시된 'password123')
+INSERT INTO users (username, password, nickname, email, kiss_count, curse_count, manner_score) VALUES
+('user1', '$2a$10$N.0cmPzwJMpSjGxUjN8vXOBjNLqMCz1pJzVwLq7FnOVTPJxLH0kfC', '에코뽀왕', 'user1@test.com', 15, 3, 37.9),
+('user2', '$2a$10$N.0cmPzwJMpSjGxUjN8vXOBjNLqMCz1pJzVwLq7FnOVTPJxLH0kfC', '숲속탐험가', 'user2@test.com', 8, 5, 36.3),
+('user3', '$2a$10$N.0cmPzwJMpSjGxUjN8vXOBjNLqMCz1pJzVwLq7FnOVTPJxLH0kfC', '저주마스터', 'user3@test.com', 2, 20, 32.7),
+('user4', '$2a$10$N.0cmPzwJMpSjGxUjN8vXOBjNLqMCz1pJzVwLq7FnOVTPJxLH0kfC', '뉴비개구리', 'user4@test.com', 0, 0, 36.5);
+
+-- 맵
+INSERT INTO maps (map_name, tile_data, bgm_path) VALUES
+('에코숲', '{"width": 20, "height": 15, "tiles": []}', '/audio/bgm/echo_forest.mp3'),
+('미로정원', '{"width": 25, "height": 20, "tiles": []}', '/audio/bgm/maze_garden.mp3'),
+('크리스탈동굴', '{"width": 30, "height": 18, "tiles": []}', '/audio/bgm/crystal_cave.mp3');
+
+-- 이미지 샘플 (4명이 함께 찍은 사진)
+INSERT INTO images (user_id, file_name, map_id, stage_number, room_code, image_type) VALUES
+(1, 'motion_20260121_001.webp', 1, 2, 'ABC123', 'MOTION'),
+(1, 'result_20260121_001.webp', 1, NULL, 'ABC123', 'RESULT');
+
+-- 함께 찍은 유저들 (이미지 1번에 user2, user3, user4)
+INSERT INTO image_participants (image_id, user_id) VALUES
+(1, 2), (1, 3), (1, 4);

@@ -14,7 +14,7 @@ public class SignUpReqDto {
     @NotBlank(message = "아이디는 필수입니다.")
     @Size(min = 4, max = 20, message = "아이디는 4~20자여야 합니다.")
     @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "아이디는 영문과 숫자만 가능합니다.")
-    private String loginId;
+    private String username;
 
     @Schema(description = "비밀번호 (8자 이상)", example = "password123!")
     @NotBlank(message = "비밀번호는 필수입니다.")

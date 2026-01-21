@@ -4,12 +4,14 @@ import com.d105.dto.auth.LoginReqDto;
 import com.d105.dto.auth.SignUpReqDto;
 import com.d105.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
+@Tag(name = "Auth", description = "회원 인증 API (회원가입, 로그인, 아이디 확인)")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -36,8 +38,15 @@ public class AuthController {
 
     @Operation(summary = "아이디 중복 확인 (true: 중복, false: 사용 가능)")
     @GetMapping("/check-id")
-    public ResponseEntity<?> checkId(@RequestParam String loginId) {
-        boolean exists = authService.checkIdDuplicate(loginId);
+    public ResponseEntity<?> checkId(@RequestParam String username) {
+        boolean exists = authService.checkIdDuplicate(username);
+        return ResponseEntity.ok(Map.of("isDuplicate", exists));
+    }
+
+    @Operation(summary = "닉네임 중복 확인 (true: 중복, false: 사용 가능)")
+    @GetMapping("/check-nickname")
+    public ResponseEntity<?> checkNickname(@RequestParam String nickname) {
+        boolean exists = authService.checkNicknameDuplicate(nickname);
         return ResponseEntity.ok(Map.of("isDuplicate", exists));
     }
 }
