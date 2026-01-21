@@ -389,10 +389,12 @@ export class Player {
     }
 
     public destroy(): void {
-        // 물리 바디 제거
-        this.scene.matter.world.remove(this.body);
+        // 물리 바디 제거 - 씬이 이미 종료되었을 수 있으므로 체크
+        if (this.scene?.matter?.world) {
+            this.scene.matter.world.remove(this.body);
+        }
         // 그래픽 제거
-        this.graphics.destroy();
+        this.graphics?.destroy();
     }
 }
 

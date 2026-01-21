@@ -1,8 +1,8 @@
 import BaseGameScene from './BaseGameScene';
 
 /**
- * Stage1Scene - 스테이지 1 (빈 템플릿)
- * 나중에 기믹 추가 예정
+ * Stage1Scene - 스테이지 1
+ * TMJ 파일을 읽어서 맵을 생성합니다.
  */
 export default class Stage1Scene extends BaseGameScene {
     constructor() {
@@ -14,20 +14,33 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     protected getWorldWidth(): number {
-        return 2000;
+        return this.worldWidth;
     }
 
     protected getRequiredPlayers(): number {
-        return 4;
+        return 1; // 테스트를 위해 1명으로 설정
+    }
+
+    preload() {
+        // Tiled TMJ 파일 로드
+        this.load.json('stage_01', '/assets/maps/stage_01.tmj');
+
+        // 타일셋 이미지 로드 (GID 21-24 용)
+        // 16x16 크기의 타일들이 들어있는 스프라이트 시트로 로드
+        this.load.spritesheet('stage_tiles', '/assets/tilesets/01 Colourful Platformer - Normal Tileset.png', {
+            frameWidth: 16,
+            frameHeight: 16
+        });
     }
 
     protected createGimmicks(): void {
-        // TODO: 스테이지 1 기믹 배치
-        console.log('[Stage1Scene] Gimmicks - TODO');
+        // TMJ 데이터 파싱 및 배치
+        this.parseTiledData('stage_01');
+        console.log('[Stage1Scene] Map parsed from stage_01.tmj');
     }
 
     protected onStageComplete(): void {
         console.log('[Stage1Scene] 🎉 Stage 1 Complete!');
-        // TODO: 스테이지 2로 이동
+        // TODO: 스테이지 2로 이동 로직 (예: this.scene.start('Stage2Scene'))
     }
 }
