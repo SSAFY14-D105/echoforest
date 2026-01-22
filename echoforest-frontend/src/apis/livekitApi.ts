@@ -1,40 +1,51 @@
 /**
- * LiveKit 토큰 API
- * 백엔드에서 LiveKit 접속 토큰을 발급받습니다.
+ * LiveKit API 서비스
+ * 백엔드에서 토큰을 발급받는 함수
  */
 
-const BASE_URL = 'http://localhost:9001/api';
+// 환경 설정
+const API_BASE_URL = 'https://i14d105.p.ssafy.io/api';
+export const LIVEKIT_SERVER_URL = 'wss://i14d105.p.ssafy.io/livekit';
 
-export interface TokenRequest {
-    roomName: string;
+/**
+ * 토큰 발급 요청 타입
+ */
+export interface LiveKitTokenRequest {
     userId: string;
     username: string;
+    roomId: string;
 }
 
-export interface TokenResponse {
+/**
+ * 토큰 발급 응답 타입
+ */
+export interface LiveKitTokenResponse {
     token: string;
 }
 
 /**
- * LiveKit 토큰 발급 API
+ * LiveKit 토큰 발급 API 호출
  */
-export async function getLiveKitToken(req: TokenRequest): Promise<TokenResponse> {
-    const token = localStorage.getItem('token');
+export async function fetchLiveKitToken(
+    request: LiveKitTokenRequest
+): Promise<LiveKitTokenResponse> {
+    console.log('📡 API 호출:', `${API_BASE_URL}/livekit/token`, request);
 
-    const res = await fetch(`${BASE_URL}/livekit/token`, {
+    const response = await fetch(`${API_BASE_URL}/livekit/token`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(req),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
     });
 
-    if (!res.ok) {
-        const errorText = await res.text();
-        console.error('LiveKit 토큰 발급 실패:', errorText);
-        throw new Error('LiveKit 토큰 발급에 실패했습니다.');
+    console.log('📡 API 응답 상태:', response.status, response.statusText);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 에러:', errorText);
+        throw new Error(`토큰 발급 실패: ${response.status}`);
     }
 
-    return res.json();
+    const data = await response.json();
+    console.log('✅ 토큰 발급 성공');
+    return data;
 }
