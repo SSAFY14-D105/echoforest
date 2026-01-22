@@ -101,6 +101,15 @@
     border-radius: 9px;
 }
 
+.localVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9px;
+    transform: scaleX(-1);
+    /* 거울 모드 */
+}
+
 /* 컨트롤 버튼 영역 */
 .controls {
     position: absolute;
