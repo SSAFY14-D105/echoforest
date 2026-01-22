@@ -10,7 +10,7 @@ services:
     ports:
       - "9001:9001"         # 외부 접속 포트
     environment:
-      - # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
+      # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
       - LIVEKIT_URL=${LIVEKIT_URL}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
