@@ -18,16 +18,16 @@ export interface LiveKitOverlayProps {
 }
 
 export default function LiveKitOverlay({
-  roomId,
-  username,
   userId,
+  username,
+  roomId,
   onConnected,
   onError,
 }: LiveKitOverlayProps) {
   const { token, serverUrl, isLoading, error } = useLiveKit({
-    roomId,
-    username,
     userId,
+    username,
+    roomId,
   });
 
   if (error && onError) {

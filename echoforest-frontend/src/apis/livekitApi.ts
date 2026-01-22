@@ -11,9 +11,9 @@ export const LIVEKIT_SERVER_URL = 'wss://i14d105.p.ssafy.io/livekit';
  * 토큰 발급 요청 타입
  */
 export interface LiveKitTokenRequest {
-    roomId: string;
     userId: string;
     username: string;
+    roomId: string;
 }
 
 /**
