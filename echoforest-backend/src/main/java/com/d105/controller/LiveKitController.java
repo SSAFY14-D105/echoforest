@@ -1,7 +1,7 @@
 package com.d105.controller;
 
-import com.d105.dto.TokenReqDto;
-import com.d105.dto.TokenResDto;
+import com.d105.dto.token.TokenReqDto;
+import com.d105.dto.token.TokenResDto;
 import com.d105.service.LiveKitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

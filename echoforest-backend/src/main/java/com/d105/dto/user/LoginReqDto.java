@@ -1,4 +1,4 @@
-package com.d105.dto.auth;
+package com.d105.dto.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

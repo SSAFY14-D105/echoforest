@@ -1,4 +1,4 @@
-package com.d105.dto;
+package com.d105.dto.token;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
