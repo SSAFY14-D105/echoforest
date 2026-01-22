@@ -1,0 +1,37 @@
+{
+  "hash": "2cfa1f9d",
+  "configHash": "dcd0d48b",
+  "lockfileHash": "2dd0dc91",
+  "browserHash": "b53ee491",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "827d4608",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "790e9f4b",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "977fbb5d",
+      "needsInterop": true
+    },
+    "@livekit/components-react": {
+      "src": "../../node_modules/@livekit/components-react/dist/index.mjs",
+      "file": "@livekit_components-react.js",
+      "fileHash": "20a90c21",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-R4VOGKSS": {
+      "file": "chunk-R4VOGKSS.js"
+    }
+  }
+}

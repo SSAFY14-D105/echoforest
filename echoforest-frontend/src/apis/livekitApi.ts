@@ -5,7 +5,7 @@
 
 // 환경 설정 (환경변수로 관리 추천)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
-export const LIVEKIT_SERVER_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io';
+export const LIVEKIT_SERVER_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io/livekit';
 
 /**
  * 토큰 발급 요청 타입
