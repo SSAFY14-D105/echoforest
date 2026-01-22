@@ -151,6 +151,9 @@ public class GameRoom implements Runnable {
         if (player == null)
             return;
 
+        // 마지막 업데이트 시간 갱신 (AFK 감지용)
+        player.touch();
+
         player.setX(x);
         player.setY(y);
         if (vx != null)
@@ -262,7 +265,13 @@ public class GameRoom implements Runnable {
 
         while (isRunning) {
             try {
-                // 브로드캐스트만 수행 (20 TPS)
+                // 1. AFK 체크 및 처리
+                checkAfkPlayers();
+
+                // 2. 자동 퇴장 처리 (10초 이상 업데이트 없음)
+                checkDisconnectedPlayers();
+
+                // 3. 브로드캐스트 (20 TPS)
                 broadcastState();
 
                 // 50ms 대기 (20 TPS)
@@ -273,6 +282,58 @@ public class GameRoom implements Runnable {
             }
         }
         log.info("🏁 Game Loop Ended: {}", roomId);
+    }
+
+    /**
+     * AFK 플레이어 체크 및 처리 (속도 0, 중력 적용)
+     */
+    private void checkAfkPlayers() {
+        for (PlayerState player : players.values()) {
+            player.checkAfkStatus();
+        }
+    }
+
+    /**
+     * 10초 이상 업데이트 없는 플레이어 자동 퇴장
+     */
+    private void checkDisconnectedPlayers() {
+        java.util.List<String> toRemove = new java.util.ArrayList<>();
+
+        for (java.util.Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            if (entry.getValue().shouldDisconnect()) {
+                toRemove.add(entry.getKey());
+                log.info("Player {} auto-disconnected (no update for 10s)", entry.getValue().getUsername());
+            }
+        }
+
+        for (String sessionId : toRemove) {
+            PlayerState removed = players.remove(sessionId);
+            WebSocketSession session = sessions.remove(sessionId);
+
+            if (removed != null) {
+                // 다른 플레이어들에게 퇴장 알림
+                GameMessageDto leaveMsg = new GameMessageDto();
+                leaveMsg.setType("PLAYER_LEFT");
+                leaveMsg.setRoomId(roomId);
+                leaveMsg.setUsername(removed.getUsername());
+                leaveMsg.setContent("Auto-disconnected (AFK)");
+                broadcast(leaveMsg, null);
+            }
+
+            // 세션 닫기
+            if (session != null && session.isOpen()) {
+                try {
+                    session.close();
+                } catch (Exception e) {
+                    log.error("Failed to close session", e);
+                }
+            }
+        }
+
+        // 방에 아무도 없으면 루프 종료
+        if (players.isEmpty()) {
+            this.isRunning = false;
+        }
     }
 
     private void processInputs() {
@@ -324,6 +385,7 @@ public class GameRoom implements Runnable {
                 pData.put("height", p.getHeight());
                 pData.put("hp", p.getHp());
                 pData.put("isDead", p.isDead());
+                pData.put("isAfk", p.isAfk()); // AFK 상태 추가
                 pData.put("curses", p.getActiveCurses().keySet());
                 stateList.add(pData);
             }

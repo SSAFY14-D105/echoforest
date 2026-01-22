@@ -11,6 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.List;
 
 @Configuration
@@ -74,9 +75,9 @@ public class SecurityConfig {
  * ============================================================================
  * [미래의 SecurityConfig] JWT 필터 구현 후, 위 코드를 지우고 아래 주석을 해제하여 사용하세요.
  * ============================================================================
- * 
+ *
  * package com.d105.config;
- * 
+ *
  * // [IMPORT 주의] JwtAuthenticationFsilter를 만든 후 경로에 맞게 임포트해야 합니다.
  * // import com.d105.jwt.JwtAuthenticationFilter;
  * import lombok.RequiredArgsConstructor;
@@ -94,22 +95,22 @@ public class SecurityConfig {
  * import org.springframework.security.web.SecurityFilterChain;
  * import org.springframework.security.web.authentication.
  * UsernamePasswordAuthenticationFilter;
- * 
+ *
  * @Configuration
- * 
+ *
  * @EnableWebSecurity
- * 
+ *
  * @RequiredArgsConstructor // [변경됨] final 필드(JwtFilter) 주입을 위해 필요
  * public class SecurityConfig {
- * 
+ *
  * // [추가됨] 나중에 만들 JwtAuthenticationFilter 주입
  * // private final JwtAuthenticationFilter jwtAuthenticationFilter;
- * 
+ *
  * @Bean
  * public PasswordEncoder passwordEncoder() {
  * return new BCryptPasswordEncoder();
  * }
- * 
+ *
  * @Bean
  * public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
  * http
@@ -117,29 +118,29 @@ public class SecurityConfig {
  * .cors(AbstractHttpConfigurer::disable)
  * .formLogin(AbstractHttpConfigurer::disable)
  * .httpBasic(AbstractHttpConfigurer::disable)
- * 
+ *
  * // [추가됨] 중요: JWT는 세션을 안 쓰므로 STATELESS로 설정해야 함
  * .sessionManagement(session ->
  * session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
- * 
- * .authorizeHttpRequests(auth -> auth
+ *
+ * .authorizeHttpRequests(user -> user
  * // 1. 허용할 경로들 (로그인, 회원가입, Swagger, 웹소켓 등)
  * .requestMatchers(
- * "/api/auth/**",
+ * "/api/user/**",
  * "/swagger-ui/**",
  * "/v3/api-docs/**",
  * "/ws/**",
  * "/error"
  * ).permitAll()
- * 
+ *
  * // 2. [변경됨] 나머지 모든 요청은 인증된(Token 가진) 사람만 접근 가능
  * .anyRequest().authenticated()
  * );
- * 
+ *
  * // [추가됨] JWT 필터를 "ID/PW 검사 필터" 앞에 끼워 넣기
  * // http.addFilterBefore(jwtAuthenticationFilter,
  * UsernamePasswordAuthenticationFilter.class);
- * 
+ *
  * return http.build();
  * }
  * }

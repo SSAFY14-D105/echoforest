@@ -1,4 +1,4 @@
-package com.d105.dto;
+package com.d105.dto.token;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
