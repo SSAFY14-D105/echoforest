@@ -10,7 +10,7 @@ def test_api():
         ("화가나네", "mild/severe - 부정 표현"),
         ("짜증난다", "mild/severe - 부정 표현"),
         ("짜증나네", "mild/severe - 부정 표현"),
-        ("졸라 짜증나", "mild/severe - 신조어"),
+        ("졸라 짜증나", "mild/severe - 부정 표현"),
         ("킹받네", "mild/severe - 신조어"),
         ("안녕하세요", "clean - 정상 발화"),
     ]
