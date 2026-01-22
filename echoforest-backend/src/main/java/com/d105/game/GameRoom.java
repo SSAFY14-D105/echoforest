@@ -143,6 +143,25 @@ public class GameRoom implements Runnable {
     }
 
     /**
+     * 플레이어 위치 업데이트 (Client-Authoritative)
+     * 클라이언트가 보낸 좌표를 그대로 신뢰하고 저장
+     */
+    public void updatePlayerPosition(String sessionId, Double x, Double y, Double vx, Double vy, String anim) {
+        PlayerState player = players.get(sessionId);
+        if (player == null)
+            return;
+
+        player.setX(x);
+        player.setY(y);
+        if (vx != null)
+            player.setVx(vx);
+        if (vy != null)
+            player.setVy(vy);
+        if (anim != null)
+            player.setAnim(anim);
+    }
+
+    /**
      * 방 내의 참가자들에게 메시지를 전송하는 기능 (Broadcasting)
      * Service 계층에서 세션 목록을 직접 순회하지 않도록 캡슐화함.
      * * @param message 전송할 메시지 객체
@@ -239,44 +258,18 @@ public class GameRoom implements Runnable {
 
     @Override
     public void run() {
-        log.info("🚀 Game Loop Started: {}", roomId);
-        long lastTime = System.nanoTime();
-        double accumulator = 0.0;
+        log.info("🚀 Game Loop Started (Relay Mode): {}", roomId);
 
         while (isRunning) {
-            long currentTime = System.nanoTime();
-            double frameTime = (currentTime - lastTime) / 1_000_000_000.0;
-            lastTime = currentTime;
-
-            // Spiral of Death 방지 (최대 0.25초까지만 연산)
-            if (frameTime > 0.25)
-                frameTime = 0.25;
-
-            accumulator += frameTime;
-            broadcastAccumulator += frameTime;
-
-            // 1. 물리 업데이트 (60 TPS)
-            while (accumulator >= TICK_DURATION) {
-                processInputs();
-                updatePhysics(TICK_DURATION);
-                accumulator -= TICK_DURATION;
-            }
-
-            // 2. 상태 브로드캐스트 (20 TPS - 네트워크 최적화)
-            if (broadcastAccumulator >= BROADCAST_INTERVAL) {
+            try {
+                // 브로드캐스트만 수행 (20 TPS)
                 broadcastState();
-                broadcastAccumulator -= BROADCAST_INTERVAL;
-            }
 
-            // 남은 시간 동안 Sleep (CPU 점유율 조절)
-            long sleepTime = (long) ((TICK_DURATION - accumulator) * 1000);
-            if (sleepTime > 0) {
-                try {
-                    Thread.sleep(sleepTime);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+                // 50ms 대기 (20 TPS)
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
             }
         }
         log.info("🏁 Game Loop Ended: {}", roomId);
@@ -311,9 +304,12 @@ public class GameRoom implements Runnable {
 
     private void broadcastState() {
         try {
-            // 전체 플레이어 상태를 리스트로 변환
+            // 전체 플레이어 상태를 리스트로 변환 (username 기준 정렬)
             List<Object> stateList = new ArrayList<>();
-            for (PlayerState p : players.values()) {
+            List<PlayerState> sortedPlayers = new ArrayList<>(players.values());
+            sortedPlayers.sort((a, b) -> a.getUsername().compareTo(b.getUsername()));
+
+            for (PlayerState p : sortedPlayers) {
                 Map<String, Object> pData = new HashMap<>();
                 pData.put("serverTick", System.currentTimeMillis());
                 pData.put("id", p.getUsername());
@@ -322,6 +318,7 @@ public class GameRoom implements Runnable {
                 pData.put("y", Math.round(p.getY() * 100) / 100.0);
                 pData.put("vx", p.getVx());
                 pData.put("vy", p.getVy());
+                pData.put("anim", p.getAnim()); // 애니메이션 상태 추가
                 // 저주로 크기 변경 시 클라이언트에 전달
                 pData.put("width", p.getWidth());
                 pData.put("height", p.getHeight());
