@@ -11,7 +11,7 @@ export const LIVEKIT_SERVER_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14
  * 토큰 발급 요청 타입
  */
 export interface LiveKitTokenRequest {
-    roomName: string;   // 방 이름
+    roomId: string;   // 방 이름
     userId: string;     // 유저 고유 ID
     username: string;   // 닉네임
 }
@@ -28,7 +28,7 @@ export interface LiveKitTokenResponse {
  * 
  * @example
  * const { token } = await fetchLiveKitToken({
- *   roomName: 'room_1',
+ *   roomId: 'room_1',
  *   userId: 'user_123',
  *   username: '철수'
  * });

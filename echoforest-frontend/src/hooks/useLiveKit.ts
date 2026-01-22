@@ -10,7 +10,7 @@ import {
 } from '../apis/livekitApi';
 
 export interface UseLiveKitOptions {
-    roomName: string;           // roomId -> roomName으로 통일
+    roomId: string;
     username: string;
     userId?: string;
     autoConnect?: boolean;
@@ -33,12 +33,12 @@ export interface UseLiveKitResult {
  * 
  * @example
  * const { token, serverUrl, isLoading, error } = useLiveKit({
- *   roomName: 'room_1',
+ *   roomId: 'room_1',
  *   username: '철수',
  * });
  */
 export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
-    const { roomName, username, userId, autoConnect = true, onError } = options;
+    const { roomId, username, userId, autoConnect = true, onError } = options;
 
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -46,10 +46,10 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
     // 토큰 발급
     const connect = useCallback(async () => {
-        console.log('🔵 LiveKit 연결 시도:', { roomName, username, userId });
+        console.log('🔵 LiveKit 연결 시도:', { roomId, username, userId });
 
-        if (!roomName || !username) {
-            console.log('⚠️ roomName 또는 username이 없습니다:', { roomName, username });
+        if (!roomId || !username) {
+            console.log('⚠️ roomId 또는 username이 없습니다:', { roomId, username });
             return;
         }
 
@@ -58,10 +58,10 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
         try {
             const finalUserId = userId || generateUserId();
-            console.log('📡 토큰 요청 중...', { roomName, userId: finalUserId, username });
+            console.log('📡 토큰 요청 중...', { roomId, userId: finalUserId, username });
 
             const response = await fetchLiveKitToken({
-                roomName,
+                roomId,
                 userId: finalUserId,
                 username,
             });
@@ -80,7 +80,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
         } finally {
             setIsLoading(false);
         }
-    }, [roomName, username, userId, onError]);
+    }, [roomId, username, userId, onError]);
 
     // 연결 해제
     const disconnect = useCallback(() => {
@@ -89,11 +89,11 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
     // 자동 연결
     useEffect(() => {
-        console.log('🟢 useLiveKit 마운트됨:', { autoConnect, roomName, username });
-        if (autoConnect && roomName && username) {
+        console.log('🟢 useLiveKit 마운트됨:', { autoConnect, roomId, username });
+        if (autoConnect && roomId && username) {
             connect();
         }
-    }, [autoConnect, roomName, username, connect]);
+    }, [autoConnect, roomId, username, connect]);
 
     return {
         token,
