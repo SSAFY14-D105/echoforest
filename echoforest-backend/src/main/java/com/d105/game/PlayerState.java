@@ -23,26 +23,75 @@ public class PlayerState {
     private boolean isGrounded = false; // 바닥에 닿았는지 여부
     private String anim = "idle_down"; // 현재 애니메이션 상태
 
-    // 3. 물리 상수 (튜닝 필요)
+    // 3. AFK(잠수) 감지용
+    private long lastUpdateTime = System.currentTimeMillis();
+    private boolean isAfk = false;
+    private static final long AFK_THRESHOLD_MS = 1000; // 1초간 업데이트 없으면 AFK
+    private static final long DISCONNECT_THRESHOLD_MS = 10000; // 10초간 업데이트 없으면 퇴장 대상
+    private static final double GROUND_Y = 560.0; // 바닥 Y 좌표 (맵에 맞게 조정)
+
+    // 4. 물리 상수 (튜닝 필요)
     private static final double MOVE_SPEED = 300.0;
     private static final double JUMP_FORCE = -600.0; // Y축 위로 점프 (음수)
-    private static final double GRAVITY = 1200.0;
+    private static final double GRAVITY = 50.0; // AFK 시 적용할 간단한 중력
     private static final double TERMINAL_VELOCITY = 800.0; // 낙하 최대 속도
 
-    // 4. 입력 상태
+    // 5. 입력 상태
     private volatile int inputX = 0; // -1, 0, 1
     private volatile boolean inputJump = false; // 점프 키 입력 여부
 
-    // 5. 저주 상태 관리
+    // 6. 저주 상태 관리
     private Map<CurseType, Long> activeCurses = new ConcurrentHashMap<>();
 
-    // 6. TIME_BOMB 저주용 누적 데미지
+    // 7. TIME_BOMB 저주용 누적 데미지
     private double accumulatedDamage = 0;
 
     public PlayerState(String username, double startX, double startY) {
         this.username = username;
         this.x = startX;
         this.y = startY;
+        this.lastUpdateTime = System.currentTimeMillis();
+    }
+
+    /**
+     * AFK 상태 체크 및 처리
+     */
+    public void checkAfkStatus() {
+        long now = System.currentTimeMillis();
+        long elapsed = now - lastUpdateTime;
+
+        if (elapsed > AFK_THRESHOLD_MS) {
+            isAfk = true;
+            // AFK 시 속도 강제 0
+            vx = 0;
+
+            // 공중에 떠있으면 중력 적용 (간단한 낙하)
+            if (!isGrounded && y < GROUND_Y) {
+                y += GRAVITY; // 간단한 중력 적용
+                if (y >= GROUND_Y) {
+                    y = GROUND_Y;
+                    isGrounded = true;
+                    vy = 0;
+                }
+            }
+        } else {
+            isAfk = false;
+        }
+    }
+
+    /**
+     * 퇴장 대상인지 확인 (10초 이상 업데이트 없음)
+     */
+    public boolean shouldDisconnect() {
+        return (System.currentTimeMillis() - lastUpdateTime) > DISCONNECT_THRESHOLD_MS;
+    }
+
+    /**
+     * 업데이트 시간 갱신
+     */
+    public void touch() {
+        this.lastUpdateTime = System.currentTimeMillis();
+        this.isAfk = false;
     }
 
     /**
