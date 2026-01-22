@@ -56,7 +56,8 @@ export default function GamePage() {
     const myPlayer: Player = {
       id: nickname,  // nickname을 id로 사용 (서버와 일치)
       nickname: nickname,
-      isHost: isHost
+      isHost: isHost,
+      isLocal: true
     };
     addPlayer(myPlayer);
   }, [isSoloMode]);
@@ -137,14 +138,33 @@ export default function GamePage() {
           // 다른 플레이어 입장
           if (msg.username && msg.username !== nickname) {
             const newPlayer: Player = {
-              id: `player-${Date.now()}-${msg.username}`,
+              id: msg.username,  // nickname을 고유 ID로 사용 (서버와 일치)
               nickname: msg.username,
-              isHost: false,
+              isHost: false,     // 나중에 들어온 사람은 Host가 아님 (보수적 판단)
               x: msg.x,
               y: msg.y
             };
             addPlayer(newPlayer);
             console.log(`👋 ${msg.username} 입장`);
+          }
+          break;
+
+        case 'MOVE':
+          // P2P Stage Sync: Host가 보낸 스테이지 태그(|s:X) 감지
+          // late joiner가 방장의 위치 패킷을 보고 스테이지를 따라가는 로직
+          if (msg.anim && msg.anim.includes('|s:')) {
+            const parts = msg.anim.split('|s:');
+            if (parts.length > 1) {
+              const hostStage = parseInt(parts[1], 10);
+              // 현재 내 스테이지와 다르면 동기화 (단, 유효한 스테이지 번호일 때만)
+              // useGameStore의 currentStage는 store에서 가져옴
+              const { currentStage: myStage, isHost: amIHost } = useGameStore.getState();
+
+              if (!amIHost && hostStage > 0 && myStage !== hostStage) {
+                console.log(`🔄 P2P Sync: 방장 스테이지(${hostStage})로 이동합니다.`);
+                startGameFromServer(hostStage); // 또는 setCurrentStageFromServer
+              }
+            }
           }
           break;
 
@@ -221,48 +241,7 @@ export default function GamePage() {
     // cleanup: 언마운트 시에도 싱글톤 연결은 유지 (leaveGame에서 정리)
   }, [roomId, nickname, isSoloMode, isHost]);
 
-  // 키보드 입력을 서버로 전송 (멀티플레이 동기화)
-  // 백엔드는 LEFT_DOWN, RIGHT_DOWN, LEFT_UP, RIGHT_UP, JUMP 입력 타입을 기대함
-  useEffect(() => {
-    if (isSoloMode) return;
-    if (!roomId || !gameWebSocket.isConnected()) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 중복 입력 방지 (key repeat)
-      if (e.repeat) return;
-
-      switch (e.key) {
-        case 'ArrowLeft':
-          gameWebSocket.sendInput(roomId, 'LEFT_DOWN');
-          break;
-        case 'ArrowRight':
-          gameWebSocket.sendInput(roomId, 'RIGHT_DOWN');
-          break;
-        case 'ArrowUp':
-          gameWebSocket.sendInput(roomId, 'JUMP');
-          break;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-          gameWebSocket.sendInput(roomId, 'LEFT_UP');
-          break;
-        case 'ArrowRight':
-          gameWebSocket.sendInput(roomId, 'RIGHT_UP');
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [roomId, isSoloMode]);
 
   // 전원 Ready 상태 확인 (방장 제외)
   const { isAllReady } = useGameStore.getState();
@@ -478,7 +457,23 @@ export default function GamePage() {
       <div className={styles.gameContainer}>
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
-          <PhaserGame startScene={`Stage${currentStage}Scene`} />
+          <PhaserGame
+            startScene={`Stage${currentStage}Scene`}
+            onSendState={(x, y, vx, vy, anim) => {
+              if (roomId && !isSoloMode) {
+                let finalAnim = anim;
+                // Host P2P Broadcast: 애니메이션 태그에 현재 스테이지 정보 숨겨서 전송
+                // late joiner가 이 태그를 보고 스테이지를 따라옴
+                if (isHost && currentStage) {
+                  finalAnim = `${anim}|s:${currentStage}`;
+                }
+
+                // Client-Authoritative: 위치/속도/애니메이션 상태 전송
+                gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, finalAnim);
+              }
+            }}
+            isSoloMode={isSoloMode}
+          />
           <div className={styles.gameInfo}>
             🎮 Stage {currentStage} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
           </div>
@@ -565,11 +560,30 @@ export default function GamePage() {
     <div className={styles.gameContainer}>
       {/* 게임 캔버스 (대기 화면) */}
       <div className={`pixel-box ${styles.canvasWrapper}`}>
-        <PhaserGame startScene="LobbyScene" />
+        <PhaserGame
+          startScene="LobbyScene"
+          onSendState={(x, y, vx, vy, anim) => {
+            if (roomId && !isSoloMode) {
+              gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim);
+            }
+          }}
+          isSoloMode={isSoloMode}
+        />
         <div className={styles.gameInfo}>
           🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span> |
           👥 {players.length}/{MAX_PLAYERS}
         </div>
+        {/* 로비로 돌아가기 버튼 (우상단) */}
+        <button
+          className={styles.backToLobbyBtn}
+          onClick={() => {
+            if (window.confirm('정말 대기방을 나가시겠습니까?')) {
+              leaveGame();
+            }
+          }}
+        >
+          ← 나가기
+        </button>
       </div>
 
       {/* 카메라 영역 */}

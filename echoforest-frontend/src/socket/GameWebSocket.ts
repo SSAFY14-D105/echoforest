@@ -49,6 +49,8 @@ export interface GameMessage {
     username?: string;
     x?: number;
     y?: number;
+    vx?: number;
+    vy?: number;
     anim?: string;
     content?: string;  // 시스템 메시지, 입력 타입, UPDATE 플레이어 데이터
 }
@@ -203,16 +205,24 @@ class GameWebSocket {
     }
 
     /**
-     * 입력 전송 (백엔드 GameService.handleMove 형식)
+     * 플레이어 상태 전송 (Client-Authoritative: 위치 기반)
      * @param roomId 방 ID
-     * @param inputType 입력 타입: LEFT_DOWN, LEFT_UP, RIGHT_DOWN, RIGHT_UP, JUMP
+     * @param x X 좌표
+     * @param y Y 좌표
+     * @param vx X 속도
+     * @param vy Y 속도
+     * @param anim 애니메이션 키
      */
-    sendInput(roomId: string, inputType: string) {
+    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string) {
         this.send({
             type: 'MOVE',
             roomId: roomId,
             username: this.username,
-            content: inputType  // 백엔드는 content 또는 anim 필드에서 inputType을 읽음
+            x: x,
+            y: y,
+            vx: vx,
+            vy: vy,
+            anim: anim
         });
     }
 

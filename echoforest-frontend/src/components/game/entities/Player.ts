@@ -28,7 +28,7 @@ export class Player {
 
     public readonly id: string;
     public readonly nickname: string;
-    public readonly color: number;
+    public color: number;
     public readonly isLocalPlayer: boolean;
 
     // 저주 시스템
@@ -49,7 +49,7 @@ export class Player {
 
     // 목표 위치 (원격 플레이어 보간용)
     private targetPos: { x: number, y: number } | null = null;
-    private readonly LERP_FACTOR = 0.2; // 보간 계수 (높을수록 빠름), 0.1~0.3 권장
+    private readonly LERP_FACTOR = 0.15; // 0.2 -> 0.15: 더 부드럽게 (지연 시간은 미세하게 증가)
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
@@ -81,10 +81,10 @@ export class Player {
         const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
         const body = this.scene.matter.add.rectangle(x, y, size, size, {
             label: this.id,
-            friction: PHYSICS.FRICTION,
             frictionStatic: PHYSICS.STATIC_FRICTION,
             frictionAir: PHYSICS.AIR_FRICTION,
-            restitution: PHYSICS.RESTITUTION
+            restitution: PHYSICS.RESTITUTION,
+            isSensor: false // 모든 플레이어 물리 충돌 활성화 (상호작용 및 기믹 호환성 복구)
         });
 
         // 회전 완전 고정 (피코파크 스타일)
@@ -119,13 +119,31 @@ export class Player {
             const currentX = this.body.position.x;
             const currentY = this.body.position.y;
 
-            // 선형 보간 (Lerp)
-            const newX = Phaser.Math.Linear(currentX, this.targetPos.x, this.LERP_FACTOR);
-            const newY = Phaser.Math.Linear(currentY, this.targetPos.y, this.LERP_FACTOR);
+            // 거리 계산
+            const dx = this.targetPos.x - currentX;
+            const dy = this.targetPos.y - currentY;
+            const distSq = dx * dx + dy * dy;
 
-            // 위치 변경
-            this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
-            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 }); // 속도 제거 (떨림 방지)
+            // 아주 작은 움직임은 무시하여 떨림 방지
+            if (distSq > 0.01) {
+                // 텔레포트 임계값 (100px)
+                if (distSq > 10000) {
+                    this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
+                } else {
+                    // 선형 보간 (Lerp)
+                    // LERP_FACTOR를 0.2 -> 0.15로 낮추어 더 부드럽게 이동 (지연은 약간 늘어남)
+                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, this.LERP_FACTOR);
+                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, this.LERP_FACTOR);
+
+                    // 위치 변경
+                    this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+                }
+            }
+
+            // 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시)
+            // 원격 플레이어는 서버 좌표를 추종하므로 속도를 0으로 유지
+            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+            this.scene.matter.body.setAngularVelocity(this.body, 0);
         }
 
         // 그래픽 위치를 물리 바디에 맞춤
@@ -276,12 +294,22 @@ export class Player {
         return this.speedMultiplier;
     }
 
+    public setColor(colorIndex: number): void {
+        const newColor = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+        if (this.color !== newColor) {
+            this.color = newColor;
+            this.drawPlayer(); // 색상 변경 후 다시 그리기
+        }
+    }
+
     public get isControlReversed(): boolean {
         return this.reverseControls;
     }
 
     public applyKnockback(forceX: number, forceY: number, duration: number): void {
-        this.scene.matter.body.applyForce(this.body, { x: 0, y: 0 }, { x: forceX, y: forceY });
+        // 기존 코드 복구: applyForce가 아니라 setVelocity를 사용해야 함
+        // Bumper power(8)는 Force로 쓰기엔 너무 크고 Velocity로 쓰기에 적당함
+        this.scene.matter.body.setVelocity(this.body, { x: forceX, y: forceY });
         this.stun(duration);
     }
 
@@ -304,13 +332,7 @@ export class Player {
             }
         });
 
-        this.stunTimer = this.scene.time.addEvent({
-            delay: duration,
-            callback: () => {
-                this._isStunned = false;
-                this.drawPlayer();
-            }
-        });
+
     }
 
     public get isStunned(): boolean {

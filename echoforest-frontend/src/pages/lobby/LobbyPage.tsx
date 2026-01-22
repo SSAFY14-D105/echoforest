@@ -20,6 +20,15 @@ export default function LobbyPage() {
   // 설정 모달용 임시 닉네임 (빈 문자열 방지)
   const [tempNickname, setTempNickname] = useState(nickname);
 
+  // 로비 진입 시 웹소켓 상태 초기화 (강제 퇴장 후 재진입 시 꼬임 방지)
+  // 단, 연결 자체를 끊으면 닉네임 유지가 안 될 수 있으므로, 에러 상태만 리셋하거나
+  // 연결이 끊겨 있다면 재연결 준비를 함.
+  // 여기서는 "방에 참가 중인 상태"가 아니라는 것을 확실히 하기 위해 leaveGame()을 호출했으므로,
+  // 웹소켓 상의 roomId 등도 클리어해주는 것이 좋으나, WebSocket 클래스에는 그런 상태가 없음.
+  // 대신, 확실한 연결을 위해 에러나 이전 상태를 정리함.
+  // 주의: 페이지 로드 시마다 disconnect하면 너무 잦은 연결/해제로 부담될 수 있음.
+  // 하지만 "에러 발생 후"라면 disconnect가 필요함.
+
   // 방 만들기 (WebSocket CREATE 메시지 전송) - 싱글톤 사용
   const handleHost = async () => {
     if (isConnecting) return;
@@ -27,10 +36,20 @@ export default function LobbyPage() {
     setJoinError('');
 
     try {
-      // 싱글톤 WS에 유저 정보 설정
-      gameWebSocket.setUser(nickname);
+      // 1. 기존 연결 확실히 끊기 (강제 퇴장 등 불안정 상태 정리)
+      if (gameWebSocket.isConnected()) {
+        console.log('🔌 로비: 기존 연결 정리 중...');
+        gameWebSocket.disconnect();
+        // 소켓이 완전히 닫힐 때까지 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-      // 메시지 핸들러 설정
+      // 2. 재연결 시도
+      console.log('🔌 로비: 웹소켓 연결 시도...');
+      gameWebSocket.setUser(nickname);
+      await gameWebSocket.connect();
+
+      // 3. 메시지 핸들러 재설정
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           // 백엔드가 생성한 방 코드 사용
@@ -45,13 +64,13 @@ export default function LobbyPage() {
         setIsConnecting(false);
       });
 
-      // WebSocket 연결 후 CREATE 메시지 전송
-      await gameWebSocket.connect();
-      gameWebSocket.createRoom();  // roomId 없이 보내면 백엔드가 생성
+      // 4. CREATE 전송
+      gameWebSocket.createRoom();
 
     } catch (error) {
       console.error('방 생성 실패:', error);
-      setJoinError('서버 연결에 실패했습니다.');
+      setJoinError('서버 연결에 실패했습니다. (서버가 켜져 있나요?)');
+      gameWebSocket.disconnect();
       setIsConnecting(false);
     }
   };
@@ -73,22 +92,38 @@ export default function LobbyPage() {
     if (isConnecting) return;
     setIsConnecting(true);
 
+    const roomCode = roomCodeInput.toUpperCase();
+
     try {
-      // 싱글톤 WS에 유저 정보 설정
+      // 1. REST API로 방 정보 먼저 확인 (방 존재 여부 및 호스트 확인)
+      // 이 단계에서 "방을 찾을 수 없음"을 미리 걸러낼 수 있습니다.
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
+      const response = await fetch(`${apiBase}/rooms/${roomCode}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('해당하는 방을 찾을 수 없습니다.');
+        }
+        throw new Error('방 정보를 가져오는 데 실패했습니다.');
+      }
+
+      const roomInfo = await response.json();
+      console.log('📋 방 정보 조회 성공:', roomInfo);
+
+      // 내가 호스트인지 확인 (닉네임 기준)
+      const amIHost = roomInfo.hostId === nickname;
+
+      // 2. WebSocket 연결 및 JOIN 메시지 전송
       gameWebSocket.setUser(nickname);
 
-      let hasError = false;  // 에러 발생 여부 추적
+      let hasWSError = false;
 
-      // 메시지 핸들러 - ERROR 응답 처리
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ERROR') {
-          hasError = true;
-          // "Room not found" 에러를 한글로 변환
-          const errorMsg = message.content?.includes('Room not found')
-            ? '해당하는 방을 찾을 수 없습니다.'
-            : message.content?.includes('Room is full')
-              ? '방이 가득 찼습니다.'
-              : message.content || '알 수 없는 오류';
+          hasWSError = true;
+          const errorMsg = message.content?.includes('Room is full')
+            ? '방이 가득 찼습니다.'
+            : message.content || '입장 중 오류가 발생했습니다.';
           setJoinError(errorMsg);
           setIsConnecting(false);
           gameWebSocket.disconnect();
@@ -96,25 +131,26 @@ export default function LobbyPage() {
       });
 
       gameWebSocket.onError((error: string) => {
-        hasError = true;
+        hasWSError = true;
         setJoinError(error);
         setIsConnecting(false);
       });
 
-      // WebSocket 연결 후 JOIN 메시지 전송
       await gameWebSocket.connect();
-      gameWebSocket.joinRoom(roomCodeInput.toUpperCase());
+      gameWebSocket.joinRoom(roomCode);
 
-      // 에러 응답 대기 후 성공 판단 (에러 없으면 입장)
+      // 3. 잠시 후 게임 페이지로 이동 (에러가 없을 경우)
       setTimeout(() => {
-        if (!hasError) {
-          joinGame(roomCodeInput.toUpperCase(), false);
+        if (!hasWSError) {
+          console.log(`🚀 방 입장 성공: ${roomCode} (Host: ${amIHost}, Stage: ${roomInfo.currentStage})`);
+          // API에서 받아온 현재 스테이지 정보를 store에 전달 (중간 난입 시 바로 해당 스테이지로 이동)
+          joinGame(roomCode, amIHost, roomInfo.currentStage || 0);
         }
-      }, 500);
+      }, 300);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('방 참가 실패:', error);
-      setJoinError('서버 연결에 실패했습니다.');
+      setJoinError(error.message || '서버 연결에 실패했습니다.');
       setIsConnecting(false);
     }
   };
@@ -270,6 +306,26 @@ export default function LobbyPage() {
                 className={styles.btnPrimary}
               >
                 저장
+              </button>
+            </div>
+
+            {/* 로그아웃 버튼 (작게 최하단에 배치) */}
+            <div className={styles.logoutSection}>
+              <button
+                className={styles.logoutBtn}
+                onClick={() => {
+                  if (window.confirm('정말 로그아웃 하시겠습니까?')) {
+                    // 로그아웃 처리
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('loginId');
+                    localStorage.removeItem('nickname');
+                    setNickname(''); // Store 초기화 -> App.tsx에서 로그인 페이지로 전환됨
+                    gameWebSocket.disconnect(); // 소켓 연결 끊기
+                    setShowSettings(false);
+                  }
+                }}
+              >
+                로그아웃
               </button>
             </div>
           </div>

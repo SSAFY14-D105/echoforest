@@ -56,6 +56,17 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // drain 저주는 제외하고 매 세션(씬 재시작)마다 유지됩니다.
     private static persistentCurses: Map<string, string> = new Map();
 
+    // ===== Authoritative Server 모델용 =====
+    // 서버 상태 전송 콜백 (GamePage에서 설정)
+    // x, y, vx, vy, anim
+    protected sendStateCallback: ((x: number, y: number, vx: number, vy: number, anim: string) => void) | null = null;
+
+    // 상태 전송 쓰로틀링 (50ms마다 전송 = 20 TPS)
+    private lastStateSendTime: number = 0;
+    private readonly STATE_SEND_INTERVAL: number = 50;
+    // 솔로 모드 여부 (로컬 물리 사용)
+    protected isSoloMode: boolean = false;
+
     // 서브클래스에서 구현해야 할 추상 메서드
     protected abstract getSceneKey(): string;
     protected abstract getWorldWidth(): number;
@@ -161,11 +172,55 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.resetState();
         this.setupPhysics();
         this.setupInput();
-        this.setupCamera();
-        this.createGimmicks();
+        this.createGimmicks(); // 맵 파싱 및 월드 크기 확정
+        this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정
         this.setupCollisions();
         this.syncPlayersFromStore();
         this.subscribeToStore();
+
+        // 배경색 설정 (맵이 안 보일 때 대비)
+        this.cameras.main.setBackgroundColor('#2d2d2d');
+
+        // 탭 전환/최소화 시 안전장치
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // [SNAP] 화면이 숨겨졌을 때: 공중 부양 방지를 위해 바닥으로 강제 착지
+                if (this.myPlayerId && this.sendStateCallback) {
+                    const player = this.players.get(this.myPlayerId);
+                    if (player) {
+                        console.log('[BaseGameScene] Tab hidden - Snapping to ground');
+
+                        // gameHeight가 0이거나 이상할 경우 안전값(720) 사용
+                        const safeHeight = (this.gameHeight > 0) ? this.gameHeight : 720;
+                        const groundY = safeHeight - 40;
+                        const currentPos = player.getPosition();
+
+                        player.setPosition(currentPos.x, groundY);
+                        player.setVelocity(0, 0);
+
+                        // 즉시 상태 전송
+                        this.sendStateCallback(currentPos.x, groundY, 0, 0, 'idle_down');
+                    }
+                }
+            } else {
+                // [RESTORE] 화면 복귀 시: 렌더링/스케일 복구
+                console.log('[BaseGameScene] Tab visible - Refreshing scale & camera');
+
+                // 1. 스케일 리프레시 (화면 깨짐 방지)
+                this.scale.refresh();
+
+                // 2. 카메라가 혹시 멈췄거나 다른 곳을 보면 다시 플레이어 고정
+                if (this.myPlayerId) {
+                    const player = this.players.get(this.myPlayerId);
+                    if (player) {
+                        this.cameras.main.startFollow(player);
+                    }
+                }
+
+                // 3. 강제 렌더링 요청 (회색 화면 방지)
+                this.game.loop.wake();
+            }
+        });
     }
 
     private resetState(): void {
@@ -236,7 +291,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     private setupCamera(): void {
-        this.cameras.main.setBounds(0, 0, this.getWorldWidth(), this.gameHeight);
+        const worldWidth = this.getWorldWidth();
+        this.cameras.main.setBounds(0, 0, worldWidth, this.gameHeight);
+        console.log(`[BaseGameScene] Camera setup: Bounds(0, 0, ${worldWidth}, ${this.gameHeight})`);
     }
 
     private subscribeToStore(): void {
@@ -537,6 +594,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+    // === Authoritative Server 모델 지원 ===
+    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string) => void): void {
+        this.sendStateCallback = callback;
+    }
+
+    public setIsSoloMode(isSolo: boolean): void {
+        this.isSoloMode = isSolo;
+    }
+
     // Store의 players 배열과 동기화
     private syncPlayersFromStore(): void {
         const state = useGameStore.getState();
@@ -561,20 +627,29 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             } else {
                 // 원격 플레이어 위치 동기화 (서버에서 받은 좌표로 업데이트)
                 const player = this.players.get(storePlayer.nickname);
-                if (player && !player.isLocalPlayer && storePlayer.x !== undefined && storePlayer.y !== undefined) {
+                if (player && storePlayer.x !== undefined && storePlayer.y !== undefined) {
                     const currentPos = player.getPosition();
                     const dx = Math.abs(currentPos.x - storePlayer.x);
                     const dy = Math.abs(currentPos.y - storePlayer.y);
 
-                    // 위치가 크게 변경된 경우 (순간이동)
-                    if (dx > 100 || dy > 100) {
-                        // 순간이동: 바로 위치 설정
-                        player.setPosition(storePlayer.x, storePlayer.y);
-                    } else if (dx > 1 || dy > 1) {
-                        // 작은 이동: 보간 목표 위치 설정 (부드러운 이동)
-                        player.setTargetPosition(storePlayer.x, storePlayer.y);
+                    if (player.isLocalPlayer) {
+                        // 로컬 플레이어: 서버 위치 무시 (Client Authoritative)
+                        // 기믹(범퍼 등)에 의한 즉각적인 반응을 위해 로컬 위치를 우선함
+                    } else {
+                        // 원격 플레이어: 보간 이동
+                        const isTeleport = dx > 100 || dy > 100;
+
+
+
+                        if (isTeleport) {
+                            player.setPosition(storePlayer.x, storePlayer.y);
+                            player.setTargetPosition(storePlayer.x, storePlayer.y); // 타겟도 리셋
+                        } else if (dx > 0.1 || dy > 0.1) { // 0.1픽셀 이상일 때만 업데이트
+                            player.setTargetPosition(storePlayer.x, storePlayer.y);
+                        }
                     }
-                    // 차이가 1픽셀 이하면 무시 (떨림 방지)
+                } else if (!player) {
+                    console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
                 }
             }
         });
@@ -592,17 +667,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const isLocalPlayer = storePlayer.nickname === currentNickname;
         // 서버에서 받은 x, y가 있으면 사용, 없으면 기본 위치
         const xPos = storePlayer.x ?? (100 + (index * 100));
-        const yPos = storePlayer.y ?? (this.gameHeight - 40 - PHYSICS.PLAYER_SIZE);
+        // Spawn precisely on top of the ground (Ground Top = gameHeight - 40)
+        // Player Center Y = Ground Top - Half Size
+        const yPos = storePlayer.y ?? (this.gameHeight - 40 - (PHYSICS.PLAYER_SIZE / 2));
 
-        // colorIndex 결정: Host는 항상 0 (P1), 나머지는 순서대로
-        // isHost가 true면 P1, 아니면 index 기반
-        let colorIndex = index;
-        if (storePlayer.isHost) {
-            colorIndex = 0;  // Host는 항상 P1 (초록색)
-        } else if (index === 0) {
-            // 만약 index가 0인데 Host가 아니면, P2로 할당
-            colorIndex = 1;
-        }
+        // colorIndex 결정: Store에서 계산된 값(접속 순서) 사용
+        // 방장은 항상 0번(초록), 이후 접속자는 순서대로 할당됨
+        const colorIndex = storePlayer.colorIndex ?? index;
 
         const config: PlayerConfig = {
             id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
@@ -941,15 +1012,37 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const myPlayer = this.players.get(this.myPlayerId);
         if (!myPlayer || !this.cursors || myPlayer.isStunned) return;
 
+        // 반전 저주 상태 확인
+        const isReversed = myPlayer.isControlReversed;
+        const leftKey = isReversed ? this.cursors.right : this.cursors.left;
+        const rightKey = isReversed ? this.cursors.left : this.cursors.right;
+        const jumpKey = isReversed ? this.cursors.down : this.cursors.up;
+
+        // === 1. 상태 전송 (멀티플레이용, 50ms 간격) ===
+        if (this.sendStateCallback && !this.isSoloMode) {
+            const now = this.time.now;
+            if (now - this.lastStateSendTime > this.STATE_SEND_INTERVAL) {
+                const { x, y } = myPlayer.getPosition(); // Fixed: getBodyPosition -> getPosition
+                const velocity = myPlayer.getVelocity();
+
+                // 현재 애니메이션 키 가져오기 (없으면 idle_down)
+                // Player.ts가 아직 그래픽(사각형) 기반이므로 애니메이션이 없음. 임시로 'idle' 전송.
+                const currentAnim = 'idle';
+
+
+
+                this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim);
+                this.lastStateSendTime = now;
+            }
+        }
+
+        // === 2. 로컬 물리 연산 (Client Authoritative) ===
+        // 항상 로컬 입력에 따라 물리 연산 수행
         const velocity = myPlayer.getVelocity();
         const moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
-        const isReversed = myPlayer.isControlReversed;
 
-        // 좌우 이동 (반전 저주 적용)
+        // 좌우 이동
         if (!myPlayer.isHidden) {
-            const leftKey = isReversed ? this.cursors.right : this.cursors.left;
-            const rightKey = isReversed ? this.cursors.left : this.cursors.right;
-
             if (leftKey.isDown) {
                 myPlayer.setVelocity(-moveSpeed, velocity.y);
             } else if (rightKey.isDown) {
@@ -959,12 +1052,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        // 점프/Goal 키 (반전 저주 적용: up ↔ down)
-        const jumpKey = isReversed ? this.cursors.down : this.cursors.up;
+        // 점프/Goal
         if (Phaser.Input.Keyboard.JustDown(jumpKey)) {
             const playerLabel = myPlayer.getBodyLabel();
 
             if (myPlayer.isHidden) {
+                // Goal 탈출
                 for (const goal of this.goals) {
                     if (goal.isPlayerEntered(playerLabel)) {
                         goal.exitGoal(playerLabel);
@@ -973,6 +1066,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     }
                 }
             } else {
+                // Goal 입장 또는 점프
                 let enteredGoal = false;
                 for (const goal of this.goals) {
                     if (goal.isPlayerNear(playerLabel)) {
@@ -1019,6 +1113,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
     }
+
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
