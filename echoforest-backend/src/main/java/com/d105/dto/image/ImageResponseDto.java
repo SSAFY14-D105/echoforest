@@ -1,7 +1,6 @@
-package com.d105.dto;
+package com.d105.dto.image;
 
 import com.d105.entity.Image;
-import com.d105.entity.ImageParticipant;
 import lombok.Builder;
 import lombok.Data;
 
@@ -27,13 +26,6 @@ public class ImageResponseDto {
     private List<ParticipantDto> participants; // 함께 찍은 유저들
     private LocalDateTime createdAt;
 
-    @Data
-    @Builder
-    public static class ParticipantDto {
-        private Long userId;
-        private String nickname;
-    }
-
     public static ImageResponseDto from(Image image) {
         List<ParticipantDto> participantDtos = image.getParticipants().stream()
                 .map(ip -> ParticipantDto.builder()
@@ -55,5 +47,12 @@ public class ImageResponseDto {
                 .participants(participantDtos)
                 .createdAt(image.getCreatedAt())
                 .build();
+    }
+
+    @Data
+    @Builder
+    public static class ParticipantDto {
+        private Long userId;
+        private String nickname;
     }
 }
