@@ -90,6 +90,34 @@ public class GameRoom implements Runnable {
     }
 
     /**
+     * 닉네임으로 플레이어 제거 (재접속 시 사용)
+     * 
+     * @return 제거된 플레이어가 있으면 true (재접속)
+     */
+    public boolean removePlayerByUsername(String username) {
+        String targetSessionId = findSessionIdByUsername(username);
+        if (targetSessionId == null) {
+            return false; // 기존 플레이어 없음 (신규 입장)
+        }
+
+        // 기존 세션 및 플레이어 제거
+        WebSocketSession oldSession = sessions.remove(targetSessionId);
+        players.remove(targetSessionId);
+
+        // 기존 세션 닫기
+        if (oldSession != null && oldSession.isOpen()) {
+            try {
+                oldSession.close();
+            } catch (Exception e) {
+                log.error("Failed to close old session for {}", username, e);
+            }
+        }
+
+        log.info("Removed existing player {} for reconnection", username);
+        return true; // 재접속
+    }
+
+    /**
      * 현재 방의 플레이어 수 반환
      */
     public int getPlayerCount() {
