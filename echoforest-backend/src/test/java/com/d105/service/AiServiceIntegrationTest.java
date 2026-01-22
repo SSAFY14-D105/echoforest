@@ -1,6 +1,7 @@
 package com.d105.service;
 
 import com.d105.config.AiProperties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,7 @@ import java.util.List;
         "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL"
 })
 @TestPropertySource(locations = "classpath:application-test.properties") // 테스트용 설정 파일 로드
-// @Disabled // 실제 API 호출을 막으려면 이 주석을 푸세요 (평소 빌드 때는 막아두는게 좋음)
+@Disabled // 실제 API 호출을 막으려면 이 주석을 푸세요 (평소 빌드 때는 막아두는게 좋음)
 class AiServiceIntegrationTest {
 
     @Autowired
