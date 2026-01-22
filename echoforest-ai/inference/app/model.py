@@ -1,7 +1,7 @@
 """
 Smilegate unSmile 모델 래퍼
 - 혐오 발언 탐지 모델 (smilegate-ai/kor_unsmile)
-- 최적 threshold: 17.4% (0.174)
+- 최적 threshold: 10.0% (0.1)
 """
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -10,13 +10,13 @@ from typing import Dict, List
 
 # 설정
 MODEL_NAME = "smilegate-ai/kor_unsmile"
-THRESHOLD = 0.174  # 17.4% - 테스트된 최적값
+THRESHOLD = 0.1  # 10% - 경미한 부정어(바보, 화나 등) 탐지를 위해 완화
 
 # 심각도 단계 threshold
 SEVERITY_THRESHOLDS = {
     1: 0.80,  # 80% 이상: 매우 심함 (최강 저주)
     2: 0.50,  # 50~80%: 심함 (강한 저주)
-    3: 0.174, # 17.4~50%: 경미 (약한 저주)
+    3: 0.1,   # 10~50%: 경미 (약한 저주)
 }
 
 # 심각도 설명
@@ -121,7 +121,7 @@ class UnSmileModel:
         elif max_hate_score >= SEVERITY_THRESHOLDS[2]:
             severity = 2  # 심함 (50~80%)
         else:
-            severity = 3  # 경미 (17.4~50%)
+            severity = 3  # 경미 (10~50%)
         
         severity_label = SEVERITY_DESCRIPTIONS[severity]
         
