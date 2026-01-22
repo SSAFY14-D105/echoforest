@@ -11,7 +11,7 @@ services:
       - "9001:9001"         # 외부 접속 포트
     environment:
       # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
-      - LIVEKIT_URL=wss://i14d105.p.ssafy.io:7880
+      - LIVEKIT_URL=wss://i14d105.p.ssafy.io/livekit
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
       - DB_URL=jdbc:mysql://mysql:3306/echoforest?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
@@ -38,13 +38,13 @@ services:
     container_name: echoforest-livekit
     command: --dev
     ports:
-      - "7880:7880" # 시그널링 (TCP)
-      - "7881:7881" # (선택) HTTP API용, 보통 7880으로 다 됨
-      - "60000-60200:60000-60200/udp" # WebRTC 미디어 전송용 포트 범위
-      - "3478:3478/udp"  # TURN 서버용 (UDP)
-      - "3478:3478/tcp"  # TURN 서버용 (TCP)
+      - "60000-60200:60000-60200/udp" # 미디어 전송 (필수)
+      - "3478:3478/udp"  # TURN
+      - "3478:3478/tcp"  # TURN
     environment:
-      - "LIVEKIT_KEYS=devkey: secret"  # 주의: devkey:(공백)secret
+      - "LIVEKIT_KEYS=devkey: secret"
+      # TURN 사용 시 외부 IP 자동 감지
+      - "LIVEKIT_NAT_1_IP_AUTO=true"
     networks:
       - echo-net
 
@@ -96,6 +96,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
     depends_on:
       - game-server
+      - livekit
     networks:
       - echo-net
 
