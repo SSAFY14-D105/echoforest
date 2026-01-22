@@ -117,7 +117,8 @@ public class GameService {
     }
 
     /**
-     * 이동/행동 처리 (MOVE, JUMP 등)
+     * 이동 처리 (Client-Authoritative)
+     * 클라이언트가 보낸 좌표를 그대로 신뢰하고 저장
      */
     public void handleMove(WebSocketSession session, GameMessageDto message) {
         String roomId = message.getRoomId();
@@ -126,13 +127,16 @@ public class GameService {
         if (room == null)
             return;
 
-        // 예시: 클라이언트가 type="MOVE", content="LEFT_DOWN" 으로 보낸다고 가정
-        String inputType = message.getContent();
-        if (inputType == null)
-            inputType = message.getAnim();
+        // Client-Authoritative: 클라이언트가 보낸 좌표를 그대로 사용
+        Double x = message.getX();
+        Double y = message.getY();
+        Double vx = message.getVx();
+        Double vy = message.getVy();
+        String anim = message.getAnim();
 
-        if (inputType != null) {
-            room.handleInput(session, inputType);
+        // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
+        if (x != null && y != null) {
+            room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim);
         }
     }
 
