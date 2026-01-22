@@ -56,28 +56,19 @@ public class GameService {
     }
 
     /**
-     * 방 참가 (JOIN)
+     * 방 참가 (JOIN) - 게임 중 난입 및 재접속 지원
      */
     public void handleJoin(WebSocketSession session, GameMessageDto message) throws IOException {
         String roomId = message.getRoomId();
         String username = message.getUsername();
 
-        // 1. Redis에서 방 존재 여부 체크
+        // 1. Redis에서 방 존재 여부 체크 (게임 중 상태도 허용)
         if (!redisRoomService.roomExists(roomId)) {
             sendError(session, "Room not found: " + roomId);
             return;
         }
 
-        // 2. 인원 제한 검사
-        if (redisRoomService.getPlayerCount(roomId) >= MAX_PLAYERS) {
-            sendError(session, "Room is full");
-            return;
-        }
-
-        // 3. Redis에 플레이어 추가
-        redisRoomService.joinRoom(roomId, username);
-
-        // 4. GameRoom 에도 추가 (없으면 생성)
+        // 2. GameRoom 가져오기 (없으면 생성)
         GameRoom room = gameRepository.getRoom(roomId);
         if (room == null) {
             room = new GameRoom(roomId, objectMapper, null);
@@ -85,8 +76,28 @@ public class GameService {
             executor.submit(room);
         }
 
-        // 5. 입장 처리
+        // 3. 재접속 처리: 같은 닉네임의 기존 플레이어가 있으면 제거
+        boolean isReconnect = room.removePlayerByUsername(username);
+        if (isReconnect) {
+            log.info("Player {} reconnected to room {}", username, roomId);
+        }
+
+        // 4. 인원 제한 검사 (재접속이 아닌 경우에만)
+        if (!isReconnect && redisRoomService.getPlayerCount(roomId) >= MAX_PLAYERS) {
+            sendError(session, "Room is full");
+            return;
+        }
+
+        // 5. Redis에 플레이어 추가
+        redisRoomService.joinRoom(roomId, username);
+
+        // 6. 입장 처리
         joinProcess(session, room, username);
+
+        // 7. 재접속인 경우 별도 메시지 전송
+        if (isReconnect) {
+            sendSystemMessage(session, "RECONNECTED", roomId);
+        }
     }
 
     /**
