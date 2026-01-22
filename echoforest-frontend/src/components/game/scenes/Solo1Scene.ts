@@ -1,21 +1,32 @@
 import BaseGameScene, { PHYSICS } from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper } from '../gimmicks';
+import { Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper, Goal } from '../gimmicks';
+import { useGameStore } from '../../../store/useGameStore';
 
 /**
- * SoloScene - 혼자하기 모드 씬
- * 현재 테스트 맵 기믹 포함
+ * Solo1Scene - 혼자하기 1 씬
+ * 기존 SoloScene에서 이름 변경
  */
-export default class SoloScene extends BaseGameScene {
+export default class Solo1Scene extends BaseGameScene {
     constructor() {
-        super({ key: 'SoloScene' });
+        super({ key: 'Solo1Scene' });
     }
 
     protected getSceneKey(): string {
-        return 'SoloScene';
+        return 'Solo1Scene';
+    }
+
+    preload() {
+        super.preload();
+        // 배경 이미지 로드
+        this.load.image('background_image', 'assets/backgrounds/background_image.png');
     }
 
     protected getWorldWidth(): number {
         return 3000;
+    }
+
+    protected getWorldHeight(): number {
+        return this.scale.height;
     }
 
     protected getRequiredPlayers(): number {
@@ -94,12 +105,23 @@ export default class SoloScene extends BaseGameScene {
         });
         this.movableBlocks.push(block2);
 
-        console.log('[SoloScene] Gimmicks restored to original layout (1 Key-Lock Set)');
+        // Goal (Lock 바로 뒤 또는 같은 위치에 배치)
+        const goal1 = new Goal(this, 2950, floorY - 32, 'goal1', 1);
+        goal1.setVisible(false);
+        this.goals.push(goal1);
+
+        console.log('[SoloScene] Gimmicks restored to original layout (1 Key-Lock-Goal Set)');
+    }
+
+    create() {
+        // 배경 타일링 설정 (Parallax 0.2)
+        this.setupTiledBackground('background_image', 0.2);
+        super.create();
     }
 
 
     protected onStageComplete(): void {
-        console.log('[SoloScene] 🎉 Solo mode complete!');
-        // TODO: 클리어 화면 표시 또는 로비로 이동
+        console.log('[Solo1Scene] 🎉 Solo mode stage 1 complete! Moving to Solo 2.');
+        useGameStore.getState().selectStage('SOLO_2');
     }
 }

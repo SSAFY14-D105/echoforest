@@ -55,21 +55,88 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // drain 저주는 제외하고 매 세션(씬 재시작)마다 유지됩니다.
     private static persistentCurses: Map<string, string> = new Map();
 
+    public static resetPersistentCurses(): void {
+        BaseGameScene.persistentCurses.clear();
+    }
+
     // 서브클래스에서 구현해야 할 추상 메서드
     protected abstract getSceneKey(): string;
     protected abstract getWorldWidth(): number;
+    protected abstract getWorldHeight(): number;
     protected abstract getRequiredPlayers(): number;
     protected abstract createGimmicks(): void;
+
+    // Goal 기믹의 시각적 설정을 정의 (텍스트, 프레임 등)
+    protected getGoalConfig(): { texture?: string; frame?: string | number; width?: number; height?: number } {
+        return { width: 48, height: 64 }; // 기본값
+    }
+
+    preload() {
+        // 개별 플레이어 스프라이트 시트 로드 (503x528 프레임)
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        colors.forEach(color => {
+            this.load.spritesheet(`player_${color}`, `assets/sprites/player_${color}.png`, {
+                frameWidth: 503,
+                frameHeight: 528
+            });
+        });
+    }
+
+    private createAnimations(): void {
+        const colors = ['green', 'blue', 'orange', 'purple'];
+
+        colors.forEach((color) => {
+            // Idle (프레임 1)
+            this.anims.create({
+                key: `player_idle_${color}`,
+                frames: [{ key: `player_${color}`, frame: 0 }],
+                frameRate: 1
+            });
+
+            // Walk (프레임 2, 3)
+            this.anims.create({
+                key: `player_walk_${color}`,
+                frames: this.anims.generateFrameNumbers(`player_${color}`, {
+                    start: 1,
+                    end: 2
+                }),
+                frameRate: 6,
+                repeat: -1
+            });
+
+            // Jump (프레임 4)
+            this.anims.create({
+                key: `player_jump_${color}`,
+                frames: [{ key: `player_${color}`, frame: 3 }],
+                frameRate: 1
+            });
+
+            // Dead (프레임 5)
+            this.anims.create({
+                key: `player_dead_${color}`,
+                frames: [{ key: `player_${color}`, frame: 4 }],
+                frameRate: 1
+            });
+        });
+    }
 
     create() {
         this.resetState();
         this.setupPhysics();
         this.setupInput();
         this.setupCamera();
+
+        // 애니메이션 생성
+        this.createAnimations();
+
         this.createGimmicks();
         this.setupCollisions();
         this.syncPlayersFromStore();
         this.subscribeToStore();
+
+        // 씬 중지/삭제 시 클린업 등록
+        this.events.on('shutdown', this.shutdown, this);
+        this.events.on('destroy', this.shutdown, this);
     }
 
     private resetState(): void {
@@ -110,8 +177,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.matter.world.off('collisionactive');
     }
 
+    protected shouldCreateDefaultFloor(): boolean {
+        return true;
+    }
+
     private setupPhysics(): void {
-        this.gameHeight = this.scale.height;
+        this.gameHeight = this.getWorldHeight();
 
         // 기존 월드 경계 초기화 (이전 씬의 벽 제거)
         // setBounds를 false로 호출하면 기존 경계 제거
@@ -123,14 +194,57 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // bottom을 false로 설정하여 별도 바닥 플랫폼 사용
 
         // 바닥 플랫폼 (별도 생성)
-        const platformHeight = 40;
-        this.matter.add.rectangle(
-            this.getWorldWidth() / 2,
-            this.gameHeight - platformHeight / 2,
-            this.getWorldWidth(),
-            platformHeight,
-            { isStatic: true, label: 'ground' }
-        );
+        if (this.shouldCreateDefaultFloor()) {
+            const platformHeight = 40;
+            this.matter.add.rectangle(
+                this.getWorldWidth() / 2,
+                this.gameHeight - platformHeight / 2,
+                this.getWorldWidth(),
+                platformHeight,
+                { isStatic: true, label: 'ground' }
+            );
+        }
+    }
+
+    /**
+     * 배경 이미지를 맵 전체 너비에 걸쳐 타일링합니다.
+     * 사용자 제안: 본 사진 > 좌우 반전 > 본 사진 > 좌우 반전 패턴으로 Seamless 연결
+     * @param textureKey 배경 이미지 키
+     * @param scrollFactor 시차 효과 (0: 고정, 1: 맵과 동일 속도)
+     */
+    protected setupTiledBackground(textureKey: string, scrollFactor: number = 0.5): void {
+        const texture = this.textures.get(textureKey);
+        if (!texture || texture.key === '__MISSING') {
+            console.warn(`[BaseGameScene] Background texture '${textureKey}' not found.`);
+            return;
+        }
+
+        const worldWidth = this.getWorldWidth();
+        const worldHeight = this.getWorldHeight();
+        const bgSource = texture.getSourceImage() as HTMLImageElement;
+
+        // 배경 이미지의 원본 비율 유지하며 맵 높이에 맞춤
+        const scale = worldHeight / bgSource.height;
+        const scaledWidth = bgSource.width * scale;
+
+        // 필요한 타일 개수 계산 (여유있게 +1)
+        const numTiles = Math.ceil(worldWidth / scaledWidth) + 1;
+
+        for (let i = 0; i < numTiles; i++) {
+            const x = i * scaledWidth + (scaledWidth / 2);
+            const bg = this.add.image(x, worldHeight / 2, textureKey);
+
+            bg.setScale(scale);
+            bg.setDepth(-100); // 모든 오브젝트 뒤에 배치
+            bg.setScrollFactor(scrollFactor);
+
+            // 홀수 번째 타일은 좌우 반전 (index 1, 3, 5...)
+            if (i % 2 === 1) {
+                bg.setFlipX(true);
+            }
+        }
+
+        console.log(`[${this.getSceneKey()}] Tiled background setup: ${numTiles} tiles, scale ${scale.toFixed(2)}`);
     }
 
     private setupInput(): void {
@@ -164,88 +278,89 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 충돌 처리 설정
     private setupCollisions(): void {
-        this.matter.world.on('collisionstart', (event: Phaser.Physics.Matter.Events.CollisionStartEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
+        this.matter.world.on('collisionstart', this.onCollisionStart, this);
+        this.matter.world.on('collisionactive', this.onCollisionActive, this);
+        this.matter.world.on('collisionend', this.onCollisionEnd, this);
+    }
 
-                if (labelA.startsWith('key-') || labelB.startsWith('key-')) {
-                    this.handleKeyCollision(labelA, labelB);
-                }
-                if (labelA.startsWith('spike-') || labelB.startsWith('spike-')) {
-                    this.handleSpikeCollision(labelA, labelB);
-                }
-                if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
-                    this.handleGoalEnter(labelA, labelB);
-                }
-                if (labelA.startsWith('spring-') || labelB.startsWith('spring-')) {
-                    this.handleSpringCollision(labelA, labelB);
-                }
+    private onCollisionStart(event: Phaser.Physics.Matter.Events.CollisionStartEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
 
-                // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
-                if (labelA.startsWith('elevator-') || labelB.startsWith('elevator-') ||
-                    (this.players.has(labelA) && this.players.has(labelB))) {
-                    this.handleSupportStart(pair);
-                }
+            if (labelA.startsWith('key-') || labelB.startsWith('key-')) {
+                this.handleKeyCollision(labelA, labelB);
+            }
+            if (labelA.startsWith('spike-') || labelB.startsWith('spike-')) {
+                this.handleSpikeCollision(labelA, labelB);
+            }
+            if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
+                this.handleGoalEnter(labelA, labelB);
+            }
+            if (labelA.startsWith('spring-') || labelB.startsWith('spring-')) {
+                this.handleSpringCollision(labelA, labelB);
+            }
 
-                if (labelA === 'bumper' || labelB === 'bumper') {
-                    this.handleBumperCollision(labelA, labelB);
-                }
-            });
+            // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
+            if (labelA.startsWith('elevator-') || labelB.startsWith('elevator-') ||
+                (this.players.has(labelA) && this.players.has(labelB))) {
+                this.handleSupportStart(pair);
+            }
+
+            if (labelA === 'bumper' || labelB === 'bumper') {
+                this.handleBumperCollision(labelA, labelB);
+            }
         });
+    }
 
-        // 매 프레임 활성 충돌 체크 (블록 밀기용 + 바닥 접촉 감지)
-        this.matter.world.on('collisionactive', (event: Phaser.Physics.Matter.Events.CollisionActiveEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
-                const normal = pair.collision.normal;
+    private onCollisionActive(event: Phaser.Physics.Matter.Events.CollisionActiveEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
+            const normal = pair.collision.normal;
 
-                // 플레이어 바닥 접촉 감지 (코요테 타임 리셋)
-                // normal.y < -0.5 means collision normal points upward = player is on top
-                if (this.players.has(labelA) && normal.y < -0.5) {
-                    this.groundedFrames.set(labelA, this.COYOTE_FRAMES);
-                }
-                if (this.players.has(labelB) && normal.y > 0.5) {
-                    this.groundedFrames.set(labelB, this.COYOTE_FRAMES);
-                }
+            // 플레이어 바닥 접촉 감지 (코요테 타임 리셋)
+            if (this.players.has(labelA) && normal.y < -0.5) {
+                this.groundedFrames.set(labelA, this.COYOTE_FRAMES);
+            }
+            if (this.players.has(labelB) && normal.y > 0.5) {
+                this.groundedFrames.set(labelB, this.COYOTE_FRAMES);
+            }
 
-                // 블록-플레이어 측면 밀기 체크
-                if ((labelA.startsWith('block-') && this.players.has(labelB)) ||
-                    (labelB.startsWith('block-') && this.players.has(labelA))) {
-                    this.handleBlockPush(pair);
-                }
+            // 블록-플레이어 측면 밀기 체크
+            if ((labelA.startsWith('block-') && this.players.has(labelB)) ||
+                (labelB.startsWith('block-') && this.players.has(labelA))) {
+                this.handleBlockPush(pair);
+            }
 
-                // 블록-블록 측면 접촉 체크
-                if (labelA.startsWith('block-') && labelB.startsWith('block-')) {
-                    if (Math.abs(normal.x) > 0.5) {
-                        const posA = pair.bodyA.position;
-                        const posB = pair.bodyB.position;
-                        // A가 B의 왼쪽에 있음
-                        if (posA.x < posB.x) {
-                            this.blockContactRight.set(labelA, labelB);
-                            this.blockContactLeft.set(labelB, labelA);
-                        } else {
-                            this.blockContactLeft.set(labelA, labelB);
-                            this.blockContactRight.set(labelB, labelA);
-                        }
+            // 블록-블록 측면 접촉 체크
+            if (labelA.startsWith('block-') && labelB.startsWith('block-')) {
+                if (Math.abs(normal.x) > 0.5) {
+                    const posA = pair.bodyA.position;
+                    const posB = pair.bodyB.position;
+                    if (posA.x < posB.x) {
+                        this.blockContactRight.set(labelA, labelB);
+                        this.blockContactLeft.set(labelB, labelA);
+                    } else {
+                        this.blockContactLeft.set(labelA, labelB);
+                        this.blockContactRight.set(labelB, labelA);
                     }
                 }
-            });
+            }
         });
+    }
 
-        this.matter.world.on('collisionend', (event: Phaser.Physics.Matter.Events.CollisionEndEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
+    private onCollisionEnd(event: Phaser.Physics.Matter.Events.CollisionEndEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
 
-                if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
-                    this.handleGoalExit(labelA, labelB);
-                }
+            if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
+                this.handleGoalExit(labelA, labelB);
+            }
 
-                // 지지 관계 종료
-                this.handleSupportEnd(labelA, labelB);
-            });
+            // 지지 관계 종료
+            this.handleSupportEnd(labelA, labelB);
         });
     }
 
@@ -303,12 +418,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                 // Lock이 있던 자리에 Goal 생성
                 const pos = lock.getPosition();
+                const config = this.getGoalConfig();
+
                 const goal = new Goal(
                     this,
                     pos.x,
                     pos.y,
                     `goal-${lock.id}`,
-                    this.getRequiredPlayers()
+                    this.getRequiredPlayers(),
+                    config.width || 48,
+                    config.height || 64,
+                    config.texture,
+                    config.frame
                 );
                 this.goals.push(goal);
 
@@ -478,7 +599,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             id: storePlayer.id,
             nickname: storePlayer.nickname,
             x: xPos,
-            y: this.gameHeight - 40 - PHYSICS.PLAYER_SIZE,
+            y: this.gameHeight - 60 - PHYSICS.PLAYER_SIZE, // 맵 바닥 위에 스폰
             colorIndex: index,
             isLocalPlayer
         };
@@ -517,7 +638,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
-    update(time: number, delta: number) {
+    update(time: number, _delta: number) {
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
@@ -646,13 +767,32 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             return !this.wouldOverlapOtherBlock(block, nextX, chainLabels);
         });
 
-        // 7. 모두 충족하면 전체 이동
+        // 7. 모두 충족하면 전체 이동 (블록 + 미는 플레이어들 동시 이동으로 진동 방지)
         if (canMove && canMoveWithoutOverlap && chainBlocks.length > 0) {
             chainBlocks.forEach(block => {
+                const label = block.getBody().label;
+
+                // 블록 이동
                 if (direction === 'right') {
                     block.moveRight();
                 } else {
                     block.moveLeft();
+                }
+
+                // 해당 블록을 미는 플레이어들도 같은 양만큼 함께 이동 (물리 충돌 튕김 방지)
+                const pushers = direction === 'right'
+                    ? this.pushMapLeft.get(label)
+                    : this.pushMapRight.get(label);
+
+                if (pushers) {
+                    pushers.forEach(playerId => {
+                        const player = this.players.get(playerId);
+                        if (player) {
+                            const pos = player.getPosition();
+                            // 플레이어 위치를 블록 가속과 완전히 동기화
+                            player.setPosition(pos.x + moveAmount, pos.y);
+                        }
+                    });
                 }
             });
         }
@@ -809,8 +949,22 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (!myPlayer || !this.cursors || myPlayer.isStunned) return;
 
         const velocity = myPlayer.getVelocity();
-        const moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
+        let moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
         const isReversed = myPlayer.isControlReversed();
+
+        // [추가] 로컬 플레이어가 현재 블록을 밀고 있는지 확인
+        // 밀고 있다면 속도를 블록의 이동 속도(1px)로 낮춤
+        let isPushing = false;
+        this.pushMapLeft.forEach((pushers) => {
+            if (pushers.has(this.myPlayerId)) isPushing = true;
+        });
+        this.pushMapRight.forEach((pushers) => {
+            if (pushers.has(this.myPlayerId)) isPushing = true;
+        });
+
+        if (isPushing) {
+            moveSpeed = 2; // 블록 이동 속도(2px)와 동기화
+        }
 
         // 좌우 이동 (반전 저주 적용)
         if (!myPlayer.isHidden) {
@@ -843,6 +997,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 let enteredGoal = false;
                 for (const goal of this.goals) {
                     if (goal.isPlayerNear(playerLabel)) {
+                        // 저주 상태 체크: 저주가 있으면 입장 불가
+                        if (myPlayer.hasCurse()) {
+                            this.showFloatingText(myPlayer.getPosition().x, myPlayer.getPosition().y - 40, "저주를 먼저 해제하세요!", 0xff4444);
+                            console.log(`[Goal] Entry denied for ${this.myPlayerId} due to curse.`);
+                            enteredGoal = true; // 실제 입장은 아니나 중복 점프 방지용
+                            break;
+                        }
+
                         if (goal.enterGoal(playerLabel)) {
                             myPlayer.hide();
                             enteredGoal = true;
@@ -949,11 +1111,34 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             0.1
         );
 
+        this.cameras.main.startFollow(this.players.get(this.myPlayerId)?.getSprite() as any);
         this.cameras.main.scrollX = Phaser.Math.Clamp(
             this.cameras.main.scrollX,
             0,
             this.getWorldWidth() - this.cameras.main.width
         );
+    }
+
+    /**
+     * 화면에 떠오르는 텍스트 피드백을 표시합니다.
+     */
+    protected showFloatingText(x: number, y: number, message: string, color: number = 0xffffff): void {
+        const text = this.add.text(x, y, message, {
+            fontSize: '18px',
+            color: `#${color.toString(16).padStart(6, '0')}`,
+            stroke: '#000000',
+            strokeThickness: 3,
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 50,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => text.destroy()
+        });
     }
 
     private constrainPlayersToCamera(): void {
@@ -973,28 +1158,60 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     shutdown() {
-        if (this.storeUnsubscribe) {
-            this.storeUnsubscribe();
-        }
-        this.players.forEach(player => player.destroy());
-        this.players.clear();
+        console.log(`[${this.getSceneKey()}] Shutdown triggered, cleaning up...`);
 
-        this.keys.forEach(key => key.destroy());
-        this.locks.forEach(lock => lock.destroy());
-        this.spikes.forEach(spike => spike.destroy());
-        this.goals.forEach(goal => goal.destroy());
-        this.springs.forEach(spring => spring.destroy());
-        this.elevators.forEach(elevator => elevator.destroy());
-        this.movableBlocks.forEach(block => block.destroy());
-        this.keys = [];
-        this.locks = [];
-        this.spikes = [];
-        this.goals = [];
-        this.springs = [];
-        this.elevators = [];
-        this.movableBlocks = [];
-        this.supportMap.clear();
-        this.pushMapLeft.clear();
-        this.pushMapRight.clear();
+        try {
+            // 스토어 구독 해제
+            if (this.storeUnsubscribe) {
+                this.storeUnsubscribe();
+                this.storeUnsubscribe = undefined;
+            }
+
+            // 플레이어 객체 파괴 (물리 바디 및 그래픽 포함)
+            this.players.forEach(player => player.destroy());
+            this.players.clear();
+
+            // 기믹 객체 파괴
+            this.keys.forEach(key => key.destroy());
+            this.locks.forEach(lock => lock.destroy());
+            this.spikes.forEach(spike => spike.destroy());
+            this.goals.forEach(goal => goal.destroy());
+            this.springs.forEach(spring => spring.destroy());
+            this.elevators.forEach(elevator => elevator.destroy());
+            this.movableBlocks.forEach(block => block.destroy());
+            this.bumpers.forEach(b => b.destroy());
+            this.movingBumpers.forEach(b => b.destroy());
+
+            this.keys = [];
+            this.locks = [];
+            this.spikes = [];
+            this.goals = [];
+            this.springs = [];
+            this.elevators = [];
+            this.movableBlocks = [];
+            this.bumpers = [];
+            this.movingBumpers = [];
+
+            this.supportMap.clear();
+            this.pushMapLeft.clear();
+            this.pushMapRight.clear();
+            this.blockContactLeft.clear();
+            this.blockContactRight.clear();
+            this.groundedFrames.clear();
+
+            // 물리 이벤트 리스너 제거 (본인이 등록한 것만 특정하여 제거)
+            if (this.matter && this.matter.world) {
+                this.matter.world.off('collisionstart', this.onCollisionStart, this);
+                this.matter.world.off('collisionactive', this.onCollisionActive, this);
+                this.matter.world.off('collisionend', this.onCollisionEnd, this);
+            }
+
+            // 등록된 이벤트 제거 (본인)
+            this.events.off('shutdown', this.shutdown, this);
+            this.events.off('destroy', this.shutdown, this);
+
+        } catch (error) {
+            console.error(`[${this.getSceneKey()}] Error during shutdown:`, error);
+        }
     }
 }

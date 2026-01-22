@@ -1,4 +1,5 @@
 import BaseGameScene from './BaseGameScene';
+import { useGameStore } from '../../../store/useGameStore';
 
 /**
  * LobbyScene - 대기실 씬
@@ -18,8 +19,20 @@ export default class LobbyScene extends BaseGameScene {
         return this.scale.width;
     }
 
+    protected getWorldHeight(): number {
+        return this.scale.height;
+    }
+
     protected getRequiredPlayers(): number {
         return 4;
+    }
+
+    create() {
+        // 로비 입장 시 모든 지속성 저주 및 콜백 초기화
+        BaseGameScene.resetPersistentCurses();
+        useGameStore.getState().setOnMoveCallback(null);
+
+        super.create();
     }
 
     protected createGimmicks(): void {
