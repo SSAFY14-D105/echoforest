@@ -15,8 +15,6 @@ tests/
 └── README.md                    # ✅ 본 문서
 ```
 
-**삭제됨**: `threshold_analysis_report.json` (구버전, 더 이상 불필요)
-
 ---
 
 ## 📝 파일별 상세 설명
@@ -33,13 +31,13 @@ tests/
 #### 실행 방법
 ```bash
 # 전체 테스트 실행
-pytest tests/test_api.py -v
+python tests/test_api.py -v
 
 # 특정 테스트만 실행
-pytest tests/test_api.py::test_analyze_negative -v
+python tests/test_api.py::test_analyze_negative -v
 
 # 커버리지 포함
-pytest tests/test_api.py --cov=app
+python tests/test_api.py --cov=app
 ```
 
 **사용 시나리오**: 코드 변경 후 회귀 테스트(Regression Test)
