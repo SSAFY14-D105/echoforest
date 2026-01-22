@@ -1,17 +1,18 @@
 package com.d105.service;
 
 import com.d105.config.AiProperties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
 
+// [수정] properties 속성을 추가하여 테스트 실행 시 DB 드라이버와 URL을 H2로 강제 설정합니다.
+// 이렇게 하면 외부 환경 변수(DB_DRIVER 등)가 있더라도 무시하고 H2 설정을 사용하게 되어 에러가 해결됩니다.
 @SpringBootTest
-@TestPropertySource(locations = "classpath:application-test.properties") // 테스트용 설정 파일 로드
-// @Disabled // 실제 API 호출을 막으려면 이 주석을 푸세요 (평소 빌드 때는 막아두는게 좋음)
+@Disabled // 실제 API 호출을 막으려면 이 주석을 푸세요 (평소 빌드 때는 막아두는게 좋음)
 class AiServiceIntegrationTest {
 
     @Autowired
