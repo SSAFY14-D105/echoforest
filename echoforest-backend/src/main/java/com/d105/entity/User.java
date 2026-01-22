@@ -67,4 +67,11 @@ public class User {
         this.curseCount = 0;
         this.mannerScore = new BigDecimal("36.5");
     }
+
+    /**
+     * 닉네임 변경
+     */
+    public void changeNickname(String newNickname) {
+        this.nickname = newNickname;
+    }
 }

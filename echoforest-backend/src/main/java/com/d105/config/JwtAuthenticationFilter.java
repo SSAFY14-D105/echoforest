@@ -37,10 +37,10 @@
 //
 //                // 4. 통과! (임시 인증 객체 생성)
 //                // 실제로는 DB에서 권한을 조회해야 하지만, 일단 단순하게 처리
-//                Authentication auth = new UsernamePasswordAuthenticationToken(loginId, null, Collections.emptyList());
+//                Authentication user = new UsernamePasswordAuthenticationToken(loginId, null, Collections.emptyList());
 //
 //                // 5. 시큐리티 관제센터(Context)에 "이 사람 로그인함" 도장 찍기
-//                SecurityContextHolder.getContext().setAuthentication(auth);
+//                SecurityContextHolder.getContext().setAuthentication(user);
 //            }
 //        }
 //

@@ -1,7 +1,7 @@
 package com.d105.service;
 
-import com.d105.dto.auth.LoginReqDto;
-import com.d105.dto.auth.SignUpReqDto;
+import com.d105.dto.user.LoginReqDto;
+import com.d105.dto.user.SignUpReqDto;
 import com.d105.entity.User;
 import com.d105.repository.UserRepository;
 import com.d105.util.JwtUtil;
@@ -9,12 +9,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class AuthService {
+public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -70,5 +71,22 @@ public class AuthService {
     // 닉네임 중복 확인
     public boolean checkNicknameDuplicate(String nickname) {
         return userRepository.existsByNickname(nickname);
+    }
+
+
+    // 닉네임 수정
+    @Transactional
+    public void updateNickname(Long userId, String newNickname) {
+        // 1. 유저 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+
+        // 2. 닉네임 중복 검사 (본인의 현재 닉네임과 같다면 통과)
+        if (!user.getNickname().equals(newNickname) && userRepository.existsByNickname(newNickname)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        // 3. 변경 적용
+        user.changeNickname(newNickname);
     }
 }
