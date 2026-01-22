@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "게임 웹소켓 통신용 메시지 규격")
 public class GameMessageDto {
-    @Schema(description = "메시지 타입", example = "JOIN", allowableValues = {"CREATE", "JOIN", "MOVE", "PING", "ERROR", "ROOM_CREATED"})
+    @Schema(description = "메시지 타입", example = "JOIN", allowableValues = { "CREATE", "JOIN", "MOVE", "PING", "ERROR",
+            "ROOM_CREATED" })
     private String type;
 
     @Schema(description = "방 번호 (JOIN/MOVE 필수, CREATE는 선택)", example = "room_1")
@@ -26,6 +27,12 @@ public class GameMessageDto {
 
     @Schema(description = "Y 좌표", example = "200.0")
     private Double y;
+
+    @Schema(description = "X축 속도", example = "2.5")
+    private Double vx;
+
+    @Schema(description = "Y축 속도", example = "-1.2")
+    private Double vy;
 
     @Schema(description = "캐릭터 애니메이션 상태", example = "walk_down")
     private String anim;

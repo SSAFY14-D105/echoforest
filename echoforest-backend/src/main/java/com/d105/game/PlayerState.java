@@ -21,6 +21,7 @@ public class PlayerState {
     private int hp = 100; // 체력 (저주용)
     private boolean isDead = false;
     private boolean isGrounded = false; // 바닥에 닿았는지 여부
+    private String anim = "idle_down"; // 현재 애니메이션 상태
 
     // 3. 물리 상수 (튜닝 필요)
     private static final double MOVE_SPEED = 300.0;
