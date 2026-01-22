@@ -62,7 +62,6 @@ export default function LiveKitVideoGrid({
     username,
     userId,
     variant = 'grid',
-    showControls = true,
     autoConnect = true,
     onConnected,
     onDisconnected,
@@ -71,7 +70,7 @@ export default function LiveKitVideoGrid({
     style,
 }: LiveKitVideoGridProps) {
     const { token, serverUrl, isLoading, error } = useLiveKit({
-        roomName: roomId,
+        roomId,
         username,
         userId,
         autoConnect,
