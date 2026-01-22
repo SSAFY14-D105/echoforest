@@ -1,6 +1,6 @@
 package com.d105.controller;
 
-import com.d105.dto.ImageResponseDto;
+import com.d105.dto.image.ImageResponseDto;
 import com.d105.entity.Image;
 import com.d105.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
