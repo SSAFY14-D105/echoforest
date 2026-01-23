@@ -6,6 +6,7 @@ import com.d105.entity.User;
 import com.d105.repository.UserRepository;
 import com.d105.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserService {
@@ -88,5 +90,23 @@ public class UserService {
 
         // 3. 변경 적용
         user.changeNickname(newNickname);
+    }
+
+    // 게임 종료 후 통계 일괄 저장
+    @Transactional
+    public void saveGameStats(String username, int kissCount, int curseCount) {
+        // 0건이면 업데이트 불필요
+        if (kissCount == 0 && curseCount == 0) {
+            return;
+        }
+
+        userRepository.findByUsername(username).ifPresentOrElse(
+                user -> {
+                    user.updateGameStats(kissCount, curseCount);
+                    log.info("Updated stats for user {}: +{} kisses, +{} curses",
+                            username, kissCount, curseCount);
+                },
+                () -> log.warn("Failed to update stats: User {} not found", username)
+        );
     }
 }

@@ -74,4 +74,15 @@ public class User {
     public void changeNickname(String newNickname) {
         this.nickname = newNickname;
     }
+
+    /**
+     * 게임 통계 업데이트 메서드
+     *
+     * @param kissCount
+     * @param curseCount
+     */
+    public void updateGameStats(int kissCount, int curseCount) {
+        this.kissCount += kissCount;
+        this.curseCount += curseCount;
+    }
 }
