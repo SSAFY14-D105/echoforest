@@ -3,7 +3,7 @@
  * 백엔드 연동 시 BASE_URL과 실제 API 엔드포인트를 수정하세요.
  */
 
-const BASE_URL = 'https://i14d105.p.ssafy.io/api'; // 배포 서버 주소
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api'; // 배포 서버 주소
 
 /**
  * HTTP 상태 코드별 에러 메시지 반환
@@ -36,12 +36,12 @@ function getErrorMessage(status: number): string {
 }
 
 export interface LoginRequest {
-    loginId: string;
+    username: string;
     password: string;
 }
 
 export interface SignupRequest {
-    loginId: string;
+    username: string;
     password: string;
     nickname: string;
     email: string;
@@ -74,7 +74,7 @@ export interface CheckIdResponse {
  * 로그인 API
  */
 export async function login(req: LoginRequest): Promise<LoginResponse> {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${BASE_URL}/user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
@@ -105,7 +105,7 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
  * 회원가입 API
  */
 export async function signup(req: SignupRequest): Promise<SignupResponse> {
-    const res = await fetch(`${BASE_URL}/auth/signup`, {
+    const res = await fetch(`${BASE_URL}/user/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
@@ -121,8 +121,8 @@ export async function signup(req: SignupRequest): Promise<SignupResponse> {
 /**
  * 아이디 중복 확인 API
  */
-export async function checkLoginId(loginId: string): Promise<CheckIdResponse> {
-    const res = await fetch(`${BASE_URL}/auth/check-id?loginId=${encodeURIComponent(loginId)}`, {
+export async function checkLoginId(username: string): Promise<CheckIdResponse> {
+    const res = await fetch(`${BASE_URL}/user/check-id?username=${encodeURIComponent(username)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
     });

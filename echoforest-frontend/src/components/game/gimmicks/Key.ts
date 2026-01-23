@@ -7,33 +7,43 @@ import Phaser from 'phaser';
 export class Key {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
+    private graphics?: Phaser.GameObjects.Graphics;
     private isCollected: boolean = false;
 
     public readonly id: string;
     public readonly linkedLockId: string;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, linkedLockId: string) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, linkedLockId: string, width: number = 24, height: number = 24, texture?: string, frame?: string | number, angle: number = 0) {
         this.scene = scene;
         this.id = id;
         this.linkedLockId = linkedLockId;
 
         // 열쇠 물리 바디 (센서로 설정 - 물리적 충돌 없이 감지만)
-        this.body = this.scene.matter.add.rectangle(x, y, 24, 24, {
+        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
             isSensor: true,
             isStatic: true,
-            label: `key-${id}`
+            label: `key-${id}`,
+            angle: Phaser.Math.DegToRad(angle)
         });
 
-        // 열쇠 그래픽 (노란색 사각형 + 열쇠 모양)
-        this.graphics = this.scene.add.graphics();
-        this.drawKey();
-
-        // 위치 설정
-        this.graphics.setPosition(x, y);
+        if (texture) {
+            this.sprite = this.scene.add.sprite(x, y, texture, frame);
+            this.sprite.setDisplaySize(width, height);
+            this.sprite.setAngle(angle);
+            this.sprite.setDepth(5);
+        } else {
+            // 열쇠 그래픽 (노란색 사각형 + 열쇠 모양)
+            this.graphics = this.scene.add.graphics();
+            this.drawKey();
+            this.graphics.setPosition(x, y);
+            this.graphics.setAngle(angle);
+            this.graphics.setDepth(5);
+        }
     }
 
     private drawKey(): void {
+        if (!this.graphics) return;
         this.graphics.clear();
         // 노란색 열쇠
         this.graphics.fillStyle(0xFFD700, 1);
@@ -48,7 +58,8 @@ export class Key {
         if (this.isCollected) return;
 
         this.isCollected = true;
-        this.graphics.setVisible(false);
+        this.graphics?.setVisible(false);
+        this.sprite?.setVisible(false);
         this.scene.matter.world.remove(this.body);
 
         console.log(`[Key] Collected: ${this.id}, unlocks Lock: ${this.linkedLockId}`);
@@ -64,6 +75,7 @@ export class Key {
 
     public destroy(): void {
         this.scene.matter.world.remove(this.body);
-        this.graphics.destroy();
+        this.graphics?.destroy();
+        this.sprite?.destroy();
     }
 }

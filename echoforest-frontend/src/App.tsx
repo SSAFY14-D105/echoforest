@@ -1,12 +1,11 @@
-import LiveKitTestPage from './pages/LiveKitTestPage';
-
 // ========== 🚧 임시: LiveKit 테스트 모드 ==========
+//import LiveKitTestPage from './pages/LiveKitTestPage';
 // TODO: 테스트 완료 후 원래 코드로 복원하세요!
-export default function App() {
-  return <LiveKitTestPage />;
-}
+// export default function App() {
+//   return <LiveKitTestPage />;
+// }
 
-/* ========== 원래 코드 (복원용) ==========
+// ========== 원래 코드 (복원용) ==========
 import { useGameStore } from './store/useGameStore';
 import LoginPage from './pages/LoginPage/LoginPage';
 import LobbyPage from './pages/lobby/LobbyPage';
@@ -25,4 +24,3 @@ export default function App() {
 
   return <GamePage />;
 }
-========================================== */

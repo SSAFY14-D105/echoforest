@@ -41,6 +41,17 @@ export default function GamePage() {
   const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
   const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
 
+  // --- 스테이지 ID 변환 유틸리티 ---
+  // 내부용 ID ("MULTI_1") -> 통신용 번호 (1)
+  const parseStageNum = (stageId: string | null): number => {
+    if (!stageId) return 1;
+    const num = parseInt(stageId.replace(/^(MULTI_|SOLO_)/, ''), 10);
+    return isNaN(num) ? 1 : num;
+  };
+
+  // 통신용 번호 (1) -> 내부용 ID ("MULTI_1")
+  const getMultiStageId = (num: number): string => `MULTI_${num}`;
+
   // 본인을 플레이어 목록에 추가 (방 입장 시)
   // 솔로 모드는 startSoloGame에서 이미 추가되므로 건너뜀
   useEffect(() => {
@@ -179,7 +190,7 @@ export default function GamePage() {
         case 'STAGE_SELECT':
           // 스테이지 선택 동기화 (호스트가 보낸 신호)
           if (!isHost && msg.stage !== undefined) {
-            selectStage(msg.stage);
+            selectStage(getMultiStageId(msg.stage));
             console.log(`🎯 스테이지 ${msg.stage} 선택됨 (호스트로부터)`);
           }
           break;
@@ -187,7 +198,7 @@ export default function GamePage() {
         case 'STAGE_CLEAR':
           // 스테이지 클리어 동기화 (호스트가 보낸 신호)
           if (!isHost && msg.stage !== undefined) {
-            clearStage(msg.stage);
+            clearStage(getMultiStageId(msg.stage));
             console.log(`🏆 스테이지 ${msg.stage} 클리어됨 (호스트로부터)`);
           }
           break;
@@ -256,14 +267,14 @@ export default function GamePage() {
 
   // 스테이지 잠금 해제 여부 확인
   const isStageUnlocked = (stageNum: number): boolean => {
-    if (stageNum === 1) return true; // Stage 1은 항상 열림
-    return clearedStages.includes(stageNum - 1); // 이전 스테이지 클리어 시 열림
+    if (stageNum === 1) return true;
+    return clearedStages.includes(`MULTI_${stageNum - 1}`);
   };
 
   // 스테이지 선택 핸들러 (호스트만, WebSocket 브로드캐스트)
   const handleSelectStage = (stageNum: number) => {
     if (isStageUnlocked(stageNum)) {
-      selectStage(stageNum);
+      selectStage(getMultiStageId(stageNum));
       // 다른 플레이어들에게 스테이지 선택 알림
       if (isHost && roomId) {
         gameWebSocket.selectStage(roomId, stageNum);
@@ -272,8 +283,18 @@ export default function GamePage() {
   };
 
   // 스테이지 클리어 핸들러 (호스트만, WebSocket 브로드캐스트)
-  const handleClearStage = (stageNum: number) => {
-    clearStage(stageNum);
+  const handleClearStage = (stageNumOrId: number | string) => {
+    // 숫자 또는 문자열 ID에 유연하게 대응
+    const stageNum = typeof stageNumOrId === 'number'
+      ? stageNumOrId
+      : parseStageNum(stageNumOrId);
+
+    const stageId = typeof stageNumOrId === 'string'
+      ? stageNumOrId
+      : getMultiStageId(stageNumOrId);
+
+    clearStage(stageId);
+
     // 다른 플레이어들에게 클리어 알림
     if (isHost && roomId) {
       gameWebSocket.clearStageSync(roomId, stageNum);
@@ -384,13 +405,16 @@ export default function GamePage() {
 
   // ========== 혼자하기 모드 화면 (카메라 없음, 로비 복귀 버튼) ==========
   if (isSoloMode && isGameStarted && currentStage !== null) {
+    // currentStage는 'SOLO_1', 'SOLO_2' 형식이므로 숫자를 파싱하거나 직접 매핑
+    const sceneKey = currentStage === 'SOLO_1' ? 'Solo1Scene' : 'Solo2Scene';
+
     return (
       <div className={styles.gameContainer}>
         {/* 게임 캔버스 (전체 화면) */}
         <div className={`pixel-box ${styles.canvasWrapper}`} style={{ marginBottom: 0, flex: 1 }}>
-          <PhaserGame startScene="SoloScene" />
+          <PhaserGame startScene={sceneKey} />
           <div className={styles.gameInfo}>
-            🧪 혼자하기 모드 | {nickname}
+            🧪 혼자하기 {currentStage.replace('SOLO_', '')} 모드 | {nickname}
           </div>
           {/* 로비로 돌아가기 버튼 */}
           <button
@@ -406,13 +430,15 @@ export default function GamePage() {
 
   // ========== 스테이지 플레이 화면 (멀티플레이) ==========
   if (isGameStarted && currentStage !== null) {
+    const stageNum = currentStage.replace('MULTI_', '');
+
     return (
       <div className={styles.gameContainer}>
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
-          <PhaserGame startScene={`Stage${currentStage}Scene`} />
+          <PhaserGame startScene={`Stage${stageNum}Scene`} />
           <div className={styles.gameInfo}>
-            🎮 Stage {currentStage} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
+            🎮 Stage {stageNum} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
           </div>
           {/* TODO: 스테이지 클리어 테스트 버튼 - 나중에 삭제 */}
           <button
@@ -444,7 +470,7 @@ export default function GamePage() {
             {Array.from({ length: TOTAL_STAGES }).map((_, index) => {
               const stageNum = index + 1;
               const isUnlocked = isStageUnlocked(stageNum);
-              const isCleared = clearedStages.includes(stageNum);
+              const isCleared = clearedStages.includes(`MULTI_${stageNum}`);
 
               return (
                 <button
@@ -470,15 +496,15 @@ export default function GamePage() {
             <div className={styles.testButtons}>
               <button
                 className={styles.testBtn}
-                onClick={() => handleClearStage(1)}
-                disabled={clearedStages.includes(1)}
+                onClick={() => clearStage('MULTI_1')}
+                disabled={clearedStages.includes('MULTI_1')}
               >
                 🧪 Stage 1 클리어 처리
               </button>
               <button
                 className={styles.testBtn}
-                onClick={() => handleClearStage(2)}
-                disabled={!clearedStages.includes(1) || clearedStages.includes(2)}
+                onClick={() => clearStage('MULTI_2')}
+                disabled={!clearedStages.includes('MULTI_1') || clearedStages.includes('MULTI_2')}
               >
                 🧪 Stage 2 클리어 처리
               </button>

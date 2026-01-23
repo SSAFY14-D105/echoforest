@@ -13,7 +13,8 @@ export const LIVEKIT_SERVER_URL = 'wss://i14d105.p.ssafy.io/livekit';
 export interface LiveKitTokenRequest {
     userId: string;
     username: string;
-    roomId: string;
+    roomId?: string;   // 기존 코드용
+    roomName?: string; // LiveKitService용
 }
 
 /**
@@ -48,4 +49,16 @@ export async function fetchLiveKitToken(
     const data = await response.json();
     console.log('✅ 토큰 발급 성공');
     return data;
+}
+
+/**
+ * LiveKitService 전용 별칭 (roomName을 roomId로 변환하여 처리)
+ */
+export async function getLiveKitToken(request: LiveKitTokenRequest): Promise<LiveKitTokenResponse> {
+    const mappedRequest: LiveKitTokenRequest = {
+        userId: request.userId,
+        username: request.username,
+        roomId: request.roomId || request.roomName // 둘 중 하나를 사용
+    };
+    return fetchLiveKitToken(mappedRequest);
 }

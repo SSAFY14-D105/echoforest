@@ -56,12 +56,12 @@ export default function LobbyPage() {
     }
   };
 
-  // 혼자하기 (테스트 모드)
+  // 혼자하기 1
   const handleSoloPlay = () => {
     startSoloGame();
   };
 
-  // 방 참가하기 (WebSocket JOIN 메시지 전송) - 싱글톤 사용
+  // 방 참가하기 (WebSocket JOIN 메시지 전송)
   const handleJoinSubmit = async () => {
     setJoinError('');
 
@@ -171,8 +171,8 @@ export default function LobbyPage() {
           <button className={`${styles.actionBtn} ${styles.soloBtn}`} onClick={handleSoloPlay}>
             <span className={styles.btnIcon}>🧪</span>
             <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>혼자하기(테스트)</div>
-              <div className={styles.btnDesc}>스테이지 기믹을 혼자 연습해봅니다</div>
+              <div className={styles.btnTitle}>혼자하기</div>
+              <div className={styles.btnDesc}>테스트 모드</div>
             </div>
           </button>
         </div>

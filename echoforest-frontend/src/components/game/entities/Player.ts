@@ -2,14 +2,14 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 32;
+const BASE_PLAYER_SIZE = 64;
 
 // 물리 파라미터
 const PHYSICS = {
     FRICTION: 0,           // 동적 마찰 없음 (벽에서 느리게 떨어지는 현상 방지)
-    STATIC_FRICTION: 0.3,  // 정지 상태에서만 약간의 마찰
+    STATIC_FRICTION: 0,    // 벽 충돌 시 덜덜거림 방지를 위해 0으로 설정
     AIR_FRICTION: 0.02,
-    RESTITUTION: 0.1
+    RESTITUTION: 0         // 튕김 방지
 };
 
 export interface PlayerConfig {
@@ -24,7 +24,8 @@ export interface PlayerConfig {
 export class Player {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private sprite: Phaser.GameObjects.Sprite;
+    private colorName: string;
 
     public readonly id: string;
     public readonly nickname: string;
@@ -46,6 +47,7 @@ export class Player {
     // 밀치기(Knockback) 및 스턴 상태
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
+    private _isDead: boolean = false;
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
@@ -53,6 +55,9 @@ export class Player {
         this.nickname = config.nickname;
         this.color = PLAYER_COLORS[config.colorIndex % PLAYER_COLORS.length];
         this.isLocalPlayer = config.isLocalPlayer;
+
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        this.colorName = colors[config.colorIndex % colors.length];
 
         // TODO: 씬 준비 상태 체크 로직 개선 필요 - 임시 가드
         if (!this.scene.matter) {
@@ -63,9 +68,10 @@ export class Player {
         // 물리 바디 생성
         this.body = this.createBody(config.x, config.y);
 
-        // 플레이어 그래픽 생성
-        this.graphics = this.scene.add.graphics();
-        this.drawPlayer();
+        // 플레이어 스프라이트 생성
+        this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
+        this.sprite.play(`player_idle_${this.colorName}`);
+        this.sprite.setDepth(10); // 기믹보다 위로 배치
     }
 
     private createBody(x: number, y: number): MatterJS.BodyType {
@@ -84,34 +90,74 @@ export class Player {
         return body;
     }
 
-    private drawPlayer(): void {
-        const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+    private updateVisualEffects(): void {
 
-        this.graphics.clear();
-
-        // 저주 효과 시각화 (테두리)
-        if (this.currentCurseId) {
-            this.graphics.lineStyle(3, CURSES[this.currentCurseId]?.color ?? 0xff0000, 0.8);
-            this.graphics.strokeRect(-size / 2 - 2, -size / 2 - 2, size + 4, size + 4);
-        }
-
-        // 스턴 상태 시 시각적 효과 (예: 빨간색 필터 느낌)
+        // 스턴 상태 시 시각적 효과 (빨간색)
         if (this._isStunned) {
-            this.graphics.fillStyle(0xff5555, 1);
+            this.sprite.setTint(0xff5555);
         } else {
-            this.graphics.fillStyle(this.color, 1);
+            this.sprite.clearTint();
         }
-        this.graphics.fillRect(-size / 2, -size / 2, size, size);
+
+        // 크기 배율 적용 (충돌 박스 64px 대비 시각적으로 1.5배 더 크게 표현)
+        // 기존 528px 원본 소스 기준
+        this.sprite.setScale((BASE_PLAYER_SIZE / 528) * this.sizeMultiplier * 1.5);
     }
 
     public update(): void {
-        // 그래픽 위치를 물리 바디에 맞춤
-        this.graphics.setPosition(this.body.position.x, this.body.position.y);
+        const { x, y } = this.body.position;
+        this.sprite.setPosition(x, y);
+
+        // 애니메이션 상태 업데이트
+        this.updateAnimation();
+
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
 
         // HP 바 업데이트 (drain 저주가 있을 때만)
         if (this.hpBarGraphics) {
             this.drawHPBar();
         }
+    }
+
+    private updateAnimation(): void {
+        // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 강제 사망 상태)
+        if (this._isDead || this.curseHP <= 0) {
+            if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
+                this.sprite.play(`player_dead_${this.colorName}`);
+            }
+            return;
+        }
+
+        const velocity = this.body.velocity;
+        // 바닥 접촉 여부 (움직임이 아주 작을 때)
+        const isGrounded = Math.abs(velocity.y) < 0.2;
+
+        // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
+        if (Math.abs(velocity.x) > 0.5) {
+            this.sprite.setFlipX(velocity.x < 0);
+        }
+
+        if (!isGrounded) {
+            // 공중 상태 (점프 또는 추락)
+            if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
+                this.sprite.play(`player_jump_${this.colorName}`);
+            }
+        } else if (Math.abs(velocity.x) > 0.5) {
+            // 걷기 (임계값 상향)
+            if (this.sprite.anims.currentAnim?.key !== `player_walk_${this.colorName}`) {
+                this.sprite.play(`player_walk_${this.colorName}`);
+            }
+        } else {
+            // 대기
+            if (this.sprite.anims.currentAnim?.key !== `player_idle_${this.colorName}`) {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+        }
+    }
+
+    public getSprite(): Phaser.GameObjects.Sprite {
+        return this.sprite;
     }
 
     /**
@@ -176,8 +222,8 @@ export class Player {
         this.body = this.createBody(pos.x, pos.y);
         this.scene.matter.body.setVelocity(this.body, vel);
 
-        // 그래픽 다시 그리기
-        this.drawPlayer();
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
     }
 
     /**
@@ -264,8 +310,8 @@ export class Player {
         this.body = this.createBody(pos.x, pos.y);
         this.scene.matter.body.setVelocity(this.body, vel);
 
-        // 그래픽 다시 그리기
-        this.drawPlayer();
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
     }
 
     /**
@@ -319,7 +365,7 @@ export class Player {
 
         // 스턴 상태 돌입
         this._isStunned = true;
-        this.drawPlayer(); // 색상 변경을 위해 즉시 다시 그리기
+        this.updateVisualEffects(); // 색상 변경을 위해 즉시 업데이트
 
         // 기존 타이머 제거
         if (this.stunTimer) {
@@ -330,7 +376,7 @@ export class Player {
         this.stunTimer = this.scene.time.delayedCall(duration, () => {
             this._isStunned = false;
             this.stunTimer = null;
-            this.drawPlayer(); // 원래 색상으로 복구
+            this.updateVisualEffects(); // 원래 색상으로 복구
         });
     }
 
@@ -362,7 +408,7 @@ export class Player {
     public hide(): void {
         if (this._isHidden) return;
         this._isHidden = true;
-        this.graphics.setVisible(false);
+        this.sprite.setVisible(false);
         // 센서로 변경 (충돌 블로킹 해제, 다른 플레이어가 통과 가능)
         this.body.isSensor = true;
         this.scene.matter.body.setStatic(this.body, true);
@@ -373,7 +419,7 @@ export class Player {
     public show(): void {
         if (!this._isHidden) return;
         this._isHidden = false;
-        this.graphics.setVisible(true);
+        this.sprite.setVisible(true);
         // 센서 해제 (다시 충돌 블로킹)
         this.body.isSensor = false;
         this.scene.matter.body.setStatic(this.body, false);
@@ -384,17 +430,44 @@ export class Player {
         return this._isHidden;
     }
 
+    public die(): void {
+        this._isDead = true;
+        // 물리 엔진에서 반응하지 않도록 설정 (선택 사항)
+        this.setVelocity(0, 0);
+        // 애니메이션 즉시 업데이트를 위해 updateAnimation 호출 가능
+    }
+
     public getBodyLabel(): string {
         return this.body.label || this.id;
     }
 
     public destroy(): void {
+        if (this.hpDrainTimer) {
+            this.hpDrainTimer.remove();
+            this.hpDrainTimer = null;
+        }
+        if (this.stunTimer) {
+            this.stunTimer.remove();
+            this.stunTimer = null;
+        }
+        if (this.hpBarGraphics) {
+            this.hpBarGraphics.destroy();
+            this.hpBarGraphics = null;
+        }
+
         // 물리 바디 제거 - 씬이 이미 종료되었을 수 있으므로 체크
         if (this.scene?.matter?.world) {
-            this.scene.matter.world.remove(this.body);
+            if (this.body) {
+                this.scene.matter.world.remove(this.body);
+            }
         }
-        // 그래픽 제거
-        this.graphics?.destroy();
+
+        // 스프라이트 제거
+        if (this.sprite) {
+            this.sprite?.destroy();
+        }
+
+        console.log(`[Player] ${this.nickname} destroyed`);
     }
 }
 
