@@ -224,10 +224,10 @@ def main():
         "misclassified_at_0_1": misclassified
     }
     
-    with open('tests/threshold_analysis_report_v2.json', 'w', encoding='utf-8') as f:
+    with open('tests/performance_metrics.json', 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
         
-    print(f"\nSaved report to tests/threshold_analysis_report_v2.json")
+    print(f"\nSaved report to tests/performance_metrics.json")
 
 if __name__ == "__main__":
     main()
