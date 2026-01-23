@@ -183,7 +183,10 @@ class GameWebSocket {
             }
             this.ws.send(JSON.stringify(message));
         } else {
-            console.warn('WebSocket이 연결되지 않음');
+            // MOVE 메시지는 빈번하므로 연결 끊김 경고를 로그에 남기지 않음 (스팸 방지)
+            if (message.type !== 'MOVE') {
+                console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+            }
         }
     }
 

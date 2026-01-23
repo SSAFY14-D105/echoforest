@@ -74,7 +74,7 @@ export interface CheckIdResponse {
  * 로그인 API
  */
 export async function login(req: LoginRequest): Promise<LoginResponse> {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${BASE_URL}/user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
@@ -105,7 +105,7 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
  * 회원가입 API
  */
 export async function signup(req: SignupRequest): Promise<SignupResponse> {
-    const res = await fetch(`${BASE_URL}/auth/signup`, {
+    const res = await fetch(`${BASE_URL}/user/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
@@ -122,7 +122,7 @@ export async function signup(req: SignupRequest): Promise<SignupResponse> {
  * 아이디 중복 확인 API
  */
 export async function checkLoginId(username: string): Promise<CheckIdResponse> {
-    const res = await fetch(`${BASE_URL}/auth/check-id?username=${encodeURIComponent(username)}`, {
+    const res = await fetch(`${BASE_URL}/user/check-id?username=${encodeURIComponent(username)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
     });

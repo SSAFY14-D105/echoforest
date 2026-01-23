@@ -63,6 +63,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 상태 전송 쓰로틀링 (50ms마다 전송 = 20 TPS)
     private lastStateSendTime: number = 0;
+    // 에러 로그 쓰로틀링 (1초마다)
+    private lastErrorLogTime: number = 0;
     private readonly STATE_SEND_INTERVAL: number = 50;
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
@@ -182,46 +184,56 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#2d2d2d');
 
         // 탭 전환/최소화 시 안전장치
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // [SNAP] 화면이 숨겨졌을 때: 공중 부양 방지를 위해 바닥으로 강제 착지
-                if (this.myPlayerId && this.sendStateCallback) {
-                    const player = this.players.get(this.myPlayerId);
-                    if (player) {
-                        console.log('[BaseGameScene] Tab hidden - Snapping to ground');
-
-                        // gameHeight가 0이거나 이상할 경우 안전값(720) 사용
-                        const safeHeight = (this.gameHeight > 0) ? this.gameHeight : 720;
-                        const groundY = safeHeight - 40;
-                        const currentPos = player.getPosition();
-
-                        player.setPosition(currentPos.x, groundY);
-                        player.setVelocity(0, 0);
-
-                        // 즉시 상태 전송
-                        this.sendStateCallback(currentPos.x, groundY, 0, 0, 'idle_down');
-                    }
-                }
-            } else {
-                // [RESTORE] 화면 복귀 시: 렌더링/스케일 복구
-                console.log('[BaseGameScene] Tab visible - Refreshing scale & camera');
-
-                // 1. 스케일 리프레시 (화면 깨짐 방지)
-                this.scale.refresh();
-
-                // 2. 카메라가 혹시 멈췄거나 다른 곳을 보면 다시 플레이어 고정
-                if (this.myPlayerId) {
-                    const player = this.players.get(this.myPlayerId);
-                    if (player) {
-                        this.cameras.main.startFollow(player);
-                    }
-                }
-
-                // 3. 강제 렌더링 요청 (회색 화면 방지)
-                this.game.loop.wake();
-            }
+        // 탭 전환/최소화 시 안전장치
+        // 탭 전환/최소화 시 안전장치 (익명 함수 대신 메서드로 분리하여 중복 방지 및 제거 가능하게 함)
+        this.events.on('destroy', () => {
+            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
         });
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+        // [LIFECYCLE] Scene Created Log
+        console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
     }
+
+    // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
+    private handleVisibilityChange = () => {
+        console.log(`[VISIBILITY] State: ${document.visibilityState}, Scene: ${this.getSceneKey()}`);
+
+        if (document.hidden) {
+            // [SNAP] 화면이 숨겨졌을 때: 공중 부양 방지를 위해 바닥으로 강제 착지
+            if (this.myPlayerId && this.sendStateCallback) {
+                const player = this.players.get(this.myPlayerId);
+                if (player) {
+                    // gameHeight가 0이거나 이상할 경우 안전값(720) 사용
+                    const safeHeight = (this.gameHeight > 0) ? this.gameHeight : 720;
+                    const groundY = safeHeight - 40;
+                    const currentPos = player.getPosition();
+
+                    player.setPosition(currentPos.x, groundY);
+
+                    // 즉시 상태 전송
+                    this.sendStateCallback(currentPos.x, groundY, 0, 0, 'idle_down');
+                }
+            }
+        } else {
+            // [CHECKPOINT] 중요한 객체들이 살아있는지 확인
+            if (!this.scene || !this.cameras || !this.cameras.main) {
+                return;
+            }
+
+            const cam = this.cameras.main;
+
+            // [CRITICAL FIX] 카메라 좌표가 NaN이면 즉시 0으로 초기화
+            if (!Number.isFinite(cam.scrollX) || !Number.isFinite(cam.scrollY)) {
+                cam.scrollX = 0;
+                cam.scrollY = 0;
+            }
+
+            // [SNAP RE-RENDER] 강제 렌더링 리프레시
+            this.scale?.refresh();
+            this.game?.loop?.wake();
+        }
+    };
 
     private resetState(): void {
         // 기존 플레이어 물리 바디 삭제
@@ -721,7 +733,23 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
-    update(time: number, _delta: number) {
+    update(time: number, delta: number) {
+        // [CRITICAL SAFETY] 카메라 좌표 NaN/Infinity 강제 복구 (가장 먼저 실행)
+        if (this.cameras.main) {
+            if (!Number.isFinite(this.cameras.main.scrollX)) {
+                this.cameras.main.scrollX = 0;
+            }
+            if (!Number.isFinite(this.cameras.main.scrollY)) {
+                this.cameras.main.scrollY = 0;
+            }
+        }
+
+        // [PHYSICS] 수동 업데이트 (탭 복귀 시 대형 Delta로 인한 폭주 방지)
+        // Delta 시간을 최대 100ms(0.1초)로 제한
+        const clampedDelta = Math.min(delta, 100);
+        this.matter.world.step(clampedDelta);
+
+
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
@@ -1165,18 +1193,54 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const positions = Array.from(this.players.values())
             .filter(p => !p.isHidden)
             .map(p => p.getPosition());
+
+        // [SAFETY] 유효하지 않은 좌표(NaN 또는 Infinity)가 있으면 카메라 업데이트 중단
+        // console.warn 남발 방지: 1초에 한 번만 로그
+        const isInvalidPos = positions.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y));
+        if (isInvalidPos) {
+            const now = Date.now();
+            if (now - this.lastErrorLogTime > 1000) {
+                console.warn('[Camera] Invalid player position (NaN/Infinity) detected! skipping update.');
+                this.lastErrorLogTime = now;
+            }
+            return;
+        }
+
         if (positions.length === 0) return;
 
         const minX = Math.min(...positions.map(p => p.x));
         const maxX = Math.max(...positions.map(p => p.x));
         const centerX = (minX + maxX) / 2;
 
-        this.cameras.main.scrollX = Phaser.Math.Linear(
+        // [SAFETY] centerX가 유효한지 확인
+        if (!Number.isFinite(centerX)) {
+            return;
+        }
+
+        const newScrollX = Phaser.Math.Linear(
             this.cameras.main.scrollX,
             centerX - this.cameras.main.width / 2,
             0.1
         );
 
+        // [SAFETY] 최종 카메라 위치가 유효한지 확인 (NaN/Infinity 체크)
+        if (!Number.isFinite(newScrollX)) {
+            const now = Date.now();
+            if (now - this.lastErrorLogTime > 1000) {
+                console.warn(`[Camera] ScrollX calculation failed! linear result: ${newScrollX}, current: ${this.cameras.main.scrollX}, target: ${centerX}`);
+                this.lastErrorLogTime = now;
+            }
+            // 안전한 값으로 강제 리셋 (플레이어 위치 혹은 0)
+            if (Number.isFinite(centerX)) {
+                this.cameras.main.scrollX = centerX - this.cameras.main.width / 2;
+            } else {
+                this.cameras.main.scrollX = 0;
+            }
+        } else {
+            this.cameras.main.scrollX = newScrollX;
+        }
+
+        // 월드 바운드 클램핑
         this.cameras.main.scrollX = Phaser.Math.Clamp(
             this.cameras.main.scrollX,
             0,

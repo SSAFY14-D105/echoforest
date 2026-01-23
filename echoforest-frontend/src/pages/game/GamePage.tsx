@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { Player } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
@@ -69,6 +69,14 @@ export default function GamePage() {
     if (isLiveKitConnecting || liveKitService.isConnected) return;
 
     const connectLiveKit = async () => {
+      // [DIAGNOSIS] 파라미터 확인 로그
+      console.log(`[LiveKit] Attempting connection. Room: ${roomId}, Nickname: ${nickname}, Solo: ${isSoloMode}`);
+
+      if (!roomId || !nickname) {
+        console.warn('[LiveKit] Missing required parameters. Aborting connection.');
+        return;
+      }
+
       setIsLiveKitConnecting(true);
       try {
         // 로컬 비디오 엘리먼트 설정
@@ -77,7 +85,7 @@ export default function GamePage() {
         // userId는 localStorage에서 가져오기
         const userId = localStorage.getItem('loginId') || nickname;
 
-        console.log('🎥 LiveKit 연결 시도...');
+        console.log(`[LiveKit] Calling connect() with UserID: ${userId}`);
         await liveKitService.connect(roomId, userId, nickname);
 
         // 초기 상태 동기화
@@ -96,6 +104,18 @@ export default function GamePage() {
       liveKitService.disconnect();
     };
   }, [roomId, nickname, isSoloMode]);
+
+  // PhaserGame으로 전달할 상태 전송 콜백 (useCallback으로 최적화)
+  const handleSendState = useCallback((x: number, y: number, vx: number, vy: number, anim: string) => {
+    if (roomId && !isSoloMode) {
+      let finalAnim = anim;
+      // Host P2P Broadcast: 애니메이션 태그에 현재 스테이지 정보 숨겨서 전송
+      if (isHost && currentStage) {
+        finalAnim = `${anim}|s:${currentStage}`;
+      }
+      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, finalAnim);
+    }
+  }, [roomId, isSoloMode, isHost, currentStage]);
 
   // 마이크 토글 핸들러
   const handleToggleMic = async () => {
@@ -116,10 +136,10 @@ export default function GamePage() {
 
     // 싱글톤 WS에 메시지 핸들러 설정
     gameWebSocket.onMessage((msg: GameMessage) => {
-      // 'MOVE' 메시지는 너무 빈번하므로 로그에서 제외
-      if (msg.type !== 'MOVE') {
-        console.log('📩 WebSocket 메시지:', msg);
-      }
+      // 진단을 위해 로그 일시 차단
+      // if (msg.type !== 'MOVE') {
+      //   console.log('📩 WebSocket 메시지:', msg);
+      // }
 
       switch (msg.type) {
         case 'UPDATE':
@@ -459,19 +479,7 @@ export default function GamePage() {
         <div className={`pixel-box ${styles.canvasWrapper}`}>
           <PhaserGame
             startScene={`Stage${currentStage}Scene`}
-            onSendState={(x, y, vx, vy, anim) => {
-              if (roomId && !isSoloMode) {
-                let finalAnim = anim;
-                // Host P2P Broadcast: 애니메이션 태그에 현재 스테이지 정보 숨겨서 전송
-                // late joiner가 이 태그를 보고 스테이지를 따라옴
-                if (isHost && currentStage) {
-                  finalAnim = `${anim}|s:${currentStage}`;
-                }
-
-                // Client-Authoritative: 위치/속도/애니메이션 상태 전송
-                gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, finalAnim);
-              }
-            }}
+            onSendState={handleSendState}
             isSoloMode={isSoloMode}
           />
           <div className={styles.gameInfo}>
@@ -555,6 +563,8 @@ export default function GamePage() {
     );
   }
 
+
+
   // ========== 대기실 화면 ==========
   return (
     <div className={styles.gameContainer}>
@@ -562,11 +572,7 @@ export default function GamePage() {
       <div className={`pixel-box ${styles.canvasWrapper}`}>
         <PhaserGame
           startScene="LobbyScene"
-          onSendState={(x, y, vx, vy, anim) => {
-            if (roomId && !isSoloMode) {
-              gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim);
-            }
-          }}
+          onSendState={handleSendState}
           isSoloMode={isSoloMode}
         />
         <div className={styles.gameInfo}>

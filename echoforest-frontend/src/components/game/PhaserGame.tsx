@@ -56,6 +56,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                 physics: {
                     default: 'matter',
                     matter: {
+                        autoUpdate: false, // [CRITICAL] 수동 업데이트로 전환하여 탭 복귀 시 물리 폭주(Physics Explosion) 방지
                         gravity: { x: 0, y: 1 },
                         debug: true
                     }
@@ -106,7 +107,9 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
 
     // 언마운트 시에만 게임 완전 제거를 위한 별도 useEffect
     useEffect(() => {
+        console.log('[PhaserGame] Component Mounted');
         return () => {
+            console.log('[PhaserGame] Component Unmounted - Destroying Game Instance');
             if (gameRef.current) {
                 gameRef.current.destroy(true);
                 gameRef.current = null;
