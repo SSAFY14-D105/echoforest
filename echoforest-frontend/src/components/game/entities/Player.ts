@@ -455,14 +455,16 @@ export class Player {
             this.hpBarGraphics = null;
         }
 
-        // 물리 바디 제거
-        if (this.body) {
-            this.scene.matter.world.remove(this.body);
+        // 물리 바디 제거 - 씬이 이미 종료되었을 수 있으므로 체크
+        if (this.scene?.matter?.world) {
+            if (this.body) {
+                this.scene.matter.world.remove(this.body);
+            }
         }
 
         // 스프라이트 제거
         if (this.sprite) {
-            this.sprite.destroy();
+            this.sprite?.destroy();
         }
 
         console.log(`[Player] ${this.nickname} destroyed`);

@@ -23,6 +23,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     protected myPlayerId: string = '';
     protected cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
     protected gameHeight: number = 600;
+    protected worldWidth: number = 800;
     protected storeUnsubscribe?: () => void;
 
     // 기믹들
@@ -149,6 +150,101 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         });
     }
 
+    /**
+     * TMJ (Tiled JSON) 데이터를 파싱하여 맵과 기믹을 생성합니다.
+     * @param mapKey 로드된 JSON 에셋의 키
+     */
+    protected parseTiledData(mapKey: string): void {
+        const data = this.cache.json.get(mapKey);
+        if (!data || !data.layers || data.layers.length === 0) {
+            console.error(`[BaseGameScene] Map data not found for key: ${mapKey}`);
+            return;
+        }
+
+        const layer = data.layers[0];
+        const tileData = layer.data;
+        const width = data.width; // 타일 개수 (가로)
+        const height = data.height; // 타일 개수 (세로)
+
+        // 동적 크기 계산: 화면 높이에 맵의 세로 칸 수를 맞춤
+        const screenHeight = this.scale.height;
+        const targetTileSize = screenHeight / height;
+
+        console.log(`[BaseGameScene] Parsing map: ${mapKey} (${width}x${height}) dynamic scaling to ${targetTileSize.toFixed(2)}px`);
+
+        // 월드 크기 업데이트 (동적 사이즈 기준)
+        this.worldWidth = width * targetTileSize;
+        this.matter.world.setBounds(0, 0, this.worldWidth, screenHeight);
+
+        const tempKeys: { x: number, y: number, i: number }[] = [];
+        const tempLocks: { x: number, y: number, i: number }[] = [];
+
+        for (let i = 0; i < tileData.length; i++) {
+            const gid = tileData[i];
+            if (gid === 0) continue;
+
+            const tileX = i % width;
+            const tileY = Math.floor(i / width);
+
+            // 동적 크기 중심 좌표 계산
+            const x = tileX * targetTileSize + targetTileSize / 2;
+            const y = tileY * targetTileSize + targetTileSize / 2;
+
+            switch (gid) {
+                case 1: // 바닥/벽 (Static) - 색상이 있는 사각형으로 표현
+                    const rect = this.add.rectangle(x, y, targetTileSize, targetTileSize, 0x4A6B2F);
+                    this.matter.add.gameObject(rect, {
+                        isStatic: true,
+                        label: 'ground'
+                    });
+                    break;
+
+                case 21:
+                case 22:
+                case 23:
+                case 24: // 타일셋 이미지 (동적 사이즈로 확대/축소)
+                    this.add.image(x, y, 'stage_tiles', gid - 21)
+                        .setDisplaySize(targetTileSize, targetTileSize);
+                    break;
+
+                case 30: // 플레이어 스폰 지점
+                    console.log(`[BaseGameScene] Spawn point at: ${x}, ${y}`);
+                    break;
+
+                case 34: // Key - 위치 저장
+                    tempKeys.push({ x, y, i });
+                    break;
+
+                case 35: // Lock - 위치 저장
+                    tempLocks.push({ x, y, i });
+                    break;
+
+                case 56: // Spring
+                    const springId = `spring-${i}`;
+                    const spring = new Spring(this, x, y, springId);
+                    this.springs.push(spring);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        // Key/Lock 1:1 연결
+        tempLocks.forEach((lockData, idx) => {
+            const lockId = `lock-${idx}`;
+            const lock = new Lock(this, lockData.x, lockData.y, lockId);
+            this.locks.push(lock);
+
+            if (tempKeys[idx]) {
+                const keyData = tempKeys[idx];
+                const keyId = `key-${idx}`;
+                const key = new Key(this, keyData.x, keyData.y, keyId, lockId);
+                this.keys.push(key);
+            }
+        });
+    }
+
     create() {
         this.resetState();
         this.setupPhysics();
@@ -180,6 +276,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.goals.forEach(goal => goal.destroy());
         this.springs.forEach(spring => spring.destroy());
         this.elevators.forEach(elevator => elevator.destroy());
+        this.movableBlocks.forEach(block => block.destroy());
 
         this.keys = [];
         this.locks = [];
@@ -188,6 +285,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.springs = [];
         this.elevators = [];
         this.movableBlocks = [];
+        // ... (이하 동일하게 bumper 등 정리)
         this.bumpers.forEach(b => b.destroy());
         this.bumpers = [];
         this.movingBumpers.forEach(b => b.destroy());
@@ -640,6 +738,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
 
             if (!this.players.has(storePlayer.id)) {
+                // TODO: TMJ에서 파싱한 스폰 지점이 있다면 거기서 시작하도록 수정 가능
                 this.addPlayer(storePlayer, index, currentNickname);
             }
         });

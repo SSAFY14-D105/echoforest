@@ -25,6 +25,7 @@ interface GameState {
     joinGame: (roomId: string, isHost: boolean) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
+    setPlayers: (players: Player[]) => void;  // ROOM_STATE용 전체 플레이어 설정
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
     updatePlayerPosition: (nickname: string, x: number, y: number, anim?: string) => void;  // WebSocket MOVE 처리용
     startGame: () => void;
@@ -68,6 +69,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             ? state.players
             : [...state.players, player]
     })),
+    setPlayers: (players) => set({ players }),  // ROOM_STATE용 전체 덮어쓰기
     removePlayerByNickname: (nickname) => set((state) => ({
         players: state.players.filter(p => p.nickname !== nickname)
     })),
