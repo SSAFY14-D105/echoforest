@@ -46,3 +46,4 @@ redis_data/
 **/*.sock
 
 .env
+jenkins_home/

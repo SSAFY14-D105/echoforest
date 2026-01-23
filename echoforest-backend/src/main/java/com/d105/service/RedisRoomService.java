@@ -22,8 +22,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RedisRoomService {
 
-    private final RedisTemplate<String, String> redisTemplate;
-
     // Redis 키 접두사
     private static final String ROOM_KEY = "room:";
     private static final String PLAYERS_SUFFIX = ":players";
@@ -31,11 +29,13 @@ public class RedisRoomService {
     private static final String KISS_SUFFIX = ":kiss";
     private static final String CURSE_SUFFIX = ":curse";
     private static final String USER_ROOM_KEY = "user:";
-
     // TTL 설정 (좀비 방 방지)
     private static final Duration ROOM_TTL = Duration.ofHours(2); // 대기 방 2시간
     private static final Duration GAME_TTL = Duration.ofHours(4); // 게임 중 4시간
     private static final Duration USER_ROOM_TTL = Duration.ofHours(2); // 유저-방 매핑 2시간
+
+    private final UserService userService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     // =========================================================
     // 방 생성/삭제
@@ -104,54 +104,56 @@ public class RedisRoomService {
     /**
      * 방 참가
      */
-    public boolean joinRoom(String roomId, String userId) {
+    public boolean joinRoom(String roomId, String userName) {
         if (!roomExists(roomId)) {
             return false;
         }
 
         // players에 추가
-        redisTemplate.opsForSet().add(ROOM_KEY + roomId + PLAYERS_SUFFIX, userId);
+        redisTemplate.opsForSet().add(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
 
         // 유저-방 매핑 (TTL 포함)
-        String userRoomKey = USER_ROOM_KEY + userId + ":room";
+        String userRoomKey = USER_ROOM_KEY + userName + ":room";
         redisTemplate.opsForValue().set(userRoomKey, roomId);
         redisTemplate.expire(userRoomKey, USER_ROOM_TTL);
 
-        log.info("User {} joined room {}", userId, roomId);
+        log.info("User {} joined room {}", userName, roomId);
         return true;
     }
 
     /**
      * 방 나가기
-     * 
+     *
      * @return true: 방이 폭파됨 (방장 퇴장), false: 일반 퇴장
      */
-    public boolean leaveRoom(String roomId, String userId) {
+    public boolean leaveRoom(String roomId, String userName) {
         // 방장인지 확인
         String hostId = getHostId(roomId);
 
         // players에서 제거
-        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userId);
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
 
         // ready에서 제거
-        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userId);
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userName);
 
         // 유저-방 매핑 제거
-        redisTemplate.delete(USER_ROOM_KEY + userId + ":room");
+        redisTemplate.delete(USER_ROOM_KEY + userName + ":room");
 
         // 방장이 나가면 방 폭파
-        if (hostId != null && hostId.equals(userId)) {
+        if (hostId != null && hostId.equals(userName)) {
+            saveRoomStatsToDB(roomId);
+
             // 남은 플레이어들의 유저-방 매핑도 제거
             Set<String> remainingPlayers = getPlayers(roomId);
-            for (String playerId : remainingPlayers) {
-                redisTemplate.delete(USER_ROOM_KEY + playerId + ":room");
+            for (String playerName : remainingPlayers) {
+                redisTemplate.delete(USER_ROOM_KEY + playerName + ":room");
             }
             deleteRoom(roomId);
             log.info("Room {} destroyed (host left)", roomId);
             return true;
         }
 
-        log.info("User {} left room {}", userId, roomId);
+        log.info("User {} left room {}", userName, roomId);
         return false;
     }
 
@@ -177,14 +179,14 @@ public class RedisRoomService {
     /**
      * Ready 상태 설정
      */
-    public void setReady(String roomId, String userId, boolean isReady) {
+    public void setReady(String roomId, String userName, boolean isReady) {
         String readyKey = ROOM_KEY + roomId + READY_SUFFIX;
         if (isReady) {
-            redisTemplate.opsForSet().add(readyKey, userId);
+            redisTemplate.opsForSet().add(readyKey, userName);
         } else {
-            redisTemplate.opsForSet().remove(readyKey, userId);
+            redisTemplate.opsForSet().remove(readyKey, userName);
         }
-        log.info("User {} ready status: {} in room {}", userId, isReady, roomId);
+        log.info("User {} ready status: {} in room {}", userName, isReady, roomId);
     }
 
     /**
@@ -243,14 +245,14 @@ public class RedisRoomService {
 
     /**
      * 게임 시작 (방장만 호출 가능)
-     * 
+     *
      * @return true: 시작 성공, false: 조건 미충족
      */
-    public boolean startGame(String roomId, String userId) {
+    public boolean startGame(String roomId, String userName) {
         // 방장 확인
         String hostId = getHostId(roomId);
-        if (hostId == null || !hostId.equals(userId)) {
-            log.warn("Non-host {} tried to start game in room {}", userId, roomId);
+        if (hostId == null || !hostId.equals(userName)) {
+            log.warn("Non-host {} tried to start game in room {}", userName, roomId);
             return false;
         }
 
@@ -302,30 +304,30 @@ public class RedisRoomService {
     /**
      * 뽀뽀 횟수 증가
      */
-    public void incrementKiss(String roomId, String userId) {
-        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + KISS_SUFFIX, userId, 1);
+    public void incrementKiss(String roomId, String userName) {
+        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + KISS_SUFFIX, userName, 1);
     }
 
     /**
      * 저주 횟수 증가
      */
-    public void incrementCurse(String roomId, String userId) {
-        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + CURSE_SUFFIX, userId, 1);
+    public void incrementCurse(String roomId, String userName) {
+        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + CURSE_SUFFIX, userName, 1);
     }
 
     /**
      * 뽀뽀 횟수 조회
      */
-    public int getKissCount(String roomId, String userId) {
-        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + KISS_SUFFIX, userId);
+    public int getKissCount(String roomId, String userName) {
+        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + KISS_SUFFIX, userName);
         return count != null ? Integer.parseInt(count.toString()) : 0;
     }
 
     /**
      * 저주 횟수 조회
      */
-    public int getCurseCount(String roomId, String userId) {
-        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + CURSE_SUFFIX, userId);
+    public int getCurseCount(String roomId, String userName) {
+        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + CURSE_SUFFIX, userName);
         return count != null ? Integer.parseInt(count.toString()) : 0;
     }
 
@@ -351,23 +353,59 @@ public class RedisRoomService {
     /**
      * 유저가 현재 참가 중인 방 조회
      */
-    public String getUserRoom(String userId) {
-        return redisTemplate.opsForValue().get(USER_ROOM_KEY + userId + ":room");
+    public String getUserRoom(String userName) {
+        return redisTemplate.opsForValue().get(USER_ROOM_KEY + userName + ":room");
     }
 
     /**
      * 강제 퇴장 (Redis에서 제거)
      */
-    public void kickPlayer(String roomId, String userId) {
+    public void kickPlayer(String roomId, String userName) {
         // players에서 제거
-        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userId);
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
 
         // ready에서 제거
-        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userId);
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userName);
 
         // 유저-방 매핑 제거
-        redisTemplate.delete(USER_ROOM_KEY + userId + ":room");
+        redisTemplate.delete(USER_ROOM_KEY + userName + ":room");
 
-        log.info("User {} kicked from room {}", userId, roomId);
+        log.info("User {} kicked from room {}", userName, roomId);
+    }
+
+    /**
+     * 방의 모든 플레이어 통계를 DB로 이관하는 헬퍼 메서드
+     *
+     * @param roomId
+     */
+    private void saveRoomStatsToDB(String roomId) {
+        try {
+            // 1. 방에 기록된 모든 플레이어 조회 (이미 나간 유저도 통계가 남아있을 수 있으므로 KISS/CURSE 키 기준 조회 권장하나,
+            // 현재 구조상 플레이어 목록(Set)에 있는 사람 혹은 통계 키를 순회해야 함.
+            // 간단하게 현재 방에 남아있는 사람 + 방금 나간 방장(이미 Set에선 빠짐)을 처리해야 하지만,
+            // Redis의 Hash Key(KISS_SUFFIX)의 모든 Key(유저ID)를 가져오는 것이 가장 정확함.
+
+            Set<Object> userNamesWithKiss = redisTemplate.opsForHash().keys(ROOM_KEY + roomId + KISS_SUFFIX);
+            Set<Object> userNamesWithCurse = redisTemplate.opsForHash().keys(ROOM_KEY + roomId + CURSE_SUFFIX);
+
+            // 두 집합 합치기 (통계가 존재하는 모든 유저)
+            Set<Object> allUserNames = new java.util.HashSet<>();
+            allUserNames.addAll(userNamesWithKiss);
+            allUserNames.addAll(userNamesWithCurse);
+
+            for (Object userNameObj : allUserNames) {
+                String username = userNameObj.toString();
+
+                int kissCount = getKissCount(roomId, username);
+                int curseCount = getCurseCount(roomId, username);
+
+                // DB 저장 호출
+                userService.saveGameStats(username, kissCount, curseCount);
+            }
+            log.info("Saved stats for {} users in room {}", allUserNames.size(), roomId);
+
+        } catch (Exception e) {
+            log.error("Failed to save room stats to DB for room {}", roomId, e);
+        }
     }
 }
