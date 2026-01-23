@@ -584,6 +584,11 @@ export default function GamePage() {
           className={styles.backToLobbyBtn}
           onClick={() => {
             if (window.confirm('정말 대기방을 나가시겠습니까?')) {
+              // [FIX] 안전한 퇴장 처리
+              if (roomId && gameWebSocket.isConnected()) {
+                gameWebSocket.sendLeave(roomId);
+                gameWebSocket.disconnect();
+              }
               leaveGame();
             }
           }}

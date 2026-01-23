@@ -16,6 +16,7 @@ export interface Player {
     curses?: string[]; // 적용된 저주 목록
     colorIndex?: number; // 색상 인덱스 (서버 순서 기반 고정, 0=Green, 1=Blue...)
     isLocal?: boolean; // 로컬 플레이어 여부
+    params?: any; // 추가 파라미터 보관 (서버 동기화 데이터 등)
 }
 
 
@@ -37,7 +38,8 @@ interface GameState {
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
     setPlayers: (players: Player[]) => void;  // 전체 플레이어 설정
-    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; curses?: string[] }[]) => void;  // UPDATE 메시지용
+    // syncPlayersFromServer: 서버로부터 받은 플레이어 목록을 동기화 (정렬 후 색상 할당)
+    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
     updatePlayerPosition: (nickname: string, x: number, y: number) => void;  // 위치 업데이트용
     // Ready 상태 관리
@@ -95,20 +97,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
         // 서버에서 받은 플레이어 상태를 기존 목록과 병합
-        // 핵심 원칙: 기존 플레이어의 "순서"는 절대 바꾸지 않음 (순서가 곧 색상/번호)
-
 
         // Debug: 첫 번째 플레이어 데이터 샘플링 (너무 빈번하므로 가끔만)
         if (Math.random() < 0.01) {
-            console.log('[Store] Sync raw:', serverPlayers.length, serverPlayers, 'MyNick:', state.nickname);
+            const nick = state.nickname;
+            // console.log('[Store] Sync raw:', serverPlayers.length, serverPlayers, 'MyNick:', nick);
         }
 
-        // 1. 서버 플레이어 순서 정렬 (닉네임 오름차순) -> 색상 고정
-        const sortedServerPlayers = [...serverPlayers].sort((a, b) => {
-            const idA = a.id || a.username || "";
-            const idB = b.id || b.username || "";
-            return idA.localeCompare(idB);
-        });
+        // [FIX] 서버 순서 신뢰 (Host=0 보장)
+        // 클라이언트 정렬(알파벳) 제거 -> 방장 색상 탈취 버그 해결
+        const sortedServerPlayers = [...serverPlayers];
 
         // 2. 플레이어 리스트 업데이트
         const nextPlayers: Player[] = sortedServerPlayers.map((serverPlayer, index) => {
@@ -152,16 +150,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (me) {
                 me.isLocal = true;
             } else {
-                // 내 닉네임이 서버 리스트에 없는 경우, 강제로라도 유지해야 함 (임시 방편)
-                // 하지만 멀티플레이에서 서버에 없으면 의미가 없으므로 로그만 출력
-                if (Math.random() < 0.01) console.warn(`[Store] My player '${myNickname}' not found in server update!`, sortedServerPlayers);
+                // 내 닉네임이 서버 리스트에 없는 경우
+                // if (Math.random() < 0.01) console.warn(`[Store] My player '${myNickname}' not found in server update!`);
             }
         }
 
-        set({ players: nextPlayers });
-
         // 4. colorIndex 재계산 및 확정 (배열 인덱스 기준)
-        // 방장은 항상 0번 인덱스에 있어야 함 (방 만들 때 추가되므로 보장됨)
         const finalPlayers = nextPlayers.map((p, index) => ({
             ...p,
             colorIndex: index // 접속 순서(배열 순서)대로 색상 고정

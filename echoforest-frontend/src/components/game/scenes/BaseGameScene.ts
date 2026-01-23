@@ -171,28 +171,30 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     create() {
-        this.resetState();
-        this.setupPhysics();
-        this.setupInput();
-        this.createGimmicks(); // 맵 파싱 및 월드 크기 확정
-        this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정
-        this.setupCollisions();
-        this.syncPlayersFromStore();
-        this.subscribeToStore();
+        try {
+            this.resetState();
+            this.setupPhysics();
+            this.setupInput();
+            this.createGimmicks(); // 맵 파싱 및 월드 크기 확정
+            this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정
+            this.setupCollisions();
+            this.syncPlayersFromStore();
+            this.subscribeToStore();
 
-        // 배경색 설정 (맵이 안 보일 때 대비)
-        this.cameras.main.setBackgroundColor('#2d2d2d');
+            // 배경색 설정 (맵이 안 보일 때 대비)
+            this.cameras.main.setBackgroundColor('#2d2d2d');
 
-        // 탭 전환/최소화 시 안전장치
-        // 탭 전환/최소화 시 안전장치
-        // 탭 전환/최소화 시 안전장치 (익명 함수 대신 메서드로 분리하여 중복 방지 및 제거 가능하게 함)
-        this.events.on('destroy', () => {
-            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-        });
-        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+            // 탭 전환/최소화 시 안전장치
+            this.events.on('destroy', () => {
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+            });
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
-        // [LIFECYCLE] Scene Created Log
-        console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
+            // [LIFECYCLE] Scene Created Log
+            console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
+        } catch (e) {
+            console.error(`[CRITICAL] Error in ${this.getSceneKey()} create():`, e);
+        }
     }
 
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check

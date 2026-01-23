@@ -267,6 +267,18 @@ class GameWebSocket {
         });
     }
 
+    /**
+     * 방 퇴장 (로비로 이동)
+     * @param roomId 방 ID
+     */
+    sendLeave(roomId: string) {
+        this.send({
+            type: 'LEAVE',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
     // PING 전송 (Keep-alive)
     ping() {
         this.send({

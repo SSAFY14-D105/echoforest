@@ -69,9 +69,18 @@ export default function LobbyPage() {
 
     } catch (error) {
       console.error('방 생성 실패:', error);
-      setJoinError('서버 연결에 실패했습니다. (서버가 켜져 있나요?)');
+      // 토큰 만료 가능성 안내
+      setJoinError('서버 연결 실패. (토큰 만료? 로그아웃 후 다시 시도해보세요)');
       gameWebSocket.disconnect();
       setIsConnecting(false);
+
+      // Auto-recovery suggestion (Optional)
+      if (window.confirm('서버 연결에 실패했습니다. 토큰이 만료되었을 수 있습니다. 로그아웃 하시겠습니까?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('nickname');
+        localStorage.removeItem('loginId');
+        window.location.reload(); // Force reload to go to Login Page
+      }
     }
   };
 
