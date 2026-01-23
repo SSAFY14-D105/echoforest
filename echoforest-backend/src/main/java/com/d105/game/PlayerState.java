@@ -26,8 +26,8 @@ public class PlayerState {
     // 3. AFK(잠수) 감지용
     private long lastUpdateTime = System.currentTimeMillis();
     private boolean isAfk = false;
-    private static final long AFK_THRESHOLD_MS = 1000; // 1초간 업데이트 없으면 AFK
-    private static final long DISCONNECT_THRESHOLD_MS = 10000; // 10초간 업데이트 없으면 퇴장 대상
+    private static final long AFK_THRESHOLD_MS = 500; // 1초간 업데이트 없으면 AFK
+    private static final long DISCONNECT_THRESHOLD_MS = 300000; // 5분간 업데이트 없으면 퇴장 대상
     private static final double GROUND_Y = 560.0; // 바닥 Y 좌표 (맵에 맞게 조정)
 
     // 4. 물리 상수 (튜닝 필요)
