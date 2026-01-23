@@ -1,7 +1,7 @@
 """
 EchoForest AI Server
-- Smilegate unSmile 모델 기반 감정 분석 API
-- 혐오 발언 탐지 (threshold: 17.4%)
+- Smilegate unSmile 모델 기반 부정어 분석 API
+- 4인 협동 게임 저주 스택 시스템 지원
 """
 
 from fastapi import FastAPI
@@ -27,18 +27,32 @@ app = FastAPI(
     description="""
 ## 🎮 EchoForest 감정 분석 API
 
-Smilegate unSmile 모델을 사용한 **혐오 발언 탐지 서비스**
+**4인 협동 게임 (피코파크 스타일)** 저주 스택 시스템을 위한 부정어 분석 서비스
 
 ---
 
-### 🎚️ 심각도 단계 (Severity Level)
+### 🔮 저주 스택 시스템
 
-| severity | label | Confidence | 게임 패널티 |
-|----------|-------|------------|-------------|
-| **1** | `critical` | 80% 이상 | 🔴 최강 저주 |
-| **2** | `severe` | 50~80% | 🟠 강한 저주 |
-| **3** | `mild` | **10~50%** | 🟡 약한 저주 |
-| **0** | `clean` | **10% 미만** | ✅ 정상 |
+| 심각도 | 라벨 | Confidence | 스택 증가량 |
+|--------|------|------------|-------------|
+| **1** | `critical` | 80% 이상 | **+5** 스택 |
+| **2** | `severe` | 50~80% | **+3** 스택 |
+| **3** | `mild` | 10~50% | **+1** 스택 |
+| **0** | `clean` | 10% 미만 | 0 스택 |
+
+---
+
+### 📦 배치 처리 (핵심!)
+
+게임 서버는 **5초마다** 플레이어 발화를 모아서 `/analyze/batch` API를 호출합니다.
+
+**모든 부정어가 각각 스택에 누적됩니다!**
+
+예시:
+- "야 바보야" → +1
+- "멍청이다" → +1  
+- "씨발" → +5
+- **total_stack_delta = 7**
 
 ---
 
@@ -48,12 +62,12 @@ Smilegate unSmile 모델을 사용한 **혐오 발언 탐지 서비스**
 ### ⚙️ Threshold
 최적 threshold: **10.0%** (경미한 부정어 탐지 강화)
     """,
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
     openapi_tags=[
         {
             "name": "sentiment",
-            "description": "텍스트 감정 분석 API"
+            "description": "텍스트 감정 분석 API (저주 스택 계산 포함)"
         }
     ]
 )
@@ -75,9 +89,18 @@ app.include_router(router, prefix="/api/v1", tags=["sentiment"])
 async def root():
     """루트 엔드포인트"""
     return {
-        "message": "EchoForest AI Server",
+        "message": "🌲 EchoForest AI Server",
+        "version": "2.0.0",
+        "game_type": "4인 협동 게임 (피코파크 스타일)",
         "docs": "/docs",
-        "health": "/api/v1/health"
+        "health": "/api/v1/health",
+        "stack_system": {
+            "critical": "+5 스택",
+            "severe": "+3 스택",
+            "mild": "+1 스택",
+            "max_stack": 10,
+            "curse_trigger": "스택 10 도달 시 랜덤 1명 저주"
+        }
     }
 
 
