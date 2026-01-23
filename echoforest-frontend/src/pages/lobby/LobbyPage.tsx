@@ -184,7 +184,11 @@ export default function LobbyPage() {
               setTempNickname(nickname);
               setShowSettings(true);
             }}>
-              ⚙️
+              <img src="/assets/ui/settings.png" alt="Settings" style={{ width: '24px', height: '24px', objectFit: 'contain', mixBlendMode: 'multiply' }} onError={(e) => {
+                // 이미지 로드 실패 시 텍스트로 폴백
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.innerText = '⚙️';
+              }} />
             </button>
           </div>
         </div>
