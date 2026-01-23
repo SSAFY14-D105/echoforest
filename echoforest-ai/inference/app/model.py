@@ -1,7 +1,7 @@
 """
 Smilegate unSmile 모델 래퍼
 - 혐오 발언 탐지 모델 (smilegate-ai/kor_unsmile)
-- 최적 threshold: 17.4% (0.174)
+- 최적 threshold: 10.0% (0.1)
 """
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -10,13 +10,13 @@ from typing import Dict, List
 
 # 설정
 MODEL_NAME = "smilegate-ai/kor_unsmile"
-THRESHOLD = 0.174  # 17.4% - 테스트된 최적값
+THRESHOLD = 0.1  # 10% - 경미한 부정어(바보, 화나 등) 탐지를 위해 완화
 
 # 심각도 단계 threshold
 SEVERITY_THRESHOLDS = {
     1: 0.80,  # 80% 이상: 매우 심함 (최강 저주)
     2: 0.50,  # 50~80%: 심함 (강한 저주)
-    3: 0.174, # 17.4~50%: 경미 (약한 저주)
+    3: 0.1,   # 10~50%: 경미 (약한 저주)
 }
 
 # 심각도 설명
@@ -38,8 +38,9 @@ LABELS = [
     "종교",
     "기타 혐오",
     "악플/욕설",
-    "clean"  # 정상 발화
+    "clean"
 ]
+
 
 
 class UnSmileModel:
@@ -79,15 +80,12 @@ class UnSmileModel:
             text: 분석할 텍스트
             
         Returns:
-            dict: {
-                'is_negative': bool,  # 부정적(혐오) 발화인지
-                'label': str,         # 가장 높은 레이블
-                'confidence': float,  # 해당 레이블 확률
-                'all_scores': dict    # 모든 레이블별 점수
-            }
+            dict
         """
         if not self._loaded:
             self.load()
+        
+        # AI 모델 기반 분석
         
         # 토큰화
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
@@ -109,7 +107,10 @@ class UnSmileModel:
         max_hate_label = max(hate_scores, key=hate_scores.get)
         max_hate_score = hate_scores[max_hate_label]
         
-        # threshold 기준으로 판단
+        # threshold 기준으로 판단 (Confidence)
+        # 중요: 신조어나 어미 변형으로 인해 점수가 낮게 나올 수 있으므로, 
+        # 특정 수준 이상이면 무조건 3단계라도 주는 보정 로직을 추가할 수도 있음.
+        
         is_negative = max_hate_score >= self.threshold
         
         # 심각도 단계 계산
@@ -120,7 +121,7 @@ class UnSmileModel:
         elif max_hate_score >= SEVERITY_THRESHOLDS[2]:
             severity = 2  # 심함 (50~80%)
         else:
-            severity = 3  # 경미 (17.4~50%)
+            severity = 3  # 경미 (10~50%)
         
         severity_label = SEVERITY_DESCRIPTIONS[severity]
         
