@@ -37,7 +37,7 @@ export default class Solo1Scene extends BaseGameScene {
         const floorY = this.gameHeight - 40 - PHYSICS.PLAYER_SIZE / 2;
 
         // Bumper (x: 300 위치) - 테스트용 테두리에 남겨둠
-        const bumper1 = new Bumper(this, 300, floorY - 50, 60, 10);
+        const bumper1 = new Bumper(this, 300, floorY - 100, 60, 10);
         this.bumpers.push(bumper1);
 
         // Moving Bumper (x: 1500 ~ 1900 사이 왕복) - 두 번째 가시 위쪽

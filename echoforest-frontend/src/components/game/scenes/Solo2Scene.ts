@@ -56,8 +56,8 @@ export default class Solo2Scene extends BaseGameScene {
         }
 
         this.map = this.make.tilemap({ key: 'solo_2_game_map' });
-        // 타일 크기를 36px로 고정 (기본 16px * 2.25 = 36px)
-        this.mapScale = 36 / this.map.tileHeight;
+        // 타일 크기를 64px로 고정 (기본 16px * 4 = 64px)
+        this.mapScale = 64 / this.map.tileHeight;
 
         // 화면 하단에 맞추기 위한 Offset 계산
         const mapPixelHeightScaled = this.map.heightInPixels * this.mapScale;

@@ -8,9 +8,9 @@ import { getRandomCurseId } from '../config/curseConfig';
 
 // 물리 파라미터
 export const PHYSICS = {
-    MOVE_SPEED: 4,
-    JUMP_POWER: -6,
-    PLAYER_SIZE: 32
+    MOVE_SPEED: 6,
+    JUMP_POWER: -11,
+    PLAYER_SIZE: 64
 };
 
 /**
@@ -72,13 +72,16 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     preload() {
-        // 개별 플레이어 스프라이트 시트 로드 (503x528 프레임)
+        // 색상별 플레이어 폴더에서 개별 자산 로드
         const colors = ['green', 'blue', 'orange', 'purple'];
         colors.forEach(color => {
-            this.load.spritesheet(`player_${color}`, `assets/sprites/player_${color}.png`, {
-                frameWidth: 503,
-                frameHeight: 528
-            });
+            const folder = `${color}_player`;
+            this.load.image(`player_${color}_standing`, `assets/sprites/${folder}/${color}_standing.png`);
+            this.load.image(`player_${color}_jump`, `assets/sprites/${folder}/${color}_jump.png`);
+            this.load.image(`player_${color}_death`, `assets/sprites/${folder}/${color}_death.png`);
+
+            // Walking 이미지는 일단 일반 이미지로 로드 (create에서 동적 슬라이싱)
+            this.load.image(`player_${color}_walking_raw`, `assets/sprites/${folder}/${color}_walking.png`);
         });
     }
 
@@ -86,35 +89,61 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const colors = ['green', 'blue', 'orange', 'purple'];
 
         colors.forEach((color) => {
-            // Idle (프레임 1)
+            // Idle (standing 이미지 사용)
             this.anims.create({
                 key: `player_idle_${color}`,
-                frames: [{ key: `player_${color}`, frame: 0 }],
+                frames: [{ key: `player_${color}_standing` }],
                 frameRate: 1
             });
 
-            // Walk (프레임 2, 3)
+            // Walk 애니메이션 (다이나믹 슬라이싱)
+            let walkFrames: Phaser.Types.Animations.AnimationFrame[] = [];
+            const walkingTex = this.textures.get(`player_${color}_walking_raw`);
+
+            // 이미지가 정상적으로 로드되었는지 확인 (Phaser의 기본 __MISSING 텍스처가 아닌 경우)
+            if (walkingTex && walkingTex.key !== '__MISSING' && walkingTex.getSourceImage()) {
+                const width = walkingTex.getSourceImage().width;
+                const height = walkingTex.getSourceImage().height;
+
+                // 2프레임으로 쪼개기 (홀수 너비일 경우 1px 간격이 있다고 가정)
+                const frameWidth = Math.floor(width / 2);
+                const spacer = width % 2;
+
+                // 프레임이 이미 정의되어 있지 않은 경우에만 추가
+                if (!walkingTex.has('frame0')) {
+                    walkingTex.add('frame0', 0, 0, 0, frameWidth, height);
+                }
+                if (!walkingTex.has('frame1')) {
+                    walkingTex.add('frame1', 0, frameWidth + spacer, 0, frameWidth, height);
+                }
+
+                walkFrames = [
+                    { key: `player_${color}_walking_raw`, frame: 'frame0' },
+                    { key: `player_${color}_walking_raw`, frame: 'frame1' }
+                ];
+            } else {
+                // 이미지 로드 실패 시(예: purple) standing 이미지로 대체
+                walkFrames = [{ key: `player_${color}_standing` }];
+            }
+
             this.anims.create({
                 key: `player_walk_${color}`,
-                frames: this.anims.generateFrameNumbers(`player_${color}`, {
-                    start: 1,
-                    end: 2
-                }),
+                frames: walkFrames,
                 frameRate: 6,
                 repeat: -1
             });
 
-            // Jump (프레임 4)
+            // Jump (jump 이미지 사용)
             this.anims.create({
                 key: `player_jump_${color}`,
-                frames: [{ key: `player_${color}`, frame: 3 }],
+                frames: [{ key: `player_${color}_jump` }],
                 frameRate: 1
             });
 
-            // Dead (프레임 5)
+            // Dead (death 이미지 사용)
             this.anims.create({
                 key: `player_dead_${color}`,
-                frames: [{ key: `player_${color}`, frame: 4 }],
+                frames: [{ key: `player_${color}_death` }],
                 frameRate: 1
             });
         });
@@ -204,6 +233,20 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 { isStatic: true, label: 'ground' }
             );
         }
+
+        // [추가] 화면 하단 낙사 센서 (death-zone)
+        // 맵의 전체 너비를 커버하며, 바닥보다 조금 아래에 배치하여 완전히 떨어졌을 때 발동
+        this.matter.add.rectangle(
+            this.getWorldWidth() / 2,
+            this.gameHeight + 50,
+            this.getWorldWidth() * 2, // 넉넉하게 설정
+            100,
+            {
+                isStatic: true,
+                isSensor: true,
+                label: 'death-zone'
+            }
+        );
     }
 
     /**
@@ -299,6 +342,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
             if (labelA.startsWith('spring-') || labelB.startsWith('spring-')) {
                 this.handleSpringCollision(labelA, labelB);
+            }
+
+            // [추가] 낙사 센서 충돌 체크
+            if (labelA === 'death-zone' || labelB === 'death-zone') {
+                const playerLabel = this.players.has(labelA) ? labelA : (this.players.has(labelB) ? labelB : null);
+                if (playerLabel) {
+                    this.triggerDeath('fall');
+                }
             }
 
             // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
@@ -460,8 +511,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.isDead = true;
         console.log(`[${this.getSceneKey()}] Death triggered by ${reason}. Restarting scene...`);
 
-        // 모든 플레이어 정지
-        this.players.forEach(p => p.setVelocity(0, 0));
+        // 모든 플레이어 정지 및 사망 모션 적용
+        this.players.forEach(p => {
+            p.setVelocity(0, 0);
+            p.die();
+        });
 
         // 0.5초 후 재시작
         this.time.delayedCall(500, () => {
@@ -554,9 +608,17 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         if (spring && player) {
             const velocity = player.getVelocity();
-            player.setVelocity(velocity.x, spring.getBouncePower());
-            spring.animate();
-            console.log(`[${this.getSceneKey()}] Player bounced on spring`);
+            const playerPos = player.getPosition();
+            const springPos = spring.getPosition();
+
+            // [개선] 윗면을 밟았을 때만 작동하도록 조건 추가
+            // 1. 플레이어가 아래로 떨어지는 중이어야 함 (velocity.y > 0)
+            // 2. 플레이어의 중심이 스프링의 중심보다 위에 있어야 함
+            if (velocity.y > 1 && playerPos.y < springPos.y) {
+                player.setVelocity(velocity.x, spring.getBouncePower());
+                spring.animate();
+                console.log(`[${this.getSceneKey()}] Player stepped on spring`);
+            }
         }
     }
 

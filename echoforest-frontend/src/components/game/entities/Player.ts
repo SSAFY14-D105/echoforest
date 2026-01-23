@@ -2,14 +2,14 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 32;
+const BASE_PLAYER_SIZE = 64;
 
 // 물리 파라미터
 const PHYSICS = {
     FRICTION: 0,           // 동적 마찰 없음 (벽에서 느리게 떨어지는 현상 방지)
-    STATIC_FRICTION: 0.3,  // 정지 상태에서만 약간의 마찰
+    STATIC_FRICTION: 0,    // 벽 충돌 시 덜덜거림 방지를 위해 0으로 설정
     AIR_FRICTION: 0.02,
-    RESTITUTION: 0.1
+    RESTITUTION: 0         // 튕김 방지
 };
 
 export interface PlayerConfig {
@@ -47,6 +47,7 @@ export class Player {
     // 밀치기(Knockback) 및 스턴 상태
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
+    private _isDead: boolean = false;
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
@@ -68,7 +69,7 @@ export class Player {
         this.body = this.createBody(config.x, config.y);
 
         // 플레이어 스프라이트 생성
-        this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}`);
+        this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
         this.sprite.play(`player_idle_${this.colorName}`);
         this.sprite.setDepth(10); // 기믹보다 위로 배치
     }
@@ -98,7 +99,8 @@ export class Player {
             this.sprite.clearTint();
         }
 
-        // 크기 배율 적용 (충돌 박스 32px 대비 시각적으로 1.5배 더 크게 표현)
+        // 크기 배율 적용 (충돌 박스 64px 대비 시각적으로 1.5배 더 크게 표현)
+        // 기존 528px 원본 소스 기준
         this.sprite.setScale((BASE_PLAYER_SIZE / 528) * this.sizeMultiplier * 1.5);
     }
 
@@ -119,8 +121,8 @@ export class Player {
     }
 
     private updateAnimation(): void {
-        // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 사망 상태)
-        if (this.curseHP <= 0) {
+        // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 강제 사망 상태)
+        if (this._isDead || this.curseHP <= 0) {
             if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
                 this.sprite.play(`player_dead_${this.colorName}`);
             }
@@ -128,11 +130,11 @@ export class Player {
         }
 
         const velocity = this.body.velocity;
-        // 바닥 접촉 여부 (Y축 속도가 거의 없고 아래 방향 힘이 작용할 때)
-        const isGrounded = Math.abs(velocity.y) < 0.1;
+        // 바닥 접촉 여부 (움직임이 아주 작을 때)
+        const isGrounded = Math.abs(velocity.y) < 0.2;
 
-        // 좌우 반전
-        if (Math.abs(velocity.x) > 0.1) {
+        // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
+        if (Math.abs(velocity.x) > 0.5) {
             this.sprite.setFlipX(velocity.x < 0);
         }
 
@@ -141,8 +143,8 @@ export class Player {
             if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
                 this.sprite.play(`player_jump_${this.colorName}`);
             }
-        } else if (Math.abs(velocity.x) > 0.1) {
-            // 걷기
+        } else if (Math.abs(velocity.x) > 0.5) {
+            // 걷기 (임계값 상향)
             if (this.sprite.anims.currentAnim?.key !== `player_walk_${this.colorName}`) {
                 this.sprite.play(`player_walk_${this.colorName}`);
             }
@@ -426,6 +428,13 @@ export class Player {
 
     public get isHidden(): boolean {
         return this._isHidden;
+    }
+
+    public die(): void {
+        this._isDead = true;
+        // 물리 엔진에서 반응하지 않도록 설정 (선택 사항)
+        this.setVelocity(0, 0);
+        // 애니메이션 즉시 업데이트를 위해 updateAnimation 호출 가능
     }
 
     public getBodyLabel(): string {

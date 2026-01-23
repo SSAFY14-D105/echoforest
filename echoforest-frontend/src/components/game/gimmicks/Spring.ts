@@ -79,6 +79,10 @@ export class Spring {
         return this.bouncePower;
     }
 
+    public getPosition(): { x: number; y: number } {
+        return { x: this.body.position.x, y: this.body.position.y };
+    }
+
     public destroy(): void {
         this.scene.matter.world.remove(this.body);
         this.graphics?.destroy();

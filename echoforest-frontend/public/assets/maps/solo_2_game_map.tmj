@@ -374,30 +374,6 @@
                  "width":18,
                  "x":752.333333333333,
                  "y":271.875
-                }, 
-                {
-                 "gid":69,
-                 "height":18,
-                 "id":26,
-                 "name":"spike",
-                 "rotation":0,
-                 "type":"Spike",
-                 "visible":true,
-                 "width":18,
-                 "x":768.333333333333,
-                 "y":271.791666666667
-                }, 
-                {
-                 "gid":69,
-                 "height":18,
-                 "id":27,
-                 "name":"spike",
-                 "rotation":0,
-                 "type":"Spike",
-                 "visible":true,
-                 "width":18,
-                 "x":784.333333333333,
-                 "y":271.916666666667
                 }],
          "opacity":1,
          "type":"objectgroup",
