@@ -32,6 +32,10 @@ public class GameRoom implements Runnable {
     private volatile boolean isRunning = true;
     private double broadcastAccumulator = 0;
 
+    // 방장 닉네임 (방장은 AFK 자동 퇴장 제외)
+    @Getter
+    private String hostUsername;
+
     /**
      * GameRoom 생성자
      *
@@ -128,6 +132,12 @@ public class GameRoom implements Runnable {
         sessions.put(session.getId(), session);
         // 초기 시작 위치 (100, 100)
         players.put(session.getId(), new PlayerState(username, 100, 100));
+
+        // 첫 번째 플레이어가 방장
+        if (hostUsername == null) {
+            hostUsername = username;
+            log.info("Host set to {} in room {}", username, roomId);
+        }
     }
 
     /**
@@ -322,15 +332,23 @@ public class GameRoom implements Runnable {
     }
 
     /**
-     * 10초 이상 업데이트 없는 플레이어 자동 퇴장
+     * 자동 퇴장 처리 (방장 제외)
+     * 방장은 AFK 상태여도 자동 퇴장하지 않음 (최소화/백그라운드 허용)
      */
     private void checkDisconnectedPlayers() {
         java.util.List<String> toRemove = new java.util.ArrayList<>();
 
         for (java.util.Map.Entry<String, PlayerState> entry : players.entrySet()) {
-            if (entry.getValue().shouldDisconnect()) {
+            PlayerState player = entry.getValue();
+
+            // 방장은 자동 퇴장에서 제외
+            if (player.getUsername().equals(hostUsername)) {
+                continue;
+            }
+
+            if (player.shouldDisconnect()) {
                 toRemove.add(entry.getKey());
-                log.info("Player {} auto-disconnected (no update for 10s)", entry.getValue().getUsername());
+                log.info("Player {} auto-disconnected (no update for timeout)", player.getUsername());
             }
         }
 
