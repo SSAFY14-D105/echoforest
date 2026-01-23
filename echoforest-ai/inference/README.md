@@ -1,75 +1,169 @@
-# EchoForest AI Inference Server
+# 🤖 EchoForest AI Inference Server
 
-Smilegate unSmile 모델 기반 감정 분석 API 서버
+한국어 혐오 발언 탐지 API 서버 (Smilegate unSmile 모델 기반)
 
-## 기능
-- 혐오 발언 탐지 (threshold: 17.4%)
-- 혐오 카테고리 분류: 여성/가족, 남성, 성소수자, 인종/국적, 연령, 지역, 종교, 기타 혐오, 악플/욕설
+> **4인 협동 게임 (피코파크 스타일)** 저주 스택 시스템 지원
 
-## 설치
+---
 
-```bash
-pip install -r requirements.txt
-```
+## 📊 핵심 기능
 
-## 실행
+### 🔮 저주 스택 계산
 
-```bash
-# inference 디렉토리에서
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+AI 서버는 부정어 분석 결과와 함께 **스택 증가량**을 계산하여 반환합니다.
 
-## API 문서
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+| 심각도 | 라벨 | Confidence | 스택 증가량 |
+|--------|------|------------|-------------|
+| **1** | `critical` | 80% 이상 | **+5** 스택 |
+| **2** | `severe` | 50~80% | **+3** 스택 |
+| **3** | `mild` | 10~50% | **+1** 스택 |
+| **0** | `clean` | 10% 미만 | 0 스택 |
 
-## API 엔드포인트
+### 📦 배치 처리 (핵심!)
 
-### 헬스 체크
-```
-GET /api/v1/health
-```
+게임 서버는 5초마다 플레이어 발화를 모아서 `/analyze/batch` API를 호출합니다.
 
-### 단일 텍스트 분석
-```
-POST /api/v1/analyze
-Content-Type: application/json
+**모든 부정어가 각각 스택에 누적됩니다!**
 
-{
-    "text": "분석할 텍스트"
-}
-```
-
-응답:
 ```json
+// 요청
+{"texts": ["야 바보야", "너 멍청이다", "씨발"]}
+
+// 응답
 {
-    "text": "분석할 텍스트",
-    "is_negative": false,
-    "label": "clean",
-    "confidence": 0.95,
-    "all_scores": {...}
+    "results": [...],
+    "total_count": 3,
+    "negative_count": 3,
+    "total_stack_delta": 7  // 1 + 1 + 5 = 7
 }
 ```
 
-### 배치 분석
-```
-POST /api/v1/analyze/batch
-Content-Type: application/json
+---
 
-{
-    "texts": ["텍스트1", "텍스트2"]
-}
+## 📊 성능 지표 요약
+
+| 지표 | 값 | 측정 기준 |
+|------|-----|----------|
+| **F1 Score** | **0.955** | Threshold 0.1, 71개 실제 음성 샘플 |
+| **Accuracy** | **95.8%** | 전체 정확도 |
+| **Precision** | **94.1%** | 욕설 판정 정밀도 |
+| **Recall** | **97.0%** | 욕설 탐지율 |
+| **응답 속도** | **~50ms** | CPU 기준, 싱글톤 패턴 적용 후 |
+| **GPU 가속** | **10배** | 단건 추론 기준 (50ms → 5ms) |
+
+## Threshold 최적화 상세 분석
+
+| Threshold | Accuracy | Precision | Recall | F1 Score | TP | FP | TN | FN | 분석 |
+|:---------:|:--------:|:---------:|:------:|:--------:|:--:|:--:|:--:|:--:|:-----|
+| 0.05 | 52.1% | 49.3% | 100.0% | 0.660 | 33 | 34 | 4 | 0 | ❌ 과탐지 심각 |
+| 0.08 | 85.9% | 78.0% | 97.0% | 0.865 | 32 | 9 | 29 | 1 | ⚠️ FP 9건 |
+| **0.10** | **95.8%** | **94.1%** | **97.0%** | **0.955** | **32** | **2** | **36** | **1** | ✅ **최적값** |
+| 0.174 | 93.0% | 96.7% | 87.9% | 0.921 | 29 | 1 | 37 | 4 | Smilegate 공식값 |
+
+**최적값 선정 근거**:
+1. **0.10 선택 이유**: FP 2건으로 오제재 최소화하면서 Recall 97% 확보
+2. **0.174(공식값) 대비**: Recall +9.1%p, FN 4건→1건으로 감소
+
+---
+
+## 🔧 해결한 주요 문제들
+
+### 1. 모델 로딩 속도 문제
+**문제**: BERT 모델(400MB)을 매 요청마다 로드 시 **5~10초** 소요
+
+**해결**: 싱글톤 패턴 적용
+```python
+_model_instance = None
+
+def get_model():
+    global _model_instance
+    if _model_instance is None:
+        _model_instance = UnSmileModel()
+        _model_instance.load()  # 서버 시작 시 1회만 실행
+    return _model_instance
 ```
 
-## 디렉토리 구조
+**결과**: 응답 속도 **100배 향상** (5초 → 50ms)
+
+### 2. Threshold 최적화
+**문제**: Smilegate 공식 권장값(17.4%)은 게임 내 경미한 투덜거림("바보", "짜증나")을 놓침
+
+**해결**: 71개 실제 음성 샘플로 최적값 도출 → **Threshold 0.10**
+
+**결과**: Recall 87.9% → 97.0% (+9.1%p)
+
+### 3. 오분류 케이스 분석
+
+| 텍스트 | 실제 | 예측 | Score | 원인 |
+|--------|------|------|-------|------|
+| "오른쪽으로 피하세요" | Clean | Mild | 0.104 | '피하다' 단어 오탐 |
+| "이거 게임이 너무 어렵잖아" | Negative | Clean | 0.056 | 단순 불만 저점수 |
+
+**대응**: 게임 명령어 화이트리스트 고려
+
+---
+
+## 💡 개발하며 깨달은 핵심 인사이트
+
+### 1. 공식 권장값 ≠ 우리 서비스 최적값
+> 모델 개발자의 권장값을 맹신하지 말고, 실제 서비스 데이터로 검증해야 한다.
+
+### 2. Precision vs Recall 트레이드오프
+> 둘 다 높일 순 없으니, 비즈니스 우선순위에 따라 선택해야 한다.
+
+### 3. 싱글톤 패턴의 실질적 효과
+> 디자인 패턴은 실제 서비스 성능에 **치명적 영향**을 미친다.
+
+### 4. CPU vs GPU 성능 차이
+
+| 작업 | CPU | GPU | 배속 |
+|------|-----|-----|------|
+| 단건 추론 | 50ms | 5ms | 10배 |
+| 배치(32개) | 1,200ms | 30ms | **40배** |
+
+### 5. 실제 데이터의 중요성
+> 좋은 모델보다 좋은 데이터가 먼저다.
+
+---
+
+## 📁 프로젝트 구조
+
 ```
 inference/
-├── app/
-│   ├── __init__.py
-│   ├── main.py      # FastAPI 앱
-│   ├── model.py     # unSmile 모델 래퍼
-│   ├── routes.py    # API 라우트
-│   └── schemas.py   # Pydantic 스키마
-├── requirements.txt
-└── README.md
+├── app/                          # 핵심 소스 코드
+│   ├── main.py                   # FastAPI 진입점
+│   ├── model.py                  # AI 모델 래퍼 (싱글톤)
+│   ├── routes.py                 # API 엔드포인트 (스택 계산 포함)
+│   ├── schemas.py                # DTO 정의 (stack_delta 포함)
+│   └── README.md                 # 소스 코드 설명
+├── tests/                        # 테스트 & 분석
+│   ├── test_api.py               # pytest 단위 테스트
+│   ├── threshold_analysis.py     # Threshold 최적화 도구
+│   └── README.md                 # 테스트 도구 설명
+├── docs/                         # API 명세서
+│   ├── API_SPEC.md               # 기본 API 명세
+│   └── GAME_API_SPEC.md          # 게임 서버 통합 명세
+└── README.md                     # 본 문서
 ```
+
+---
+
+## 🚀 서버 실행
+
+```bash
+# 1. 가상환경 활성화
+conda activate echoforest-ai
+
+# 2. 서버 시작
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**API 문서**: http://localhost:8000/docs
+
+---
+
+## 🔗 관련 문서
+
+- [app/README.md](app/README.md): 소스 코드 상세 설명
+- [tests/README.md](tests/README.md): 테스트 도구 및 분석 결과
+- [docs/README.md](docs/README.md): API 명세 및 아키텍처
