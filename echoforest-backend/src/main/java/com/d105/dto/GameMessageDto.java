@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Schema(description = "게임 웹소켓 통신용 메시지 규격")
 public class GameMessageDto {
     @Schema(description = "메시지 타입", example = "JOIN", allowableValues = { "CREATE", "JOIN", "MOVE", "PING", "ERROR",
-            "ROOM_CREATED" })
+            "ROOM_CREATED", "SPEECH_BATCH", "CURSE_RELEASE", "STACK_UPDATED", "CURSE_TRIGGERED", "CURSE_RELEASED" })
     private String type;
 
     @Schema(description = "방 번호 (JOIN/MOVE 필수, CREATE는 선택)", example = "room_1")
@@ -39,4 +41,30 @@ public class GameMessageDto {
 
     @Schema(description = "시스템 메시지 내용 (생성된 방 번호, 에러 메시지 등)", example = "8F3A21")
     private String content;
+
+    // ===== STT 저주 시스템용 필드 =====
+    
+    @Schema(description = "SPEECH_BATCH: 발화 텍스트 목록")
+    private List<String> texts;
+
+    @Schema(description = "CURSE_RELEASE: 긍정어 (뽀뽀/사랑해/좋아해)")
+    private String word;
+
+    @Schema(description = "STACK_UPDATED: 현재 저주 스택 값", example = "7")
+    private Integer stack;
+
+    @Schema(description = "STACK_UPDATED: 스택 변화량", example = "3")
+    private Integer delta;
+
+    @Schema(description = "STACK_UPDATED: 변화 사유", example = "negative_word")
+    private String reason;
+
+    @Schema(description = "CURSE_TRIGGERED: 저주 대상 플레이어", example = "UserB")
+    private String cursedPlayerId;
+
+    @Schema(description = "CURSE_RELEASED: 저주 해제된 플레이어")
+    private String releasedPlayerId;
+
+    @Schema(description = "CURSE_TRIGGERED: 현재 맵 ID", example = "1")
+    private Integer mapId;
 }

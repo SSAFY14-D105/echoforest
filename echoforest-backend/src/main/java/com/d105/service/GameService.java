@@ -26,6 +26,7 @@ public class GameService {
     // 의존성 주입
     private final GameRepository gameRepository;
     private final RedisRoomService redisRoomService;
+    private final AiSentimentService aiSentimentService;
     private final ObjectMapper objectMapper;
 
     // 가상 스레드 실행기 (각 GameRoom의 Tick Loop를 돌리기 위함)
@@ -357,5 +358,134 @@ public class GameService {
         }
 
         log.info("Room {} advanced to stage {}", roomId, nextStage);
+    }
+
+    // =========================================================
+    // STT 저주 시스템 핸들러
+    // =========================================================
+
+    /**
+     * 발화 배치 처리 (SPEECH_BATCH)
+     * 
+     * 1. AI 서버에 배치 분석 요청
+     * 2. 스택 증가량 적용
+     * 3. 스택 업데이트 브로드캐스트
+     * 4. 스택 >= 10 시 저주 발동
+     */
+    public void handleSpeechBatch(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null) {
+            log.warn("SPEECH_BATCH: 세션에 roomId 없음");
+            return;
+        }
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            log.warn("SPEECH_BATCH: 방을 찾을 수 없음 - {}", roomId);
+            return;
+        }
+
+        var texts = message.getTexts();
+        if (texts == null || texts.isEmpty()) {
+            log.debug("SPEECH_BATCH: 빈 텍스트 목록");
+            return;
+        }
+
+        log.info("🎤 Room {}: SPEECH_BATCH 수신 ({} 개 발화)", roomId, texts.size());
+
+        // 1. AI 서버에 배치 분석 요청
+        int delta = aiSentimentService.analyzeBatch(texts);
+
+        if (delta > 0) {
+            // 2. 스택 증가
+            boolean curseTrigger = room.addCurseStack(delta);
+            int currentStack = room.getCurseStack();
+
+            // 3. STACK_UPDATED 브로드캐스트
+            GameMessageDto stackMsg = new GameMessageDto();
+            stackMsg.setType("STACK_UPDATED");
+            stackMsg.setRoomId(roomId);
+            stackMsg.setStack(currentStack);
+            stackMsg.setDelta(delta);
+            stackMsg.setReason("negative_word");
+            room.broadcast(stackMsg, null);
+
+            // 4. 저주 발동 검사
+            if (curseTrigger) {
+                triggerCurse(room);
+            }
+        }
+    }
+
+    /**
+     * 저주 해제 요청 처리 (CURSE_RELEASE)
+     * 
+     * 긍정어(뽀뽀/사랑해/좋아해)로 저주 해제 시도
+     */
+    public void handleCurseRelease(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            log.warn("CURSE_RELEASE: 세션 정보 없음");
+            return;
+        }
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            log.warn("CURSE_RELEASE: 방을 찾을 수 없음 - {}", roomId);
+            return;
+        }
+
+        String word = message.getWord();
+        log.info("💖 Room {}: CURSE_RELEASE from {} with word '{}'", roomId, username, word);
+
+        // 발화자의 저주 해제 처리
+        String sessionId = room.findSessionIdByUsername(username);
+        if (sessionId != null) {
+            room.triggerCurseEvent(sessionId, true); // isPositive = true
+
+            // CURSE_RELEASED 브로드캐스트
+            GameMessageDto releaseMsg = new GameMessageDto();
+            releaseMsg.setType("CURSE_RELEASED");
+            releaseMsg.setRoomId(roomId);
+            releaseMsg.setReleasedPlayerId(username);
+            releaseMsg.setWord(word);
+            room.broadcast(releaseMsg, null);
+
+            log.info("✨ Room {}: {} 의 저주 해제됨 (긍정어: {})", roomId, username, word);
+        }
+    }
+
+    /**
+     * 저주 발동 처리
+     */
+    private void triggerCurse(GameRoom room) {
+        // 랜덤 플레이어 선택
+        String cursedUsername = room.getRandomPlayerUsername();
+        if (cursedUsername == null) {
+            log.warn("저주 발동 실패: 플레이어 없음");
+            return;
+        }
+
+        // 저주 적용
+        String sessionId = room.findSessionIdByUsername(cursedUsername);
+        if (sessionId != null) {
+            room.triggerCurseEvent(sessionId, false); // isPositive = false
+        }
+
+        // 스택 초기화
+        room.resetCurseStack();
+
+        // CURSE_TRIGGERED 브로드캐스트
+        GameMessageDto curseMsg = new GameMessageDto();
+        curseMsg.setType("CURSE_TRIGGERED");
+        curseMsg.setRoomId(room.getRoomId());
+        curseMsg.setCursedPlayerId(cursedUsername);
+        curseMsg.setMapId(room.getCurrentMapId());
+        room.broadcast(curseMsg, null);
+
+        log.info("💀 Room {}: {} 에게 저주 발동! (Map: {})", 
+                room.getRoomId(), cursedUsername, room.getCurrentMapId());
     }
 }

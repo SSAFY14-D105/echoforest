@@ -36,6 +36,12 @@ public class GameRoom implements Runnable {
     @Getter
     private String hostUsername;
 
+    // ===== STT 저주 스택 시스템 =====
+    private static final int MAX_CURSE_STACK = 10;
+    private int curseStack = 0;
+    @Getter
+    private int currentMapId = 1; // 기본 맵 ID
+
     /**
      * GameRoom 생성자
      *
@@ -276,7 +282,59 @@ public class GameRoom implements Runnable {
         return keys.get(random.nextInt(keys.size()));
     }
 
-    // 저주 이벤트 트리거
+    // --- 랜덤 플레이어 username 찾기 (저주 대상 선정용) ---
+    public String getRandomPlayerUsername() {
+        if (players.isEmpty())
+            return null;
+
+        List<PlayerState> playerList = new ArrayList<>(players.values());
+        Random random = new Random();
+        return playerList.get(random.nextInt(playerList.size())).getUsername();
+    }
+
+    // ===== STT 저주 스택 메서드 =====
+
+    /**
+     * 저주 스택 증가
+     * @param delta 증가량
+     * @return 저주 발동 여부 (스택 >= 10 시 true)
+     */
+    public boolean addCurseStack(int delta) {
+        if (delta <= 0) return false;
+        
+        this.curseStack += delta;
+        log.info("🔮 Room {}: 저주 스택 +{} (현재: {}/{})", roomId, delta, curseStack, MAX_CURSE_STACK);
+        
+        if (this.curseStack >= MAX_CURSE_STACK) {
+            log.info("💀 Room {}: 저주 발동! (스택: {})", roomId, curseStack);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 현재 저주 스택 조회
+     */
+    public int getCurseStack() {
+        return this.curseStack;
+    }
+
+    /**
+     * 저주 스택 초기화 (저주 발동 후)
+     */
+    public void resetCurseStack() {
+        this.curseStack = 0;
+        log.info("🔮 Room {}: 저주 스택 초기화", roomId);
+    }
+
+    /**
+     * 현재 맵 ID 설정
+     */
+    public void setCurrentMapId(int mapId) {
+        this.currentMapId = mapId;
+    }
+
+    // 저주 이벤트 트리거 (기존 메서드 유지)
     public void triggerCurseEvent(String targetSessionId, boolean isPositive) {
         PlayerState p = players.get(targetSessionId);
         if (p == null)
@@ -285,15 +343,11 @@ public class GameRoom implements Runnable {
         if (isPositive) {
             // 긍정적인 말: 모든 저주 해제
             p.clearCurses();
-            // 시스템 메시지 전송 (선택 사항)
-            // broadcastSystemMessage(p.getUsername() + "님이 긍정의 힘으로 저주를 풀었습니다!");
         } else {
             // 부정적인 말: 랜덤 저주 적용
             CurseType[] curses = CurseType.values();
             CurseType randomCurse = curses[new Random().nextInt(curses.length)];
             p.addCurse(randomCurse);
-            // broadcastSystemMessage(p.getUsername() + "님이 부정적인 말로 저주에 걸렸습니다: " +
-            // randomCurse);
         }
     }
 
