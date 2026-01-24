@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import LobbyScene from './scenes/LobbyScene';
-import SoloScene from './scenes/SoloScene';
+import Solo1Scene from './scenes/Solo1Scene';
 import Stage1Scene from './scenes/Stage1Scene';
 import Stage2Scene from './scenes/Stage2Scene';
 import Stage3Scene from './scenes/Stage3Scene';
+import Solo2Scene from './scenes/Solo2Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
@@ -36,6 +37,14 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         // 부모 컴포넌트나 엘리먼트가 없으면 중단
         if (!parentRef.current) return;
 
+        const handleResize = () => {
+            if (gameRef.current && parentRef.current) {
+                const newWidth = parentRef.current.clientWidth;
+                const newHeight = parentRef.current.clientHeight;
+                gameRef.current.scale.resize(newWidth, newHeight);
+            }
+        };
+
         // 1. 게임 인스턴스가 없으면 생성
         if (!gameRef.current) {
             const parent = parentRef.current;
@@ -58,7 +67,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     matter: {
                         autoUpdate: false, // [CRITICAL] 수동 업데이트로 전환하여 탭 복귀 시 물리 폭주(Physics Explosion) 방지
                         gravity: { x: 0, y: 1 },
-                        debug: true
+                        debug: false
                     }
                 },
                 scene: [], // 씬은 수동으로 추가
@@ -68,10 +77,14 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
 
             // 모든 씬 등록
             gameRef.current.scene.add('LobbyScene', LobbyScene, false);
-            gameRef.current.scene.add('SoloScene', SoloScene, false);
+            gameRef.current.scene.add('Solo1Scene', Solo1Scene, false);
             gameRef.current.scene.add('Stage1Scene', Stage1Scene, false);
             gameRef.current.scene.add('Stage2Scene', Stage2Scene, false);
             gameRef.current.scene.add('Stage3Scene', Stage3Scene, false);
+            gameRef.current.scene.add('Solo2Scene', Solo2Scene, false);
+
+            window.addEventListener('resize', handleResize);
+
         }
 
         // 2. 현재 실행 중인 씬과 요청된 startScene이 다르면 전환
@@ -99,15 +112,39 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         }
 
         return () => {
-            // 전체 게임 중지 (컴포넌트 언마운트 시에만)
-            // 주의: dependencies에 startScene이 있으므로 여기서 destroy하면 안 됨
-            // 하지만 React 18+ strict mode 등에서는 문제가 될 수 있으므로 세심한 관리가 필요
+            window.removeEventListener('resize', handleResize);
         };
-    }, [startScene]);
+    }, []); // 시작 시 한 번만 실행 (게임 인스턴스 생성)
 
-    // 언마운트 시에만 게임 완전 제거를 위한 별도 useEffect
+    // startScene 변경 감지 및 씬 전환
     useEffect(() => {
-        console.log('[PhaserGame] Component Mounted');
+        const game = gameRef.current;
+        if (game) {
+            // 현재 실행 중인 모든 씬 중지 (Lobby 등 중복 실행 방지)
+            game.scene.getScenes(true).forEach(scene => {
+                if (scene.scene.key !== startScene) {
+                    scene.scene.stop();
+                }
+            });
+
+            // 원하는 씬이 실행 중이 아니면 시작
+            if (!game.scene.isActive(startScene)) {
+                game.scene.start(startScene);
+
+                // 씬 시작 직후 props 전달 (비동기 초기화 대응)
+                setTimeout(() => {
+                    const scene = game.scene.getScene(startScene);
+                    if (scene) {
+                        if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
+                        if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
+                    }
+                }, 100);
+            }
+        }
+    }, [startScene, onSendState, isSoloMode]);
+
+    // 언마운트 시 게임 완전 제거
+    useEffect(() => {
         return () => {
             console.log('[PhaserGame] Component Unmounted - Destroying Game Instance');
             if (gameRef.current) {

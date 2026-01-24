@@ -8,9 +8,9 @@ import { getRandomCurseId } from '../config/curseConfig';
 
 // 물리 파라미터
 export const PHYSICS = {
-    MOVE_SPEED: 4,
-    JUMP_POWER: -6,
-    PLAYER_SIZE: 32
+    MOVE_SPEED: 6,
+    JUMP_POWER: -11,
+    PLAYER_SIZE: 64
 };
 
 /**
@@ -69,11 +69,99 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
 
+    public static resetPersistentCurses(): void {
+        BaseGameScene.persistentCurses.clear();
+    }
+
     // 서브클래스에서 구현해야 할 추상 메서드
     protected abstract getSceneKey(): string;
     protected abstract getWorldWidth(): number;
+    protected abstract getWorldHeight(): number;
     protected abstract getRequiredPlayers(): number;
     protected abstract createGimmicks(): void;
+
+    // Goal 기믹의 시각적 설정을 정의 (텍스트, 프레임 등)
+    protected getGoalConfig(): { texture?: string; frame?: string | number; width?: number; height?: number } {
+        return { width: 48, height: 64 }; // 기본값
+    }
+
+    preload() {
+        // 색상별 플레이어 폴더에서 개별 자산 로드
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        colors.forEach(color => {
+            const folder = `${color}_player`;
+            this.load.image(`player_${color}_standing`, `assets/sprites/${folder}/${color}_standing.png`);
+            this.load.image(`player_${color}_jump`, `assets/sprites/${folder}/${color}_jump.png`);
+            this.load.image(`player_${color}_death`, `assets/sprites/${folder}/${color}_death.png`);
+
+            // Walking 이미지는 일단 일반 이미지로 로드 (create에서 동적 슬라이싱)
+            this.load.image(`player_${color}_walking_raw`, `assets/sprites/${folder}/${color}_walking.png`);
+        });
+    }
+
+    private createAnimations(): void {
+        const colors = ['green', 'blue', 'orange', 'purple'];
+
+        colors.forEach((color) => {
+            // Idle (standing 이미지 사용)
+            this.anims.create({
+                key: `player_idle_${color}`,
+                frames: [{ key: `player_${color}_standing` }],
+                frameRate: 1
+            });
+
+            // Walk 애니메이션 (다이나믹 슬라이싱)
+            let walkFrames: Phaser.Types.Animations.AnimationFrame[] = [];
+            const walkingTex = this.textures.get(`player_${color}_walking_raw`);
+
+            // 이미지가 정상적으로 로드되었는지 확인 (Phaser의 기본 __MISSING 텍스처가 아닌 경우)
+            if (walkingTex && walkingTex.key !== '__MISSING' && walkingTex.getSourceImage()) {
+                const width = walkingTex.getSourceImage().width;
+                const height = walkingTex.getSourceImage().height;
+
+                // 2프레임으로 쪼개기 (홀수 너비일 경우 1px 간격이 있다고 가정)
+                const frameWidth = Math.floor(width / 2);
+                const spacer = width % 2;
+
+                // 프레임이 이미 정의되어 있지 않은 경우에만 추가
+                if (!walkingTex.has('frame0')) {
+                    walkingTex.add('frame0', 0, 0, 0, frameWidth, height);
+                }
+                if (!walkingTex.has('frame1')) {
+                    walkingTex.add('frame1', 0, frameWidth + spacer, 0, frameWidth, height);
+                }
+
+                walkFrames = [
+                    { key: `player_${color}_walking_raw`, frame: 'frame0' },
+                    { key: `player_${color}_walking_raw`, frame: 'frame1' }
+                ];
+            } else {
+                // 이미지 로드 실패 시(예: purple) standing 이미지로 대체
+                walkFrames = [{ key: `player_${color}_standing` }];
+            }
+
+            this.anims.create({
+                key: `player_walk_${color}`,
+                frames: walkFrames,
+                frameRate: 6,
+                repeat: -1
+            });
+
+            // Jump (jump 이미지 사용)
+            this.anims.create({
+                key: `player_jump_${color}`,
+                frames: [{ key: `player_${color}_jump` }],
+                frameRate: 1
+            });
+
+            // Dead (death 이미지 사용)
+            this.anims.create({
+                key: `player_dead_${color}`,
+                frames: [{ key: `player_${color}_death` }],
+                frameRate: 1
+            });
+        });
+    }
 
     /**
      * TMJ (Tiled JSON) 데이터를 파싱하여 맵과 기믹을 생성합니다.
@@ -175,20 +263,33 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.resetState();
             this.setupPhysics();
             this.setupInput();
+
+            // 맵 및 카메라 설정
             this.createGimmicks(); // 맵 파싱 및 월드 크기 확정
-            this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정
+            this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정 (DEV는 setupCamera 먼저 호출하지만, worldWidth가 필요하므로 순서 유지)
+
+            // 애니메이션 생성 (DEV)
+            this.createAnimations();
+
             this.setupCollisions();
             this.syncPlayersFromStore();
             this.subscribeToStore();
 
-            // 배경색 설정 (맵이 안 보일 때 대비)
+            // 배경색 설정 (HEAD)
+            // 맵이 안 보일 때 대비
             this.cameras.main.setBackgroundColor('#2d2d2d');
 
-            // 탭 전환/최소화 시 안전장치
+            // 탭 전환/최소화 시 안전장치 (HEAD)
+            // 중복 리스너 방지를 위해 기존 것 제거 후 추가
+            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+            // 씬 중지/삭제 시 클린업 등록 (DEV + HEAD)
+            this.events.on('shutdown', this.shutdown, this);
             this.events.on('destroy', () => {
+                this.shutdown();
                 document.removeEventListener('visibilitychange', this.handleVisibilityChange);
             });
-            document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
             // [LIFECYCLE] Scene Created Log
             console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
@@ -196,6 +297,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             console.error(`[CRITICAL] Error in ${this.getSceneKey()} create():`, e);
         }
     }
+
+
 
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
     private handleVisibilityChange = () => {
@@ -277,8 +380,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.matter.world.off('collisionactive');
     }
 
+    protected shouldCreateDefaultFloor(): boolean {
+        return true;
+    }
+
     private setupPhysics(): void {
-        this.gameHeight = this.scale.height;
+        this.gameHeight = this.getWorldHeight();
 
         // 기존 월드 경계 초기화 (이전 씬의 벽 제거)
         // setBounds를 false로 호출하면 기존 경계 제거
@@ -290,14 +397,71 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // bottom을 false로 설정하여 별도 바닥 플랫폼 사용
 
         // 바닥 플랫폼 (별도 생성)
-        const platformHeight = 40;
+        if (this.shouldCreateDefaultFloor()) {
+            const platformHeight = 40;
+            this.matter.add.rectangle(
+                this.getWorldWidth() / 2,
+                this.gameHeight - platformHeight / 2,
+                this.getWorldWidth(),
+                platformHeight,
+                { isStatic: true, label: 'ground' }
+            );
+        }
+
+        // [추가] 화면 하단 낙사 센서 (death-zone)
+        // 맵의 전체 너비를 커버하며, 바닥보다 조금 아래에 배치하여 완전히 떨어졌을 때 발동
         this.matter.add.rectangle(
             this.getWorldWidth() / 2,
-            this.gameHeight - platformHeight / 2,
-            this.getWorldWidth(),
-            platformHeight,
-            { isStatic: true, label: 'ground' }
+            this.gameHeight + 50,
+            this.getWorldWidth() * 2, // 넉넉하게 설정
+            100,
+            {
+                isStatic: true,
+                isSensor: true,
+                label: 'death-zone'
+            }
         );
+    }
+
+    /**
+     * 배경 이미지를 맵 전체 너비에 걸쳐 타일링합니다.
+     * 사용자 제안: 본 사진 > 좌우 반전 > 본 사진 > 좌우 반전 패턴으로 Seamless 연결
+     * @param textureKey 배경 이미지 키
+     * @param scrollFactor 시차 효과 (0: 고정, 1: 맵과 동일 속도)
+     */
+    protected setupTiledBackground(textureKey: string, scrollFactor: number = 0.5): void {
+        const texture = this.textures.get(textureKey);
+        if (!texture || texture.key === '__MISSING') {
+            console.warn(`[BaseGameScene] Background texture '${textureKey}' not found.`);
+            return;
+        }
+
+        const worldWidth = this.getWorldWidth();
+        const worldHeight = this.getWorldHeight();
+        const bgSource = texture.getSourceImage() as HTMLImageElement;
+
+        // 배경 이미지의 원본 비율 유지하며 맵 높이에 맞춤
+        const scale = worldHeight / bgSource.height;
+        const scaledWidth = bgSource.width * scale;
+
+        // 필요한 타일 개수 계산 (여유있게 +1)
+        const numTiles = Math.ceil(worldWidth / scaledWidth) + 1;
+
+        for (let i = 0; i < numTiles; i++) {
+            const x = i * scaledWidth + (scaledWidth / 2);
+            const bg = this.add.image(x, worldHeight / 2, textureKey);
+
+            bg.setScale(scale);
+            bg.setDepth(-100); // 모든 오브젝트 뒤에 배치
+            bg.setScrollFactor(scrollFactor);
+
+            // 홀수 번째 타일은 좌우 반전 (index 1, 3, 5...)
+            if (i % 2 === 1) {
+                bg.setFlipX(true);
+            }
+        }
+
+        console.log(`[${this.getSceneKey()}] Tiled background setup: ${numTiles} tiles, scale ${scale.toFixed(2)}`);
     }
 
     private setupInput(): void {
@@ -333,88 +497,97 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 충돌 처리 설정
     private setupCollisions(): void {
-        this.matter.world.on('collisionstart', (event: Phaser.Physics.Matter.Events.CollisionStartEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
+        this.matter.world.on('collisionstart', this.onCollisionStart, this);
+        this.matter.world.on('collisionactive', this.onCollisionActive, this);
+        this.matter.world.on('collisionend', this.onCollisionEnd, this);
+    }
 
-                if (labelA.startsWith('key-') || labelB.startsWith('key-')) {
-                    this.handleKeyCollision(labelA, labelB);
-                }
-                if (labelA.startsWith('spike-') || labelB.startsWith('spike-')) {
-                    this.handleSpikeCollision(labelA, labelB);
-                }
-                if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
-                    this.handleGoalEnter(labelA, labelB);
-                }
-                if (labelA.startsWith('spring-') || labelB.startsWith('spring-')) {
-                    this.handleSpringCollision(labelA, labelB);
-                }
+    private onCollisionStart(event: Phaser.Physics.Matter.Events.CollisionStartEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
 
-                // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
-                if (labelA.startsWith('elevator-') || labelB.startsWith('elevator-') ||
-                    (this.players.has(labelA) && this.players.has(labelB))) {
-                    this.handleSupportStart(pair);
-                }
+            if (labelA.startsWith('key-') || labelB.startsWith('key-')) {
+                this.handleKeyCollision(labelA, labelB);
+            }
+            if (labelA.startsWith('spike-') || labelB.startsWith('spike-')) {
+                this.handleSpikeCollision(labelA, labelB);
+            }
+            if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
+                this.handleGoalEnter(labelA, labelB);
+            }
+            if (labelA.startsWith('spring-') || labelB.startsWith('spring-')) {
+                this.handleSpringCollision(labelA, labelB);
+            }
 
-                if (labelA === 'bumper' || labelB === 'bumper') {
-                    this.handleBumperCollision(labelA, labelB);
+            // [추가] 낙사 센서 충돌 체크
+            if (labelA === 'death-zone' || labelB === 'death-zone') {
+                const playerLabel = this.players.has(labelA) ? labelA : (this.players.has(labelB) ? labelB : null);
+                if (playerLabel) {
+                    this.triggerDeath('fall');
                 }
-            });
+            }
+
+            // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
+            if (labelA.startsWith('elevator-') || labelB.startsWith('elevator-') ||
+                (this.players.has(labelA) && this.players.has(labelB))) {
+                this.handleSupportStart(pair);
+            }
+
+            if (labelA === 'bumper' || labelB === 'bumper') {
+                this.handleBumperCollision(labelA, labelB);
+            }
         });
+    }
 
-        // 매 프레임 활성 충돌 체크 (블록 밀기용 + 바닥 접촉 감지)
-        this.matter.world.on('collisionactive', (event: Phaser.Physics.Matter.Events.CollisionActiveEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
-                const normal = pair.collision.normal;
+    private onCollisionActive(event: Phaser.Physics.Matter.Events.CollisionActiveEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
+            const normal = pair.collision.normal;
 
-                // 플레이어 바닥 접촉 감지 (코요테 타임 리셋)
-                // normal.y < -0.5 means collision normal points upward = player is on top
-                if (this.players.has(labelA) && normal.y < -0.5) {
-                    this.groundedFrames.set(labelA, this.COYOTE_FRAMES);
-                }
-                if (this.players.has(labelB) && normal.y > 0.5) {
-                    this.groundedFrames.set(labelB, this.COYOTE_FRAMES);
-                }
+            // 플레이어 바닥 접촉 감지 (코요테 타임 리셋)
+            if (this.players.has(labelA) && normal.y < -0.5) {
+                this.groundedFrames.set(labelA, this.COYOTE_FRAMES);
+            }
+            if (this.players.has(labelB) && normal.y > 0.5) {
+                this.groundedFrames.set(labelB, this.COYOTE_FRAMES);
+            }
 
-                // 블록-플레이어 측면 밀기 체크
-                if ((labelA.startsWith('block-') && this.players.has(labelB)) ||
-                    (labelB.startsWith('block-') && this.players.has(labelA))) {
-                    this.handleBlockPush(pair);
-                }
+            // 블록-플레이어 측면 밀기 체크
+            if ((labelA.startsWith('block-') && this.players.has(labelB)) ||
+                (labelB.startsWith('block-') && this.players.has(labelA))) {
+                this.handleBlockPush(pair);
+            }
 
-                // 블록-블록 측면 접촉 체크
-                if (labelA.startsWith('block-') && labelB.startsWith('block-')) {
-                    if (Math.abs(normal.x) > 0.5) {
-                        const posA = pair.bodyA.position;
-                        const posB = pair.bodyB.position;
-                        // A가 B의 왼쪽에 있음
-                        if (posA.x < posB.x) {
-                            this.blockContactRight.set(labelA, labelB);
-                            this.blockContactLeft.set(labelB, labelA);
-                        } else {
-                            this.blockContactLeft.set(labelA, labelB);
-                            this.blockContactRight.set(labelB, labelA);
-                        }
+            // 블록-블록 측면 접촉 체크
+            if (labelA.startsWith('block-') && labelB.startsWith('block-')) {
+                if (Math.abs(normal.x) > 0.5) {
+                    const posA = pair.bodyA.position;
+                    const posB = pair.bodyB.position;
+                    if (posA.x < posB.x) {
+                        this.blockContactRight.set(labelA, labelB);
+                        this.blockContactLeft.set(labelB, labelA);
+                    } else {
+                        this.blockContactLeft.set(labelA, labelB);
+                        this.blockContactRight.set(labelB, labelA);
                     }
                 }
-            });
+            }
         });
+    }
 
-        this.matter.world.on('collisionend', (event: Phaser.Physics.Matter.Events.CollisionEndEvent) => {
-            event.pairs.forEach((pair) => {
-                const labelA = pair.bodyA.label || '';
-                const labelB = pair.bodyB.label || '';
+    private onCollisionEnd(event: Phaser.Physics.Matter.Events.CollisionEndEvent): void {
+        event.pairs.forEach((pair) => {
+            const labelA = pair.bodyA.label || '';
+            const labelB = pair.bodyB.label || '';
 
-                if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
-                    this.handleGoalExit(labelA, labelB);
-                }
+            if (labelA.startsWith('goal-') || labelB.startsWith('goal-')) {
+                this.handleGoalExit(labelA, labelB);
+            }
 
-                // 지지 관계 종료
-                this.handleSupportEnd(labelA, labelB);
-            });
+            // 지지 관계 종료
+            this.handleSupportEnd(labelA, labelB);
         });
     }
 
@@ -472,12 +645,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                 // Lock이 있던 자리에 Goal 생성
                 const pos = lock.getPosition();
+                const config = this.getGoalConfig();
+
                 const goal = new Goal(
                     this,
                     pos.x,
                     pos.y,
                     `goal-${lock.id}`,
-                    this.getRequiredPlayers()
+                    this.getRequiredPlayers(),
+                    config.width || 48,
+                    config.height || 64,
+                    config.texture,
+                    config.frame
                 );
                 this.goals.push(goal);
 
@@ -508,8 +687,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.isDead = true;
         console.log(`[${this.getSceneKey()}] Death triggered by ${reason}. Restarting scene...`);
 
-        // 모든 플레이어 정지
-        this.players.forEach(p => p.setVelocity(0, 0));
+        // 모든 플레이어 정지 및 사망 모션 적용
+        this.players.forEach(p => {
+            p.setVelocity(0, 0);
+            p.die();
+        });
 
         // 0.5초 후 재시작
         this.time.delayedCall(500, () => {
@@ -602,9 +784,17 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         if (spring && player) {
             const velocity = player.getVelocity();
-            player.setVelocity(velocity.x, spring.getBouncePower());
-            spring.animate();
-            console.log(`[${this.getSceneKey()}] Player bounced on spring`);
+            const playerPos = player.getPosition();
+            const springPos = spring.getPosition();
+
+            // [개선] 윗면을 밟았을 때만 작동하도록 조건 추가
+            // 1. 플레이어가 아래로 떨어지는 중이어야 함 (velocity.y > 0)
+            // 2. 플레이어의 중심이 스프링의 중심보다 위에 있어야 함
+            if (velocity.y > 1 && playerPos.y < springPos.y) {
+                player.setVelocity(velocity.x, spring.getBouncePower());
+                spring.animate();
+                console.log(`[${this.getSceneKey()}] Player stepped on spring`);
+            }
         }
     }
 
@@ -751,7 +941,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const clampedDelta = Math.min(delta, 100);
         this.matter.world.step(clampedDelta);
 
-
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
@@ -880,13 +1069,32 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             return !this.wouldOverlapOtherBlock(block, nextX, chainLabels);
         });
 
-        // 7. 모두 충족하면 전체 이동
+        // 7. 모두 충족하면 전체 이동 (블록 + 미는 플레이어들 동시 이동으로 진동 방지)
         if (canMove && canMoveWithoutOverlap && chainBlocks.length > 0) {
             chainBlocks.forEach(block => {
+                const label = block.getBody().label;
+
+                // 블록 이동
                 if (direction === 'right') {
                     block.moveRight();
                 } else {
                     block.moveLeft();
+                }
+
+                // 해당 블록을 미는 플레이어들도 같은 양만큼 함께 이동 (물리 충돌 튕김 방지)
+                const pushers = direction === 'right'
+                    ? this.pushMapLeft.get(label)
+                    : this.pushMapRight.get(label);
+
+                if (pushers) {
+                    pushers.forEach(playerId => {
+                        const player = this.players.get(playerId);
+                        if (player) {
+                            const pos = player.getPosition();
+                            // 플레이어 위치를 블록 가속과 완전히 동기화
+                            player.setPosition(pos.x + moveAmount, pos.y);
+                        }
+                    });
                 }
             });
         }
@@ -1069,7 +1277,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // === 2. 로컬 물리 연산 (Client Authoritative) ===
         // 항상 로컬 입력에 따라 물리 연산 수행
         const velocity = myPlayer.getVelocity();
-        const moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
+        let moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
+
+        // [추가] 로컬 플레이어가 현재 블록을 밀고 있는지 확인
+        // 밀고 있다면 속도를 블록의 이동 속도(1px)로 낮춤
+        let isPushing = false;
+        this.pushMapLeft.forEach((pushers) => {
+            if (pushers.has(this.myPlayerId)) isPushing = true;
+        });
+        this.pushMapRight.forEach((pushers) => {
+            if (pushers.has(this.myPlayerId)) isPushing = true;
+        });
+
+        if (isPushing) {
+            moveSpeed = 2; // 블록 이동 속도(2px)와 동기화
+        }
 
         // 좌우 이동
         if (!myPlayer.isHidden) {
@@ -1100,6 +1322,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 let enteredGoal = false;
                 for (const goal of this.goals) {
                     if (goal.isPlayerNear(playerLabel)) {
+                        // 저주 상태 체크: 저주가 있으면 입장 불가
+                        if (myPlayer.hasCurse()) {
+                            this.showFloatingText(myPlayer.getPosition().x, myPlayer.getPosition().y - 40, "저주를 먼저 해제하세요!", 0xff4444);
+                            console.log(`[Goal] Entry denied for ${this.myPlayerId} due to curse.`);
+                            enteredGoal = true; // 실제 입장은 아니나 중복 점프 방지용
+                            break;
+                        }
+
                         if (goal.enterGoal(playerLabel)) {
                             myPlayer.hide();
                             enteredGoal = true;
@@ -1250,6 +1480,28 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         );
     }
 
+    /**
+     * 화면에 떠오르는 텍스트 피드백을 표시합니다.
+     */
+    protected showFloatingText(x: number, y: number, message: string, color: number = 0xffffff): void {
+        const text = this.add.text(x, y, message, {
+            fontSize: '18px',
+            color: `#${color.toString(16).padStart(6, '0')}`,
+            stroke: '#000000',
+            strokeThickness: 3,
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 50,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => text.destroy()
+        });
+    }
+
     private constrainPlayersToCamera(): void {
         const camLeft = this.cameras.main.scrollX;
         const camRight = camLeft + this.cameras.main.width;
@@ -1267,28 +1519,60 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     shutdown() {
-        if (this.storeUnsubscribe) {
-            this.storeUnsubscribe();
-        }
-        this.players.forEach(player => player.destroy());
-        this.players.clear();
+        console.log(`[${this.getSceneKey()}] Shutdown triggered, cleaning up...`);
 
-        this.keys.forEach(key => key.destroy());
-        this.locks.forEach(lock => lock.destroy());
-        this.spikes.forEach(spike => spike.destroy());
-        this.goals.forEach(goal => goal.destroy());
-        this.springs.forEach(spring => spring.destroy());
-        this.elevators.forEach(elevator => elevator.destroy());
-        this.movableBlocks.forEach(block => block.destroy());
-        this.keys = [];
-        this.locks = [];
-        this.spikes = [];
-        this.goals = [];
-        this.springs = [];
-        this.elevators = [];
-        this.movableBlocks = [];
-        this.supportMap.clear();
-        this.pushMapLeft.clear();
-        this.pushMapRight.clear();
+        try {
+            // 스토어 구독 해제
+            if (this.storeUnsubscribe) {
+                this.storeUnsubscribe();
+                this.storeUnsubscribe = undefined;
+            }
+
+            // 플레이어 객체 파괴 (물리 바디 및 그래픽 포함)
+            this.players.forEach(player => player.destroy());
+            this.players.clear();
+
+            // 기믹 객체 파괴
+            this.keys.forEach(key => key.destroy());
+            this.locks.forEach(lock => lock.destroy());
+            this.spikes.forEach(spike => spike.destroy());
+            this.goals.forEach(goal => goal.destroy());
+            this.springs.forEach(spring => spring.destroy());
+            this.elevators.forEach(elevator => elevator.destroy());
+            this.movableBlocks.forEach(block => block.destroy());
+            this.bumpers.forEach(b => b.destroy());
+            this.movingBumpers.forEach(b => b.destroy());
+
+            this.keys = [];
+            this.locks = [];
+            this.spikes = [];
+            this.goals = [];
+            this.springs = [];
+            this.elevators = [];
+            this.movableBlocks = [];
+            this.bumpers = [];
+            this.movingBumpers = [];
+
+            this.supportMap.clear();
+            this.pushMapLeft.clear();
+            this.pushMapRight.clear();
+            this.blockContactLeft.clear();
+            this.blockContactRight.clear();
+            this.groundedFrames.clear();
+
+            // 물리 이벤트 리스너 제거 (본인이 등록한 것만 특정하여 제거)
+            if (this.matter && this.matter.world) {
+                this.matter.world.off('collisionstart', this.onCollisionStart, this);
+                this.matter.world.off('collisionactive', this.onCollisionActive, this);
+                this.matter.world.off('collisionend', this.onCollisionEnd, this);
+            }
+
+            // 등록된 이벤트 제거 (본인)
+            this.events.off('shutdown', this.shutdown, this);
+            this.events.off('destroy', this.shutdown, this);
+
+        } catch (error) {
+            console.error(`[${this.getSceneKey()}] Error during shutdown:`, error);
+        }
     }
 }

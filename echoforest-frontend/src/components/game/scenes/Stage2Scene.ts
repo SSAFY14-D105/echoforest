@@ -1,8 +1,9 @@
 import BaseGameScene from './BaseGameScene';
+import { useGameStore } from '../../../store/useGameStore';
 
 /**
  * Stage2Scene - 스테이지 2 (빈 템플릿)
- * 나중에 기믹 추가 예정
+ * 혼자하기 2는 Solo2Scene에서 관리함
  */
 export default class Stage2Scene extends BaseGameScene {
     constructor() {
@@ -14,7 +15,11 @@ export default class Stage2Scene extends BaseGameScene {
     }
 
     protected getWorldWidth(): number {
-        return 2500;
+        return 3000;
+    }
+
+    protected getWorldHeight(): number {
+        return this.scale.height;
     }
 
     protected getRequiredPlayers(): number {
@@ -22,12 +27,12 @@ export default class Stage2Scene extends BaseGameScene {
     }
 
     protected createGimmicks(): void {
-        // TODO: 스테이지 2 기믹 배치
-        console.log('[Stage2Scene] Gimmicks - TODO');
+        console.log('[Stage2Scene] Gimmicks - Stub');
     }
 
     protected onStageComplete(): void {
         console.log('[Stage2Scene] 🎉 Stage 2 Complete!');
-        // TODO: 스테이지 3으로 이동
+        useGameStore.getState().clearStage('MULTI_2');
+        useGameStore.getState().backToStageSelect();
     }
 }

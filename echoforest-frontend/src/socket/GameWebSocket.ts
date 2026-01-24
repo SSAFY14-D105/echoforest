@@ -24,6 +24,8 @@ export type MessageType =
     | 'READY_STATUS'  // Server→All: Ready 상태 브로드캐스트 (username, content: "true"/"false")
     | 'GAME_START'    // Server→All: 게임 시작 (content: 스테이지 번호)
     | 'STAGE_CHANGE'  // Server→All: 스테이지 변경 (content: 스테이지 번호)
+    | 'STAGE_SELECT'  // Client<->Server: 스테이지 선택 (stage: 번호)
+    | 'STAGE_CLEAR'   // Client<->Server: 스테이지 클리어 (stage: 번호)
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED';       // Server→Client: 강제 퇴장됨
@@ -53,6 +55,7 @@ export interface GameMessage {
     vy?: number;
     anim?: string;
     content?: string;  // 시스템 메시지, 입력 타입, UPDATE 플레이어 데이터
+    stage?: number;    // 스테이지 번호 (SELECT, CLEAR 등에서 사용)
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -264,6 +267,30 @@ class GameWebSocket {
             type: 'NEXT_STAGE',
             roomId: roomId,
             username: this.username
+        });
+    }
+
+    /**
+     * 스테이지 선택 알림 (방장 -> 서버 -> 모두)
+     */
+    selectStage(roomId: string, stageNum: number) {
+        this.send({
+            type: 'STAGE_SELECT',
+            roomId: roomId,
+            username: this.username,
+            stage: stageNum
+        });
+    }
+
+    /**
+     * 스테이지 클리어 알림 (방장 -> 서버 -> 모두)
+     */
+    clearStageSync(roomId: string, stageNum: number) {
+        this.send({
+            type: 'STAGE_CLEAR',
+            roomId: roomId,
+            username: this.username,
+            stage: stageNum
         });
     }
 

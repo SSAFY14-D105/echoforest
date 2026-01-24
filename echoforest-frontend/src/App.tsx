@@ -5,7 +5,6 @@ import LobbyPage from './pages/lobby/LobbyPage';
 import GamePage from './pages/game/GamePage';
 
 export default function App() {
-  // 전역 상태(Store)에서 nickname, roomId 가져오기
   const { nickname, roomId, setNickname } = useGameStore();
   const [isInitializing, setIsInitializing] = useState(true); // 초기화 상태 추가
 
@@ -31,11 +30,9 @@ export default function App() {
     return <LoginPage onLogin={(id) => setNickname(id)} />;
   }
 
-  // 2. 닉네임은 있지만 방 번호가 없으면 -> 로비 화면
   if (!roomId) {
     return <LobbyPage />;
   }
 
-  // 3. 방 번호가 있으면 -> 게임 화면
   return <GamePage />;
 }

@@ -7,7 +7,8 @@ import Phaser from 'phaser';
 export class Goal {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
+    private graphics?: Phaser.GameObjects.Graphics;
 
     // Goal 영역 근처에 있는 플레이어 (충돌 감지)
     private playersNearGoal: Set<string> = new Set();
@@ -19,7 +20,7 @@ export class Goal {
     private readonly x: number;
     private readonly y: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, requiredPlayers: number = 1) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, requiredPlayers: number = 1, width: number = 48, height: number = 64, texture?: string, frame?: string | number, angle: number = 0) {
         this.scene = scene;
         this.id = id;
         this.requiredPlayers = requiredPlayers;
@@ -27,19 +28,30 @@ export class Goal {
         this.y = y;
 
         // 골인 영역 물리 바디 (센서)
-        this.body = this.scene.matter.add.rectangle(x, y, 48, 64, {
+        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
             isSensor: true,
             isStatic: true,
-            label: `goal-${id}`
+            label: `goal-${id}`,
+            angle: Phaser.Math.DegToRad(angle)
         });
 
-        // 골인 그래픽
-        this.graphics = this.scene.add.graphics();
-        this.drawGoal();
-        this.graphics.setPosition(x, y);
+        if (texture) {
+            this.sprite = this.scene.add.sprite(x, y, texture, frame);
+            this.sprite.setDisplaySize(width, height);
+            this.sprite.setAngle(angle);
+            this.sprite.setDepth(5); // 플레이어(10)보다 낮은 depth 설정
+        } else {
+            // 골인 그래픽
+            this.graphics = this.scene.add.graphics();
+            this.drawGoal();
+            this.graphics.setPosition(x, y);
+            this.graphics.setAngle(angle);
+            this.graphics.setDepth(5); // 플레이어(10)보다 낮은 depth 설정
+        }
     }
 
     private drawGoal(): void {
+        if (!this.graphics) return;
         this.graphics.clear();
         // 파란색 골인 영역 (반투명)
         this.graphics.fillStyle(0x3498DB, 0.5);
@@ -123,8 +135,14 @@ export class Goal {
         return this.body;
     }
 
+    public setVisible(visible: boolean): void {
+        this.graphics?.setVisible(visible);
+        this.sprite?.setVisible(visible);
+    }
+
     public destroy(): void {
         this.scene.matter.world.remove(this.body);
-        this.graphics.destroy();
+        this.graphics?.destroy();
+        this.sprite?.destroy();
     }
 }
