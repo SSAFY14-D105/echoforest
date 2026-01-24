@@ -5,10 +5,10 @@ services:
   # 0. 게임 서버 (Spring Boot)
   # ==========================================
   game-server:
-    build: .                # 현재 폴더의 Dockerfile로 빌드
+    build: . # 현재 폴더의 Dockerfile로 빌드
     container_name: echoforest-server
     ports:
-      - "9001:9001"         # 외부 접속 포트
+      - "9001:9001" # 외부 접속 포트
     environment:
       # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
       - LIVEKIT_URL=${LIVEKIT_URL}
@@ -46,8 +46,8 @@ services:
     command: --dev
     ports:
       - "60000-60200:60000-60200/udp" # 미디어 전송 (필수)
-      - "3478:3478/udp"  # TURN
-      - "3478:3478/tcp"  # TURN
+      - "3478:3478/udp" # TURN
+      - "3478:3478/tcp" # TURN
     environment:
       - "LIVEKIT_KEYS=devkey: secret"
       # TURN 사용 시 외부 IP 자동 감지
@@ -106,7 +106,6 @@ services:
       - livekit
     networks:
       - echo-net
-
     # ==========================================
     # 5. Jenkins (CI/CD)
     # ==========================================
