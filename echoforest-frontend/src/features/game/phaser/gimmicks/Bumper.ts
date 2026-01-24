@@ -52,7 +52,9 @@ export class Bumper {
     }
 
     public destroy(): void {
-        this.scene.matter.world.remove(this.body);
-        this.graphics.destroy();
+        if (this.scene?.matter?.world) {
+            this.scene.matter.world.remove(this.body);
+        }
+        this.graphics?.destroy();
     }
 }
