@@ -10,7 +10,7 @@ import java.util.Date;
 public class JwtUtil {
     // 실제로는 application.properties에서 관리해야 함
     private static final String SECRET_KEY = "my_super_secret_key_echo_forest";
-    private static final long ACCESS_TIME = 60 * 60 * 1000L; // 1시간
+    private static final long ACCESS_TIME = 24 * 60 * 60 * 1000L; // 24시간 (1일)
 
     // 토큰 생성 (로그인 성공 시)
     public String createToken(Long userId, String username) {
