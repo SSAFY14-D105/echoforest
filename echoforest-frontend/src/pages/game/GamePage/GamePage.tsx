@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '../../../store/useGameStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
@@ -7,6 +7,11 @@ import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
 import styles from './GamePage.module.css';
+// STT 저주 시스템 import
+import { useSpeechRecognition } from '../../../hooks/useSpeechRecognition';
+import { useSttStore } from '../../../store/useSttStore';
+import FloatingButton from '../../../components/stt/FloatingButton';
+import CurseStackBar from '../../../components/stt/CurseStackBar';
 
 const MAX_PLAYERS = 4;
 
@@ -31,6 +36,40 @@ export default function GamePage() {
     clearStage,
     leaveGame
   } = useGameStore();
+
+  // === STT 저주 시스템 훅 ===
+  const {
+    transcript,
+    interimTranscript,
+    isListening,
+  } = useSpeechRecognition();
+
+  const {
+    setBoosterMode,
+    boosterActive,
+    curseState,
+    processTranscript,
+    onStackUpdated,
+    onCurseTriggered,
+    onCurseReleased,
+  } = useSttStore();
+
+  const lastProcessedRef = useRef('');
+
+  // STT 최종 결과 처리
+  useEffect(() => {
+    if (transcript && transcript !== lastProcessedRef.current) {
+      lastProcessedRef.current = transcript;
+      processTranscript(transcript, true);
+    }
+  }, [transcript, processTranscript]);
+
+  // STT 중간 결과 처리 (부스터 모드에서 긍정어 감지용)
+  useEffect(() => {
+    if (interimTranscript) {
+      processTranscript(interimTranscript, false);
+    }
+  }, [interimTranscript, processTranscript]);
 
   // --- 스테이지 ID 변환 유틸리티 ---
   // 내부용 ID ("MULTI_1") -> 통신용 번호 (1)
@@ -192,6 +231,31 @@ export default function GamePage() {
 
         case 'ERROR':
           console.error('❌ WebSocket 에러:', msg.content);
+          break;
+
+        // === STT 저주 시스템 메시지 ===
+        case 'STACK_UPDATED':
+          // 저주 스택 업데이트
+          if (msg.stack !== undefined) {
+            onStackUpdated(msg.stack, msg.delta ?? 0, msg.reason);
+            console.log(`🔮 스택: ${msg.stack} (${msg.delta! > 0 ? '+' : ''}${msg.delta})`);
+          }
+          break;
+
+        case 'CURSE_TRIGGERED':
+          // 저주 발동
+          if (msg.cursedPlayerId) {
+            onCurseTriggered(msg.cursedPlayerId, msg.mapId ?? 1);
+            console.log(`💀 저주 발동! 대상: ${msg.cursedPlayerId}`);
+          }
+          break;
+
+        case 'CURSE_RELEASED':
+          // 저주 해제
+          if (msg.releasedPlayerId) {
+            onCurseReleased(msg.releasedPlayerId, msg.word ?? '');
+            console.log(`✨ 저주 해제! ${msg.releasedPlayerId}`);
+          }
           break;
       }
     });
@@ -370,10 +434,24 @@ export default function GamePage() {
           >
             🏆 테스트: 스테이지 클리어
           </button>
+
+          {/* ===== STT 저주 UI ===== */}
+          <CurseStackBar
+            stack={curseState.stack}
+            cursedPlayer={curseState.cursedPlayer}
+            isListening={isListening}
+          />
         </div >
 
         {/* 카메라 영역 (항상 표시) */}
         <CameraArea />
+
+        {/* 플로팅 부스터 버튼 */}
+        <FloatingButton
+          onPress={() => setBoosterMode(true)}
+          onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+          isActive={boosterActive}
+        />
       </div >
     );
   }

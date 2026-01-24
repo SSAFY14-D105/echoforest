@@ -28,7 +28,13 @@ export type MessageType =
     | 'STAGE_CLEAR'   // Client<->Server: 스테이지 클리어 (stage: 번호)
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
-    | 'KICKED';       // Server→Client: 강제 퇴장됨
+    | 'KICKED'        // Server→Client: 강제 퇴장됨
+    // STT 저주 시스템 (추가)
+    | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
+    | 'CURSE_RELEASE'     // Client→Server: 저주 해제 요청 (content: 긍정어)
+    | 'STACK_UPDATED'     // Server→All: 스택 업데이트 (stack, delta, reason)
+    | 'CURSE_TRIGGERED'   // Server→All: 저주 발동 (cursedPlayerId, mapId)
+    | 'CURSE_RELEASED';   // Server→All: 저주 해제됨 (releasedPlayerId, word)
 
 // UPDATE 메시지에서 오는 플레이어 상태
 export interface ServerPlayerState {
@@ -58,6 +64,15 @@ export interface GameMessage {
     anim?: string;
     content?: string;  // 시스템 메시지, 입력 타입, UPDATE 플레이어 데이터
     stage?: number;    // 스테이지 번호 (SELECT, CLEAR 등에서 사용)
+    // STT 저주 시스템 필드 (추가)
+    texts?: string[];           // SPEECH_BATCH용
+    word?: string;              // CURSE_RELEASE용
+    stack?: number;             // STACK_UPDATED용
+    delta?: number;             // 스택 변화량
+    reason?: string;            // 스택 변화 이유
+    cursedPlayerId?: string;    // CURSE_TRIGGERED용
+    releasedPlayerId?: string;  // CURSE_RELEASED용
+    mapId?: number;             // 저주 효과 맵 ID
 }
 
 type MessageHandler = (message: GameMessage) => void;
