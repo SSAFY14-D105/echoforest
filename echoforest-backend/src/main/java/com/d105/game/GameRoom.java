@@ -36,6 +36,9 @@ public class GameRoom implements Runnable {
     @Getter
     private String hostUsername;
 
+    // [NEW] 슬롯 점유 상태 관리 (최대 4명) -- session ID 저장
+    private final String[] slots = new String[4];
+
     /**
      * GameRoom 생성자
      *
@@ -84,6 +87,15 @@ public class GameRoom implements Runnable {
     // --- removePlayer 메소드 구현 ---
     public void removePlayer(WebSocketSession session) {
         String sessionId = session.getId();
+
+        // [NEW] 슬롯 해제 (Shift 금지)
+        for (int i = 0; i < 4; i++) {
+            if (sessionId.equals(slots[i])) {
+                slots[i] = null; // 해당 자리만 비움
+                break;
+            }
+        }
+
         sessions.remove(sessionId);
         players.remove(sessionId);
 
@@ -108,6 +120,14 @@ public class GameRoom implements Runnable {
         WebSocketSession oldSession = sessions.remove(targetSessionId);
         players.remove(targetSessionId);
 
+        // [NEW] 슬롯 해제
+        for (int i = 0; i < 4; i++) {
+            if (targetSessionId.equals(slots[i])) {
+                slots[i] = null;
+                break;
+            }
+        }
+
         // 기존 세션 닫기
         if (oldSession != null && oldSession.isOpen()) {
             try {
@@ -129,15 +149,36 @@ public class GameRoom implements Runnable {
     }
 
     public void addPlayer(WebSocketSession session, String username) {
+        // [NEW] 1. 빈 슬롯 찾기 (0번부터 순차 탐색)
+        int assignedSlot = -1;
+        for (int i = 0; i < 4; i++) {
+            if (slots[i] == null) {
+                slots[i] = session.getId();
+                assignedSlot = i;
+                break;
+            }
+        }
+
+        if (assignedSlot == -1) {
+            // 방이 꽉 찼음 (원칙적으로는 입장 불가 처리해야 하나, 현재 구조상 덮어쓰기보다는 리턴)
+            log.warn("Room {} is full, cannot add player {}", roomId, username);
+            return;
+        }
+
         sessions.put(session.getId(), session);
         // 초기 시작 위치 (100, 100)
-        players.put(session.getId(), new PlayerState(username, 100, 100));
+        PlayerState newPlayer = new PlayerState(username, 100, 100);
+        newPlayer.setColorIndex(assignedSlot); // [NEW] 슬롯 번호 할당
+        players.put(session.getId(), newPlayer);
 
         // 첫 번째 플레이어가 방장
         if (hostUsername == null) {
             hostUsername = username;
             log.info("Host set to {} in room {}", username, roomId);
         }
+
+        // 방장이 나가고 빈자리에 누군가 들어왔는데, 방장이 없는 상태라면? (Host Migration 로직 필요할 수 있음)
+        // 현재 명세에는 없으므로 패스, 혹은 가장 오래된 유저에게 부여 등.
     }
 
     /**
@@ -200,6 +241,9 @@ public class GameRoom implements Runnable {
             player.setVy(vy);
         if (anim != null)
             player.setAnim(anim);
+
+        // [NEW] 물리적 Idle 방지를 위해 입력 시간 갱신 (패킷이 들어왔으므로 입력이 있는 것)
+        player.updateInputTimestamp();
     }
 
     /**
@@ -309,7 +353,10 @@ public class GameRoom implements Runnable {
                 // 2. 자동 퇴장 처리 (10초 이상 업데이트 없음)
                 checkDisconnectedPlayers();
 
-                // 3. 브로드캐스트 (20 TPS)
+                // [NEW] 3. 물리 업데이트 (중력 적용 등) - 50ms (0.05초) 간격
+                updatePhysics(0.05);
+
+                // 4. 브로드캐스트 (20 TPS)
                 broadcastState();
 
                 // 50ms 대기 (20 TPS)
@@ -395,6 +442,9 @@ public class GameRoom implements Runnable {
                 case "LEFT_UP", "RIGHT_UP" -> p.setInputX(0);
                 case "JUMP" -> p.setInputJump(true); // 점프 예약
             }
+
+            // [NEW] 입력 시간 갱신 (물리적 Idle 방지)
+            p.updateInputTimestamp();
         }
     }
 
@@ -411,12 +461,17 @@ public class GameRoom implements Runnable {
 
     private void broadcastState() {
         try {
-            // 전체 플레이어 상태를 리스트로 변환 (username 기준 정렬)
+            // 전체 플레이어 상태를 리스트로 변환 (slots 순서대로)
             List<Object> stateList = new ArrayList<>();
-            List<PlayerState> sortedPlayers = new ArrayList<>(players.values());
-            sortedPlayers.sort((a, b) -> a.getUsername().compareTo(b.getUsername()));
 
-            for (PlayerState p : sortedPlayers) {
+            for (int i = 0; i < 4; i++) {
+                String sid = slots[i];
+                if (sid == null)
+                    continue;
+                PlayerState p = players.get(sid);
+                if (p == null)
+                    continue;
+
                 Map<String, Object> pData = new HashMap<>();
                 pData.put("serverTick", System.currentTimeMillis());
                 pData.put("id", p.getUsername());
@@ -426,6 +481,11 @@ public class GameRoom implements Runnable {
                 pData.put("vx", p.getVx());
                 pData.put("vy", p.getVy());
                 pData.put("anim", p.getAnim()); // 애니메이션 상태 추가
+
+                // [NEW] 핵심 데이터 추가
+                pData.put("colorIndex", p.getColorIndex());
+                pData.put("isHost", p.getUsername().equals(this.hostUsername));
+
                 // 저주로 크기 변경 시 클라이언트에 전달
                 pData.put("width", p.getWidth());
                 pData.put("height", p.getHeight());

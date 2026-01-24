@@ -37,6 +37,12 @@ public class GameMessageDto {
     @Schema(description = "캐릭터 애니메이션 상태", example = "walk_down")
     private String anim;
 
+    @Schema(description = "방장 여부", example = "true")
+    private Boolean isHost;
+
+    @Schema(description = "플레이어 슬롯 번호 (색상)", example = "0")
+    private Integer colorIndex;
+
     @Schema(description = "시스템 메시지 내용 (생성된 방 번호, 에러 메시지 등)", example = "8F3A21")
     private String content;
 }
