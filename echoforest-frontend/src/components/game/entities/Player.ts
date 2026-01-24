@@ -63,6 +63,7 @@ export class Player {
         const colors = ['green', 'blue', 'orange', 'purple'];
         this.colorName = colors[config.colorIndex % colors.length];
 
+        // TODO: 씬 준비 상태 체크 로직 개선 필요 - 임시 가드
         if (!this.scene.matter) {
             console.warn('[Player] Scene matter physics not ready, skipping player creation:', config.id);
             throw new Error('Scene matter physics not initialized');
@@ -75,7 +76,6 @@ export class Player {
         if (!this.isLocalPlayer) {
             this.targetPos = { x: config.x, y: config.y };
         }
-
         // 플레이어 스프라이트 생성
         this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
         this.sprite.play(`player_idle_${this.colorName}`);

@@ -233,7 +233,6 @@ export default function GamePage() {
             console.log(`🎯 스테이지 변경 (레거시): ${stage}`);
           }
           break;
-
         case 'STAGE_SELECT':
           // 스테이지 선택 동기화 (호스트가 보낸 신호)
           if (!isHost && msg.stage !== undefined) {

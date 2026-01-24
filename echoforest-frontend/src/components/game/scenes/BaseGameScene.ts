@@ -68,7 +68,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private readonly STATE_SEND_INTERVAL: number = 50;
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
-
     public static resetPersistentCurses(): void {
         BaseGameScene.persistentCurses.clear();
     }
@@ -940,6 +939,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // Delta 시간을 최대 100ms(0.1초)로 제한
         const clampedDelta = Math.min(delta, 100);
         this.matter.world.step(clampedDelta);
+
 
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
