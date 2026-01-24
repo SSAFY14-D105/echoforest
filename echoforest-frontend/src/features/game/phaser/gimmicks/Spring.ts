@@ -84,7 +84,9 @@ export class Spring {
     }
 
     public destroy(): void {
-        this.scene.matter.world.remove(this.body);
+        if (this.scene?.matter?.world) {
+            this.scene.matter.world.remove(this.body);
+        }
         this.graphics?.destroy();
         this.sprite?.destroy();
     }

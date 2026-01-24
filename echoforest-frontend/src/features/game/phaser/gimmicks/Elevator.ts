@@ -106,8 +106,10 @@ export class Elevator {
     }
 
     public destroy(): void {
-        this.scene.matter.world.remove(this.body);
-        this.graphics.destroy();
-        this.text.destroy();
+        if (this.scene?.matter?.world) {
+            this.scene.matter.world.remove(this.body);
+        }
+        this.graphics?.destroy();
+        this.text?.destroy();
     }
 }
