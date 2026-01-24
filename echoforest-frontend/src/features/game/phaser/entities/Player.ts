@@ -147,8 +147,10 @@ export class Player {
         const { x, y } = this.body.position;
         this.sprite.setPosition(x, y);
 
-        // 애니메이션 상태 업데이트
-        this.updateAnimation();
+        // 애니메이션 상태 업데이트 (로컬 플레이어만)
+        if (this.isLocalPlayer) {
+            this.updateAnimation();
+        }
 
         // 비주얼 효과 업데이트
         this.updateVisualEffects();
@@ -204,6 +206,90 @@ export class Player {
      */
     public setTargetPosition(x: number, y: number): void {
         this.targetPos = { x, y };
+    }
+
+    // 원격 플레이어의 서버 상태 (방향 및 애니메이션 결정용)
+    private remoteVx: number = 0;
+    private remoteVy: number = 0;
+    private remoteAnim: string | null = null;
+
+    /**
+     * 원격 플레이어 상태 동기화 (위치 + 속도 + 애니메이션)
+     * @param x 목표 X 좌표
+     * @param y 목표 Y 좌표
+     * @param vx 서버에서 받은 X 속도 (방향 결정용)
+     * @param vy 서버에서 받은 Y 속도 (점프 판정용)
+     * @param anim 서버에서 받은 애니메이션 상태
+     */
+    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string): void {
+        this.targetPos = { x, y };
+        this.remoteVx = vx;
+        if (vy !== undefined) this.remoteVy = vy;
+        if (anim !== undefined) this.remoteAnim = anim;
+    }
+
+    /**
+     * 원격 플레이어 방향(flip) 적용
+     * 로컬이 아닌 플레이어의 방향을 서버 속도 기반으로 결정
+     */
+    public applyRemoteDirection(): void {
+        if (this.isLocalPlayer) return;
+
+        // vx 임계값 (0.5 이상일 때만 방향 변경, 미세한 떨림 방지)
+        if (Math.abs(this.remoteVx) > 0.5) {
+            this.sprite.setFlipX(this.remoteVx < 0);
+        }
+    }
+
+    /**
+     * 원격 플레이어 애니메이션 적용
+     * 서버에서 받은 anim 또는 vx, vy 기반으로 애니메이션 결정
+     */
+    public applyRemoteAnimation(): void {
+        if (this.isLocalPlayer) return;
+        if (this._isDead || this.curseHP <= 0) {
+            if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
+                this.sprite.play(`player_dead_${this.colorName}`);
+            }
+            return;
+        }
+
+        // 서버 애니메이션 상태 우선 사용 (있을 경우)
+        // 백엔드에서 'jump', 'walk', 'idle' 등을 전송
+        if (this.remoteAnim) {
+            // 서버에서 받은 anim이 있으면 매핑
+            let targetAnim: string | null = null;
+            if (this.remoteAnim.includes('jump')) {
+                targetAnim = `player_jump_${this.colorName}`;
+            } else if (this.remoteAnim.includes('walk')) {
+                targetAnim = `player_walk_${this.colorName}`;
+            } else if (this.remoteAnim.includes('idle')) {
+                targetAnim = `player_idle_${this.colorName}`;
+            }
+
+            if (targetAnim && this.sprite.anims.currentAnim?.key !== targetAnim) {
+                this.sprite.play(targetAnim);
+                return;
+            }
+        }
+
+        // Fallback: 속도 기반 애니메이션 결정
+        const isAirborne = Math.abs(this.remoteVy) > 1;
+        const isMoving = Math.abs(this.remoteVx) > 0.5;
+
+        if (isAirborne) {
+            if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
+                this.sprite.play(`player_jump_${this.colorName}`);
+            }
+        } else if (isMoving) {
+            if (this.sprite.anims.currentAnim?.key !== `player_walk_${this.colorName}`) {
+                this.sprite.play(`player_walk_${this.colorName}`);
+            }
+        } else {
+            if (this.sprite.anims.currentAnim?.key !== `player_idle_${this.colorName}`) {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+        }
     }
 
     /**
