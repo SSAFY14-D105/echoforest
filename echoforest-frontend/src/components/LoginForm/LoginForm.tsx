@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { login } from '../api/authApi';
+import { login } from '../../apis/authApi';
 import styles from './LoginForm.module.css';
 
 interface LoginFormProps {

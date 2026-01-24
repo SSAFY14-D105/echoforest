@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useGameStore } from '../../game/store/useGameStore';
-import { gameWebSocket } from '../../../socket/GameWebSocket';
-import type { GameMessage } from '../../../socket/GameWebSocket';
+import { useGameStore } from '../../store/useGameStore';
+import { gameWebSocket } from '../../socket/GameWebSocket';
+import type { GameMessage } from '../../socket/GameWebSocket';
 import styles from './JoinGameModal.module.css';
 
 interface JoinGameModalProps {

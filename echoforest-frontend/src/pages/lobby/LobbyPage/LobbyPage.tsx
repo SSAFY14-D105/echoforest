@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useGameStore } from '../../game/store/useGameStore';
+import { useGameStore } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
-import JoinGameModal from '../components/JoinGameModal';
-import SettingsModal from '../components/SettingsModal';
+import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
+import SettingsModal from '../../../components/SettingsModal/SettingsModal';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {

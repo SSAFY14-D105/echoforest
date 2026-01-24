@@ -3,7 +3,7 @@
  * 토큰 발급 및 연결 상태 관리
  */
 import { useState, useEffect, useCallback } from 'react';
-import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../api/livekitApi';
+import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../apis/livekitApi';
 
 export interface UseLiveKitOptions {
     roomId: string;

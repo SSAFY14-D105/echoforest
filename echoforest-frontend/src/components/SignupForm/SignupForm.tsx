@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { signup, checkLoginId } from '../api/authApi';
+import { signup, checkLoginId } from '../../apis/authApi';
 import styles from './SignupForm.module.css';
 
 interface SignupFormProps {
