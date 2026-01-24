@@ -13,7 +13,7 @@ import {
     VideoPresets,
     createLocalTracks
 } from 'livekit-client';
-import { getLiveKitToken } from '../apis/livekitApi';
+import { getLiveKitToken } from '../features/livekit/api/livekitApi';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
