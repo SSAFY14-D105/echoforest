@@ -13,7 +13,7 @@ import {
     VideoPresets,
     createLocalTracks
 } from 'livekit-client';
-import { getLiveKitToken } from '../features/livekit/api/livekitApi';
+import { fetchLiveKitToken } from '../apis/livekitApi';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
@@ -108,7 +108,7 @@ export class LiveKitService {
     async connect(roomName: string, userId: string, username: string): Promise<void> {
         try {
             // 1. 백엔드에서 토큰 발급
-            const { token } = await getLiveKitToken({ roomName, userId, username });
+            const { token } = await fetchLiveKitToken({ roomId: roomName, userId, username });
             console.log('✅ LiveKit 토큰 발급 성공');
 
             // 2. Room 생성 및 연결

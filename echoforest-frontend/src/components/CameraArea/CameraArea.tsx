@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useGameStore } from '../store/useGameStore';
-import { liveKitService } from '../../../socket/LiveKitService';
+import { useGameStore } from '../../store/useGameStore';
+import { liveKitService } from '../../socket/LiveKitService';
 import styles from './CameraArea.module.css';
 
 const PLAYER_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'];

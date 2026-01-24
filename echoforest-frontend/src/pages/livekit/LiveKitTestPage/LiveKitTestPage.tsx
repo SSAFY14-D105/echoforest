@@ -5,8 +5,8 @@
 import { useState, useEffect } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../api/livekitApi';
-import TestVideo from '../components/TestVideo';
+import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../../../apis/livekitApi';
+import TestVideo from '../../../components/TestVideo/TestVideo';
 import styles from './LiveKitTestPage.module.css';
 
 export default function LiveKitTestPage() {

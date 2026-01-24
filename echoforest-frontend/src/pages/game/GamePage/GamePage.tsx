@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useGameStore } from '../store/useGameStore';
-import type { Player } from '../store/useGameStore';
+import { useGameStore } from '../../../store/useGameStore';
+import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage, ServerPlayerState } from '../../../socket/GameWebSocket';
-import PhaserGame from '../phaser/PhaserGame';
-import CameraArea from '../components/CameraArea';
-import StageSelectScreen from '../components/StageSelectScreen';
+import PhaserGame from '../../../phaser/PhaserGame';
+import CameraArea from '../../../components/CameraArea/CameraArea';
+import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
 import styles from './GamePage.module.css';
 
 const MAX_PLAYERS = 4;

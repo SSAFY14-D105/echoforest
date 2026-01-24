@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from './LoginPage.module.css';
-import LoginForm from '../../components/LoginForm';
-import SignupForm from '../../components/SignupForm';
+import LoginForm from '../../../components/LoginForm/LoginForm';
+import SignupForm from '../../../components/SignupForm/SignupForm';
 
 interface Props {
   onLogin: (nickname: string) => void;
