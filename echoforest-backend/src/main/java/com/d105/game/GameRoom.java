@@ -353,14 +353,14 @@ public class GameRoom implements Runnable {
                 // 2. 자동 퇴장 처리 (10초 이상 업데이트 없음)
                 checkDisconnectedPlayers();
 
-                // [NEW] 3. 물리 업데이트 (중력 적용 등) - 50ms (0.05초) 간격
-                updatePhysics(0.05);
+                // [REVERTED] 3. 물리 업데이트 제거 (Client-Authoritative 충돌 방지)
+                // updatePhysics(0.05);
 
                 // 4. 브로드캐스트 (20 TPS)
                 broadcastState();
 
-                // 50ms 대기 (20 TPS)
-                Thread.sleep(50);
+                // 33ms 대기 (약 30 TPS)
+                Thread.sleep(33);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
