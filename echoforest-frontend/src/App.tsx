@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useGameStore } from './store/useGameStore';
-import LoginPage from './pages/LoginPage/LoginPage';
-import LobbyPage from './pages/lobby/LobbyPage';
-import GamePage from './pages/game/GamePage';
+import { useGameStore } from './features/game/store/useGameStore';
+import LoginPage from './features/auth/pages/LoginPage/LoginPage';
+import LobbyPage from './features/lobby/pages/LobbyPage';
+import GamePage from './features/game/pages/GamePage';
 
 export default function App() {
   const { nickname, roomId, setNickname } = useGameStore();

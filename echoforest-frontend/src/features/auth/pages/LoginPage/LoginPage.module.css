@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+}
+
+.box {
+  padding: 40px;
+  border-radius: 16px;
+  text-align: center;
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* 폼 관련 스타일은 각 컴포넌트(LoginForm, SignupForm)로 이동되었습니다. */
+
+/* 반응형 - 태블릿 */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .box {
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 24px;
+    box-sizing: border-box;
+  }
+}
+
+/* 반응형 - 모바일 */
+@media (max-width: 480px) {
+  .container {
+    padding: 15px;
+  }
+
+  .box {
+    padding: 24px 20px;
+  }
+}
