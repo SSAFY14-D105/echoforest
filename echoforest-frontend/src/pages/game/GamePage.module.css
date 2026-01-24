@@ -621,3 +621,41 @@
     border-color: rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
 }
+
+/* Ready 버튼 */
+.readyBtn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.readyBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.readyBtn.readyActive {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.readyBtn.readyActive:hover {
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+}
+
+/* Ready 상태 표시 */
+.readyStatus {
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+}

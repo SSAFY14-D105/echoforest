@@ -56,6 +56,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // drain 저주는 제외하고 매 세션(씬 재시작)마다 유지됩니다.
     private static persistentCurses: Map<string, string> = new Map();
 
+    // ===== Authoritative Server 모델용 =====
+    // 서버 상태 전송 콜백 (GamePage에서 설정)
+    // x, y, vx, vy, anim
+    protected sendStateCallback: ((x: number, y: number, vx: number, vy: number, anim: string) => void) | null = null;
+
+    // 상태 전송 쓰로틀링 (50ms마다 전송 = 20 TPS)
+    private lastStateSendTime: number = 0;
+    // 에러 로그 쓰로틀링 (1초마다)
+    private lastErrorLogTime: number = 0;
+    private readonly STATE_SEND_INTERVAL: number = 50;
+    // 솔로 모드 여부 (로컬 물리 사용)
+    protected isSoloMode: boolean = false;
     public static resetPersistentCurses(): void {
         BaseGameScene.persistentCurses.clear();
     }
@@ -246,23 +258,86 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     create() {
-        this.resetState();
-        this.setupPhysics();
-        this.setupInput();
-        this.setupCamera();
+        try {
+            this.resetState();
+            this.setupPhysics();
+            this.setupInput();
 
-        // 애니메이션 생성
-        this.createAnimations();
+            // 맵 및 카메라 설정
+            this.createGimmicks(); // 맵 파싱 및 월드 크기 확정
+            this.setupCamera();    // 확정된 월드 크기로 카메라 바운드 설정 (DEV는 setupCamera 먼저 호출하지만, worldWidth가 필요하므로 순서 유지)
 
-        this.createGimmicks();
-        this.setupCollisions();
-        this.syncPlayersFromStore();
-        this.subscribeToStore();
+            // 애니메이션 생성 (DEV)
+            this.createAnimations();
 
-        // 씬 중지/삭제 시 클린업 등록
-        this.events.on('shutdown', this.shutdown, this);
-        this.events.on('destroy', this.shutdown, this);
+            this.setupCollisions();
+            this.syncPlayersFromStore();
+            this.subscribeToStore();
+
+            // 배경색 설정 (HEAD)
+            // 맵이 안 보일 때 대비
+            this.cameras.main.setBackgroundColor('#2d2d2d');
+
+            // 탭 전환/최소화 시 안전장치 (HEAD)
+            // 중복 리스너 방지를 위해 기존 것 제거 후 추가
+            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+            // 씬 중지/삭제 시 클린업 등록 (DEV + HEAD)
+            this.events.on('shutdown', this.shutdown, this);
+            this.events.on('destroy', () => {
+                this.shutdown();
+                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+            });
+
+            // [LIFECYCLE] Scene Created Log
+            console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
+        } catch (e) {
+            console.error(`[CRITICAL] Error in ${this.getSceneKey()} create():`, e);
+        }
     }
+
+
+
+    // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
+    private handleVisibilityChange = () => {
+        console.log(`[VISIBILITY] State: ${document.visibilityState}, Scene: ${this.getSceneKey()}`);
+
+        if (document.hidden) {
+            // [SNAP] 화면이 숨겨졌을 때: 공중 부양 방지를 위해 바닥으로 강제 착지
+            if (this.myPlayerId && this.sendStateCallback) {
+                const player = this.players.get(this.myPlayerId);
+                if (player) {
+                    // gameHeight가 0이거나 이상할 경우 안전값(720) 사용
+                    const safeHeight = (this.gameHeight > 0) ? this.gameHeight : 720;
+                    const groundY = safeHeight - 40;
+                    const currentPos = player.getPosition();
+
+                    player.setPosition(currentPos.x, groundY);
+
+                    // 즉시 상태 전송
+                    this.sendStateCallback(currentPos.x, groundY, 0, 0, 'idle_down');
+                }
+            }
+        } else {
+            // [CHECKPOINT] 중요한 객체들이 살아있는지 확인
+            if (!this.scene || !this.cameras || !this.cameras.main) {
+                return;
+            }
+
+            const cam = this.cameras.main;
+
+            // [CRITICAL FIX] 카메라 좌표가 NaN이면 즉시 0으로 초기화
+            if (!Number.isFinite(cam.scrollX) || !Number.isFinite(cam.scrollY)) {
+                cam.scrollX = 0;
+                cam.scrollY = 0;
+            }
+
+            // [SNAP RE-RENDER] 강제 렌더링 리프레시
+            this.scale?.refresh();
+            this.game?.loop?.wake();
+        }
+    };
 
     private resetState(): void {
         // 기존 플레이어 물리 바디 삭제
@@ -393,7 +468,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     private setupCamera(): void {
-        this.cameras.main.setBounds(0, 0, this.getWorldWidth(), this.gameHeight);
+        const worldWidth = this.getWorldWidth();
+        this.cameras.main.setBounds(0, 0, worldWidth, this.gameHeight);
+        console.log(`[BaseGameScene] Camera setup: Bounds(0, 0, ${worldWidth}, ${this.gameHeight})`);
     }
 
     private subscribeToStore(): void {
@@ -720,86 +797,150 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+    // === Authoritative Server 모델 지원 ===
+    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string) => void): void {
+        this.sendStateCallback = callback;
+    }
+
+    public setIsSoloMode(isSolo: boolean): void {
+        this.isSoloMode = isSolo;
+    }
+
     // Store의 players 배열과 동기화
     private syncPlayersFromStore(): void {
         const state = useGameStore.getState();
         const storePlayers = state.players;
         const currentNickname = state.nickname;
 
-        // Store에 있는데 게임에 없는 플레이어 추가
+        // Store에 있는데 게임에 없는 플레이어 추가 또는 위치 동기화
+        // 핵심: nickname을 키로 사용 (서버와 일치)
         storePlayers.forEach((storePlayer, index) => {
-            const existingPlayer = this.players.get(storePlayer.id);
+            const existingPlayer = this.players.get(storePlayer.nickname);
 
             // 본인 여부가 바뀌었는지 확인 (닉네임 설정 시점 차이 대응)
             const isLocal = storePlayer.nickname === currentNickname;
             if (existingPlayer && existingPlayer.isLocalPlayer !== isLocal) {
                 console.log(`[${this.getSceneKey()}] Player ${storePlayer.nickname} local status changed, recreating...`);
-                this.removePlayer(storePlayer.id);
+                this.removePlayer(storePlayer.nickname);
             }
 
-            if (!this.players.has(storePlayer.id)) {
-                // TODO: TMJ에서 파싱한 스폰 지점이 있다면 거기서 시작하도록 수정 가능
+            if (!this.players.has(storePlayer.nickname)) {
+                // 새 플레이어 추가
                 this.addPlayer(storePlayer, index, currentNickname);
+            } else {
+                // 원격 플레이어 위치 동기화 (서버에서 받은 좌표로 업데이트)
+                const player = this.players.get(storePlayer.nickname);
+                if (player && storePlayer.x !== undefined && storePlayer.y !== undefined) {
+                    const currentPos = player.getPosition();
+                    const dx = Math.abs(currentPos.x - storePlayer.x);
+                    const dy = Math.abs(currentPos.y - storePlayer.y);
+
+                    if (player.isLocalPlayer) {
+                        // 로컬 플레이어: 서버 위치 무시 (Client Authoritative)
+                        // 기믹(범퍼 등)에 의한 즉각적인 반응을 위해 로컬 위치를 우선함
+                    } else {
+                        // 원격 플레이어: 보간 이동
+                        const isTeleport = dx > 100 || dy > 100;
+
+
+
+                        if (isTeleport) {
+                            player.setPosition(storePlayer.x, storePlayer.y);
+                            player.setTargetPosition(storePlayer.x, storePlayer.y); // 타겟도 리셋
+                        } else if (dx > 0.1 || dy > 0.1) { // 0.1픽셀 이상일 때만 업데이트
+                            player.setTargetPosition(storePlayer.x, storePlayer.y);
+                        }
+                    }
+                } else if (!player) {
+                    console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
+                }
             }
         });
 
         // 게임에 있는데 Store에 없는 플레이어 제거
-        const storePlayerIds = new Set(storePlayers.map(p => p.id));
-        this.players.forEach((_, playerId) => {
-            if (!storePlayerIds.has(playerId)) {
-                this.removePlayer(playerId);
+        const storeNicknames = new Set(storePlayers.map(p => p.nickname));
+        this.players.forEach((_, playerNickname) => {
+            if (!storeNicknames.has(playerNickname)) {
+                this.removePlayer(playerNickname);
             }
         });
     }
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {
         const isLocalPlayer = storePlayer.nickname === currentNickname;
-        const xPos = 100 + (index * 100);
+        // 서버에서 받은 x, y가 있으면 사용, 없으면 기본 위치
+        const xPos = storePlayer.x ?? (100 + (index * 100));
+        // Spawn precisely on top of the ground (Ground Top = gameHeight - 40)
+        // Player Center Y = Ground Top - Half Size
+        const yPos = storePlayer.y ?? (this.gameHeight - 40 - (PHYSICS.PLAYER_SIZE / 2));
+
+        // colorIndex 결정: Store에서 계산된 값(접속 순서) 사용
+        // 방장은 항상 0번(초록), 이후 접속자는 순서대로 할당됨
+        const colorIndex = storePlayer.colorIndex ?? index;
 
         const config: PlayerConfig = {
-            id: storePlayer.id,
+            id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
             nickname: storePlayer.nickname,
             x: xPos,
-            y: this.gameHeight - 60 - PHYSICS.PLAYER_SIZE, // 맵 바닥 위에 스폰
-            colorIndex: index,
+            y: yPos,
+            colorIndex: colorIndex,
             isLocalPlayer
         };
+
+        console.log(`[${this.getSceneKey()}] Adding player: ${storePlayer.nickname}, isHost: ${storePlayer.isHost}, colorIndex: ${colorIndex}, isLocal: ${isLocalPlayer}`);
 
         try {
             const player = new Player(this, config);
 
-            // 좽음 콜백 설정 (저주 HP 0 등)
+            // 죽음 콜백 설정 (저주 HP 0 등)
             player.setOnDeathCallback(() => this.triggerDeath('curse'));
 
             // 저장된 저주가 있다면 복구 (drain 제외)
-            const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.id);
+            const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.nickname);
             if (savedCurseId) {
                 console.log(`[Curse] Restoring saved curse '${savedCurseId}' for ${storePlayer.nickname}`);
                 player.applyCurse(savedCurseId);
             }
 
-            this.players.set(storePlayer.id, player);
+            // nickname을 키로 저장 (서버와 일치)
+            this.players.set(storePlayer.nickname, player);
 
             if (isLocalPlayer) {
-                this.myPlayerId = storePlayer.id;
+                this.myPlayerId = storePlayer.nickname;
             }
-            console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname}`);
+            console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname} at (${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
         } catch (error) {
             console.warn(`[${this.getSceneKey()}] Failed to add player:`, error);
         }
     }
 
-    private removePlayer(playerId: string): void {
-        const player = this.players.get(playerId);
+    private removePlayer(nickname: string): void {
+        const player = this.players.get(nickname);
         if (player) {
             player.destroy();
-            this.players.delete(playerId);
-            BaseGameScene.persistentCurses.delete(playerId);
-            console.log(`[${this.getSceneKey()}] Player removed: ${playerId}`);
+            this.players.delete(nickname);
+            BaseGameScene.persistentCurses.delete(nickname);
+            console.log(`[${this.getSceneKey()}] Player removed: ${nickname}`);
         }
     }
 
-    update(time: number, _delta: number) {
+    update(time: number, delta: number) {
+        // [CRITICAL SAFETY] 카메라 좌표 NaN/Infinity 강제 복구 (가장 먼저 실행)
+        if (this.cameras.main) {
+            if (!Number.isFinite(this.cameras.main.scrollX)) {
+                this.cameras.main.scrollX = 0;
+            }
+            if (!Number.isFinite(this.cameras.main.scrollY)) {
+                this.cameras.main.scrollY = 0;
+            }
+        }
+
+        // [PHYSICS] 수동 업데이트 (탭 복귀 시 대형 Delta로 인한 폭주 방지)
+        // Delta 시간을 최대 100ms(0.1초)로 제한
+        const clampedDelta = Math.min(delta, 100);
+        this.matter.world.step(clampedDelta);
+
+
         // 이동형 범퍼 업데이트
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
@@ -1109,9 +1250,34 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const myPlayer = this.players.get(this.myPlayerId);
         if (!myPlayer || !this.cursors || myPlayer.isStunned) return;
 
+        // 반전 저주 상태 확인
+        const isReversed = myPlayer.isControlReversed;
+        const leftKey = isReversed ? this.cursors.right : this.cursors.left;
+        const rightKey = isReversed ? this.cursors.left : this.cursors.right;
+        const jumpKey = isReversed ? this.cursors.down : this.cursors.up;
+
+        // === 1. 상태 전송 (멀티플레이용, 50ms 간격) ===
+        if (this.sendStateCallback && !this.isSoloMode) {
+            const now = this.time.now;
+            if (now - this.lastStateSendTime > this.STATE_SEND_INTERVAL) {
+                const { x, y } = myPlayer.getPosition(); // Fixed: getBodyPosition -> getPosition
+                const velocity = myPlayer.getVelocity();
+
+                // 현재 애니메이션 키 가져오기 (없으면 idle_down)
+                // Player.ts가 아직 그래픽(사각형) 기반이므로 애니메이션이 없음. 임시로 'idle' 전송.
+                const currentAnim = 'idle';
+
+
+
+                this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim);
+                this.lastStateSendTime = now;
+            }
+        }
+
+        // === 2. 로컬 물리 연산 (Client Authoritative) ===
+        // 항상 로컬 입력에 따라 물리 연산 수행
         const velocity = myPlayer.getVelocity();
         let moveSpeed = PHYSICS.MOVE_SPEED * myPlayer.getSpeedMultiplier();
-        const isReversed = myPlayer.isControlReversed();
 
         // [추가] 로컬 플레이어가 현재 블록을 밀고 있는지 확인
         // 밀고 있다면 속도를 블록의 이동 속도(1px)로 낮춤
@@ -1127,11 +1293,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             moveSpeed = 2; // 블록 이동 속도(2px)와 동기화
         }
 
-        // 좌우 이동 (반전 저주 적용)
+        // 좌우 이동
         if (!myPlayer.isHidden) {
-            const leftKey = isReversed ? this.cursors.right : this.cursors.left;
-            const rightKey = isReversed ? this.cursors.left : this.cursors.right;
-
             if (leftKey.isDown) {
                 myPlayer.setVelocity(-moveSpeed, velocity.y);
             } else if (rightKey.isDown) {
@@ -1141,12 +1304,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        // 점프/Goal 키 (반전 저주 적용: up ↔ down)
-        const jumpKey = isReversed ? this.cursors.down : this.cursors.up;
+        // 점프/Goal
         if (Phaser.Input.Keyboard.JustDown(jumpKey)) {
             const playerLabel = myPlayer.getBodyLabel();
 
             if (myPlayer.isHidden) {
+                // Goal 탈출
                 for (const goal of this.goals) {
                     if (goal.isPlayerEntered(playerLabel)) {
                         goal.exitGoal(playerLabel);
@@ -1155,6 +1318,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     }
                 }
             } else {
+                // Goal 입장 또는 점프
                 let enteredGoal = false;
                 for (const goal of this.goals) {
                     if (goal.isPlayerNear(playerLabel)) {
@@ -1210,6 +1374,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
         // 기본 구현: 콘솔 로그만
@@ -1260,19 +1425,54 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const positions = Array.from(this.players.values())
             .filter(p => !p.isHidden)
             .map(p => p.getPosition());
+
+        // [SAFETY] 유효하지 않은 좌표(NaN 또는 Infinity)가 있으면 카메라 업데이트 중단
+        // console.warn 남발 방지: 1초에 한 번만 로그
+        const isInvalidPos = positions.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y));
+        if (isInvalidPos) {
+            const now = Date.now();
+            if (now - this.lastErrorLogTime > 1000) {
+                console.warn('[Camera] Invalid player position (NaN/Infinity) detected! skipping update.');
+                this.lastErrorLogTime = now;
+            }
+            return;
+        }
+
         if (positions.length === 0) return;
 
         const minX = Math.min(...positions.map(p => p.x));
         const maxX = Math.max(...positions.map(p => p.x));
         const centerX = (minX + maxX) / 2;
 
-        this.cameras.main.scrollX = Phaser.Math.Linear(
+        // [SAFETY] centerX가 유효한지 확인
+        if (!Number.isFinite(centerX)) {
+            return;
+        }
+
+        const newScrollX = Phaser.Math.Linear(
             this.cameras.main.scrollX,
             centerX - this.cameras.main.width / 2,
             0.1
         );
 
-        this.cameras.main.startFollow(this.players.get(this.myPlayerId)?.getSprite() as any);
+        // [SAFETY] 최종 카메라 위치가 유효한지 확인 (NaN/Infinity 체크)
+        if (!Number.isFinite(newScrollX)) {
+            const now = Date.now();
+            if (now - this.lastErrorLogTime > 1000) {
+                console.warn(`[Camera] ScrollX calculation failed! linear result: ${newScrollX}, current: ${this.cameras.main.scrollX}, target: ${centerX}`);
+                this.lastErrorLogTime = now;
+            }
+            // 안전한 값으로 강제 리셋 (플레이어 위치 혹은 0)
+            if (Number.isFinite(centerX)) {
+                this.cameras.main.scrollX = centerX - this.cameras.main.width / 2;
+            } else {
+                this.cameras.main.scrollX = 0;
+            }
+        } else {
+            this.cameras.main.scrollX = newScrollX;
+        }
+
+        // 월드 바운드 클램핑
         this.cameras.main.scrollX = Phaser.Math.Clamp(
             this.cameras.main.scrollX,
             0,

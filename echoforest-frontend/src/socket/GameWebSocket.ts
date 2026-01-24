@@ -6,27 +6,43 @@
  * - getInstance()로 전역 인스턴스 접근
  */
 
-// 백엔드와 동일한 메시지 타입
+// 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
-    | 'CREATE'
-    | 'JOIN'
-    | 'MOVE'
-    | 'LEAVE'
-    | 'PING'
-    | 'PONG'
-    | 'ERROR'
-    | 'ROOM_CREATED'
-    | 'ROOM_STATE'    // 기존 플레이어 목록 전달
-    | 'START'         // 게임 시작
-    | 'STAGE_SELECT'  // 스테이지 선택
-    | 'STAGE_CLEAR';  // 스테이지 클리어
+    | 'CREATE'        // Client→Server: 방 생성
+    | 'ROOM_CREATED'  // Server→Client: 방 생성 완료 (content에 방 코드)
+    | 'JOIN'          // 양방향: 방 참가 요청/알림
+    | 'LEAVE'         // Server→Others: 플레이어 퇴장 알림
+    | 'MOVE'          // Client→Server: 입력 전송 (content에 입력 타입)
+    | 'UPDATE'        // Server→All: 전체 플레이어 상태 (20 TPS)
+    | 'PING'          // Client→Server: Keep-alive
+    | 'PONG'          // Server→Client: Keep-alive 응답
+    | 'ERROR'         // Server→Client: 에러 메시지
+    // Ready/Start/Stage 관련 (새로 추가)
+    | 'READY'         // Client→Server: Ready 상태 변경 (content: "true"/"false")
+    | 'START_GAME'    // Client→Server: 게임 시작 (방장만)
+    | 'NEXT_STAGE'    // Client→Server: 다음 스테이지 (방장만)
+    | 'READY_STATUS'  // Server→All: Ready 상태 브로드캐스트 (username, content: "true"/"false")
+    | 'GAME_START'    // Server→All: 게임 시작 (content: 스테이지 번호)
+    | 'STAGE_CHANGE'  // Server→All: 스테이지 변경 (content: 스테이지 번호)
+    | 'STAGE_SELECT'  // Client<->Server: 스테이지 선택 (stage: 번호)
+    | 'STAGE_CLEAR'   // Client<->Server: 스테이지 클리어 (stage: 번호)
+    | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
+    | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
+    | 'KICKED';       // Server→Client: 강제 퇴장됨
 
-// 플레이어 정보 (ROOM_STATE에서 사용)
-export interface PlayerInfo {
-    username: string;
-    isHost: boolean;
-    x?: number;
-    y?: number;
+// UPDATE 메시지에서 오는 플레이어 상태
+export interface ServerPlayerState {
+    id: string;          // username
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    width: number;
+    height: number;
+    hp: number;
+    isDead: boolean;
+    curses: string[];
+    serverTick?: number;
 }
 
 export interface GameMessage {
@@ -35,10 +51,11 @@ export interface GameMessage {
     username?: string;
     x?: number;
     y?: number;
+    vx?: number;
+    vy?: number;
     anim?: string;
-    content?: string;      // 시스템 메시지 (방 코드, 에러 메시지 등)
-    players?: PlayerInfo[]; // ROOM_STATE: 기존 플레이어 목록
-    stage?: number;        // STAGE_SELECT, STAGE_CLEAR: 스테이지 번호
+    content?: string;  // 시스템 메시지, 입력 타입, UPDATE 플레이어 데이터
+    stage?: number;    // 스테이지 번호 (SELECT, CLEAR 등에서 사용)
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -112,7 +129,9 @@ class GameWebSocket {
         return new Promise((resolve, reject) => {
             try {
                 // JWT 토큰을 쿼리 파라미터로 전달 (백엔드 JwtHandshakeInterceptor 요구)
-                const wsUrl = `wss://i14d105.p.ssafy.io/ws/game?token=${this.token}`;
+                const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
+                const wsBase = apiBase.replace('http', 'ws').replace('/api', '/ws/game');
+                const wsUrl = `${wsBase}?token=${this.token}`;
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {
@@ -124,8 +143,8 @@ class GameWebSocket {
                 this.ws.onmessage = (event) => {
                     try {
                         const message: GameMessage = JSON.parse(event.data);
-                        // 'MOVE' 메시지는 너무 빈번하므로 로그에서 제외
-                        if (message.type !== 'MOVE') {
+                        // UPDATE 메시지는 너무 빈번하므로 로그에서 제외
+                        if (message.type !== 'UPDATE') {
                             console.log('📩 수신:', message);
                         }
 
@@ -167,15 +186,17 @@ class GameWebSocket {
             }
             this.ws.send(JSON.stringify(message));
         } else {
-            console.warn('WebSocket이 연결되지 않음');
+            // MOVE 메시지는 빈번하므로 연결 끊김 경고를 로그에 남기지 않음 (스팸 방지)
+            if (message.type !== 'MOVE') {
+                console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+            }
         }
     }
 
     // 방 생성 요청
-    createRoom(roomId?: string) {
+    createRoom() {
         this.send({
             type: 'CREATE',
-            roomId: roomId,  // 없으면 백엔드가 생성
             username: this.username
         });
     }
@@ -189,53 +210,107 @@ class GameWebSocket {
         });
     }
 
-    // 이동 메시지 전송
-    move(roomId: string, x: number, y: number, anim?: string) {
+    /**
+     * 플레이어 상태 전송 (Client-Authoritative: 위치 기반)
+     * @param roomId 방 ID
+     * @param x X 좌표
+     * @param y Y 좌표
+     * @param vx X 속도
+     * @param vy Y 속도
+     * @param anim 애니메이션 키
+     */
+    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string) {
         this.send({
             type: 'MOVE',
             roomId: roomId,
             username: this.username,
             x: x,
             y: y,
+            vx: vx,
+            vy: vy,
             anim: anim
         });
     }
 
-    // 게임 시작 요청 (호스트만)
-    startGame(roomId: string) {
+    /**
+     * Ready 상태 변경 (비방장용)
+     * @param roomId 방 ID
+     * @param isReady Ready 여부
+     */
+    sendReady(roomId: string, isReady: boolean) {
         this.send({
-            type: 'START',
+            type: 'READY',
+            roomId: roomId,
+            username: this.username,
+            content: String(isReady)
+        });
+    }
+
+    /**
+     * 게임 시작 요청 (방장만)
+     * @param roomId 방 ID
+     */
+    sendStartGame(roomId: string) {
+        this.send({
+            type: 'START_GAME',
             roomId: roomId,
             username: this.username
         });
     }
 
-    // 스테이지 선택 (호스트만)
-    selectStage(roomId: string, stage: number) {
+    /**
+     * 다음 스테이지 진행 (방장만)
+     * @param roomId 방 ID
+     */
+    sendNextStage(roomId: string) {
+        this.send({
+            type: 'NEXT_STAGE',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
+    /**
+     * 스테이지 선택 알림 (방장 -> 서버 -> 모두)
+     */
+    selectStage(roomId: string, stageNum: number) {
         this.send({
             type: 'STAGE_SELECT',
             roomId: roomId,
             username: this.username,
-            stage: stage
+            stage: stageNum
         });
     }
 
-    // 스테이지 클리어 브로드캐스트 (호스트만)
-    clearStageSync(roomId: string, stage: number) {
+    /**
+     * 스테이지 클리어 알림 (방장 -> 서버 -> 모두)
+     */
+    clearStageSync(roomId: string, stageNum: number) {
         this.send({
             type: 'STAGE_CLEAR',
             roomId: roomId,
             username: this.username,
-            stage: stage
+            stage: stageNum
         });
     }
 
-    // 방 나가기
-    leave(roomId: string) {
+    /**
+     * 방 퇴장 (로비로 이동)
+     * @param roomId 방 ID
+     */
+    sendLeave(roomId: string) {
         this.send({
             type: 'LEAVE',
             roomId: roomId,
             username: this.username
+        });
+    }
+
+    // PING 전송 (Keep-alive)
+    ping() {
+        this.send({
+            type: 'PING',
+            content: String(Date.now())
         });
     }
 

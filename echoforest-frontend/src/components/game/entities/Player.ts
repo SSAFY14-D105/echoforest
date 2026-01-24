@@ -29,7 +29,7 @@ export class Player {
 
     public readonly id: string;
     public readonly nickname: string;
-    public readonly color: number;
+    public color: number;
     public readonly isLocalPlayer: boolean;
 
     // 저주 시스템
@@ -48,6 +48,10 @@ export class Player {
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
     private _isDead: boolean = false;
+
+    // 목표 위치 (원격 플레이어 보간용)
+    private targetPos: { x: number, y: number } | null = null;
+    private readonly LERP_FACTOR = 0.15; // 0.2 -> 0.15: 더 부드럽게 (지연 시간은 미세하게 증가)
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
@@ -68,6 +72,10 @@ export class Player {
         // 물리 바디 생성
         this.body = this.createBody(config.x, config.y);
 
+        // 초기 목표 위치 설정 (원격 플레이어용)
+        if (!this.isLocalPlayer) {
+            this.targetPos = { x: config.x, y: config.y };
+        }
         // 플레이어 스프라이트 생성
         this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
         this.sprite.play(`player_idle_${this.colorName}`);
@@ -78,10 +86,10 @@ export class Player {
         const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
         const body = this.scene.matter.add.rectangle(x, y, size, size, {
             label: this.id,
-            friction: PHYSICS.FRICTION,
             frictionStatic: PHYSICS.STATIC_FRICTION,
             frictionAir: PHYSICS.AIR_FRICTION,
-            restitution: PHYSICS.RESTITUTION
+            restitution: PHYSICS.RESTITUTION,
+            isSensor: false // 모든 플레이어 물리 충돌 활성화 (상호작용 및 기믹 호환성 복구)
         });
 
         // 회전 완전 고정 (피코파크 스타일)
@@ -91,7 +99,6 @@ export class Player {
     }
 
     private updateVisualEffects(): void {
-
         // 스턴 상태 시 시각적 효과 (빨간색)
         if (this._isStunned) {
             this.sprite.setTint(0xff5555);
@@ -105,6 +112,38 @@ export class Player {
     }
 
     public update(): void {
+        // 원격 플레이어 보간 이동
+        if (!this.isLocalPlayer && this.targetPos) {
+            const currentX = this.body.position.x;
+            const currentY = this.body.position.y;
+
+            // 거리 계산
+            const dx = this.targetPos.x - currentX;
+            const dy = this.targetPos.y - currentY;
+            const distSq = dx * dx + dy * dy;
+
+            // 아주 작은 움직임은 무시하여 떨림 방지
+            if (distSq > 0.01) {
+                // 텔레포트 임계값 (100px)
+                if (distSq > 10000) {
+                    this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
+                } else {
+                    // 선형 보간 (Lerp)
+                    // LERP_FACTOR를 0.2 -> 0.15로 낮추어 더 부드럽게 이동 (지연은 약간 늘어남)
+                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, this.LERP_FACTOR);
+                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, this.LERP_FACTOR);
+
+                    // 위치 변경
+                    this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+                }
+            }
+
+            // 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시)
+            // 원격 플레이어는 서버 좌표를 추종하므로 속도를 0으로 유지
+            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+            this.scene.matter.body.setAngularVelocity(this.body, 0);
+        }
+
         const { x, y } = this.body.position;
         this.sprite.setPosition(x, y);
 
@@ -161,6 +200,13 @@ export class Player {
     }
 
     /**
+     * 목표 위치 설정 (원격 플레이어 보간용)
+     */
+    public setTargetPosition(x: number, y: number): void {
+        this.targetPos = { x, y };
+    }
+
+    /**
      * HP 바 그리기 (플레이어 위에 표시)
      */
     private drawHPBar(): void {
@@ -174,11 +220,11 @@ export class Player {
 
         this.hpBarGraphics.clear();
 
-        // 배경 (어두운 빨강)
+        // 배경
         this.hpBarGraphics.fillStyle(0x333333, 0.8);
         this.hpBarGraphics.fillRect(x, y, barWidth, barHeight);
 
-        // HP (초록 → 빨강 그라데이션 효과)
+        // HP
         const hpRatio = this.curseHP / 100;
         const hpColor = hpRatio > 0.5 ? 0x00ff00 : (hpRatio > 0.25 ? 0xffff00 : 0xff0000);
         this.hpBarGraphics.fillStyle(hpColor, 1);
@@ -191,10 +237,6 @@ export class Player {
 
     // ===== 저주 시스템 =====
 
-    /**
-     * 저주 적용
-     * @param curseId 저주 ID (curseConfig.ts에 정의된 ID)
-     */
     public applyCurse(curseId: string): void {
         const curse = CURSES[curseId];
         if (!curse) {
@@ -226,9 +268,6 @@ export class Player {
         this.updateVisualEffects();
     }
 
-    /**
-     * HP 감소 타이머 시작
-     */
     private startHPDrain(): void {
         // 기존 타이머 제거
         this.stopHPDrain();
@@ -238,72 +277,46 @@ export class Player {
             this.hpBarGraphics = this.scene.add.graphics();
         }
 
-        // 1초마다 HP 20% 감소 (5초 후 좽음)
+        // 1초마다 HP 20% 감소 (5초 후 죽음)
         this.hpDrainTimer = this.scene.time.addEvent({
             delay: 1000,
             repeat: 4,  // 5회 실행 (0, 1, 2, 3, 4)
             callback: () => {
                 this.curseHP -= 20;
-                console.log(`[Player] ${this.id} HP: ${this.curseHP}%`);
-
                 if (this.curseHP <= 0) {
                     this.curseHP = 0;
-                    this.onCurseDeath();
+                    if (this.onDeathCallback) {
+                        this.onDeathCallback();
+                    }
                 }
             }
         });
     }
 
-    /**
-     * HP 감소 타이머 정지
-     */
     private stopHPDrain(): void {
         if (this.hpDrainTimer) {
-            this.hpDrainTimer.destroy();
+            this.hpDrainTimer.remove();
             this.hpDrainTimer = null;
         }
         if (this.hpBarGraphics) {
+            this.hpBarGraphics.clear();
             this.hpBarGraphics.destroy();
             this.hpBarGraphics = null;
         }
-        this.curseHP = 100;
     }
 
-    /**
-     * 저주로 인한 좽음 처리
-     */
-    private onCurseDeath(): void {
-        console.log(`[Player] ${this.id} died from curse!`);
-        this.stopHPDrain();
-        if (this.onDeathCallback) {
-            this.onDeathCallback();
-        }
-    }
-
-    /**
-     * 좽음 콜백 설정 (BaseGameScene에서 설정)
-     */
-    public setOnDeathCallback(callback: () => void): void {
-        this.onDeathCallback = callback;
-    }
-
-    /**
-     * 저주 해제
-     */
     public removeCurse(): void {
         if (!this.currentCurseId) return;
 
         console.log(`[Player] Removing curse from ${this.id}`);
-
-        // HP 타이머 정지
-        this.stopHPDrain();
-
         this.currentCurseId = null;
         this.sizeMultiplier = 1;
         this.speedMultiplier = 1;
         this.reverseControls = false;
 
-        // 물리 바디 재생성 (원래 크기)
+        this.stopHPDrain();
+
+        // 물리 바디 재생성
         const pos = this.body.position;
         const vel = this.body.velocity;
         this.scene.matter.world.remove(this.body);
@@ -314,63 +327,62 @@ export class Player {
         this.updateVisualEffects();
     }
 
-    /**
-     * 속도 수정자 반환 (이동 로직에서 사용)
-     */
-    public getSpeedMultiplier(): number {
-        return this.speedMultiplier;
-    }
-
-    /**
-     * 저주 상태 확인
-     */
     public hasCurse(): boolean {
         return this.currentCurseId !== null;
     }
 
-    /**
-     * 현재 저주 ID 반환
-     */
-    public getCurrentCurseId(): string | null {
-        return this.currentCurseId;
+    public setOnDeathCallback(callback: () => void): void {
+        this.onDeathCallback = callback;
     }
 
-    /**
-     * 조작 반전 여부 반환
-     */
-    public isControlReversed(): boolean {
+    public getSpeedMultiplier(): number {
+        return this.speedMultiplier;
+    }
+
+    public setColor(colorIndex: number): void {
+        const newColor = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        const newColorName = colors[colorIndex % colors.length];
+
+        if (this.color !== newColor) {
+            this.color = newColor;
+            this.colorName = newColorName;
+
+            // 애니메이션 갱신 (현재 상태 유지하며 색상 변경)
+            const currentAnim = this.sprite.anims.currentAnim?.key;
+            if (currentAnim) {
+                // 예: "player_idle_green" -> "player_idle_blue"
+                const parts = currentAnim.split('_');
+                const action = parts[1]; // idle, walk, jump, dead
+                this.sprite.play(`player_${action}_${this.colorName}`, true);
+            } else {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+            this.updateVisualEffects();
+        }
+    }
+
+    public get isControlReversed(): boolean {
         return this.reverseControls;
     }
 
-    /**
-     * 현재 HP 반환 (0~100)
-     */
-    public getCurseHP(): number {
-        return this.curseHP;
+    public applyKnockback(forceX: number, forceY: number, duration: number): void {
+        // 기존 코드 복구: applyForce가 아니라 setVelocity를 사용해야 함
+        // Bumper power(8)는 Force로 쓰기엔 너무 크고 Velocity로 쓰기에 적당함
+        this.scene.matter.body.setVelocity(this.body, { x: forceX, y: forceY });
+        this.stun(duration);
     }
 
-    // ===== 밀치기 및 스턴 시스템 =====
+    // ===== 스턴 시스템 =====
 
-    /**
-     * 밀치기 적용 및 스턴 상태 돌입
-     * @param forceX X측 힘
-     * @param forceY Y측 힘
-     * @param duration 스턴 지속 시간 (ms)
-     */
-    public applyKnockback(forceX: number, forceY: number, duration: number = 300): void {
-        if (this._isHidden) return;
+    public stun(duration: number): void {
+        if (this._isStunned) return;
 
-        // 힘 적용 (경량화를 위해 setVelocity 사용)
-        this.setVelocity(forceX, forceY);
-
-        // 스턴 상태 돌입
         this._isStunned = true;
         this.updateVisualEffects(); // 색상 변경을 위해 즉시 업데이트
 
-        // 기존 타이머 제거
-        if (this.stunTimer) {
-            this.stunTimer.destroy();
-        }
+        // 일정 시간 후 스턴 해제
+        if (this.stunTimer) this.stunTimer.destroy();
 
         // 지속 시간 후 스턴 해제
         this.stunTimer = this.scene.time.delayedCall(duration, () => {
@@ -378,6 +390,8 @@ export class Player {
             this.stunTimer = null;
             this.updateVisualEffects(); // 원래 색상으로 복구
         });
+
+
     }
 
     public get isStunned(): boolean {
@@ -400,6 +414,7 @@ export class Player {
 
     public setPosition(x: number, y: number): void {
         this.scene.matter.body.setPosition(this.body, { x, y });
+        this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
     }
 
     // Goal 입장 시 플레이어 숨기기
@@ -470,4 +485,3 @@ export class Player {
         console.log(`[Player] ${this.nickname} destroyed`);
     }
 }
-

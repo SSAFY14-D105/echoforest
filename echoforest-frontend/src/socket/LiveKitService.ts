@@ -16,7 +16,7 @@ import {
 import { getLiveKitToken } from '../apis/livekitApi';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
-const LIVEKIT_URL = 'ws://localhost:7880';
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
 
 export interface ParticipantInfo {
     identity: string;
@@ -131,7 +131,7 @@ export class LiveKitService {
                 this.notifyParticipantUpdate();
             });
 
-            this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+            this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
                 console.log('🎥 트랙 구독:', track.kind, participant.identity);
                 this.notifyParticipantUpdate();
             });
