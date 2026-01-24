@@ -1,193 +1,334 @@
-# EchoForest Frontend
+# 🎮 EchoForest Frontend - STT 저주 시스템
 
-React + TypeScript + Vite 기반 멀티플레이어 협동 퍼즐 플랫포머 게임 클라이언트
-
-## 🌲 프로젝트 개요
-
-**EchoForest**는 최대 4명이 함께하는 협동 플랫포머 게임입니다.
-- **Phaser 3** 기반 2D 물리 엔진 (Matter.js)
-- **WebSocket** 실시간 플레이어 상태 동기화 (20 TPS)
-- **LiveKit WebRTC** 음성/화상 통신
-- **Zustand** 클라이언트 상태 관리
+> **SSAFY 14기 S14P11D105 프론트엔드**  
+> React + Phaser3 게임 클라이언트 with 실시간 STT 저주 시스템
 
 ---
 
-## 📁 디렉토리 구조
+## 📑 목차
+
+1. [시스템 개요](#-시스템-개요)
+2. [STT 저주 시스템](#-stt-저주-시스템)
+3. [프로젝트 구조](#-프로젝트-구조)
+4. [핵심 컴포넌트](#-핵심-컴포넌트)
+5. [WebSocket 통신](#-websocket-통신)
+6. [설정 및 실행](#-설정-및-실행)
+
+---
+
+## 🎯 시스템 개요
+
+### 기술 스택
+
+| 분류 | 기술 | 용도 |
+|------|------|------|
+| **Framework** | React 18, TypeScript | UI 프레임워크 |
+| **Game Engine** | Phaser 3 | 2D 플랫포머 게임 |
+| **State** | Zustand | 전역 상태 관리 |
+| **STT** | Web Speech API | 브라우저 음성 인식 |
+| **Video** | LiveKit | 화상 채팅 |
+| **Build** | Vite | 빌드 도구 |
+| **WebSocket** | Native WebSocket | 실시간 통신 |
+
+### 화면 구성
 
 ```
-echoforest-frontend/
-├── public/                   # 정적 파일
-│   └── assets/               # 게임 에셋 (sprites, maps, tilesets)
-├── src/
-│   ├── apis/                 # REST API 요청 정의
-│   │   ├── authApi.ts        # 로그인/회원가입 API
-│   │   └── livekitApi.ts     # LiveKit 토큰 발급 API
-│   │
-│   ├── socket/               # 실시간 통신
-│   │   ├── GameWebSocket.ts  # 게임 서버 WebSocket (싱글톤)
-│   │   └── LiveKitService.ts # LiveKit 연결 서비스
-│   │
-│   ├── store/                # Zustand 상태 관리
-│   │   └── useGameStore.ts   # 플레이어/방/스테이지 상태
-│   │
-│   ├── components/           # 재사용 가능한 UI 컴포넌트
-│   │   ├── LoginForm/        # 로그인 폼
-│   │   ├── SignupForm/       # 회원가입 폼
-│   │   ├── CameraArea/       # 4분할 카메라 영역 (LiveKit)
-│   │   ├── JoinGameModal/    # 방 참가 모달
-│   │   ├── SettingsModal/    # 설정 모달
-│   │   ├── StageSelectScreen/ # 스테이지 선택 화면
-│   │   └── ...
-│   │
-│   ├── pages/                # 라우팅되는 페이지 컴포넌트
-│   │   ├── auth/LoginPage/   # 로그인/회원가입 페이지
-│   │   ├── lobby/LobbyPage/  # 로비 (방 생성/참가)
-│   │   ├── game/GamePage/    # 게임 화면 (대기실/스테이지)
-│   │   └── livekit/          # LiveKit 테스트 페이지
-│   │
-│   ├── hooks/                # 커스텀 React 훅
-│   │   └── useLiveKit.ts     # LiveKit 연결 훅
-│   │
-│   ├── styles/               # 전역 스타일
-│   │   └── GlobalStyles.css  # CSS 변수, 공통 스타일
-│   │
-│   ├── phaser/               # Phaser 3 게임 엔진
-│   │   ├── PhaserGame.tsx    # React-Phaser 브릿지
-│   │   ├── entities/Player.ts # 플레이어 엔티티
-│   │   ├── scenes/           # 게임 씬들
-│   │   │   ├── BaseGameScene.ts  # 공통 게임 로직
-│   │   │   ├── LobbyScene.ts     # 대기실 씬
-│   │   │   ├── Stage1Scene.ts    # 스테이지 1
-│   │   │   ├── Stage2Scene.ts    # 스테이지 2
-│   │   │   └── ...
-│   │   ├── gimmicks/         # 게임 기믹 (Spike, Spring, Key 등)
-│   │   ├── config/           # 게임 설정 (저주 시스템 등)
-│   │   └── utils/            # 유틸리티 (TiledParser, SceneHelper)
-│   │
-│   ├── App.tsx               # 라우팅 및 앱 구조
-│   └── main.tsx              # 앱 진입점
+로그인 (LoginPage)
+    ↓
+로비 (LobbyPage)
+    ↓
+게임 대기실 (GamePage - 대기 모드)
+    ↓
+게임 플레이 (GamePage - 스테이지 플레이)
+```
+
+---
+
+## 🔮 STT 저주 시스템
+
+### 데이터 흐름
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         STT 저주 시스템 흐름                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1️⃣ 음성 인식 (useSpeechRecognition)                                │
+│     ├─ Web Speech API로 연속 듣기                                   │
+│     ├─ 중간 결과 (interimTranscript): 긍정어 감지용                 │
+│     └─ 최종 결과 (transcript): 배치 큐에 추가                       │
+│                                                                     │
+│  2️⃣ 상태 관리 (useSttStore)                                         │
+│     ├─ 긍정어 로컬 매칭 ("뽀뽀", "사랑해", "좋아해")                 │
+│     ├─ 5초마다 배치 전송 (speechQueue → SPEECH_BATCH)               │
+│     └─ 저주 스택 상태 관리 (0~10)                                   │
+│                                                                     │
+│  3️⃣ WebSocket 통신                                                  │
+│     ├─ [Client→Server] SPEECH_BATCH { texts: [...] }               │
+│     ├─ [Server→Client] STACK_UPDATED { stack, delta }              │
+│     ├─ [Server→Client] CURSE_TRIGGERED { cursedPlayerId }          │
+│     └─ [Client→Server] CURSE_RELEASE { word: "사랑해" }             │
+│                                                                     │
+│  4️⃣ UI 렌더링                                                       │
+│     ├─ CurseStackBar: 상단 스택 표시 (색상 변화)                    │
+│     ├─ FloatingButton: 우하단 부스터 버튼                           │
+│     └─ 경고 모달: 저주 발동/해제 알림                               │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 긍정어 부스터 사용법
+
+1. **우하단 플로팅 버튼 길게 누르기** (마우스다운/터치 유지)
+2. **긍정어 발화** ("뽀뽀", "사랑해", "좋아해" 중 하나)
+3. **긍정어 감지 시 자동으로 CURSE_RELEASE 전송**
+4. 버튼 놓으면 부스터 모드 종료
+
+---
+
+## 📁 프로젝트 구조
+
+```
+src/
+├── hooks/
+│   └── useSpeechRecognition.ts     # Web Speech API 래퍼 훅
 │
-├── index.html                # Vite HTML 템플릿
-├── vite.config.ts            # Vite 설정
-├── tsconfig.json             # TypeScript 설정
-└── package.json              # 의존성 및 스크립트
+├── store/
+│   ├── useGameStore.ts             # 게임 상태 (플레이어, 방, 스테이지)
+│   └── useSttStore.ts              # STT 상태 (스택, 부스터, 배치)
+│
+├── components/
+│   └── stt/
+│       ├── FloatingButton.tsx      # 플로팅 부스터 버튼
+│       ├── FloatingButton.module.css
+│       ├── CurseStackBar.tsx       # 저주 스택 바
+│       └── CurseStackBar.module.css
+│
+├── socket/
+│   ├── GameWebSocket.ts            # 게임 WebSocket 싱글톤
+│   └── LiveKitService.ts           # 화상 채팅 서비스
+│
+├── pages/
+│   ├── auth/LoginPage/             # 로그인 페이지
+│   ├── lobby/LobbyPage/            # 로비 페이지
+│   └── game/GamePage/              # 게임 페이지 (STT 통합)
+│
+├── phaser/
+│   ├── PhaserGame.tsx              # Phaser 게임 컴포넌트
+│   └── scenes/                     # 게임 씬들
+│
+└── App.tsx                         # 라우팅
 ```
 
 ---
 
-## 🎮 핵심 아키텍처
+## 🧩 핵심 컴포넌트
 
-### 1. 상태 관리 (Zustand)
+### 1. useSpeechRecognition
 
-`useGameStore` - 게임 전체 상태 관리:
-- `nickname`, `roomId`, `isHost` - 유저/방 정보
-- `players[]` - 플레이어 목록 (위치, 색상, 저주 등)
-- `isGameStarted`, `currentStage`, `clearedStages` - 게임 진행 상태
-- `isSoloMode` - 혼자하기 모드 여부
+Web Speech API를 래핑한 커스텀 훅.
 
-### 2. 실시간 통신 (WebSocket)
+```typescript
+const {
+    transcript,          // 최종 음성 인식 결과
+    interimTranscript,   // 중간 결과 (실시간)
+    isListening,         // 듣는 중 여부
+    isSupported,         // 브라우저 지원 여부
+    error,               // 에러 메시지
+    startListening,      // 시작
+    stopListening,       // 중지
+    resetTranscript,     // 초기화
+} = useSpeechRecognition();
+```
 
-`GameWebSocket` (싱글톤):
-- JWT 토큰 기반 인증
-- 메시지 타입: `CREATE`, `JOIN`, `MOVE`, `UPDATE`, `READY`, `START_GAME` 등
-- 서버에서 20 TPS로 `UPDATE` 메시지 수신 → 플레이어 위치 동기화
+**특징**:
+- 연속 듣기 모드 (`continuous: true`)
+- 한국어 설정 (`lang: 'ko-KR'`)
+- 자동 재시작 (끊김 방지)
 
-### 3. 게임 엔진 (Phaser 3)
+### 2. useSttStore
 
-`BaseGameScene` - 모든 게임 씬의 부모 클래스:
-- Matter.js 물리 엔진 (중력, 충돌)
-- Tiled 맵 파서 (TMJ 형식)
-- 플레이어 생성 및 동기화
-- 기믹 충돌 처리 (Spike, Spring, Bumper, Key, Lock, Goal)
+STT 상태 관리 Zustand 스토어.
 
-### 4. 화상 통신 (LiveKit)
+```typescript
+const {
+    curseState,          // { stack, cursedPlayer, ... }
+    setBoosterMode,      // 부스터 모드 활성화
+    boosterActive,       // 부스터 발동 여부
+    processTranscript,   // 텍스트 처리
+    onStackUpdated,      // 스택 업데이트 핸들러
+    onCurseTriggered,    // 저주 발동 핸들러
+    onCurseReleased,     // 저주 해제 핸들러
+} = useSttStore();
+```
 
-`LiveKitService`:
-- 백엔드에서 토큰 발급 → LiveKit 서버 연결
-- 로컬/리모트 비디오 트랙 관리
-- 마이크/카메라 토글
+**주요 로직**:
+- **긍정어 매칭**: 프론트엔드에서 로컬 처리
+- **배치 전송**: 5초마다 `speechQueue` → 서버
+- **스택 관리**: 서버로부터 받은 값으로 업데이트
+
+### 3. FloatingButton
+
+우하단 플로팅 원형 버튼.
+
+```tsx
+<FloatingButton
+    onPress={() => setBoosterMode(true)}
+    onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+    isActive={boosterActive}
+/>
+```
+
+**시각 효과**:
+- 기본: 보라색 그라디언트 `💬`
+- 누르는 중: 빨강-핑크 + 펄스 링 `🎤`
+- 발동: 초록색 + 파티클 `💖`
+
+### 4. CurseStackBar
+
+상단 저주 스택 표시.
+
+```tsx
+<CurseStackBar
+    stack={curseState.stack}
+    cursedPlayer={curseState.cursedPlayer}
+    isListening={isListening}
+/>
+```
+
+**색상 변화**:
+- 0~4: 파랑 (`#667eea`)
+- 5~7: 주황 (`#ffaa00`)
+- 8~10: 빨강 (`#ff4444`)
 
 ---
 
-## 🚀 시작하기
+## 🔌 WebSocket 통신
 
-### 설치
+### STT 관련 메시지 타입
+
+#### Client → Server
+
+| Type | 필드 | 설명 |
+|------|------|------|
+| `SPEECH_BATCH` | `content: JSON(texts[])` | 발화 배치 전송 (5초마다) |
+| `CURSE_RELEASE` | `content: word` | 저주 해제 요청 (긍정어) |
+
+#### Server → Client
+
+| Type | 필드 | 설명 |
+|------|------|------|
+| `STACK_UPDATED` | `stack, delta, reason` | 스택 업데이트 |
+| `CURSE_TRIGGERED` | `cursedPlayerId, mapId` | 저주 발동 |
+| `CURSE_RELEASED` | `releasedPlayerId, word` | 저주 해제됨 |
+
+### GameWebSocket 싱글톤
+
+```typescript
+import { gameWebSocket } from './socket/GameWebSocket';
+
+// 연결
+gameWebSocket.setUser(nickname);
+await gameWebSocket.connect();
+
+// 메시지 전송
+gameWebSocket.send({
+    type: 'SPEECH_BATCH',
+    roomId,
+    content: JSON.stringify(texts),
+});
+
+// 메시지 수신
+gameWebSocket.onMessage((msg) => {
+    if (msg.type === 'STACK_UPDATED') {
+        useSttStore.getState().onStackUpdated(msg.stack!, msg.delta!);
+    }
+});
+```
+
+---
+
+## ⚙️ 설정 및 실행
+
+### 환경 변수
+
+`.env` 파일:
+
 ```bash
+VITE_API_BASE_URL=https://i14d105.p.ssafy.io/api
+```
+
+### 설치 및 실행
+
+```bash
+# 의존성 설치
 npm install
-```
 
-### 개발 서버 실행
-```bash
+# 개발 서버 실행
 npm run dev
-```
+# → http://localhost:5173
 
-### 프로덕션 빌드
-```bash
+# 프로덕션 빌드
 npm run build
 ```
 
+### 브라우저 요구사항
+
+- **Chrome / Edge (권장)**: Web Speech API 완전 지원
+- **Safari**: 부분 지원 (iOS는 지원 안 됨)
+- **Firefox**: 지원 안 함
+
+### 마이크 권한
+
+첫 실행 시 브라우저에서 마이크 권한을 요청합니다. **반드시 허용**해야 STT가 작동합니다.
+
 ---
 
-## 🔗 환경 변수
+## 🧪 테스트
 
-`.env` 파일에 설정:
+### STT 기능 테스트
 
-```env
-VITE_API_BASE_URL=https://i14d105.p.ssafy.io/api
-VITE_LIVEKIT_URL=wss://i14d105.p.ssafy.io:7880
+1. **음성 인식 확인**:
+   - 게임 진입 후 아무 말이나 해보기
+   - 콘솔에 `✅ 최종: [인식된 텍스트]` 로그 확인
+
+2. **배치 전송 확인**:
+   - 5초 동안 여러 문장 말하기
+   - 콘솔에 `📤 배치 전송: N개 발화` 로그 확인
+
+3. **긍정어 부스터 테스트**:
+   - 플로팅 버튼 길게 누르기
+   - "사랑해" 또는 "뽀뽀" 발화
+   - 콘솔에 `💖 긍정어 감지: 사랑해` 로그 확인
+   - `📤 CURSE_RELEASE 전송` 확인
+
+---
+
+## 🎨 UI 구성
+
+### 게임 화면 (스테이지 플레이)
+
+```
+┌──────────────────────────────────────────────┐
+│ 🔮 저주 스택: 3/10 [████░░░░░░]   🎤 듣는 중  │  ← CurseStackBar
+├──────────────────────────────────────────────┤
+│                                              │
+│         [ Phaser 게임 영역 ]                  │
+│                                              │
+│                                       [💬]  │  ← FloatingButton
+├──────────────────────────────────────────────┤
+│         [ 카메라 영역 - 4분할 ]               │
+└──────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📋 주요 흐름
+## 👥 팀 정보
 
-```
-1. 로그인 (LoginPage)
-   └── authApi.login() → JWT 토큰 저장 → nickname 설정
-
-2. 로비 (LobbyPage)
-   ├── 방 만들기 → WebSocket.createRoom() → ROOM_CREATED 수신
-   ├── 방 참가하기 → REST API로 방 확인 → WebSocket.joinRoom()
-   └── 혼자하기 → startSoloGame() (WebSocket 없이 로컬 실행)
-
-3. 대기실 (GamePage - LobbyScene)
-   ├── Ready 상태 토글 → WebSocket.sendReady()
-   └── 방장: 게임 시작 → WebSocket.sendStartGame() → GAME_START 수신
-
-4. 게임 플레이 (GamePage - StageXScene)
-   ├── 로컬 입력 → Player.move() → WebSocket.sendPlayerState()
-   ├── 서버 UPDATE 수신 → syncPlayersFromServer() → 리모트 플레이어 위치 업데이트
-   └── Goal 도달 → clearStage() → 스테이지 선택 화면
-```
+**SSAFY 14기 S14P11D105**
 
 ---
 
-## 🛠 기술 스택
+## 📜 라이선스
 
-| 분류 | 기술 |
-|------|------|
-| Framework | React 18 + TypeScript |
-| Build Tool | Vite |
-| State | Zustand |
-| Game Engine | Phaser 3 (Matter.js) |
-| WebSocket | Native WebSocket |
-| WebRTC | LiveKit |
-| Map Editor | Tiled (TMJ export) |
-| Styling | CSS Modules |
-
----
-
-## 📝 개발 노트
-
-### 플레이어 색상 할당
-- 서버 순서(배열 인덱스) 기반으로 색상 고정
-- 0번: 초록(방장), 1번: 파랑, 2번: 주황, 3번: 보라
-
-### 저주 시스템 (STT 기반)
-- 부정적인 단어 감지 시 저주 스택 누적
-- 저주 효과: 캐릭터 크기 변화, 화면 흔들림 등
-- 긍정적인 단어로 저주 해제 가능
-
-### P2P 스테이지 동기화
-- 방장이 MOVE 메시지에 현재 스테이지 정보 포함
-- 비방장은 방장의 스테이지로 자동 동기화
+MIT License
