@@ -145,6 +145,12 @@ public class GameService {
         Double vy = message.getVy();
         String anim = message.getAnim();
 
+        // [DEBUG] 수신 데이터 확인 (배포 후 제거)
+        if (anim != null && !anim.equals("idle")) {
+            log.info("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
+                    session.getId().substring(0, 8), vx, vy, anim);
+        }
+
         // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
         if (x != null && y != null) {
             room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim);
