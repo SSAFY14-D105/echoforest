@@ -66,7 +66,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private lastStateSendTime: number = 0;
     // 에러 로그 쓰로틀링 (1초마다)
     private lastErrorLogTime: number = 0;
-    private readonly STATE_SEND_INTERVAL: number = 50;
+    private readonly STATE_SEND_INTERVAL: number = 33;
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
     public static resetPersistentCurses(): void {
@@ -653,17 +653,22 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         // 로컬 플레이어: 서버 위치 무시 (Client Authoritative)
                         // 기믹(범퍼 등)에 의한 즉각적인 반응을 위해 로컬 위치를 우선함
                     } else {
-                        // 원격 플레이어: 보간 이동
+                        // 원격 플레이어: 보간 이동 + 방향/애니메이션 동기화
                         const isTeleport = dx > 100 || dy > 100;
-
-
+                        const serverVx = storePlayer.params?.vx ?? 0;
+                        const serverVy = storePlayer.params?.vy ?? 0;
+                        const serverAnim = storePlayer.params?.anim;
 
                         if (isTeleport) {
                             player.setPosition(storePlayer.x, storePlayer.y);
-                            player.setTargetPosition(storePlayer.x, storePlayer.y); // 타겟도 리셋
-                        } else if (dx > 0.1 || dy > 0.1) { // 0.1픽셀 이상일 때만 업데이트
-                            player.setTargetPosition(storePlayer.x, storePlayer.y);
                         }
+
+                        // 항상 상태 업데이트 (위치, 속도, 애니메이션)
+                        player.setRemoteState(storePlayer.x, storePlayer.y, serverVx, serverVy, serverAnim);
+
+                        // 방향 및 애니메이션 적용
+                        player.applyRemoteDirection();
+                        player.applyRemoteAnimation();
                     }
                 } else if (!player) {
                     console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
@@ -1077,11 +1082,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 const { x, y } = myPlayer.getPosition(); // Fixed: getBodyPosition -> getPosition
                 const velocity = myPlayer.getVelocity();
 
-                // 현재 애니메이션 키 가져오기 (없으면 idle_down)
-                // Player.ts가 아직 그래픽(사각형) 기반이므로 애니메이션이 없음. 임시로 'idle' 전송.
-                const currentAnim = 'idle';
-
-
+                // 현재 애니메이션 상태 계산 (속도 기반)
+                // vy > 1: 공중(점프/낙하), vx 이동 중: 걷기, 그 외: 대기
+                let currentAnim = 'idle';
+                if (Math.abs(velocity.y) > 1) {
+                    currentAnim = 'jump';
+                } else if (Math.abs(velocity.x) > 0.5) {
+                    currentAnim = 'walk';
+                }
 
                 this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim);
                 this.lastStateSendTime = now;

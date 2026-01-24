@@ -37,10 +37,12 @@ export interface ServerPlayerState {
     y: number;
     vx: number;
     vy: number;
+    anim?: string;       // 애니메이션 상태 (jump, walk, idle)
     width: number;
     height: number;
     hp: number;
     isDead: boolean;
+    isAfk?: boolean;     // AFK 상태
     curses: string[];
     serverTick?: number;
 }
