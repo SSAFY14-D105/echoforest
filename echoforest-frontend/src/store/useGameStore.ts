@@ -28,9 +28,9 @@ interface GameState {
     readyPlayers: string[];  // Ready 상태인 플레이어 닉네임 목록
     isGameStarted: boolean;
     isSoloMode: boolean; // 혼자하기 모드
-    currentStage: number | null; // null = 스테이지 선택 화면, 1~3 = 해당 스테이지 플레이 중
-    clearedStages: number[]; // 클리어한 스테이지 목록
-    onMoveCallback: ((x: number, y: number) => void) | null;  // 로컬 플레이어 이동 콜백
+    currentStage: string | null; // null = 스테이지 선택 화면, 'SOLO_1', 'MULTI_1' 등 고유 ID
+    clearedStages: string[]; // 클리어한 스테이지 ID 목록
+    onMoveCallback: ((x: number, y: number, anim?: string) => void) | null;  // 로컬 플레이어 이동 콜백
 
     // 액션(함수)들
     setNickname: (name: string) => void;
@@ -49,9 +49,8 @@ interface GameState {
     startGame: () => void;
     startGameFromServer: (stage: number) => void;  // 서버에서 게임 시작 알림 받음
     startSoloGame: () => void; // 혼자하기 모드 시작
-    selectStage: (stage: number) => void;
-    setCurrentStageFromServer: (stage: number) => void;  // 서버에서 스테이지 변경 알림 받음
-    clearStage: (stage: number) => void;
+    selectStage: (stageId: string) => void;
+    clearStage: (stageId: string) => void;
     backToStageSelect: () => void;
     setOnMoveCallback: (callback: ((x: number, y: number) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
@@ -211,16 +210,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             players: [soloPlayer],
             readyPlayers: [],
             isGameStarted: true,
-            currentStage: 1
+            currentStage: 'SOLO_1' // 혼자하기 1부터 시작
         });
     },
-    selectStage: (stage) => set({ currentStage: stage }),
-    setCurrentStageFromServer: (stage) => set({ currentStage: stage }),
-    clearStage: (stage) => set((state) => ({
-        clearedStages: state.clearedStages.includes(stage)
+    selectStage: (stageId) => set({ currentStage: stageId }),
+    clearStage: (stageId) => set((state) => ({
+        clearedStages: state.clearedStages.includes(stageId)
             ? state.clearedStages
-            : [...state.clearedStages, stage],
-        currentStage: null
+            : [...state.clearedStages, stageId],
+        currentStage: null // 스테이지 선택 화면으로 돌아감
     })),
     backToStageSelect: () => set({ currentStage: null }),
     setOnMoveCallback: (callback) => set({ onMoveCallback: callback }),

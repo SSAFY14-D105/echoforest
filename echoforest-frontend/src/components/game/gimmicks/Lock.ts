@@ -7,7 +7,8 @@ import Phaser from 'phaser';
 export class Lock {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
+    private graphics?: Phaser.GameObjects.Graphics;
     private isUnlocked: boolean = false;
 
     public readonly id: string;
@@ -15,7 +16,7 @@ export class Lock {
     private width: number;
     private height: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 64) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 64, texture?: string, frame?: string | number, angle: number = 0) {
         this.scene = scene;
         this.id = id;
         this.width = width;
@@ -25,18 +26,27 @@ export class Lock {
         this.body = this.scene.matter.add.rectangle(x, y, width, height, {
             isStatic: true,
             isSensor: true,
-            label: `lock-${id}`
+            label: `lock-${id}`,
+            angle: Phaser.Math.DegToRad(angle)
         });
 
-        // 자물쇠 그래픽 (반투명한 빨간색 벽)
-        this.graphics = this.scene.add.graphics();
-        this.drawLock(width, height);
-
-        // 위치 설정
-        this.graphics.setPosition(x, y);
+        if (texture) {
+            this.sprite = this.scene.add.sprite(x, y, texture, frame);
+            this.sprite.setDisplaySize(width, height);
+            this.sprite.setAngle(angle);
+            this.sprite.setDepth(5);
+        } else {
+            // 자물쇠 그래픽 (반투명한 빨간색 벽)
+            this.graphics = this.scene.add.graphics();
+            this.drawLock(width, height);
+            this.graphics.setPosition(x, y);
+            this.graphics.setAngle(angle);
+            this.graphics.setDepth(5);
+        }
     }
 
     private drawLock(width: number, height: number): void {
+        if (!this.graphics) return;
         this.graphics.clear();
         // 빨간색 자물쇠 (잠김 상태 - 반투명하게 변경하여 통과 가능함을 암시)
         this.graphics.fillStyle(0xE74C3C, 0.5);
@@ -63,7 +73,8 @@ export class Lock {
         if (this.isUnlocked) return;
 
         this.isUnlocked = true;
-        this.graphics.setVisible(false);
+        this.graphics?.setVisible(false);
+        this.sprite?.setVisible(false);
         this.scene.matter.world.remove(this.body);
 
         console.log(`[Lock] Unlocked: ${this.id}`);
@@ -79,6 +90,7 @@ export class Lock {
 
     public destroy(): void {
         this.scene.matter.world.remove(this.body);
-        this.graphics.destroy();
+        this.graphics?.destroy();
+        this.sprite?.destroy();
     }
 }

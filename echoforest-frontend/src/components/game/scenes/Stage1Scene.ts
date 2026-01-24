@@ -1,4 +1,5 @@
 import BaseGameScene from './BaseGameScene';
+import { useGameStore } from '../../../store/useGameStore';
 
 /**
  * Stage1Scene - 스테이지 1
@@ -15,6 +16,10 @@ export default class Stage1Scene extends BaseGameScene {
 
     protected getWorldWidth(): number {
         return this.worldWidth;
+    }
+
+    protected getWorldHeight(): number {
+        return this.scale.height;
     }
 
     protected getRequiredPlayers(): number {
@@ -41,6 +46,7 @@ export default class Stage1Scene extends BaseGameScene {
 
     protected onStageComplete(): void {
         console.log('[Stage1Scene] 🎉 Stage 1 Complete!');
-        // TODO: 스테이지 2로 이동 로직 (예: this.scene.start('Stage2Scene'))
+        useGameStore.getState().clearStage('MULTI_1');
+        useGameStore.getState().backToStageSelect();
     }
 }

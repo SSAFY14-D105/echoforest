@@ -221,6 +221,69 @@ http://localhost:5173
 
 ---
 
+## 🎥 LiveKit 화상 채팅 모듈 사용법
+
+### 📁 파일 구조
+
+```
+src/
+├── apis/
+│   └── livekitApi.ts       # 토큰 발급 API
+├── hooks/
+│   └── useLiveKit.ts       # 연결 관리 훅
+├── components/
+│   └── LiveKitOverlay.tsx  # 화상 채팅 컴포넌트
+└── pages/
+    └── LiveKitTestPage.tsx # 테스트 페이지
+```
+
+---
+
+### 🔧 1. API 직접 사용하기
+
+토큰만 발급받고 싶을 때 사용합니다.
+
+```tsx
+import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../apis/livekitApi';
+
+// 토큰 발급
+const { token } = await fetchLiveKitToken({
+  roomId: 'room_1',       // 방 ID
+  userId: 'user_123',     // 사용자 ID
+  username: '홍길동',     // 표시될 이름
+});
+
+console.log('토큰:', token);
+console.log('서버 URL:', LIVEKIT_SERVER_URL);
+```
+
+---
+
+### 🪝 2. Hook 사용하기
+
+토큰 발급 + 상태 관리를 자동으로 처리합니다.
+
+```tsx
+import useLiveKit from '../hooks/useLiveKit';
+
+function MyComponent() {
+  const { token, serverUrl, isLoading, error, connect } = useLiveKit({
+    roomId: 'room_1',
+    userId: 'user_123',
+    username: '홍길동',
+    autoConnect: true,  // 자동 연결 (기본값: true)
+  });
+
+  if (isLoading) return <div>연결 중...</div>;
+  if (error) return <div>에러: {error.message}</div>;
+  if (!token) return null;
+
+  return (
+    <div>
+      <p>토큰 발급 완료!</p>
+      {/* LiveKitRoom 컴포넌트와 함께 사용 */}
+    </div>
+=======
 ## 📸 CaptureConsentModal 컴포넌트
 
 게임 종료 후 카메라 화면 캡처 및 이미지 합성에 대한 사용자 동의를 받는 모달 컴포넌트입니다.
@@ -258,6 +321,93 @@ function YourPage() {
 }
 ```
 
+---
+
+### 🎬 3. 컴포넌트 사용하기 (권장)
+
+가장 간단한 방법입니다. 모든 것이 자동으로 처리됩니다.
+
+```tsx
+import LiveKitOverlay from '../components/LiveKitOverlay';
+
+function GamePage() {
+  return (
+    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      {/* 게임 화면 */}
+      <div>게임 컨텐츠...</div>
+
+      {/* 화상 채팅 (오버레이) */}
+      <LiveKitOverlay
+        roomId="room_1"
+        userId="user_123"
+        username="홍길동"
+        onConnected={() => console.log('연결됨!')}
+        onError={(err) => console.error('에러:', err)}
+      />
+    </div>
+  );
+}
+```
+
+#### Props
+
+| Prop | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `roomId` | string | ✅ | 방 ID |
+| `userId` | string | ✅ | 사용자 ID |
+| `username` | string | ✅ | 표시될 이름 |
+| `onConnected` | () => void | ❌ | 연결 성공 콜백 |
+| `onError` | (error) => void | ❌ | 에러 콜백 |
+
+---
+
+### 🧪 4. 테스트 방법
+
+1. `npm run dev` 실행
+2. `App.tsx`에서 `LiveKitTestPage` 렌더링
+3. http://localhost:5173 접속
+4. 카메라 권한 허용
+5. 내 얼굴이 화면에 표시되면 성공!
+
+---
+
+### ⚙️ 환경 설정
+
+현재 하드코딩된 설정값 (`src/apis/livekitApi.ts`):
+
+```typescript
+const API_BASE_URL = 'https://i14d105.p.ssafy.io/api';
+const LIVEKIT_SERVER_URL = 'wss://i14d105.p.ssafy.io/livekit';
+```
+
+프로덕션 배포 시 환경변수로 변경 가능:
+```env
+VITE_API_BASE_URL=https://your-api.com/api
+VITE_LIVEKIT_URL=wss://your-livekit.com
+```
+
+---
+
+### 🔌 백엔드 API 명세
+
+#### 토큰 발급 `POST /api/livekit/token`
+
+**Request:**
+```json
+{
+  "roomId": "room_1",
+  "userId": "user_123",
+  "username": "홍길동"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+=======
 ### Props
 
 | Prop | Type | Description |

@@ -1,4 +1,5 @@
 import BaseGameScene from './BaseGameScene';
+import { useGameStore } from '../../../store/useGameStore';
 
 /**
  * Stage3Scene - 스테이지 3 (빈 템플릿)
@@ -17,6 +18,10 @@ export default class Stage3Scene extends BaseGameScene {
         return 3000;
     }
 
+    protected getWorldHeight(): number {
+        return this.scale.height;
+    }
+
     protected getRequiredPlayers(): number {
         return 4;
     }
@@ -28,6 +33,7 @@ export default class Stage3Scene extends BaseGameScene {
 
     protected onStageComplete(): void {
         console.log('[Stage3Scene] 🎉 Stage 3 Complete! Game Cleared!');
-        // TODO: 게임 클리어 화면
+        useGameStore.getState().clearStage('MULTI_3');
+        useGameStore.getState().backToStageSelect();
     }
 }

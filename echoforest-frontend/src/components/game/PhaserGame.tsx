@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import LobbyScene from './scenes/LobbyScene';
-import SoloScene from './scenes/SoloScene';
+import Solo1Scene from './scenes/Solo1Scene';
 import Stage1Scene from './scenes/Stage1Scene';
 import Stage2Scene from './scenes/Stage2Scene';
 import Stage3Scene from './scenes/Stage3Scene';
+import Solo2Scene from './scenes/Solo2Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
@@ -58,7 +59,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     matter: {
                         autoUpdate: false, // [CRITICAL] 수동 업데이트로 전환하여 탭 복귀 시 물리 폭주(Physics Explosion) 방지
                         gravity: { x: 0, y: 1 },
-                        debug: true
+                        debug: false
                     }
                 },
                 scene: [], // 씬은 수동으로 추가
@@ -68,10 +69,21 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
 
             // 모든 씬 등록
             gameRef.current.scene.add('LobbyScene', LobbyScene, false);
-            gameRef.current.scene.add('SoloScene', SoloScene, false);
+            gameRef.current.scene.add('Solo1Scene', Solo1Scene, false);
             gameRef.current.scene.add('Stage1Scene', Stage1Scene, false);
             gameRef.current.scene.add('Stage2Scene', Stage2Scene, false);
             gameRef.current.scene.add('Stage3Scene', Stage3Scene, false);
+            gameRef.current.scene.add('Solo2Scene', Solo2Scene, false);
+
+            const handleResize = () => {
+                if (gameRef.current && parentRef.current) {
+                    const newWidth = parentRef.current.clientWidth;
+                    const newHeight = parentRef.current.clientHeight;
+                    gameRef.current.scale.resize(newWidth, newHeight);
+                }
+            };
+
+            window.addEventListener('resize', handleResize);
         }
 
         // 2. 현재 실행 중인 씬과 요청된 startScene이 다르면 전환
