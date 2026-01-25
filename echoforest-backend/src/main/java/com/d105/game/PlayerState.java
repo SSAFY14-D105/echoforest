@@ -49,6 +49,10 @@ public class PlayerState {
     // 6. 저주 상태 관리
     private Map<CurseType, Long> activeCurses = new ConcurrentHashMap<>();
 
+    // 7. 재접속 관리
+    private boolean isDisconnected = false;
+    private long disconnectTime = 0;
+
     // 7. TIME_BOMB 저주용 누적 데미지
     private double accumulatedDamage = 0;
 

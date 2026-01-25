@@ -15,8 +15,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Slf4j
 public class GameRoom implements Runnable {
 
-    // 60 TPS (약 16ms)
-    private static final double TICK_DURATION = 1.0 / 60.0;
+    // Tick Duration (33ms = ~30 TPS)
+    // 50ms (20 TPS) -> 33ms (30 TPS) for smoother movement
+    private static final long TICK_DURATION = 33;
+    private static final long RECONNECT_TIMEOUT_MS = 3 * 60 * 1000; // 3분
+
+    public enum GameState {
+        RUNNING, PAUSED
+    }
+
+    private GameState state = GameState.RUNNING;
     // 브로드캐스트 빈도 (20 TPS - 네트워크 최적화)
     private static final double BROADCAST_INTERVAL = 1.0 / 20.0;
     @Getter
@@ -38,6 +46,11 @@ public class GameRoom implements Runnable {
 
     // [NEW] 슬롯 점유 상태 관리 (최대 4명) -- session ID 저장
     private final String[] slots = new String[4];
+
+    // [NEW] 팀 공용 저주 스택 (Max 10)
+    @Getter
+    private int teamCurseStack = 0;
+    private static final int MAX_CURSE_STACK = 10;
 
     /**
      * GameRoom 생성자
@@ -87,19 +100,48 @@ public class GameRoom implements Runnable {
     // --- removePlayer 메소드 구현 ---
     public void removePlayer(WebSocketSession session) {
         String sessionId = session.getId();
+        PlayerState p = players.get(sessionId);
 
-        // [NEW] 슬롯 해제 (Shift 금지)
-        for (int i = 0; i < 4; i++) {
-            if (sessionId.equals(slots[i])) {
-                slots[i] = null; // 해당 자리만 비움
-                break;
-            }
+        if (p == null) {
+            sessions.remove(sessionId);
+            return;
         }
 
-        sessions.remove(sessionId);
-        players.remove(sessionId);
+        // 방장이 나가면 방 폭파 (기존 로직 유지)
+        if (p.getUsername().equals(hostUsername)) {
+            log.info("Host {} left. Closing room {}", hostUsername, roomId);
+            // 방장 퇴장 알림
+            GameMessageDto leaveMsg = new GameMessageDto();
+            leaveMsg.setType("PLAYER_LEFT");
+            leaveMsg.setRoomId(roomId);
+            leaveMsg.setUsername(p.getUsername());
+            leaveMsg.setContent("Host left.");
+            broadcast(leaveMsg, null);
 
-        // 방에 아무도 없으면 루프 종료 신호
+            this.isRunning = false;
+            sessions.remove(sessionId);
+            players.clear();
+            return;
+        }
+
+        // 게스트의 경우: 완전 삭제가 아닌 Disconnect 상태로 전환 (재접속 대기)
+        log.info("Player {} disconnected. Waiting for reconnect...", p.getUsername());
+        p.setDisconnected(true);
+        p.setDisconnectTime(System.currentTimeMillis());
+
+        // 세션 관리에서만 제거 (메시지 전송 불가)
+        sessions.remove(sessionId);
+
+        // Disconnect 알림 전송 for Client UI update (e.g. grey out)
+        GameMessageDto discMsg = new GameMessageDto();
+        discMsg.setType("PLAYER_DISCONNECTED");
+        discMsg.setRoomId(roomId);
+        discMsg.setUsername(p.getUsername());
+        broadcast(discMsg, null);
+
+        // 방에 활성 세션이 하나도 없으면 루프 종료 고민?
+        // -> 아니오, 방장이 남아있거나 재접속 대기중일 수 있으므로 유지.
+        // 다만 방장도 없고 모두 나갔다면 종료.
         if (sessions.isEmpty()) {
             this.isRunning = false;
         }
@@ -110,35 +152,14 @@ public class GameRoom implements Runnable {
      * 
      * @return 제거된 플레이어가 있으면 true (재접속)
      */
+    /**
+     * 닉네임으로 플레이어 찾아서 강제 퇴장 (Kick 등) - 필요 시 구현
+     * 현재는 재접속 로직이 addPlayer로 이동했으므로 단순화
+     */
     public boolean removePlayerByUsername(String username) {
-        String targetSessionId = findSessionIdByUsername(username);
-        if (targetSessionId == null) {
-            return false; // 기존 플레이어 없음 (신규 입장)
-        }
-
-        // 기존 세션 및 플레이어 제거
-        WebSocketSession oldSession = sessions.remove(targetSessionId);
-        players.remove(targetSessionId);
-
-        // [NEW] 슬롯 해제
-        for (int i = 0; i < 4; i++) {
-            if (targetSessionId.equals(slots[i])) {
-                slots[i] = null;
-                break;
-            }
-        }
-
-        // 기존 세션 닫기
-        if (oldSession != null && oldSession.isOpen()) {
-            try {
-                oldSession.close();
-            } catch (Exception e) {
-                log.error("Failed to close old session for {}", username, e);
-            }
-        }
-
-        log.info("Removed existing player {} for reconnection", username);
-        return true; // 재접속
+        // 더 이상 재접속을 위해 미리 지우지 않음.
+        // addPlayer에서 처리하므로 여기서는 아무것도 하지 않거나 false 리턴.
+        return false;
     }
 
     /**
@@ -148,8 +169,62 @@ public class GameRoom implements Runnable {
         return players.size();
     }
 
+    /**
+     * 해당 닉네임의 플레이어가 존재하는지 확인 (연결/비연결 불문)
+     */
+    public boolean hasPlayer(String username) {
+        for (PlayerState p : players.values()) {
+            if (p.getUsername().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void addPlayer(WebSocketSession session, String username) {
-        // [NEW] 1. 빈 슬롯 찾기 (0번부터 순차 탐색)
+        // [NEW] 재접속 체크
+        String oldSessionId = null;
+        PlayerState existingPlayer = null;
+
+        for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            PlayerState p = entry.getValue();
+            if (p.getUsername().equals(username) && p.isDisconnected()) {
+                oldSessionId = entry.getKey();
+                existingPlayer = p;
+                break;
+            }
+        }
+
+        // 재접속 처리
+        if (existingPlayer != null && oldSessionId != null) {
+            log.info("Player {} reconnected! Restoring state...", username);
+
+            // 1. Map Key 교체 (Old Session ID -> New Session ID)
+            players.remove(oldSessionId);
+            players.put(session.getId(), existingPlayer);
+            sessions.put(session.getId(), session);
+
+            // 2. 상태 복구
+            existingPlayer.setDisconnected(false);
+            existingPlayer.setDisconnectTime(0);
+
+            // 3. 슬롯 정보 업데이트
+            for (int i = 0; i < 4; i++) {
+                if (oldSessionId.equals(slots[i])) {
+                    slots[i] = session.getId();
+                    break;
+                }
+            }
+
+            // 4. 재접속 알림 (JOIN 대신 다른 메시지 사용 가능하나, 프론트 처리를 위해 일단 JOIN/UPDATE로 커버)
+            // 프론트엔드에서 '자신의 캐릭터'를 다시 인식하려면 JOIN 메시지 필요할 수 있음.
+            // JOIN 메시지는 GameService에서 보냄.
+
+            return;
+        }
+
+        // [신규 입장]
+        // 1. 빈 슬롯 찾기 (0번부터 순차 탐색)
         int assignedSlot = -1;
         for (int i = 0; i < 4; i++) {
             if (slots[i] == null) {
@@ -160,7 +235,6 @@ public class GameRoom implements Runnable {
         }
 
         if (assignedSlot == -1) {
-            // 방이 꽉 찼음 (원칙적으로는 입장 불가 처리해야 하나, 현재 구조상 덮어쓰기보다는 리턴)
             log.warn("Room {} is full, cannot add player {}", roomId, username);
             return;
         }
@@ -176,10 +250,7 @@ public class GameRoom implements Runnable {
             hostUsername = username;
             log.info("Host set to {} in room {}", username, roomId);
         }
-
-        // 방장이 나가고 빈자리에 누군가 들어왔는데, 방장이 없는 상태라면? (Host Migration 로직 필요할 수 있음)
-        // 현재 명세에는 없으므로 패스, 혹은 가장 오래된 유저에게 부여 등.
-    }
+    } // 현재 명세에는 없으므로 패스, 혹은 가장 오래된 유저에게 부여 등.
 
     /**
      * 강제 퇴장 (방장이 특정 유저를 내보냄)
@@ -383,50 +454,109 @@ public class GameRoom implements Runnable {
      * 방장은 AFK 상태여도 자동 퇴장하지 않음 (최소화/백그라운드 허용)
      */
     private void checkDisconnectedPlayers() {
-        java.util.List<String> toRemove = new java.util.ArrayList<>();
+        long now = System.currentTimeMillis();
+        List<String> toRemove = new ArrayList<>();
 
-        for (java.util.Map.Entry<String, PlayerState> entry : players.entrySet()) {
-            PlayerState player = entry.getValue();
+        for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            String sid = entry.getKey();
+            PlayerState p = entry.getValue();
 
-            // 방장은 자동 퇴장에서 제외
-            if (player.getUsername().equals(hostUsername)) {
-                continue;
-            }
+            // 방장은 예외? -> 방장도 연결 끊기면 처리해야 함.
+            // 단, 방장의 removePlayer 로직에서 이미 방 폭파가 처리되므로 여기까진 안 올 수 있음.
+            // 하지만 'Timeout'으로 인한 연결 끊김 처리는 여기서 수행.
 
-            if (player.shouldDisconnect()) {
-                toRemove.add(entry.getKey());
-                log.info("Player {} auto-disconnected (no update for timeout)", player.getUsername());
-            }
-        }
+            if (p.isDisconnected()) {
+                // 이미 Disconnected 상태인 경우 -> 3분 체크
+                if (now - p.getDisconnectTime() > RECONNECT_TIMEOUT_MS) {
+                    toRemove.add(sid);
+                    log.info("Player {} removed due to reconnect timeout (3min)", p.getUsername());
+                }
+            } else {
+                // 활성 상태인데 업데이트가 너무 오래 없는 경우 (Network Failure)
+                // shouldDisconnect -> 10초 이상 업데이트 없음
+                if (p.shouldDisconnect()) {
+                    // Soft Disconnect 처리
+                    p.setDisconnected(true);
+                    p.setDisconnectTime(now);
 
-        for (String sessionId : toRemove) {
-            PlayerState removed = players.remove(sessionId);
-            WebSocketSession session = sessions.remove(sessionId);
+                    // 세션 맵에서 제거 (물리적 연결 끊김 간주)
+                    WebSocketSession s = sessions.remove(sid);
+                    if (s != null && s.isOpen()) {
+                        try {
+                            s.close();
+                        } catch (Exception ignore) {
+                        }
+                    }
 
-            if (removed != null) {
-                // 다른 플레이어들에게 퇴장 알림
-                GameMessageDto leaveMsg = new GameMessageDto();
-                leaveMsg.setType("PLAYER_LEFT");
-                leaveMsg.setRoomId(roomId);
-                leaveMsg.setUsername(removed.getUsername());
-                leaveMsg.setContent("Auto-disconnected (AFK)");
-                broadcast(leaveMsg, null);
-            }
+                    log.info("Player {} soft-disconnected due to inactivity (timeout)", p.getUsername());
 
-            // 세션 닫기
-            if (session != null && session.isOpen()) {
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    log.error("Failed to close session", e);
+                    GameMessageDto discMsg = new GameMessageDto();
+                    discMsg.setType("PLAYER_DISCONNECTED");
+                    discMsg.setRoomId(roomId);
+                    discMsg.setUsername(p.getUsername());
+                    // broadcast 대상에서 본인은 이미 제외됨 (sessions에서 제거됨)
+                    broadcast(discMsg, null);
                 }
             }
         }
 
-        // 방에 아무도 없으면 루프 종료
+        // 진짜 삭제 (3분 경과)
+        for (String sessionId : toRemove) {
+            PlayerState removed = players.remove(sessionId);
+
+            // 슬롯 정리
+            for (int i = 0; i < 4; i++) {
+                if (sessionId.equals(slots[i])) {
+                    slots[i] = null;
+                    break;
+                }
+            }
+
+            if (removed != null) {
+                // 완전히 나감 -> PLAYER_LEFT
+                GameMessageDto leaveMsg = new GameMessageDto();
+                leaveMsg.setType("PLAYER_LEFT");
+                leaveMsg.setRoomId(roomId);
+                leaveMsg.setUsername(removed.getUsername());
+                leaveMsg.setContent("Disconnected timeout");
+                broadcast(leaveMsg, null);
+            }
+        }
+
+        // 방에 아무도 없으면 (Disconnected 포함? 아니면 활성 세션 기준?)
+        // 재접속 기다리는 플레이어가 있으면 방 유지? -> 네, 유지.
+        // 단, players 맵이 비면 종료.
         if (players.isEmpty()) {
             this.isRunning = false;
         }
+    }
+
+    // --- Pause / Resume Implementations ---
+
+    public void pause(String requestUser) {
+        if (!requestUser.equals(hostUsername))
+            return;
+
+        this.state = GameState.PAUSED;
+        log.info("Room {} Paused by {}", roomId, requestUser);
+
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("GAME_PAUSED");
+        msg.setRoomId(roomId);
+        broadcast(msg, null);
+    }
+
+    public void resume(String requestUser) {
+        if (!requestUser.equals(hostUsername))
+            return;
+
+        this.state = GameState.RUNNING;
+        log.info("Room {} Resumed by {}", roomId, requestUser);
+
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("GAME_RESUMED");
+        msg.setRoomId(roomId);
+        broadcast(msg, null);
     }
 
     private void processInputs() {
@@ -499,7 +629,18 @@ public class GameRoom implements Runnable {
             GameMessageDto msg = new GameMessageDto();
             msg.setType("UPDATE");
             msg.setRoomId(roomId);
+            // [NEW] 팀 저주 스택 추가 (브로드캐스트에 포함)
             msg.setContent(objectMapper.writeValueAsString(stateList));
+            // 별도 필드가 없으므로 content에 넣거나, DTO 확장이 필요할 수 있음.
+            // 하지만 Client는 UPDATE 메시지의 content(Player List) 외에 Room State도 필요함.
+            // 일단 GameMessageDto에 필드가 제한적이므로, 별도 메시지로 스택 업데이트를 보내거나
+            // UPDATE 메시지의 구조를 변경해야 함.
+            // 여기서는 안전하게 별도로 가거나, content 내부에 포함시킴.
+            // 하지만 content는 String(JSON)이므로, 구조를 바꾸면 프론트 파싱이 깨질 수 있음.
+            // 따라서 33ms마다 보내는 UPDATE에는 Player 정보만 넣고,
+            // 스택 변경 시에만 별도 메시지 전송 로직(addCurseStack)을 사용함.
+            // 다만, 중간 중간 싱크를 위해 가끔 보내는 것도 좋음.
+            // 일단 여기서는 Player List만 보냄.
 
             TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(msg));
 
@@ -510,6 +651,108 @@ public class GameRoom implements Runnable {
             }
         } catch (Exception e) {
             log.error("Broadcast Error in Room {}", roomId, e);
+        }
+    }
+
+    /**
+     * 팀 저주 스택 증가
+     * 
+     * @param delta 증가량 (1, 3, 5 등)
+     */
+    public void addCurseStack(int delta) {
+        this.teamCurseStack += delta;
+        // Max 제한 없음? 아니면 10 넘으면 발동?
+        // 발동 조건: 10 이상
+        log.info("Curse Stack Added: +{} -> {}", delta, teamCurseStack);
+
+        if (this.teamCurseStack >= MAX_CURSE_STACK) {
+            triggerRandomCurse();
+            this.teamCurseStack = 0; // 리셋
+        }
+
+        // 스택 업데이트 브로드캐스트
+        broadcastStackUpdate();
+    }
+
+    private void broadcastStackUpdate() {
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("CURSE_STACK_UPDATE");
+        msg.setRoomId(roomId);
+        msg.setContent(String.valueOf(teamCurseStack)); // Content에 현재 스택 담아 전송
+        broadcast(msg, null);
+    }
+
+    private void triggerRandomCurse() {
+        // 살아있는(연결된) 플레이어 중 랜덤 1명
+        List<String> activePlayers = new ArrayList<>();
+        for (String sessId : sessions.keySet()) {
+            if (players.containsKey(sessId)) {
+                activePlayers.add(sessId);
+            }
+        }
+
+        if (activePlayers.isEmpty())
+            return;
+
+        Random random = new Random();
+        String victimSessionId = activePlayers.get(random.nextInt(activePlayers.size()));
+        PlayerState victim = players.get(victimSessionId);
+
+        if (victim != null) {
+            log.info("Curses triggered on {}!", victim.getUsername());
+            // 저주 효과 적용 (PlayerState에 저주 추가)
+            // 예: "SIZE_UP", "FOG", "STUN" 등 타입 필요.
+            // 임시로 "TEST_CURSE" 또는 기존 로직 사용.
+            // 기존 triggerCurseEvent 호출?
+            applyCurseEffect(victim);
+
+            // 알림
+            GameMessageDto msg = new GameMessageDto();
+            msg.setType("CURSE_TRIGGERED");
+            msg.setRoomId(roomId);
+            msg.setUsername(victim.getUsername());
+            msg.setContent("Random Curse Activated!");
+            broadcast(msg, null);
+        }
+    }
+
+    /**
+     * 실제 저주 효과 적용
+     */
+    private void applyCurseEffect(PlayerState p) {
+        // 임시: 랜덤 저주 하나 선택
+        CurseType[] types = CurseType.values();
+        // None 제외
+        CurseType selected = types[new Random().nextInt(types.length)];
+
+        // 명세: "저주 해제: 버튼 + 긍정어" -> 즉, 시간제한이 아니라 '조건부 해제'일 가능성 큼.
+        // 따라서 Duration은 무시하고 Enum 타입으로 추가함.
+        p.addCurse(selected);
+    }
+
+    /**
+     * 저주 해제 시도 (버튼 + 긍정어)
+     */
+    public void attemptCurseLift(String username) {
+        String sessionId = findSessionIdByUsername(username);
+        if (sessionId == null)
+            return;
+
+        PlayerState p = players.get(sessionId);
+        if (p == null)
+            return;
+
+        // 모든 저주 해제
+        if (!p.getActiveCurses().isEmpty()) {
+            p.getActiveCurses().clear();
+            log.info("Curse Lifted for {}", username);
+
+            GameMessageDto msg = new GameMessageDto();
+            msg.setType("CURSE_LIFTED");
+            msg.setRoomId(roomId);
+            msg.setUsername(username);
+            msg.setContent("All curses lifted by positive speech!");
+            broadcast(msg, null);
         }
     }
 
