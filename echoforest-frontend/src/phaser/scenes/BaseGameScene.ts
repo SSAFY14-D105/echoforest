@@ -178,6 +178,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 cam.scrollY = 0;
             }
 
+            // [FIX] 모든 플레이어 스프라이트 가시성 및 위치 강제 복구
+            this.players.forEach((player) => {
+                const sprite = player.getSprite();
+                if (sprite && !player.isHidden) {
+                    sprite.setVisible(true);
+                    sprite.setActive(true);
+                    // 현재 위치로 스프라이트 동기화
+                    const pos = player.getPosition();
+                    sprite.setPosition(pos.x, pos.y);
+                }
+            });
+
             // [SNAP RE-RENDER] 강제 렌더링 리프레시
             this.scale?.refresh();
             this.game?.loop?.wake();
