@@ -13,7 +13,8 @@ import lombok.NoArgsConstructor;
 @Schema(description = "게임 웹소켓 통신용 메시지 규격")
 public class GameMessageDto {
     @Schema(description = "메시지 타입", example = "JOIN", allowableValues = { "CREATE", "JOIN", "MOVE", "PING", "ERROR",
-            "ROOM_CREATED" })
+            "ROOM_CREATED", "PAUSE_GAME", "GAME_PAUSED", "RESUME_GAME", "GAME_RESUMED", "PLAYER_DISCONNECTED",
+            "CURSE_STACK_UPDATE", "CURSE_TRIGGERED", "LIFT_CURSE_REQUEST", "CURSE_LIFTED" })
     private String type;
 
     @Schema(description = "방 번호 (JOIN/MOVE 필수, CREATE는 선택)", example = "room_1")

@@ -76,13 +76,15 @@ public class GameService {
             executor.submit(room);
         }
 
-        // 3. 재접속 처리: 같은 닉네임의 기존 플레이어가 있으면 제거
-        boolean isReconnect = room.removePlayerByUsername(username);
+        // 3. 재접속 여부 확인
+        // GameRoom에 해당 유저(닉네임)가 이미 있는지 확인
+        boolean isReconnect = room.hasPlayer(username);
         if (isReconnect) {
-            log.info("Player {} reconnected to room {}", username, roomId);
+            log.info("Player {} rejoining room {} (Reconnect likely)", username, roomId);
         }
 
         // 4. 인원 제한 검사 (재접속이 아닌 경우에만)
+        // 재접속일 경우 이미 room.players에 포함되어 있으므로 카운트 체크 패스
         if (!isReconnect && redisRoomService.getPlayerCount(roomId) >= MAX_PLAYERS) {
             sendError(session, "Room is full");
             return;
@@ -91,7 +93,7 @@ public class GameService {
         // 5. Redis에 플레이어 추가
         redisRoomService.joinRoom(roomId, username);
 
-        // 6. 입장 처리
+        // 6. 입장 처리 (GameRoom.addPlayer 내에서 재접속/신규 분기 처리)
         joinProcess(session, room, username);
 
         // 7. 재접속인 경우 별도 메시지 전송
@@ -158,29 +160,30 @@ public class GameService {
     }
 
     /**
-     * 음성 분석 결과 처리 (외부 컨트롤러/서비스에서 호출)
-     *
-     * @param roomId    방 번호
-     * @param username  발화자
-     * @param sentiment 감정 (POSITIVE / NEGATIVE)
+     * AI 분석 결과 처리 (SpeechController에서 호출)
      */
-    public void handleSpeechEvent(String roomId, String username, String sentiment) {
-        GameRoom room = gameRepository.getRoom(roomId);
+    public void handleSpeechAnalysis(com.d105.dto.SpeechAnalysisResultDto dto) {
+        GameRoom room = gameRepository.getRoom(dto.getRoomId());
         if (room == null)
             return;
 
-        if ("NEGATIVE".equals(sentiment)) {
-            // 랜덤 플레이어 저주
-            String victimSessionId = room.getRandomPlayerSessionId();
-            if (victimSessionId != null) {
-                room.triggerCurseEvent(victimSessionId, false);
-            }
-        } else if ("POSITIVE".equals(sentiment)) {
-            // 발화자 본인의 저주 해제 시도
-            String speakerSessionId = room.findSessionIdByUsername(username);
-            if (speakerSessionId != null) {
-                room.triggerCurseEvent(speakerSessionId, true);
-            }
+        // 스택 증가 (dto.getStackDelta())
+        // 만약 예외적으로 0이거나 음수는 무시할지 결정.
+        if (dto.getStackDelta() > 0) {
+            log.info("Applying Curse Stack Delta: +{} for Room {}", dto.getStackDelta(), dto.getRoomId());
+            room.addCurseStack(dto.getStackDelta());
+        }
+    }
+
+    /**
+     * 저주 해제 요청 처리 (클라이언트가 긍정어 감지 후 요청)
+     */
+    public void handleLiftCurseRequest(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.attemptCurseLift(username);
         }
     }
 
@@ -192,6 +195,30 @@ public class GameService {
         pong.setType("PONG");
         pong.setContent(message.getContent());
         sendMessage(session, pong);
+    }
+
+    /**
+     * Pause Game
+     */
+    public void handlePause(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.pause(username);
+        }
+    }
+
+    /**
+     * Resume Game
+     */
+    public void handleResume(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.resume(username);
+        }
     }
 
     /**
