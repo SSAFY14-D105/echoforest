@@ -325,7 +325,7 @@ export default function GamePage() {
 
   // ========== 혼자하기 모드 화면 (카메라 없음, 로비 복귀 버튼) ==========
   if (isSoloMode && isGameStarted && currentStage !== null) {
-    const sceneKey = currentStage === 'SOLO_1' ? 'Solo1Scene' : 'Solo2Scene';
+    const sceneKey = currentStage.replace('SOLO_', 'Solo') + 'Scene';
 
     return (
       <div className={styles.gameContainer}>

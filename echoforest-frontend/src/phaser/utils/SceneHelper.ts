@@ -26,6 +26,12 @@ export function setupTiledBackground(
         return;
     }
 
+    // 0 또는 NaN 체크 (첫 프레임 씬 로딩 시 예외 방지)
+    if (!worldWidth || !worldHeight || isNaN(worldWidth) || isNaN(worldHeight)) {
+        console.warn(`[SceneHelper] Invalid world dimensions: ${worldWidth}x${worldHeight}`);
+        return;
+    }
+
     const bgSource = texture.getSourceImage() as HTMLImageElement;
 
     // 배경 이미지의 원본 비율 유지하며 맵 높이에 맞춤
@@ -35,9 +41,15 @@ export function setupTiledBackground(
     // 필요한 타일 개수 계산 (여유있게 +1)
     const numTiles = Math.ceil(worldWidth / scaledWidth) + 1;
 
+    // [중요] 세로 방향 시차 효과 보정 (Bottom-up 방식)
+    // 카메라가 하단(scrollY = worldHeight - screenHeight)에 있을 때 배경이 정확히 보이도록 보정
+    const screenHeight = scene.scale.height;
+    const startCameraY = Math.max(0, worldHeight - screenHeight);
+    const bgY = (screenHeight / 2) + (startCameraY * scrollFactor);
+
     for (let i = 0; i < numTiles; i++) {
         const x = i * scaledWidth + (scaledWidth / 2);
-        const bg = scene.add.image(x, worldHeight / 2, textureKey);
+        const bg = scene.add.image(x, bgY, textureKey);
 
         bg.setScale(scale);
         bg.setDepth(-100); // 모든 오브젝트 뒤에 배치

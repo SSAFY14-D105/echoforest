@@ -8,12 +8,15 @@ export interface ElevatorConfig {
     width: number;
     height: number;
     requiredPlayers: number;
+    texture?: string;
+    frame?: string | number;
 }
 
 export class Elevator {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private graphics?: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
     private text: Phaser.GameObjects.Text;
 
     public readonly id: string;
@@ -41,12 +44,18 @@ export class Elevator {
         this.body = this.scene.matter.add.rectangle(this.x, this.initialY, this.width, this.height, {
             isStatic: true,
             label: `elevator-${this.id}`,
-            friction: 0.1,
+            friction: 0,
+            frictionStatic: 0,
             restitution: 0
         });
 
-        // 그래픽 생성
-        this.graphics = this.scene.add.graphics();
+        // 그래픽 또는 스프라이트 생성
+        if (config.texture) {
+            this.sprite = this.scene.add.sprite(this.x, this.initialY, config.texture, config.frame);
+            this.sprite.setDisplaySize(this.width, this.height);
+        } else {
+            this.graphics = this.scene.add.graphics();
+        }
 
         // 정보 텍스트 생성 (필요 인원 표시)
         this.text = this.scene.add.text(this.x, this.initialY, '0 / 0', {
@@ -66,10 +75,12 @@ export class Elevator {
         // 목표 위치 결정
         const finalTargetY = this.currentWeight >= this.requiredPlayers ? this.targetY : this.initialY;
 
-        // 부드러운 위치 이동
-        if (Math.abs(currentPosY - finalTargetY) > 0.5) {
-            const step = currentPosY < finalTargetY ? this.speed : -this.speed;
-            const nextY = currentPosY + step;
+        // 부드러운 위치 이동 (목표 지점을 지나치지 않도록 스냅 로직 적용)
+        const distance = Math.abs(currentPosY - finalTargetY);
+        if (distance > 0.1) {
+            const moveStep = Math.min(distance, this.speed);
+            const direction = currentPosY < finalTargetY ? 1 : -1;
+            const nextY = currentPosY + (moveStep * direction);
 
             // 실제 물리 바디 위치 업데이트
             this.scene.matter.body.setPosition(this.body, { x: this.x, y: nextY });
@@ -81,16 +92,22 @@ export class Elevator {
     private updateVisuals(): void {
         const y = this.body.position.y;
 
-        this.graphics.clear();
+        if (this.sprite) {
+            this.sprite.setPosition(this.x, y);
+        }
 
-        // 배경 박스
-        const color = this.currentWeight >= this.requiredPlayers ? 0x4CAF50 : 0x7f8c8d;
-        this.graphics.fillStyle(color, 0.8);
-        this.graphics.fillRect(this.x - this.width / 2, y - this.height / 2, this.width, this.height);
+        if (this.graphics) {
+            this.graphics.clear();
 
-        // 테두리
-        this.graphics.lineStyle(2, 0xffffff, 1);
-        this.graphics.strokeRect(this.x - this.width / 2, y - this.height / 2, this.width, this.height);
+            // 배경 박스
+            const color = this.currentWeight >= this.requiredPlayers ? 0x4CAF50 : 0x7f8c8d;
+            this.graphics.fillStyle(color, 0.8);
+            this.graphics.fillRect(this.x - this.width / 2, y - this.height / 2, this.width, this.height);
+
+            // 테두리
+            this.graphics.lineStyle(2, 0xffffff, 1);
+            this.graphics.strokeRect(this.x - this.width / 2, y - this.height / 2, this.width, this.height);
+        }
 
         // 텍스트 위치 및 내용 업데이트
         this.text.setPosition(this.x, y);
@@ -110,6 +127,7 @@ export class Elevator {
             this.scene.matter.world.remove(this.body);
         }
         this.graphics?.destroy();
+        this.sprite?.destroy();
         this.text?.destroy();
     }
 }

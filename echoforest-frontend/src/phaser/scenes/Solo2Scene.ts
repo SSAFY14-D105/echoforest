@@ -1,5 +1,5 @@
 import BaseGameScene from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Goal } from '../gimmicks';
+import { Key, Lock, Spike, Spring, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton } from '../gimmicks';
 import { useGameStore } from '../../store/useGameStore';
 
 /**
@@ -23,7 +23,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     protected getWorldHeight(): number {
-        return this.scale.height;
+        return (this.map?.heightInPixels || 0) * this.mapScale;
     }
 
     protected getRequiredPlayers(): number {
@@ -44,24 +44,18 @@ export default class Solo2Scene extends BaseGameScene {
 
     create() {
         console.log('[Solo2Scene] Initializing new game map');
-        // 배경 타일링 설정 (Parallax 0.2로 설정하여 천천히 움직이게 함)
-        this.setupTiledBackground('background_image', 0.2);
 
-        // Solo2Scene 전용: 물리 디버그 충돌선 숨기기
-        if (this.matter && this.matter.world && this.matter.world.debugConfig) {
-            this.matter.world.debugConfig.showBody = false;
-            this.matter.world.debugConfig.showStaticBody = false;
-            this.matter.world.debugConfig.showInternalEdges = false;
-            this.matter.world.debugConfig.showConvexHulls = false;
-        }
 
         this.map = this.make.tilemap({ key: 'solo_2_game_map' });
         // 타일 크기를 64px로 고정 (기본 16px * 4 = 64px)
         this.mapScale = 64 / this.map.tileHeight;
 
-        // 화면 하단에 맞추기 위한 Offset 계산
+        // 화면 하단에 맞추기 위한 Offset 계산 (음수 방지)
         const mapPixelHeightScaled = this.map.heightInPixels * this.mapScale;
-        this.offsetY = this.scale.height - mapPixelHeightScaled;
+        this.offsetY = Math.max(0, this.scale.height - mapPixelHeightScaled);
+
+        // Matter.js 월드 경계 설정 (양수 좌표계 유지)
+        this.matter.world.setBounds(0, 0, this.getWorldWidth(), this.getWorldHeight());
 
         // 타일셋 이미지 추가
         const ts = this.map.addTilesetImage('tiles_tileset', 'tiles_tileset')!;
@@ -90,7 +84,9 @@ export default class Solo2Scene extends BaseGameScene {
 
                 this.matter.add.rectangle(centerX, centerY, adjWidth, adjHeight, {
                     isStatic: true,
-                    label: 'ground'
+                    label: 'ground',
+                    friction: 0,
+                    frictionStatic: 0
                 });
             }
         });
@@ -116,6 +112,9 @@ export default class Solo2Scene extends BaseGameScene {
                 }
             });
         }
+
+        // 배경 타일링 설정 (Parallax 0.2) - 맵 크기가 확정된 후 실행
+        this.setupTiledBackground('background_image', 0.2);
 
         super.create();
 
@@ -191,6 +190,55 @@ export default class Solo2Scene extends BaseGameScene {
                     }
                     break;
                 }
+                case 'Mushroom': {
+                    const mushroom = new PoisonMushroom(this, centerX, centerY, `mushroom-${obj.id}`, width, height, texture, frame);
+                    (this as any).poisonMushrooms.push(mushroom);
+                    break;
+                }
+                case 'Button': {
+                    // Tiled에서 커스텀 프로퍼티로 spawnX, spawnY, reqPlayers 등을 설정했다고 가정
+                    const props: any = {};
+                    obj.properties?.forEach((p: any) => props[p.name] = p.value);
+
+                    const button = new BlockButton(this, {
+                        id: `button-${obj.id}`,
+                        x: centerX,
+                        y: centerY,
+                        width,
+                        height,
+                        spawnConfig: {
+                            id: `spawned-block-${obj.id}`,
+                            x: props.spawnX || centerX + 100,
+                            y: props.spawnY || centerY,
+                            width: props.blockWidth || 32,
+                            height: props.blockHeight || 32,
+                            requiredPlayers: props.reqPlayers || 1
+                        }
+                    });
+                    (this as any).blockButtons.push(button);
+                    break;
+                }
+                case 'TogglePlatform': {
+                    const platform = new TogglePlatform(this, centerX, centerY, `platform-${obj.id}`, width, height);
+                    (this as any).togglePlatforms.push(platform);
+                    break;
+                }
+                case 'TriggerButton': {
+                    const props: any = {};
+                    obj.properties?.forEach((p: any) => props[p.name] = p.value);
+
+                    const button = new TriggerButton(this, {
+                        id: `tbutton-${obj.id}`,
+                        x: centerX,
+                        y: centerY,
+                        targetId: props.targetId || '',
+                        width,
+                        height,
+                        oneTime: props.oneTime !== undefined ? props.oneTime : true
+                    });
+                    (this as any).triggerButtons.push(button);
+                    break;
+                }
             }
         });
     }
@@ -208,10 +256,13 @@ export default class Solo2Scene extends BaseGameScene {
         return obj.properties?.find((p: any) => p.name === name)?.value;
     }
 
+    protected shouldSpawnGoalOnUnlock(): boolean {
+        return true;
+    }
+
     protected onStageComplete(): void {
         console.log('[Solo2Scene] 🎉 Solo mode stage 2 complete!');
-        // 혼자하기 2 클리어 후 로비로 이동
-        useGameStore.getState().clearStage('SOLO_2');
-        useGameStore.getState().leaveGame();
+        // 혼자하기 3으로 이동
+        useGameStore.getState().selectStage('SOLO_3');
     }
 }
