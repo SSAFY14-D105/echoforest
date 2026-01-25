@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { gameWebSocket } from '../socket/GameWebSocket';
 import { useGameStore } from '../store/useGameStore';
 
 /**
@@ -20,15 +19,12 @@ export function useGameVisibility() {
                 // 화면 숨겨짐 (최소화/탭 이동)
                 console.log('🙈 게임 화면 숨겨짐 -> 일시정지 요청');
                 setIsBackground(true);
-
-                // 백엔드에 PAUSE_GAME 구현되기 전까지는 로컬 로그만 남길 수도 있음
-                // gameWebSocket.sendPauseRequest(roomId); 
+                // Note: PAUSE_GAME 전송은 GamePage.tsx에서 isBackground 상태 변화 감지하여 처리
             } else {
                 // 화면 복귀
                 console.log('👀 게임 화면 복귀 -> 재개 요청');
                 setIsBackground(false);
-
-                // gameWebSocket.sendResumeRequest(roomId);
+                // Note: RESUME_GAME 전송은 GamePage.tsx에서 처리
             }
         };
 
