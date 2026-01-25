@@ -27,24 +27,47 @@ export default function CameraArea() {
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
 
+    // Mock Mode State (For UI Testing without Backend)
+    const [isMockMode, setIsMockMode] = useState(false);
+
     // Remote Video Refs map (key: identity or index)
     const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+
+    const toggleMockMode = () => {
+        setIsMockMode(prev => !prev);
+    };
+
+    // Derived Players for Rendering
+    const displayPlayers = isMockMode
+        ? [
+            { nickname: nickname || 'Me', isHost: true },
+            { nickname: 'SimUser1', isHost: false },
+            { nickname: 'SimUser2', isHost: false },
+            { nickname: 'SimUser3', isHost: false }
+        ]
+        : players;
+
+    // Mock Participants Info
+    const displayParticipantInfos = isMockMode
+        ? [
+            { identity: 'SimUser1', isSpeaking: true, isMuted: false, isCameraEnabled: true, videoTrack: null, audioTrack: null },
+            { identity: 'SimUser2', isSpeaking: false, isMuted: true, isCameraEnabled: false, videoTrack: null, audioTrack: null },
+            { identity: 'SimUser3', isSpeaking: false, isMuted: false, isCameraEnabled: true, videoTrack: null, audioTrack: null }
+        ]
+        : participantInfos;
 
     // LiveKit Connection
     useEffect(() => {
         if (isSoloMode) return;
         if (!roomId || !nickname) return;
 
-        // 참가자 업데이트 리스너 등록
         liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
         });
 
-        // 이미 연결되어 있다면 상태 초기화만 수행
         if (liveKitService.isConnected) {
             setIsMicEnabled(liveKitService.isMicEnabled);
             setIsCameraEnabled(liveKitService.isCameraEnabled);
-            // 초기 참가자 정보 가져오기
         }
 
         if (isLiveKitConnecting || liveKitService.isConnected) return;
@@ -54,9 +77,8 @@ export default function CameraArea() {
             setIsLiveKitConnecting(true);
             try {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
-                const userId = localStorage.getItem('loginId') || nickname; // Use stored ID if available
+                const userId = localStorage.getItem('loginId') || nickname;
                 await liveKitService.connect(roomId, userId, nickname);
-
                 setIsMicEnabled(liveKitService.isMicEnabled);
                 setIsCameraEnabled(liveKitService.isCameraEnabled);
             } catch (error) {
@@ -66,33 +88,42 @@ export default function CameraArea() {
             }
         };
 
-        connectLiveKit();
+        if (!isMockMode) {
+            connectLiveKit();
+        }
 
-        // Cleanup
         return () => {
             liveKitService.disconnect();
         };
-    }, [roomId, nickname, isSoloMode]);
+    }, [roomId, nickname, isSoloMode, isMockMode]);
 
     // Remote Video Track Attachment
     useEffect(() => {
-        // participantInfos가 변경될 때마다 비디오 트랙 연결
-        participantInfos.forEach(info => {
-            if (info.identity === nickname) return; // Skip local
-
+        displayParticipantInfos.forEach(info => {
+            if (info.identity === nickname) return;
             const videoEl = remoteVideoRefs.current[info.identity];
             if (videoEl && info.videoTrack) {
                 info.videoTrack.attach(videoEl);
             }
         });
-    }, [participantInfos, nickname]);
+    }, [displayParticipantInfos, nickname]);
 
     const handleToggleMic = async () => {
+        if (isMockMode) {
+            console.log('[Mock] Toggle Mic');
+            setIsMicEnabled(prev => !prev);
+            return;
+        }
         const newState = await liveKitService.toggleMic();
         setIsMicEnabled(newState);
     };
 
     const handleToggleCamera = async () => {
+        if (isMockMode) {
+            console.log('[Mock] Toggle Camera');
+            setIsCameraEnabled(prev => !prev);
+            return;
+        }
         const newState = await liveKitService.toggleCamera();
         setIsCameraEnabled(newState);
     };
@@ -105,14 +136,32 @@ export default function CameraArea() {
 
     return (
         <div className={styles.cameraArea}>
+            {/* Debug Toggle Button (Dev Only) */}
+            <div style={{ position: 'fixed', bottom: 150, right: 10, zIndex: 9999 }}>
+                <button
+                    onClick={toggleMockMode}
+                    style={{
+                        fontSize: '10px',
+                        padding: '2px 5px',
+                        background: isMockMode ? '#ff4444' : '#444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        opacity: 0.7
+                    }}>
+                    {isMockMode ? 'Mock: ON' : 'Mock: OFF'}
+                </button>
+            </div>
+
             {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
-                const player = players[index];
+                const player = displayPlayers[index];
                 const isEmpty = !player;
-                const isMe = player?.nickname === nickname;
+                const isMe = player?.nickname === nickname; // In Mock mode, nickname might be 'Me' or 'UserA'
 
                 // 해당 슬롯 플레이어의 LiveKit 정보 찾기
                 const participantInfo = !isEmpty
-                    ? participantInfos.find(p => p.identity === player.nickname)
+                    ? displayParticipantInfos.find(p => p.identity === player.nickname)
                     : null;
 
                 if (isEmpty) {
@@ -147,7 +196,7 @@ export default function CameraArea() {
                             <div className={styles.cameraContent}>
                                 {/* Remote Video */}
                                 <video
-                                    ref={el => { remoteVideoRefs.current[player.nickname] = el; }}
+                                    ref={el => { if (el && player) remoteVideoRefs.current[player.nickname] = el; }}
                                     autoPlay
                                     playsInline
                                     className={styles.remoteVideo}
