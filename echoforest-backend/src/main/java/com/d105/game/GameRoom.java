@@ -534,28 +534,26 @@ public class GameRoom implements Runnable {
     // --- Pause / Resume Implementations ---
 
     public void pause(String requestUser) {
-        if (!requestUser.equals(hostUsername))
-            return;
-
+        // [CHANGED] 모든 플레이어가 일시정지 가능 (탭 이동 시)
         this.state = GameState.PAUSED;
         log.info("Room {} Paused by {}", roomId, requestUser);
 
         GameMessageDto msg = new GameMessageDto();
         msg.setType("GAME_PAUSED");
         msg.setRoomId(roomId);
+        msg.setContent(requestUser); // 일시정지 유발자 전달
         broadcast(msg, null);
     }
 
     public void resume(String requestUser) {
-        if (!requestUser.equals(hostUsername))
-            return;
-
+        // [CHANGED] 모든 플레이어가 재개 가능 (탭 복귀 시)
         this.state = GameState.RUNNING;
         log.info("Room {} Resumed by {}", roomId, requestUser);
 
         GameMessageDto msg = new GameMessageDto();
         msg.setType("GAME_RESUMED");
         msg.setRoomId(roomId);
+        msg.setContent(requestUser); // 재개 유발자 전달
         broadcast(msg, null);
     }
 
