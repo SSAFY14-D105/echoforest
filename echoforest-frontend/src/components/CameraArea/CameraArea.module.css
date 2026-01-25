@@ -61,6 +61,24 @@
     transform: scaleX(-1);
 }
 
+.remoteVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 9px;
+}
+
+.remoteLabel {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    color: white;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
 /* 컨트롤 버튼 영역 */
 .controls {
     position: absolute;

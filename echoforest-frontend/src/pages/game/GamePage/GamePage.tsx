@@ -6,6 +6,8 @@ import type { GameMessage, ServerPlayerState } from '../../../socket/GameWebSock
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
+import PauseOverlay from '../../../components/game/PauseOverlay';
+import { useGameVisibility } from '../../../hooks/useGameVisibility';
 import styles from './GamePage.module.css';
 
 const MAX_PLAYERS = 4;
@@ -21,6 +23,7 @@ export default function GamePage() {
     isSoloMode,
     currentStage,
     clearedStages,
+    pausedBy, // 일시정지 상태
     addPlayer,
     syncPlayersFromServer,
     removePlayerByNickname,
@@ -29,8 +32,22 @@ export default function GamePage() {
     startGameFromServer,
     selectStage,
     clearStage,
-    leaveGame
+    leaveGame,
+    setGamePaused // 일시정지 액션
   } = useGameStore();
+
+  // 창 최소화 감지 Hook
+  const isBackground = useGameVisibility();
+
+  // 창 최소화 시 소켓 전송
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
+    if (isBackground) {
+      gameWebSocket.sendPauseRequest(roomId);
+    } else {
+      gameWebSocket.sendResumeRequest(roomId);
+    }
+  }, [isBackground, roomId, isSoloMode]);
 
   // --- 스테이지 ID 변환 유틸리티 ---
   // 내부용 ID ("MULTI_1") -> 통신용 번호 (1)
@@ -100,7 +117,7 @@ export default function GamePage() {
               id: msg.username,  // nickname을 고유 ID로 사용 (서버와 일치)
               nickname: msg.username,
               isHost: false,     // 나중에 들어온 사람은 Host가 아님 (보수적 판단)
-              x: msg.x,
+              x: msg.x, // 서버가 좌표를 줄 경우 사용 (빈자리 복구)
               y: msg.y
             };
             addPlayer(newPlayer);
@@ -188,6 +205,16 @@ export default function GamePage() {
           console.log('🚨 방에서 강제 퇴장되었습니다.');
           leaveGame();
           alert('방장에 의해 강제 퇴장되었습니다.');
+          break;
+
+        case 'GAME_PAUSED':
+          // [NEW] 게임 일시정지 (content에 닉네임)
+          setGamePaused(msg.content || 'Unknown Player');
+          break;
+
+        case 'GAME_RESUMED':
+          // [NEW] 게임 재개
+          setGamePaused(null);
           break;
 
         case 'ERROR':
@@ -353,6 +380,7 @@ export default function GamePage() {
 
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
           <PhaserGame
@@ -382,6 +410,7 @@ export default function GamePage() {
   if (isGameStarted && currentStage === null) {
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 스테이지 선택 영역 컴포넌트 */}
         <StageSelectScreen
           roomId={roomId}
@@ -400,6 +429,7 @@ export default function GamePage() {
   // ========== 대기실 화면 ==========
   return (
     <div className={styles.gameContainer}>
+      <PauseOverlay pausedBy={pausedBy} />
       {/* 게임 캔버스 (대기 화면) */}
       <div className={`pixel-box ${styles.canvasWrapper}`}>
         <PhaserGame
