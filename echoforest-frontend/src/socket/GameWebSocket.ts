@@ -28,7 +28,12 @@ export type MessageType =
     | 'STAGE_CLEAR'   // Client<->Server: 스테이지 클리어 (stage: 번호)
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
-    | 'KICKED';       // Server→Client: 강제 퇴장됨
+    | 'KICKED'        // Server→Client: 강제 퇴장됨
+    // Pause/Resume (Stability)
+    | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
+    | 'RESUME_GAME'   // Client->Server: 재개 요청
+    | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
+    | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
 
 // UPDATE 메시지에서 오는 플레이어 상태
 export interface ServerPlayerState {
@@ -303,6 +308,28 @@ class GameWebSocket {
     sendLeave(roomId: string) {
         this.send({
             type: 'LEAVE',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
+    /**
+     * 일시정지 요청
+     */
+    sendPauseRequest(roomId: string) {
+        this.send({
+            type: 'PAUSE_GAME',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
+    /**
+     * 재개 요청
+     */
+    sendResumeRequest(roomId: string) {
+        this.send({
+            type: 'RESUME_GAME',
             roomId: roomId,
             username: this.username
         });

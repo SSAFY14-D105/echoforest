@@ -23,7 +23,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     protected getWorldHeight(): number {
-        return this.scale.height;
+        return 720;
     }
 
     protected getRequiredPlayers(): number {

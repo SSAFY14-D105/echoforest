@@ -1295,10 +1295,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // 월드 바운드 클램핑
+        const maxScrollX = Math.max(0, this.getWorldWidth() - this.cameras.main.width);
         this.cameras.main.scrollX = Phaser.Math.Clamp(
             this.cameras.main.scrollX,
             0,
-            this.getWorldWidth() - this.cameras.main.width
+            maxScrollX
         );
     }
 

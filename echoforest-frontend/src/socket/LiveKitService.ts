@@ -13,10 +13,10 @@ import {
     VideoPresets,
     createLocalTracks
 } from 'livekit-client';
-import { fetchLiveKitToken } from '../apis/livekitApi';
+import { LIVEKIT_SERVER_URL as API_LIVEKIT_SERVER_URL, getLiveKitToken } from '../apis/livekitApi';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://i14d105.p.ssafy.io:7880';
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || API_LIVEKIT_SERVER_URL;
 
 export interface ParticipantInfo {
     identity: string;
@@ -34,6 +34,7 @@ type ErrorCallback = (error: string) => void;
 export class LiveKitService {
     private room: Room | null = null;
     private localVideoElement: HTMLVideoElement | null = null;
+    private connectionOpId = 0; // Async race condition 방지용 ID
 
     private onParticipantUpdate: ParticipantUpdateCallback | null = null;
     private onConnectedCallback: ConnectionCallback | null = null;
@@ -106,9 +107,22 @@ export class LiveKitService {
 
     // LiveKit Room 연결
     async connect(roomName: string, userId: string, username: string): Promise<void> {
+        // 기존 연결 정리 및 이전 시도 무효화
+        this.disconnect();
+
+        const myId = ++this.connectionOpId;
+        console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${roomName}, User: ${username}`);
+
         try {
             // 1. 백엔드에서 토큰 발급
-            const { token } = await fetchLiveKitToken({ roomId: roomName, userId, username });
+            const { token } = await getLiveKitToken({ roomId: roomName, userId, username });
+
+            // 경합 상태 확인: 토큰 발급 중 disconnect()나 새로운 connect()가 호출되었으면 중단
+            if (myId !== this.connectionOpId) {
+                console.warn(`[LiveKitService] 연결 시도 #${myId} 취소됨 (새로운 작업 감지)`);
+                return;
+            }
+
             console.log('✅ LiveKit 토큰 발급 성공');
 
             // 2. Room 생성 및 연결
@@ -147,36 +161,62 @@ export class LiveKitService {
 
             // 4. 연결
             await this.room.connect(LIVEKIT_URL, token);
+
+            if (myId !== this.connectionOpId) {
+                console.warn(`[LiveKitService] 연결 시도 #${myId} 취소됨 (연결 직후)`);
+                this.room.disconnect(); // 혹시 연결되었다면 끊기
+                this.room = null;
+                return;
+            }
+
             console.log('✅ LiveKit Room 연결 성공');
 
             // 5. 로컬 트랙 생성 및 발행
-            const tracks = await createLocalTracks({
-                audio: true,
-                video: true
-            });
+            try {
+                const tracks = await createLocalTracks({
+                    audio: true,
+                    video: true
+                });
 
-            for (const track of tracks) {
-                await this.room.localParticipant.publishTrack(track);
-
-                // 로컬 비디오 표시
-                if (track.kind === Track.Kind.Video && this.localVideoElement) {
-                    track.attach(this.localVideoElement);
+                if (myId !== this.connectionOpId || !this.room) {
+                    tracks.forEach(t => t.stop());
+                    return;
                 }
+
+                for (const track of tracks) {
+                    if (this.room && this.room.state === 'connected') {
+                        await this.room.localParticipant.publishTrack(track);
+
+                        // 로컬 비디오 표시
+                        if (track.kind === Track.Kind.Video && this.localVideoElement) {
+                            track.attach(this.localVideoElement);
+                        }
+                    }
+                }
+            } catch (publishErr) {
+                console.warn('트랙 발행 중 오류 (연결 해제됨?):', publishErr);
             }
 
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
 
         } catch (err: any) {
-            console.error('LiveKit 연결 실패:', err);
-            this.onErrorCallback?.(err?.message || 'LiveKit 연결에 실패했습니다.');
-            throw err;
+            // 내가 최신 시도인데 실패한 경우에만 에러 보고 (오래된 시도의 에러는 무시)
+            if (myId === this.connectionOpId) {
+                console.error('LiveKit 연결 실패:', err);
+                this.onErrorCallback?.(err?.message || 'LiveKit 연결에 실패했습니다.');
+                throw err;
+            } else {
+                console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
+            }
         }
     }
 
     // 연결 종료
     disconnect() {
+        this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
+            console.log('[LiveKitService] 연결 종료');
             this.room.disconnect();
             this.room = null;
         }
@@ -184,7 +224,7 @@ export class LiveKitService {
 
     // 마이크 토글
     async toggleMic(): Promise<boolean> {
-        if (!this.room) return false;
+        if (!this.room || !this.room.localParticipant) return false;
         const newState = !this.room.localParticipant.isMicrophoneEnabled;
         await this.room.localParticipant.setMicrophoneEnabled(newState);
         return newState;
@@ -192,7 +232,7 @@ export class LiveKitService {
 
     // 카메라 토글
     async toggleCamera(): Promise<boolean> {
-        if (!this.room) return false;
+        if (!this.room || !this.room.localParticipant) return false;
         const newState = !this.room.localParticipant.isCameraEnabled;
         await this.room.localParticipant.setCameraEnabled(newState);
         return newState;
@@ -210,7 +250,7 @@ export class LiveKitService {
 
     // 연결 상태
     get isConnected(): boolean {
-        return this.room !== null;
+        return this.room?.state === 'connected';
     }
 
     // 참가자 비디오 연결
