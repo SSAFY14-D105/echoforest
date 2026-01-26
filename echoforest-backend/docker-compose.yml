@@ -15,11 +15,14 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
 
-      # [추가] AI 모델 관련 환경 변수
+      # AI 모델 관련 환경 변수
       - AI_MODEL_URL=${AI_MODEL_URL}
       - AI_MODEL_API_KEY=${AI_MODEL_API_KEY}
 
-      # [변경] DB 정보 환경 변수 주입 (보안 강화)
+      # AI 서버용
+      - SENTIMENT_AI_URL=http://ai-server:8000
+
+      # DB 정보 환경 변수 주입 (보안 강화)
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -35,6 +38,7 @@ services:
       - livekit
       - mysql
       - redis
+      - ai-server
     volumes:
       - ./uploads:/app/uploads
     networks:
@@ -126,6 +130,31 @@ services:
       - /usr/bin/docker:/usr/bin/docker
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
       - ./jenkins_home:/var/jenkins_home # 데이터 영구 저장 (현재 폴더에 저장)
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 6. AI Server
+  # ==========================================
+  ai-server:
+    container_name: echoforest-ai
+    build:
+      # [중요] docker-compose.yml 파일 위치 기준, AI 프로젝트 폴더 경로
+      # 예: backend 폴더와 ai 폴더가 나란히 있다면 ../echoforest-ai
+      context: ../echoforest-ai
+      dockerfile: Dockerfile
+    restart: always
+#    ports:
+#      - "8000:8000" # 테스트시 주석 해제
+    volumes:
+      - /home/ubuntu/model_cache:/code/model_cache
+    environment:
+      - HF_HOME=/code/model_cache
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'    # CPU 2코어 제한 (게임 서버 렉 방지)
+          memory: 4G     # 메모리 4GB 제한
     networks:
       - echo-net
 
