@@ -1,5 +1,5 @@
 import BaseGameScene from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard } from '../gimmicks';
+import { Key, Lock, Spike, Spring, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, Respawn } from '../gimmicks';
 import { useGameStore } from '../../store/useGameStore';
 
 /**
@@ -130,9 +130,20 @@ export default class Solo2Scene extends BaseGameScene {
 
                 // 타입이 명시되지 않은 경우 GID나 속성으로 추론
                 if (!type) {
+                    // 1. GID 기반 추론
                     if (gid === 113 || gid === 111 || gid === 131) {
                         if (gid === 113) type = 'Goal';
                         else type = 'Lock';
+                    } else if (gid === 96 || gid === 30) {
+                        type = 'Spawn';
+                    }
+                    // 2. 이름 기반 추론
+                    else if (obj.name === 'Spawn' || obj.name === 'SpawnPoint') {
+                        type = 'Spawn';
+                    }
+                    // 3. 커스텀 프로퍼티 기반 추론
+                    else if (this.getTiledProperty(obj, 'playerIndex') !== undefined || this.getTiledProperty(obj, 'isDefault') !== undefined) {
+                        type = 'Spawn';
                     }
                 }
 
@@ -239,6 +250,20 @@ export default class Solo2Scene extends BaseGameScene {
                             frame
                         });
                         this.signboards.push(sign);
+                        break;
+                    }
+                    case 'Spawn':
+                    case 'SpawnPoint': {
+                        const playerIndex = this.getTiledProperty(obj, 'playerIndex');
+                        const isDefault = this.getTiledProperty(obj, 'isDefault');
+                        this.spawnPoints.push(new Respawn(
+                            centerX,
+                            centerY,
+                            `solo2-spawn-${obj.id}`,
+                            playerIndex !== undefined ? Number(playerIndex) : undefined,
+                            isDefault === true || isDefault === 'true'
+                        ));
+                        console.log(`[Solo2Scene] Spawn point registered: (${centerX}, ${centerY}) for index: ${playerIndex}`);
                         break;
                     }
                 }

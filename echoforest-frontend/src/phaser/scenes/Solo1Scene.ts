@@ -1,5 +1,5 @@
 import BaseGameScene, { PHYSICS } from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform } from '../gimmicks';
+import { Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 import { useGameStore } from '../../store/useGameStore';
 
 /**
@@ -38,6 +38,9 @@ export default class Solo1Scene extends BaseGameScene {
     protected createGimmicks(): void {
         const floorY = this.gameHeight - 40 - PHYSICS.PLAYER_SIZE / 2;
 
+        // 리스폰 위치 설정
+        this.spawnPoints.push(new Respawn(100, floorY, 'solo1-default-spawn', undefined, true));
+
         // Bumper (x: 300 위치) - 테스트용 테두리에 남겨둠
         const bumper1 = new Bumper(this, 300, floorY - 100, 60, 10);
         this.bumpers.push(bumper1);
@@ -47,7 +50,8 @@ export default class Solo1Scene extends BaseGameScene {
             id: 'mb1',
             startX: 1500,
             endX: 1900,
-            y: floorY - 150,
+            startY: floorY - 150,
+            endY: floorY - 150,
             size: 50,
             speed: 0.003,
             power: 12
@@ -107,14 +111,11 @@ export default class Solo1Scene extends BaseGameScene {
         });
         this.movableBlocks.push(block2);
 
-        // Goal은 Lock이 풀릴 때 해당 위치에 자동으로 생성됨 (shouldSpawnGoalOnUnlock 기반)
-
         // 독버섯 테스트용 하나 추가 (x: 600 위치)
         const mushroom1 = new PoisonMushroom(this, 600, floorY + 8, 'test-mushroom');
         this.poisonMushrooms.push(mushroom1);
 
         // 블록 소환 버튼 테스트 (x: 800 위치)
-        // 밟으면 x: 1000 위치에 1인용 소형 블록 소환
         const button1 = new BlockButton(this, {
             id: 'test-button',
             x: 800,
@@ -152,7 +153,6 @@ export default class Solo1Scene extends BaseGameScene {
         this.signboards.push(sign1);
 
         // 유령 플랫폼 테스트 (Reveal 효과)
-        // 플랫폼 뒤에 Key2를 숨겨둠
         const key2 = new Key(this, 2400, floorY - 100, 'key2', 'none');
         this.keys.push(key2);
 
@@ -166,8 +166,6 @@ export default class Solo1Scene extends BaseGameScene {
             alpha: 1.0 // 평상시에는 불투명하게 설정
         });
         this.ghostPlatforms.push(ghost1);
-
-        console.log('[SoloScene] Gimmicks restored to original layout + Poison Mushroom + Block Button + Platform Toggle + Signboard + GhostPlatform (Reveal)');
     }
 
     create() {
@@ -175,7 +173,6 @@ export default class Solo1Scene extends BaseGameScene {
         this.setupTiledBackground('background_image', 0.2);
         super.create();
     }
-
 
     protected shouldSpawnGoalOnUnlock(): boolean {
         return true;

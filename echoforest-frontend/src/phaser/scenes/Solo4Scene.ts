@@ -1,5 +1,5 @@
 import BaseGameScene from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Goal, BlockButton, Elevator, Bumper, Signboard, MovableBlock, MovingBumper, PoisonMushroom, TogglePlatform, TriggerButton, GhostPlatform } from '../gimmicks';
+import { Key, Lock, Spike, Spring, Goal, BlockButton, Elevator, Bumper, Signboard, MovableBlock, MovingBumper, PoisonMushroom, TogglePlatform, TriggerButton, GhostPlatform, Respawn } from '../gimmicks';
 import { useGameStore } from '../../store/useGameStore';
 
 /**
@@ -61,8 +61,8 @@ export default class Solo4Scene extends BaseGameScene {
         const worldHeight = this.getWorldHeight();
         this.matter.world.setBounds(0, 0, worldWidth, worldHeight);
 
-        // 플레이어 스폰 지점 설정 (하단에서 약 400px 위로 올림, 왼쪽에서 80px * scale 지점)
-        this.spawnPoint = { x: 80 * this.mapScale, y: worldHeight - 400 };
+        // 플레이어 스폰 지점 설정
+        this.spawnPoints.push(new Respawn(80 * this.mapScale, worldHeight - 400, 'solo4-default-spawn', undefined, true));
 
         // 타일셋
         const ts = this.map.addTilesetImage('tiles_tileset', 'tiles_tileset')!;
@@ -104,9 +104,17 @@ export default class Solo4Scene extends BaseGameScene {
                 let type = obj.type;
 
                 // Tiled에서 'Spawn' 타입의 오브젝트가 있다면 스폰 지점으로 설정
-                if (type === 'Spawn' || obj.name === 'Spawn') {
-                    this.spawnPoint = { x: centerX, y: centerY };
-                    console.log(`[${this.getSceneKey()}] Custom spawn point set via Tiled: (${centerX}, ${centerY})`);
+                if (type === 'Spawn' || obj.name === 'Spawn' || type === 'SpawnPoint') {
+                    const playerIndex = this.getTiledProperty(obj, 'playerIndex');
+                    const isDefault = this.getTiledProperty(obj, 'isDefault');
+                    this.spawnPoints.push(new Respawn(
+                        centerX,
+                        centerY,
+                        `solo4-spawn-${obj.id}`,
+                        playerIndex !== undefined ? Number(playerIndex) : undefined,
+                        isDefault === true || isDefault === 'true'
+                    ));
+                    console.log(`[${this.getSceneKey()}] Custom spawn point registered via Tiled: (${centerX}, ${centerY})`);
                     return;
                 }
 
@@ -132,6 +140,12 @@ export default class Solo4Scene extends BaseGameScene {
                         type = objectType;
                     } else if (gid === 111 || gid === 131) {
                         type = 'Lock';
+                    } else if (gid === 113) {
+                        type = 'Goal';
+                    } else if (gid === 96 || gid === 30 || obj.name === 'Spawn' || obj.name === 'SpawnPoint') {
+                        type = 'Spawn';
+                    } else if (this.getTiledProperty(obj, 'playerIndex') !== undefined || this.getTiledProperty(obj, 'isDefault') !== undefined) {
+                        type = 'Spawn';
                     } else if (this.getTiledProperty(obj, 'targetX') !== undefined || this.getTiledProperty(obj, 'targetY') !== undefined) {
                         // targetX나 targetY가 있으면 MovingBumper나 Elevator일 가능성이 높음
                         if (this.getTiledProperty(obj, 'speed') !== undefined) {

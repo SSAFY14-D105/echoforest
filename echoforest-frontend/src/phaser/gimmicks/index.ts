@@ -20,3 +20,4 @@ export type { TriggerButtonConfig } from './TriggerButton';
 export { Signboard } from './Signboard';
 export type { SignboardConfig } from './Signboard';
 export { GhostPlatform } from './GhostPlatform';
+export { Respawn } from './Respawn';

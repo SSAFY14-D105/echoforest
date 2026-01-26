@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { Player } from '../entities/Player';
 import type { PlayerConfig } from '../entities/Player';
 import type { Player as StorePlayer } from '../../store/useGameStore';
-import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform } from '../gimmicks';
+import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 import { getRandomCurseId } from '../config/curseConfig';
 import { createPlayerAnimations, preloadPlayerAssets, parseTiledMap, showFloatingText, setupTiledBackground as setupTiledBg } from '../utils';
 
@@ -60,6 +60,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스폰 위치 및 맵 오프셋 (Tiled 등에서 설정 가능)
     protected spawnPoint: { x: number; y: number } | null = null;
+    protected spawnPoints: Respawn[] = [];
     protected offsetY: number = 0;
 
     // 플레이어 상태
@@ -251,6 +252,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.blockContactRight.clear();
         this.myPlayerId = '';
         this.isDead = false;
+        this.spawnPoints = [];
+        this.spawnPoint = null;
 
         // Matter.js 이벤트 리스너 초기화 (중복 방지)
         this.matter.world.off('collisionstart');
@@ -949,16 +952,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {
         const isLocalPlayer = storePlayer.nickname === currentNickname;
-        // 서버에서 받은 x, y가 있으면 사용, 없으면 기본 위치
-        const xPos = storePlayer.x ?? (this.spawnPoint?.x ?? (100 + (index * 100)));
-        // Tiled 맵(64px 타일) 및 오프셋(하단 정렬)을 고려하여 기본 스폰 높이 계산
-        const groundY = this.getWorldHeight() + this.offsetY;
-        const defaultY = groundY - (this.shouldCreateDefaultFloor() ? 40 : 64) - (PHYSICS.PLAYER_SIZE / 2);
-        const yPos = storePlayer.y ?? (this.spawnPoint?.y ?? defaultY);
 
         // colorIndex 결정: Store에서 계산된 값(접속 순서) 사용
         // 방장은 항상 0번(초록), 이후 접속자는 순서대로 할당됨
         const colorIndex = storePlayer.colorIndex ?? index;
+
+        // 리스폰/스폰 위치 결정
+        const spawn = this.getSpawnPoint(colorIndex);
+        const xPos = storePlayer.x ?? spawn.x;
+        const yPos = storePlayer.y ?? spawn.y;
 
         const config: PlayerConfig = {
             id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
@@ -1477,6 +1479,33 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+
+    /**
+     * 특정 플레이어 인덱스에 맞는 스폰 위치를 반환합니다.
+     */
+    protected getSpawnPoint(playerIndex: number): { x: number; y: number } {
+        // 1. 해당 인덱스에 명시적으로 할당된 스폰 포인트 검색
+        const specificSpawn = this.spawnPoints.find(p => p.playerIndex === playerIndex);
+        if (specificSpawn) return { x: specificSpawn.x, y: specificSpawn.y };
+
+        // 2. 기본(isDefault) 스폰 포인트 검색
+        const defaultSpawn = this.spawnPoints.find(p => p.isDefault);
+        if (defaultSpawn) return { x: defaultSpawn.x, y: defaultSpawn.y };
+
+        // 3. 아무 스폰 포인트나 첫 번째 것 반환
+        if (this.spawnPoints.length > 0) return { x: this.spawnPoints[0].x, y: this.spawnPoints[0].y };
+
+        // 4. 레거시 단일 spawnPoint 반환
+        if (this.spawnPoint) return this.spawnPoint;
+
+        // 5. 최후의 보루: 맵 하단 기반 기본 위치 계산
+        const groundY = this.getWorldHeight() + this.offsetY;
+        const defaultY = groundY - (this.shouldCreateDefaultFloor() ? 100 : 128);
+        return {
+            x: 100 + (playerIndex * 100),
+            y: defaultY
+        };
+    }
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
