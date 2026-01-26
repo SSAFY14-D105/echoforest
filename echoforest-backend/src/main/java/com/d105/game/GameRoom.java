@@ -52,6 +52,13 @@ public class GameRoom implements Runnable {
     private int teamCurseStack = 0;
     private static final int MAX_CURSE_STACK = 10;
 
+    // STT 저주 스택 (별도 관리) - GameService에서 사용
+    private int curseStack = 0;
+    
+    // 현재 맵 ID
+    @Getter
+    private int currentMapId = 1;
+
     /**
      * GameRoom 생성자
      *
@@ -701,15 +708,15 @@ public class GameRoom implements Runnable {
     }
 
     /**
-     * 팀 저주 스택 증가
+     * 팀 저주 스택 증가 (내부 처리용)
+     * 주의: GameService.handleSpeechBatch()에서 boolean 반환 버전 addCurseStack(int)을 사용합니다.
+     * 이 메서드는 handleSpeechAnalysis() 등 레거시 호출용입니다.
      * 
      * @param delta 증가량 (1, 3, 5 등)
      */
-    public void addCurseStack(int delta) {
+    public void addTeamCurseStack(int delta) {
         this.teamCurseStack += delta;
-        // Max 제한 없음? 아니면 10 넘으면 발동?
-        // 발동 조건: 10 이상
-        log.info("Curse Stack Added: +{} -> {}", delta, teamCurseStack);
+        log.info("Team Curse Stack Added: +{} -> {}", delta, teamCurseStack);
 
         if (this.teamCurseStack >= MAX_CURSE_STACK) {
             triggerRandomCurse();

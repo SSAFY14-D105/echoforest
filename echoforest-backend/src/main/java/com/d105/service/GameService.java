@@ -172,7 +172,7 @@ public class GameService {
         // 만약 예외적으로 0이거나 음수는 무시할지 결정.
         if (dto.getStackDelta() > 0) {
             log.info("Applying Curse Stack Delta: +{} for Room {}", dto.getStackDelta(), dto.getRoomId());
-            room.addCurseStack(dto.getStackDelta());
+            room.addTeamCurseStack(dto.getStackDelta());
         }
     }
 
