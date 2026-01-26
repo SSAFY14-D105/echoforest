@@ -3,14 +3,15 @@ import BaseGesture from './BaseGesture.js';
 export default class RightPokeGesture extends BaseGesture {
     constructor(config = {}) {
         super(config);
-        // 수정: gesture-tuner.html에서는 '오른볼 콕'을 '화면상 오른쪽(물리적 왼쪽 187번) 볼 찌르기'로 정의하고 있습니다.
-        // 따라서 187번대(왼쪽 볼) 좌표를 사용하여 '오른볼 콕'을 판정합니다.
-        // 임계값도 0.2 -> 0.3으로 완화하여 인식률을 높입니다.
         this.thresholds = {
-            pokeDistance: 0.3,
+            pokeDistance: 0.2, // 0.15~0.2 적절
             ...config
         };
 
+        // 중요: 거울모드 및 Mediapipe 좌표계 특성상, 
+        // 화면에서 사용자의 '오른쪽 볼'을 터치하려면 
+        // 랜드마크 인덱스는 반대쪽(왼쪽 볼) 좌표를 써야 할 수 있음.
+        // 기존 411(오른쪽) -> 187(왼쪽) 계열로 변경하여 테스트
         this.cheekPoints = [187, 147, 116, 123, 50];
     }
 
@@ -39,15 +40,9 @@ export default class RightPokeGesture extends BaseGesture {
             faceSize = this.distance(faceLandmarks[10], faceLandmarks[152]);
         }
 
-        // 1. 검지 펴짐 체크 (유연하게 처리)
-        // Case A: 완전히 펴짐 (threshold 1.2)
-        // Case B: 살짝 구부러짐 (threshold 0.8) - "귀여운 콕" 지원
-        const isIndexFullyExtended = this.isFingerExtended(handR, 8, 6, 1.2);
-        const isIndexSemiExtended = this.isFingerExtended(handR, 8, 6, 0.8);
-
-        // 검지가 너무 많이 접혀있으면(주먹 등) 즉시 실패
-        if (!isIndexSemiExtended) {
-            return { detected: false, score: 0, reason: 'Index finger folded' };
+        // 1. 검지 펴짐 체크 (필수) ✅
+        if (!this.isFingerExtended(handR, 8, 6)) {
+            return { detected: false, score: 0, reason: 'Index finger not extended' };
         }
 
         // 2. 나머지 손가락 접힘 체크 (필수 - '가위'나 '보' 방지) ✅
@@ -59,19 +54,6 @@ export default class RightPokeGesture extends BaseGesture {
 
         if (!isMiddleClosed || !isRingClosed || !isPinkyClosed) {
             return { detected: false, score: 0, reason: 'Other fingers not closed' };
-        }
-
-        // 3. 엄지 위치 체크 (손바닥 펴고 찌르기 방지)
-        // 사용자가 요청한 대로 '엄지 끝(4)과 중지 PIP(10)가 가까워야 함'을 체크
-        const thumbTip = handR[4];
-        const middlePip = handR[10]; // 중지 두 번째 마디
-        const d4to10 = this.distance(thumbTip, middlePip);
-        const palmSize = metadata.palmSize || 0.1; // 0 방지
-        const normDist4to10 = d4to10 / palmSize;
-
-        // 임계값: 0.3 정도면 검지를 쥘 때 엄지가 중지 위에 올라가는 형태
-        if (normDist4to10 > 0.35) {
-            return { detected: false, score: 0, reason: `Thumb too far from middle finger (${normDist4to10.toFixed(2)})` };
         }
 
         // 3. 볼과의 거리 체크
@@ -91,21 +73,9 @@ export default class RightPokeGesture extends BaseGesture {
         });
 
         // 4. 판정
-        // 4. 판정
-        // (1) 검지가 완전히 펴져 있으면 거리 0.3 이내면 OK
-        // (2) 검지가 살짝 구부러져 있으면("귀여운 콕") 더 가까워야 OK (0.2 이내)
-        const isTouching = minDist < this.thresholds.pokeDistance; // 0.3
-        const isCloseContact = minDist < 0.2;
+        const isTouching = minDist < this.thresholds.pokeDistance;
 
-        let detected = false;
-        if (isIndexFullyExtended && isTouching) {
-            detected = true;
-        } else if (isIndexSemiExtended && isCloseContact) {
-            // 구부린 콕은 좀 더 가까이 대야 인정
-            detected = true;
-        }
-
-        if (detected) {
+        if (isTouching) {
             const score = Math.max(0.1, 1 - (minDist / this.thresholds.pokeDistance));
             return {
                 detected: true,
