@@ -94,35 +94,15 @@
                  "name":"",
                  "properties":[
                         {
-                         "name":"blockHeight",
-                         "type":"int",
-                         "value":16
-                        }, 
-                        {
-                         "name":"blockWidth",
-                         "type":"int",
-                         "value":16
-                        }, 
-                        {
-                         "name":"requiredPlayers",
+                         "name":"targetBlockId",
                          "type":"int",
                          "value":1
-                        }, 
-                        {
-                         "name":"spawnX",
-                         "type":"float",
-                         "value":96
-                        }, 
-                        {
-                         "name":"spawnY",
-                         "type":"float",
-                         "value":224.5
                         }],
                  "rotation":0,
                  "type":"BlockButton",
                  "visible":true,
                  "width":18,
-                 "x":319.5,
+                 "x":270.833333333333,
                  "y":255.5
                 }, 
                 {
@@ -229,8 +209,8 @@
                  "type":"Spike",
                  "visible":true,
                  "width":18,
-                 "x":703.454545454545,
-                 "y":174.954545454545
+                 "x":702.90909090909,
+                 "y":175.772727272727
                 }, 
                 {
                  "gid":189,
@@ -297,6 +277,106 @@
                  "width":18,
                  "x":927.916666666667,
                  "y":158.666666666667
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":19,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"isDefault",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":5,
+                 "y":252
+                }, 
+                {
+                 "gid":27,
+                 "height":18,
+                 "id":20,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"requiredPlayers",
+                         "type":"int",
+                         "value":1
+                        }, 
+                        {
+                         "name":"targetBlockId",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"MovableBlock",
+                 "visible":true,
+                 "width":18,
+                 "x":111,
+                 "y":224.333333333333
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":21,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":27,
+                 "y":252
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":22,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":49,
+                 "y":252
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":23,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":3
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":71,
+                 "y":252
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -305,7 +385,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":19,
+ "nextobjectid":24,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

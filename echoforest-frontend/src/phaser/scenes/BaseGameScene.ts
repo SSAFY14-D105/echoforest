@@ -80,6 +80,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 에러 로그 쓰로틀링 (1초마다)
     private lastErrorLogTime: number = 0;
     private readonly STATE_SEND_INTERVAL: number = 33;
+    // 초기 배치 여부 (씬 시작/재시작 시 스폰 지점 강제 적용용)
+    private isInitialPlacement: boolean = true;
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
     public static resetPersistentCurses(): void {
@@ -289,6 +291,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.blockContactRight.clear();
         this.myPlayerId = '';
         this.isDead = false;
+        this.isInitialPlacement = true; // 재시작 시 초기 배치 모드 활성화
         this.spawnPoints = [];
         this.spawnPoint = null;
 
@@ -335,11 +338,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // [추가] 화면 하단 낙사 센서 (death-zone)
-        // 맵의 전체 너비를 커버하며, 바닥보다 조금 아래에 배치하여 완전히 떨어졌을 때 발동
+        // 맵의 전체 너비를 커버하며, 바닥 경계선에 배치하여 닿는 즉시 발동
         this.matter.add.rectangle(
             this.getWorldWidth() / 2,
-            this.gameHeight + 300,
-            this.getWorldWidth() * 2, // 넉넉하게 설정
+            this.gameHeight + 50, // 센서 높이 100의 절반
+            this.getWorldWidth() * 4, // 넉넉하게 설정
             100,
             {
                 isStatic: true,
@@ -984,19 +987,24 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         player.applyRemoteDirection();
                         player.applyRemoteAnimation();
                     }
+
+                    // [FIX] 색상 인덱스 동기화 (접속 초기 colorIndex 지연 대응)
+                    const newColorIndex = storePlayer.colorIndex ?? index;
+                    if (player.colorIndex !== newColorIndex) {
+                        console.log(`[BaseGameScene] Syncing colorIndex for ${player.nickname}: ${player.colorIndex} -> ${newColorIndex}`);
+                        player.setColor(newColorIndex);
+                    }
                 } else if (!player) {
                     console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
                 }
             }
         });
 
-        // 게임에 있는데 Store에 없는 플레이어 제거
-        const storeNicknames = new Set(storePlayers.map(p => p.nickname));
-        this.players.forEach((_, playerNickname) => {
-            if (!storeNicknames.has(playerNickname)) {
-                this.removePlayer(playerNickname);
-            }
-        });
+        // 초기 배치가 끝났으므로 플래그 해제 (이후의 sync는 서버 좌표를 따름)
+        if (this.isInitialPlacement && storePlayers.length > 0) {
+            console.log(`[BaseGameScene] Initial placement complete for ${storePlayers.length} players.`);
+            this.isInitialPlacement = false;
+        }
     }
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {
@@ -1011,8 +1019,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // 리스폰/스폰 위치 결정
         const spawn = this.getSpawnPoint(colorIndex);
-        const xPos = storePlayer.x ?? spawn.x;
-        const yPos = storePlayer.y ?? spawn.y;
+
+        // [FIX] 씬이 막 생성되었거나 재시작된 경우(Initial Placement), 스토어의 이전 위치 정보를 무시하고 맵의 스폰 지점을 강제함
+        // 그 외(진행 중 난입 등)에는 스토어 좌표가 있으면 그걸 우선함
+        const useSpawn = this.isInitialPlacement || !storePlayer.x || !storePlayer.y || (storePlayer.x === 0 && storePlayer.y === 0);
+
+        const xPos = useSpawn ? spawn.x : (storePlayer.x ?? spawn.x);
+        const yPos = useSpawn ? spawn.y : (storePlayer.y ?? spawn.y);
+
+        console.log(`[BaseGameScene] ${this.isInitialPlacement ? 'INITIAL' : 'LATE-JOIN'} spawn for ${storePlayer.nickname} (Idx: ${colorIndex}) at (${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
 
         const config: PlayerConfig = {
             id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
@@ -1087,16 +1102,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.players.forEach(player => {
             const pos = player.getPosition();
 
-            // 바닥(화면 끝)보다 200px 이상 내려갔다면 강제 복구 (낙사 처리보다 우선)
-            // 참고: 낙사 존(death-zone)은 gameHeight + 50 위치에 있으므로 그보다 더 아래
-            if (pos.y > mapBottomY + 200) {
-                console.warn(`[Physics] Player ${player.nickname} fell too deep (${pos.y}), resetting to safe Y.`);
-                // 안전한 높이로 복구 (맵 바닥보다 약간 위)
-                // 주의: Tiled Map 바닥 높이를 정확히 모를 때는 보수적으로 잡아야 함
-                // 일단 0 (천장)으로 보내거나, 마지막 안전 위치가 있다면 거기로 보내는 게 좋음
-                // 여기서는 화면 중간(300)으로 보냄으로써 확실히 보이게 함
-                player.setPosition(pos.x, 300);
-                player.setVelocity(0, 0);
+            // 바닥(화면 끝)에 닿는 즉시 낙사 처리 (여유 공간 0)
+            if (pos.y > mapBottomY) {
+                if (player.isLocalPlayer && !this.isDead) {
+                    console.warn(`[Physics] Player ${player.nickname} fell out of bounds (${pos.y.toFixed(0)}), triggering death.`);
+                    this.triggerDeath('fall');
+                }
             }
         });
 
@@ -1576,14 +1587,24 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     protected getSpawnPoint(playerIndex: number): { x: number; y: number } {
         // 1. 해당 인덱스에 명시적으로 할당된 스폰 포인트 검색
         const specificSpawn = this.spawnPoints.find(p => p.playerIndex === playerIndex);
-        if (specificSpawn) return { x: specificSpawn.x, y: specificSpawn.y };
+        if (specificSpawn) {
+            console.log(`[BaseGameScene] Found specific spawn point for Index ${playerIndex}: (${specificSpawn.x}, ${specificSpawn.y})`);
+            return { x: specificSpawn.x, y: specificSpawn.y };
+        }
 
         // 2. 기본(isDefault) 스폰 포인트 검색
         const defaultSpawn = this.spawnPoints.find(p => p.isDefault);
-        if (defaultSpawn) return { x: defaultSpawn.x, y: defaultSpawn.y };
+        if (defaultSpawn) {
+            console.log(`[BaseGameScene] No specific spawn for Index ${playerIndex}, using default: (${defaultSpawn.x}, ${defaultSpawn.y})`);
+            return { x: defaultSpawn.x, y: defaultSpawn.y };
+        }
 
         // 3. 아무 스폰 포인트나 첫 번째 것 반환
-        if (this.spawnPoints.length > 0) return { x: this.spawnPoints[0].x, y: this.spawnPoints[0].y };
+        if (this.spawnPoints.length > 0) {
+            const first = this.spawnPoints[0];
+            console.log(`[BaseGameScene] No default spawn found, using first available point: (${first.x}, ${first.y})`);
+            return { x: first.x, y: first.y };
+        }
 
         // 4. 레거시 단일 spawnPoint 반환
         if (this.spawnPoint) return this.spawnPoint;
@@ -1591,8 +1612,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 5. 최후의 보루: 맵 하단 기반 기본 위치 계산
         const groundY = this.getWorldHeight() + this.offsetY;
         const defaultY = groundY - (this.shouldCreateDefaultFloor() ? 100 : 128);
+        const fallbackX = 100 + (playerIndex * 100);
+        console.warn(`[BaseGameScene] NO spawn points found! Using fallback: (${fallbackX}, ${defaultY})`);
         return {
-            x: 100 + (playerIndex * 100),
+            x: fallbackX,
             y: defaultY
         };
     }
