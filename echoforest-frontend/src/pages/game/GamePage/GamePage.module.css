@@ -43,6 +43,25 @@
 
 .roomId {
     color: #e74c3c;
+    margin-right: 8px; /* 버튼과 간격 */
+}
+
+.copyBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
+
+.copyBtn:hover {
+    transform: scale(1.2);
+}
+
+.copyBtn:active {
+    transform: scale(0.95);
 }
 
 /* 카메라 영역은 CameraArea.module.css 로 이동됨 */
