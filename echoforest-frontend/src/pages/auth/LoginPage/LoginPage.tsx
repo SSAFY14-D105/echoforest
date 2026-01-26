@@ -18,6 +18,11 @@ export default function LoginPage({ onLogin }: Props) {
 
   return (
     <div className={styles.container}>
+      <img
+        className={styles.bgImage}
+        src="/assets/backgrounds/login_bg.gif"
+        alt="Login Background"
+      />
       <div className={`${styles.box} pixel-box`}>
         {mode === 'login' ? (
           <LoginForm

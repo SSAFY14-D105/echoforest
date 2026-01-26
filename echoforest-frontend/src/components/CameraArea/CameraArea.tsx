@@ -137,7 +137,7 @@ export default function CameraArea() {
     return (
         <div className={styles.cameraArea}>
             {/* Debug Toggle Button (Dev Only) */}
-            <div style={{ position: 'fixed', bottom: 150, right: 10, zIndex: 9999 }}>
+            <div style={{ position: 'fixed', bottom: 150, right: 10, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-end' }}>
                 <button
                     onClick={toggleMockMode}
                     style={{
@@ -151,6 +151,27 @@ export default function CameraArea() {
                         opacity: 0.7
                     }}>
                     {isMockMode ? 'Mock: ON' : 'Mock: OFF'}
+                </button>
+                {/* Manual Token Button */}
+                <button
+                    onClick={() => {
+                        const token = prompt('LiveKit Token을 입력하세요 (수동 연결):');
+                        if (token && roomId && nickname) {
+                            console.log('[Dev] Manual Token Connect:', token);
+                            liveKitService.connectWithToken(roomId, token, nickname);
+                        }
+                    }}
+                    style={{
+                        fontSize: '10px',
+                        padding: '2px 5px',
+                        background: '#2196F3',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        opacity: 0.7
+                    }}>
+                    🔑 Token
                 </button>
             </div>
 
