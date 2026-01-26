@@ -3,11 +3,12 @@ import Phaser from 'phaser';
 export class Bumper {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private graphics?: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
     private size: number;
     private power: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, size: number = 40, power: number = 8) {
+    constructor(scene: Phaser.Scene, x: number, y: number, size: number = 40, power: number = 8, texture?: string, frame?: string | number, angle: number = 0) {
         this.scene = scene;
         this.size = size;
         this.power = power;
@@ -16,14 +17,23 @@ export class Bumper {
         this.body = this.scene.matter.add.circle(x, y, size / 2, {
             isStatic: true,
             label: 'bumper',
-            isSensor: true // 플레이어를 직접 튕겨내기 위해 센서로 설정 (충돌 이벤트만 활용)
+            isSensor: true, // 플레이어를 직접 튕겨내기 위해 센서로 설정 (충돌 이벤트만 활용)
+            angle: Phaser.Math.DegToRad(angle)
         });
 
-        this.graphics = this.scene.add.graphics();
-        this.drawBumper();
+        if (texture) {
+            this.sprite = this.scene.add.sprite(x, y, texture, frame);
+            this.sprite.setDisplaySize(size, size);
+            this.sprite.setAngle(angle);
+        } else {
+            this.graphics = this.scene.add.graphics();
+            this.drawBumper();
+            this.graphics.setAngle(angle);
+        }
     }
 
     private drawBumper(): void {
+        if (!this.graphics) return;
         this.graphics.clear();
 
         // 외곽선 (네온 느낌)
@@ -56,5 +66,6 @@ export class Bumper {
             this.scene.matter.world.remove(this.body);
         }
         this.graphics?.destroy();
+        this.sprite?.destroy();
     }
 }

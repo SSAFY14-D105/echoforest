@@ -86,10 +86,14 @@ export function createPlayerAnimations(scene: Phaser.Scene): void {
 export function preloadPlayerAssets(scene: Phaser.Scene): void {
     const colors = ['green', 'blue', 'orange', 'purple'];
     colors.forEach(color => {
-        const folder = `${color}_player`;
+        const folder = color; // 폴더명이 색상명과 동일함
         scene.load.image(`player_${color}_standing`, `assets/sprites/${folder}/${color}_standing.png`);
         scene.load.image(`player_${color}_jump`, `assets/sprites/${folder}/${color}_jump.png`);
-        scene.load.image(`player_${color}_death`, `assets/sprites/${folder}/${color}_death.png`);
+
+        // purple의 경우 death 이미지가 여러 개이므로 256을 기본으로 사용
+        const deathFile = color === 'purple' ? `${color}_death256.png` : `${color}_death.png`;
+        scene.load.image(`player_${color}_death`, `assets/sprites/${folder}/${deathFile}`);
+
         scene.load.image(`player_${color}_walking_raw`, `assets/sprites/${folder}/${color}_walking.png`);
     });
 }

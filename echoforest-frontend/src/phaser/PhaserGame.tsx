@@ -6,6 +6,8 @@ import Stage1Scene from './scenes/Stage1Scene';
 import Stage2Scene from './scenes/Stage2Scene';
 import Stage3Scene from './scenes/Stage3Scene';
 import Solo2Scene from './scenes/Solo2Scene';
+import Solo3Scene from './scenes/Solo3Scene';
+import Solo4Scene from './scenes/Solo4Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
@@ -46,13 +48,17 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             const config: Phaser.Types.Core.GameConfig = {
                 type: Phaser.AUTO,
                 parent: parent,
-                width: '100%',
-                height: '100%',
+                width: 1280,
+                height: 720,
                 scale: {
-                    mode: Phaser.Scale.RESIZE,
-                    autoCenter: Phaser.Scale.NO_CENTER
+                    mode: Phaser.Scale.FIT,
+                    autoCenter: Phaser.Scale.CENTER_BOTH
                 },
                 backgroundColor: '#2c3e50',
+                render: {
+                    pixelArt: true,
+                    antialias: false
+                },
                 // @ts-ignore - Phaser 3 config property
                 disableVisibilityChange: true, // 탭 전환/최소화 시에도 게임 루프 계속 실행
                 physics: {
@@ -75,6 +81,8 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             gameRef.current.scene.add('Stage2Scene', Stage2Scene, false);
             gameRef.current.scene.add('Stage3Scene', Stage3Scene, false);
             gameRef.current.scene.add('Solo2Scene', Solo2Scene, false);
+            gameRef.current.scene.add('Solo3Scene', Solo3Scene, false);
+            gameRef.current.scene.add('Solo4Scene', Solo4Scene, false);
 
         }
 

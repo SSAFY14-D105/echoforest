@@ -14,16 +14,19 @@ export class Goal {
     private playersNearGoal: Set<string> = new Set();
     // Goal에 입장한 플레이어 (사라진 상태)
     private playersEnteredGoal: Set<string> = new Set();
+    private _isVisible: boolean = false;
 
     public readonly id: string;
     public readonly requiredPlayers: number;
+    public readonly targetGoalId?: number;
     private readonly x: number;
     private readonly y: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, requiredPlayers: number = 1, width: number = 48, height: number = 64, texture?: string, frame?: string | number, angle: number = 0) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, requiredPlayers: number = 1, width: number = 48, height: number = 64, texture?: string, frame?: string | number, angle: number = 0, targetGoalId?: number) {
         this.scene = scene;
         this.id = id;
         this.requiredPlayers = requiredPlayers;
+        this.targetGoalId = targetGoalId;
         this.x = x;
         this.y = y;
 
@@ -73,6 +76,7 @@ export class Goal {
 
     // 플레이어가 Goal 영역 근처에 들어옴 (충돌 시작)
     public playerNear(playerId: string): void {
+        if (!this._isVisible) return;
         this.playersNearGoal.add(playerId);
         console.log(`[Goal] Player near: ${playerId}`);
     }
@@ -90,8 +94,8 @@ export class Goal {
 
     // 플레이어가 Goal에 입장 (↑ 키 누름)
     public enterGoal(playerId: string): boolean {
-        if (!this.playersNearGoal.has(playerId)) {
-            return false; // 근처에 없으면 입장 불가
+        if (!this._isVisible || !this.playersNearGoal.has(playerId)) {
+            return false; // 근처에 없거나 비활성 상태면 입장 불가
         }
         if (this.playersEnteredGoal.has(playerId)) {
             return false; // 이미 입장한 상태
@@ -136,6 +140,7 @@ export class Goal {
     }
 
     public setVisible(visible: boolean): void {
+        this._isVisible = visible;
         this.graphics?.setVisible(visible);
         this.sprite?.setVisible(visible);
     }

@@ -21,17 +21,18 @@ export interface CurseEffect {
  * 새 저주를 추가하려면 여기에 객체를 추가하세요.
  */
 export const CURSES: Record<string, CurseEffect> = {
-    giant: {
-        id: 'giant',
+    BIG_AND_SLOW: {
+        id: 'BIG_AND_SLOW',
         name: '거대화',
-        description: '크기가 2배로 커지고 이동속도가 절반으로 감소합니다.',
+        description: '크기가 2배로 커지고 이동속도와 점프력이 절반으로 감소합니다.',
         sizeMultiplier: 2,
         speedMultiplier: 0.5,
+        jumpMultiplier: 0.5,
         color: 0x8B0000,  // 어두운 빨강
     },
-    drain: {
-        id: 'drain',
-        name: 'HP 저하',
+    TIME_BOMB: {
+        id: 'TIME_BOMB',
+        name: '시한폭탄', // HP 저하 -> 시한폭탄
         description: 'HP가 지속적으로 감소하여 5초 후 죽습니다.',
         sizeMultiplier: 1,
         speedMultiplier: 1,

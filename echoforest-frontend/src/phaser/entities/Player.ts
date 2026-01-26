@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 64;
+const BASE_PLAYER_SIZE = 60;
 
 // 물리 파라미터
 const PHYSICS = {
@@ -36,6 +36,7 @@ export class Player {
     private currentCurseId: string | null = null;
     private sizeMultiplier: number = 1;
     private speedMultiplier: number = 1;
+    private jumpMultiplier: number = 1;
     private reverseControls: boolean = false;
 
     // HP 저주용
@@ -49,6 +50,7 @@ export class Player {
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
     private _isDead: boolean = false;
+
 
     // 목표 위치 (원격 플레이어 보간용)
     private targetPos: { x: number, y: number } | null = null;
@@ -79,6 +81,7 @@ export class Player {
         }
         // 플레이어 스프라이트 생성
         this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
+        this.sprite.setOrigin(0.5, 1); // 하단 중앙을 기준으로 설정하여 충돌체 하단과 일치시키기 용이하게 함
         this.sprite.play(`player_idle_${this.colorName}`);
         this.sprite.setDepth(10); // 기믹보다 위로 배치
     }
@@ -87,6 +90,7 @@ export class Player {
         const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
         const body = this.scene.matter.add.rectangle(x, y, size, size, {
             label: this.id,
+            friction: PHYSICS.FRICTION,
             frictionStatic: PHYSICS.STATIC_FRICTION,
             frictionAir: PHYSICS.AIR_FRICTION,
             restitution: PHYSICS.RESTITUTION,
@@ -107,11 +111,12 @@ export class Player {
             this.sprite.clearTint();
         }
 
-        // 크기 배율 적용 (충돌 박스 64px 대비 시각적으로 1.5배 더 크게 표현)
-        // 기존 528px 원본 소스 기준
-        this.sprite.setScale((BASE_PLAYER_SIZE / 528) * this.sizeMultiplier * 1.5);
+        // 크기 배율 적용 (충돌 박스 60px 대비 시각적으로 3배 더 크게 표현)
+        // [MERGE] dev-frontend의 3배 확대 적용 + 기존의 visualProxy 비활성화 유지
+        const displaySize = BASE_PLAYER_SIZE * this.sizeMultiplier * 3.0;
+        this.sprite.setDisplaySize(displaySize, displaySize);
 
-        // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 이제 스프라이트가 잘 보이므로 비활성화
+        // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
         // if (this.visualProxy) {
         //     this.visualProxy.clear();
         //     this.visualProxy.fillStyle(this.color, 1);
@@ -124,7 +129,7 @@ export class Player {
         // }
     }
 
-    public update(): void {
+    public update(isGrounded: boolean): void {
         // 원격 플레이어 보간 이동
         if (!this.isLocalPlayer && this.targetPos) {
             const currentX = this.body.position.x;
@@ -158,11 +163,13 @@ export class Player {
         }
 
         const { x, y } = this.body.position;
-        this.sprite.setPosition(x, y);
+        const currentBodyHeight = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        // 스프라이트의 origin이 (0.5, 1)이므로 y 좌표를 몸체 하단(y + height/2)에 맞춤
+        this.sprite.setPosition(x, y + currentBodyHeight / 2);
 
         // 애니메이션 상태 업데이트 (로컬 플레이어만)
         if (this.isLocalPlayer) {
-            this.updateAnimation();
+            this.updateAnimation(isGrounded);
         }
 
         // 비주얼 효과 업데이트
@@ -187,7 +194,7 @@ export class Player {
         // }
     }
 
-    private updateAnimation(): void {
+    private updateAnimation(isGrounded: boolean): void {
         // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 강제 사망 상태)
         if (this._isDead || this.curseHP <= 0) {
             if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
@@ -197,8 +204,8 @@ export class Player {
         }
 
         const velocity = this.body.velocity;
-        // 바닥 접촉 여부 (움직임이 아주 작을 때)
-        const isGrounded = Math.abs(velocity.y) < 0.2;
+        // 바닥 접촉 여부 (Scene에서 전달받은 값 사용)
+        // const isGrounded = Math.abs(velocity.y) < 0.2; // [FIX] 기존 속도 기반 체크 제거
 
         // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
         if (Math.abs(velocity.x) > 0.5) {
@@ -361,6 +368,7 @@ export class Player {
         this.currentCurseId = curseId;
         this.sizeMultiplier = curse.sizeMultiplier;
         this.speedMultiplier = curse.speedMultiplier;
+        this.jumpMultiplier = curse.jumpMultiplier ?? 1;
         this.reverseControls = curse.reverseControls ?? false;
 
         // HP 저주 처리
@@ -424,6 +432,7 @@ export class Player {
         this.currentCurseId = null;
         this.sizeMultiplier = 1;
         this.speedMultiplier = 1;
+        this.jumpMultiplier = 1;
         this.reverseControls = false;
 
         this.stopHPDrain();
@@ -449,6 +458,10 @@ export class Player {
 
     public getSpeedMultiplier(): number {
         return this.speedMultiplier;
+    }
+
+    public getJumpMultiplier(): number {
+        return this.jumpMultiplier;
     }
 
     public setColor(colorIndex: number): void {
@@ -523,6 +536,8 @@ export class Player {
     public setVelocity(x: number, y: number): void {
         this.scene.matter.body.setVelocity(this.body, { x, y });
     }
+
+
 
     public setPosition(x: number, y: number): void {
         this.scene.matter.body.setPosition(this.body, { x, y });
