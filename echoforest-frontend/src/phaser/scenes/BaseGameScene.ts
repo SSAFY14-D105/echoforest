@@ -149,12 +149,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             document.removeEventListener('visibilitychange', this.handleVisibilityChange);
             document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
-            // 씬 중지/삭제 시 클린업 등록 (DEV + HEAD)
+            // 씬 중지/삭제 시 클린업 등록
+            // shutdown()에서 리스너 제거 및 자원 해제를 담당함
+            this.events.off('shutdown'); // 중복 등록 방지
+            this.events.off('destroy');
+
             this.events.on('shutdown', this.shutdown, this);
-            this.events.on('destroy', () => {
-                this.shutdown();
-                document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-            });
+            this.events.on('destroy', this.shutdown, this);
 
             // [LIFECYCLE] Scene Created Log
             console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
@@ -166,54 +167,78 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
 
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
+    // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
     private handleVisibilityChange = () => {
-        console.log(`[VISIBILITY] State: ${document.visibilityState}, Scene: ${this.getSceneKey()}`);
-
         if (document.hidden) {
+            console.log(`[VISIBILITY] State: hidden, Scene: ${this.getSceneKey()}`);
+            // 물리 엔진 일시정지 (탭 전환 시 추락 방지)
+            this.matter.world.pause();
+
             // [SNAP] 화면이 숨겨졌을 때: 공중 부양 방지를 위해 바닥으로 강제 착지
             if (this.myPlayerId && this.sendStateCallback) {
                 const player = this.players.get(this.myPlayerId);
                 if (player) {
-                    // gameHeight가 0이거나 이상할 경우 안전값(720) 사용
-                    const safeHeight = (this.gameHeight > 0) ? this.gameHeight : 720;
-                    const groundY = safeHeight - 40;
                     const currentPos = player.getPosition();
 
-                    player.setPosition(currentPos.x, groundY);
+                    // 강제 착지 (y값 보정) - 잘못된 위치로 이동할 수 있으므로 제거
+                    // player.setPosition(currentPos.x, groundY);
+                    player.setVelocity(0, 0); // 속도 정지
 
-                    // 즉시 상태 전송
-                    this.sendStateCallback(currentPos.x, groundY, 0, 0, 'idle_down');
+                    // 즉시 상태 전송 (위치 변경 없이 속도만 0으로)
+                    this.sendStateCallback(currentPos.x, currentPos.y, 0, 0, 'idle_down');
                 }
             }
         } else {
-            // [CHECKPOINT] 중요한 객체들이 살아있는지 확인
+            console.log(`[VISIBILITY] State: visible, Scene: ${this.getSceneKey()}`);
+
+            // [CHECKPOINT] 화면 복귀 시
             if (!this.scene || !this.cameras || !this.cameras.main) {
                 return;
             }
 
+            // 물리 엔진 재개
+            this.matter.world.resume();
+
+            if (this.game?.loop) {
+                this.game.loop.wake();
+            }
+
             const cam = this.cameras.main;
 
-            // [CRITICAL FIX] 카메라 좌표가 NaN이면 즉시 0으로 초기화
+            // 1. 카메라 좌표 안전장치
             if (!Number.isFinite(cam.scrollX) || !Number.isFinite(cam.scrollY)) {
                 cam.scrollX = 0;
                 cam.scrollY = 0;
             }
+            cam.dirty = true;
 
-            // [FIX] 모든 플레이어 스프라이트 가시성 및 위치 강제 복구
+            // 2. 모든 플레이어 스프라이트 완전 재생성 (Hard Reset)
             this.players.forEach((player) => {
+                // 물리 엔진 재개 후 튀는 현상 방지를 위해 속도 리셋
+                player.setVelocity(0, 0);
+
+                player.hardResetVisuals();
+
+                // 재생성된 스프라이트 위치 동기화
+                const pos = player.getPosition();
                 const sprite = player.getSprite();
-                if (sprite && !player.isHidden) {
-                    sprite.setVisible(true);
-                    sprite.setActive(true);
-                    // 현재 위치로 스프라이트 동기화
-                    const pos = player.getPosition();
+                if (sprite) {
                     sprite.setPosition(pos.x, pos.y);
+                }
+
+                if (player.isLocalPlayer) {
+                    console.log(`[VISIBILITY] Restored Local Player: ${player.nickname}`);
                 }
             });
 
-            // [SNAP RE-RENDER] 강제 렌더링 리프레시
+            // 3. 디버그 그래픽 재생성 (디버그 모드일 경우)
+            if (this.matter.world.drawDebug) {
+                console.log('[VISIBILITY] Re-creating debug graphic...');
+                this.matter.world.createDebugGraphic();
+            }
+
+            // 4. 강제 렌더링 리프레시
             this.scale?.refresh();
-            this.game?.loop?.wake();
         }
     };
 
@@ -284,10 +309,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // setBounds를 false로 호출하면 기존 경계 제거
         this.matter.world.setBounds(0, 0, 0, 0);
 
+        // [CRITICAL FIX] 자동 업데이트 비활성화 (탭 전환 시 대형 Delta로 인한 물리 폭주 방지)
+        // update() 메서드에서 수동으로 step(clampedDelta)를 호출하여 제어함
+        this.matter.world.autoUpdate = false;
+
         // 새 월드 경계 설정 (이 씬의 맵 크기에 맞게)
         this.matter.world.setBounds(0, 0, this.getWorldWidth(), this.gameHeight, 1, true, true, false, true);
         // 파라미터: x, y, width, height, thickness, left, right, top, bottom
         // bottom을 false로 설정하여 별도 바닥 플랫폼 사용
+
+        // [DEBUG] 물리 바디 시각화 (디버깅용) - 배포 시 false로 변경
+        this.matter.world.createDebugGraphic();
+        this.matter.world.drawDebug = false;
 
         // 바닥 플랫폼 (별도 생성)
         if (this.shouldCreateDefaultFloor()) {
@@ -968,6 +1001,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {
         const isLocalPlayer = storePlayer.nickname === currentNickname;
+        // 서버에서 받은 x, y가 있으면 사용, 없으면 기본 위치
+        // [MERGE] dev-frontend의 스폰 로직 사용 (colorIndex 기반)
+        // 낙사 방지 로직은 update()에서 처리하므로 여기서는 위치 결정만 수행
 
         // colorIndex 결정: Store에서 계산된 값(접속 순서) 사용
         // 방장은 항상 0번(초록), 이후 접속자는 순서대로 할당됨
@@ -1025,20 +1061,53 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
-        // [CRITICAL SAFETY] 카메라 좌표 NaN/Infinity 강제 복구 (가장 먼저 실행)
+        // [CRITICAL SAFETY] 카메라 좌표 NaN/Infinity 강제 복구
         if (this.cameras.main) {
-            if (!Number.isFinite(this.cameras.main.scrollX)) {
-                this.cameras.main.scrollX = 0;
-            }
-            if (!Number.isFinite(this.cameras.main.scrollY)) {
-                this.cameras.main.scrollY = 0;
-            }
+            if (!Number.isFinite(this.cameras.main.scrollX)) this.cameras.main.scrollX = 0;
+            if (!Number.isFinite(this.cameras.main.scrollY)) this.cameras.main.scrollY = 0;
         }
 
-        // [PHYSICS] 수동 업데이트 (탭 복귀 시 대형 Delta로 인한 폭주 방지)
-        // Delta 시간을 최대 100ms(0.1초)로 제한
-        const clampedDelta = Math.min(delta, 100);
-        this.matter.world.step(clampedDelta);
+        // [CRITICAL FIX] 탭이 숨겨져 있거나 델타가 너무 크면 물리 업데이트 생략
+        if (document.hidden || delta > 200) {
+            // 물리 연산 건너뜀 (멈춤)
+        } else {
+            // [PHYSICS] 수동 업데이트
+            // Delta 시간을 최대 50ms로 더 타이트하게 제한
+            const clampedDelta = Math.min(delta, 50);
+            this.matter.world.step(clampedDelta);
+        }
+
+        // [SAFETY] 플레이어 추락 방지 가드 (맵 밖으로 나가면 복구)
+        // update 루프 내에서 지속적으로 감시
+        // 맵 바닥(Tiled Map)보다 훨씬 아래로 떨어졌는지 확인
+        // Tiled Map 높이는 this.gameHeight가 아니라 실제 타일 맵 데이터에 의존하지만,
+        // 여기서는 안전하게 화면 밖(100px)으로 나가면 복구
+        const mapBottomY = this.gameHeight > 0 ? this.gameHeight : 720;
+
+        this.players.forEach(player => {
+            const pos = player.getPosition();
+
+            // 바닥(화면 끝)보다 200px 이상 내려갔다면 강제 복구 (낙사 처리보다 우선)
+            // 참고: 낙사 존(death-zone)은 gameHeight + 50 위치에 있으므로 그보다 더 아래
+            if (pos.y > mapBottomY + 200) {
+                console.warn(`[Physics] Player ${player.nickname} fell too deep (${pos.y}), resetting to safe Y.`);
+                // 안전한 높이로 복구 (맵 바닥보다 약간 위)
+                // 주의: Tiled Map 바닥 높이를 정확히 모를 때는 보수적으로 잡아야 함
+                // 일단 0 (천장)으로 보내거나, 마지막 안전 위치가 있다면 거기로 보내는 게 좋음
+                // 여기서는 화면 중간(300)으로 보냄으로써 확실히 보이게 함
+                player.setPosition(pos.x, 300);
+                player.setVelocity(0, 0);
+            }
+        });
+
+        // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
+        if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
+            const p = this.players.get(this.myPlayerId);
+            if (p) {
+                const s = p.getSprite();
+                console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
+            }
+        }
 
 
         // 이동형 범퍼 업데이트
@@ -1082,7 +1151,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         this.updateCamera();
         this.handleLocalPlayerInput();
-        this.constrainPlayersToCamera();
+        // [REMOVED] 개별 카메라 모드에서는 플레이어가 카메라 밖으로 나갈 수 있어야 함
+        // this.constrainPlayersToCamera();
 
         // 다음 프레임을 위해 맵 초기화
         this.pushMapLeft.clear();
@@ -1403,6 +1473,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // 좌우 이동
+        /* [DEBUG] 입력 상태 및 속도 로깅 */
+        if (this.game.loop.frame % 60 === 0) {
+            console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
+        }
+
         if (!myPlayer.isHidden) {
             if (leftKey.isDown) {
                 myPlayer.setVelocity(-moveSpeed, velocity.y);
@@ -1569,33 +1644,32 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
 
     private updateCamera(): void {
-        const positions = Array.from(this.players.values())
-            .filter(p => !p.isHidden)
-            .map(p => p.getPosition());
+        if (!this.myPlayerId) return;
 
-        // [SAFETY] 유효하지 않은 좌표(NaN 또는 Infinity)가 있으면 카메라 업데이트 중단
-        // console.warn 남발 방지: 1초에 한 번만 로그
-        const isInvalidPos = positions.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y));
-        if (isInvalidPos) {
+        const myPlayer = this.players.get(this.myPlayerId);
+        if (!myPlayer) return;
+
+        const pos = myPlayer.getPosition();
+
+        // [SAFETY] 유효하지 않은 좌표(NaN 또는 Infinity) 확인
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
             const now = Date.now();
             if (now - this.lastErrorLogTime > 1000) {
-                console.warn('[Camera] Invalid player position (NaN/Infinity) detected! skipping update.');
+                console.warn('[Camera] Invalid local player position (NaN/Infinity) detected! skipping update.');
                 this.lastErrorLogTime = now;
             }
             return;
         }
 
-        if (positions.length === 0) return;
+        // [MERGE FIX] positions 변수가 정의되지 않아 에러 발생
+        // 로컬 플레이어 외의 다른 플레이어들의 위치도 고려할지 여부
+        // dev-frontend 로직은 모든 플레이어의 위치를 고려하는 것으로 보임
+        const positions = Array.from(this.players.values()).map(p => p.getPosition());
+        if (positions.length === 0) positions.push(pos); // 최소한 자기 자신은 포함
 
-        const minX = Math.min(...positions.map(p => p.x));
-        const maxX = Math.max(...positions.map(p => p.x));
-        const centerX = (minX + maxX) / 2;
+        const centerX = pos.x;
 
-        // [SAFETY] centerX가 유효한지 확인
-        if (!Number.isFinite(centerX)) {
-            return;
-        }
-
+        // 카메라 부드러운 이동 (Lerp)
         const newScrollX = Phaser.Math.Linear(
             this.cameras.main.scrollX,
             centerX - this.cameras.main.width / 2,
@@ -1619,7 +1693,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 console.warn(`[Camera] Scroll calculation failed! result: X = ${newScrollX}, Y = ${newScrollY} `);
                 this.lastErrorLogTime = now;
             }
-            // 안전한 값으로 강제 리셋 (플레이어 위치 혹은 0)
+            // 안전한 값으로 강제 리셋
             if (Number.isFinite(centerX)) this.cameras.main.scrollX = centerX - this.cameras.main.width / 2;
             if (Number.isFinite(centerY)) this.cameras.main.scrollY = centerY - this.cameras.main.height / 2;
         } else {
@@ -1649,24 +1723,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         showFloatingText(this, x, y, message, color);
     }
 
-    private constrainPlayersToCamera(): void {
-        const camLeft = this.cameras.main.scrollX;
-        const camRight = camLeft + this.cameras.main.width;
 
-        this.players.forEach(player => {
-            if (player.isHidden) return;
-            const pos = player.getPosition();
-            if (pos.x < camLeft + 16) {
-                player.setPosition(camLeft + 16, pos.y);
-            }
-            if (pos.x > camRight - 16) {
-                player.setPosition(camRight - 16, pos.y);
-            }
-        });
-    }
 
     shutdown() {
         console.log(`[${this.getSceneKey()}] Shutdown triggered, cleaning up...`);
+
+        // [CRITICAL FIX] 글로벌 이벤트 리스너 제거
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
 
         try {
             // 스토어 구독 해제

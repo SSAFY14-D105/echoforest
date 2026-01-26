@@ -25,7 +25,7 @@ export class Player {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
     private sprite: Phaser.GameObjects.Sprite;
-    private colorName: string;
+    public colorName: string;
 
     public readonly id: string;
     public readonly nickname: string;
@@ -43,6 +43,7 @@ export class Player {
     private curseHP: number = 100;
     private hpDrainTimer: Phaser.Time.TimerEvent | null = null;
     private hpBarGraphics: Phaser.GameObjects.Graphics | null = null;
+    private visualProxy: Phaser.GameObjects.Graphics | null = null; // [FALLBACK] 비주얼 백업
     private onDeathCallback: (() => void) | null = null;
 
     // 밀치기(Knockback) 및 스턴 상태
@@ -111,8 +112,21 @@ export class Player {
         }
 
         // 크기 배율 적용 (충돌 박스 60px 대비 시각적으로 3배 더 크게 표현)
+        // [MERGE] dev-frontend의 3배 확대 적용 + 기존의 visualProxy 비활성화 유지
         const displaySize = BASE_PLAYER_SIZE * this.sizeMultiplier * 3.0;
         this.sprite.setDisplaySize(displaySize, displaySize);
+
+        // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
+        // if (this.visualProxy) {
+        //     this.visualProxy.clear();
+        //     this.visualProxy.fillStyle(this.color, 1);
+        //     const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        //     const { x, y } = this.body.position;
+        //     this.visualProxy.fillCircle(x, y, size / 2);
+        //     this.visualProxy.lineStyle(2, 0xffffff, 1);
+        //     this.visualProxy.strokeCircle(x, y, size / 2);
+        //     this.visualProxy.setDepth(9);
+        // }
     }
 
     public update(isGrounded: boolean): void {
@@ -165,6 +179,19 @@ export class Player {
         if (this.hpBarGraphics) {
             this.drawHPBar();
         }
+
+        // 비주얼 프록시(도형) 업데이트 - 비활성화
+        // if (this.visualProxy) {
+        //     this.visualProxy.clear();
+        //     this.visualProxy.fillStyle(this.color, 1);
+        //     // 스프라이트가 안 보일 때를 대비해 기본적으로 그림 (반투명 혹은 테두리)
+        //     // 혹은 스프라이트 뒤에 백업으로 배치
+        //     const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        //     this.visualProxy.fillCircle(x, y, size / 2);
+        //     this.visualProxy.lineStyle(2, 0xffffff, 1);
+        //     this.visualProxy.strokeCircle(x, y, size / 2);
+        //     this.visualProxy.setDepth(9); // 스프라이트(10)보다 약간 뒤
+        // }
     }
 
     private updateAnimation(isGrounded: boolean): void {
@@ -556,6 +583,63 @@ export class Player {
         return this.body.label || this.id;
     }
 
+    public hardResetVisuals(): void {
+        console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
+
+        // 1. 기존 스프라이트 제거
+        if (this.sprite) {
+            this.sprite.destroy();
+        }
+        // 기존 프록시 제거
+        if (this.visualProxy) {
+            this.visualProxy.destroy();
+        }
+
+        // 2. 스프라이트 새로 생성
+        this.sprite = this.scene.add.sprite(this.body.position.x, this.body.position.y, `player_${this.colorName}_standing`);
+
+        // [FALLBACK] 비주얼 프록시(도형) 생성 - 비활성화
+        // this.visualProxy = this.scene.add.graphics();
+
+        // 3. 상태 복구
+        this.sprite.setDepth(10);
+        this.sprite.setVisible(true);
+        this.sprite.setActive(true);
+        this.sprite.setAlpha(1);
+
+        // 4. 애니메이션 재시작 (Idle)
+        const idleAnim = `player_idle_${this.colorName}`;
+        if (this.scene.anims.exists(idleAnim)) {
+            this.sprite.play(idleAnim, true);
+        }
+
+        // 5. 스턴 상태라면 틴트 복구 (메서드 활용)
+        this.updateVisualEffects();
+    }
+
+    public forceRefreshVisuals(): void {
+        if (!this.sprite) return;
+
+        console.log(`[Player] Forcing visual refresh for ${this.nickname}`);
+
+        // 1. 투명도 및 활성 상태 강제 복구
+        this.sprite.setVisible(true);
+        this.sprite.setActive(true);
+        this.sprite.setAlpha(1);
+        this.sprite.setDepth(10);
+
+        // 2. 애니메이션 재시작 (Idle로 리셋)
+        if (this.scene.anims.exists(`player_idle_${this.colorName}`)) {
+            this.sprite.play(`player_idle_${this.colorName}`, true);
+        }
+
+        // 3. 틴트 초기화
+        this.sprite.clearTint();
+
+        // 4. 크기 재설정
+        this.updateVisualEffects();
+    }
+
     public destroy(): void {
         if (this.hpDrainTimer) {
             this.hpDrainTimer.remove();
@@ -568,6 +652,11 @@ export class Player {
         if (this.hpBarGraphics) {
             this.hpBarGraphics.destroy();
             this.hpBarGraphics = null;
+        }
+        if (this.visualProxy) {
+            this.visualProxy.clear();
+            this.visualProxy.destroy();
+            this.visualProxy = null;
         }
 
         // 물리 바디 제거 - 씬이 이미 종료되었을 수 있으므로 체크
