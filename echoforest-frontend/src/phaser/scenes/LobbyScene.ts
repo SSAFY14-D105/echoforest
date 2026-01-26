@@ -15,12 +15,12 @@ export default class LobbyScene extends BaseGameScene {
     }
 
     protected getWorldWidth(): number {
-        // 대기실은 화면에 보이는 공간이 맵 크기
-        return this.scale.width;
+        // 대기실은 고정된 1280x720 크기 사용 (반응형 문제 해결)
+        return 1280;
     }
 
     protected getWorldHeight(): number {
-        return this.scale.height;
+        return 720;
     }
 
     protected getRequiredPlayers(): number {
@@ -33,6 +33,8 @@ export default class LobbyScene extends BaseGameScene {
         useGameStore.getState().setOnMoveCallback(null);
 
         super.create();
+
+
     }
 
     protected createGimmicks(): void {

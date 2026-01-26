@@ -39,19 +39,12 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         // 부모 컴포넌트나 엘리먼트가 없으면 중단
         if (!parentRef.current) return;
 
-        const handleResize = () => {
-            if (gameRef.current && parentRef.current) {
-                const newWidth = parentRef.current.clientWidth;
-                const newHeight = parentRef.current.clientHeight;
-                gameRef.current.scale.resize(newWidth, newHeight);
-            }
-        };
-
         // 1. 게임 인스턴스가 없으면 생성
         if (!gameRef.current) {
             const parent = parentRef.current;
-            // Width/Height now fixed to 1280x720 (FIT mode)
 
+            // [FIX] User Request: Eliminate letterboxing and fill the container
+            // Use RESIZE mode to adapt to parent size dynamically without stretching
             const config: Phaser.Types.Core.GameConfig = {
                 type: Phaser.AUTO,
                 parent: parent,
@@ -87,8 +80,6 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             gameRef.current.scene.add('Solo3Scene', Solo3Scene, false);
             gameRef.current.scene.add('Solo4Scene', Solo4Scene, false);
 
-            window.addEventListener('resize', handleResize);
-
         }
 
         // 2. 현재 실행 중인 씬과 요청된 startScene이 다르면 전환
@@ -116,7 +107,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         }
 
         return () => {
-            window.removeEventListener('resize', handleResize);
+            // Cleanup
         };
     }, []); // 시작 시 한 번만 실행 (게임 인스턴스 생성)
 
@@ -158,5 +149,5 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         };
     }, []);
 
-    return <div ref={parentRef} style={{ width: '100%', height: '100%' }}></div>;
+    return <div ref={parentRef} style={{ width: '100%', height: '100%', overflow: 'hidden' }}></div>;
 }

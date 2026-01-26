@@ -3,7 +3,9 @@
  * 백엔드 연동 시 BASE_URL과 실제 API 엔드포인트를 수정하세요.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api'; // 배포 서버 주소
+import { API_BASE_URL } from '../config';
+
+const BASE_URL = API_BASE_URL;
 
 /**
  * HTTP 상태 코드별 에러 메시지 반환

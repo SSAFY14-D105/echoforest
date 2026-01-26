@@ -32,8 +32,12 @@ interface GameState {
     clearedStages: string[]; // 클리어한 스테이지 ID 목록
     onMoveCallback: ((x: number, y: number, anim?: string) => void) | null;  // 로컬 플레이어 이동 콜백
 
+    // 일시정지 상태 (멀티플레이용)
+    pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
+
     // 액션(함수)들
     setNickname: (name: string) => void;
+    setGamePaused: (username: string | null) => void; // 일시정지/재개 설정 (null=재개)
     joinGame: (roomId: string, isHost: boolean, initialStage?: number) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
@@ -54,6 +58,10 @@ interface GameState {
     backToStageSelect: () => void;
     setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
+
+    // Pause 상태 관리
+    pausedBy: string | null;
+    setGamePaused: (nickname: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -67,6 +75,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     currentStage: null,
     clearedStages: [],
     onMoveCallback: null,
+    pausedBy: null,
+
+    setGamePaused: (nickname) => set({ pausedBy: nickname }),
 
     setNickname: (name) => set({ nickname: name }),
     joinGame: (roomId, isHost, initialStage = 0) => {
@@ -192,22 +203,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         currentStage: `MULTI_${stage}`,
         readyPlayers: []  // 게임 시작 시 Ready 상태 초기화
     }),
-    startSoloGame: () => {
-        const { nickname } = get();
-        const soloRoomCode = `SOLO-${Math.floor(1000 + Math.random() * 9000)}`;
-        const soloPlayer: Player = {
-            id: `solo-player-${Date.now()}`,
-            nickname: nickname || 'Solo Player',
-            isHost: true
-        };
+    startSoloGame: async () => {
+        // 테스트용: 혼자서 멀티플레이 방 생성
+        // WebSocket 연결 및 방 생성 로직은 LobbyPage에서 처리
         set({
-            roomId: soloRoomCode,
+            isSoloMode: true,  // 솔로 모드 플래그 유지 (UI 구분용)
             isHost: true,
-            isSoloMode: true,
-            players: [soloPlayer],
-            readyPlayers: [],
-            isGameStarted: true,
-            currentStage: 'SOLO_1' // 혼자하기 1부터 시작
         });
     },
     selectStage: (stageId) => set({ currentStage: stageId }),
@@ -224,5 +225,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (onMoveCallback) {
             onMoveCallback(x, y);
         }
-    }
+    },
+    setGamePaused: (username) => set({ pausedBy: username })
 }));

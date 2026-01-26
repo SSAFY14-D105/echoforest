@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
+import { createLocalTracks, LocalVideoTrack } from 'livekit-client';
 import styles from './SettingsModal.module.css';
 
 interface SettingsModalProps {
@@ -13,6 +14,57 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     // 임시 상태
     const [tempNickname, setTempNickname] = useState(nickname);
     const [micVolume, setMicVolume] = useState(50);
+
+    // 카메라 프리뷰 상태
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [videoTrack, setVideoTrack] = useState<LocalVideoTrack | null>(null);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+
+    // 카메라 프리뷰 시작
+    useEffect(() => {
+        let mounted = true;
+
+        const startCamera = async () => {
+            try {
+                const tracks = await createLocalTracks({
+                    audio: false,
+                    video: true,
+                });
+
+                const vidTrack = tracks.find(t => t.kind === 'video') as LocalVideoTrack;
+
+                if (mounted && vidTrack) {
+                    setVideoTrack(vidTrack);
+                    if (videoRef.current) {
+                        vidTrack.attach(videoRef.current);
+                    }
+                } else {
+                    tracks.forEach(t => t.stop());
+                }
+            } catch (error) {
+                console.error('Failed to get local tracks:', error);
+                if (mounted) {
+                    setCameraError('카메라를 찾을 수 없거나 권한이 없습니다.');
+                }
+            }
+        };
+
+        startCamera();
+
+        return () => {
+            mounted = false;
+            if (videoTrack) {
+                videoTrack.stop();
+            }
+        };
+    }, []);
+
+    // Cleanup tracks on unmount
+    useEffect(() => {
+        return () => {
+            videoTrack?.stop();
+        };
+    }, [videoTrack]);
 
     const handleSave = () => {
         if (tempNickname.trim()) {
@@ -50,12 +102,18 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                     />
                 </div>
 
-                {/* 2. 카메라 프리뷰 자리 */}
+                {/* 2. 카메라 프리뷰 */}
                 <div className={styles.settingSection}>
                     <label className={styles.settingLabel}>카메라 미리보기</label>
                     <div className={styles.cameraPreview}>
-                        <p>📹 카메라 미리보기</p>
-                        <span className={styles.cameraNote}>LiveKit 연동 시 활성화됩니다</span>
+                        {cameraError ? (
+                            <div className={styles.cameraError}>{cameraError}</div>
+                        ) : (
+                            <div className={styles.videoContainer}>
+                                <video ref={videoRef} className={styles.previewVideo} autoPlay muted playsInline />
+                            </div>
+                        )}
+                        {!videoTrack && !cameraError && <p>카메라 연결 중...</p>}
                     </div>
                 </div>
 

@@ -61,8 +61,59 @@ export default function LobbyPage() {
     }
   };
 
-  const handleSoloPlay = () => {
-    startSoloGame();
+  const handleSoloPlay = async () => {
+    // 솔로 모드: 기존 UI 유지하면서 WebSocket 연결 (게임 서버 → AI 서버 체인용)
+    if (isConnecting) return;
+    setIsConnecting(true);
+    setJoinError('');
+
+    try {
+      // 1. 기존 연결 끊기
+      if (gameWebSocket.isConnected()) {
+        console.log('🔌 솔로: 기존 연결 정리 중...');
+        gameWebSocket.disconnect();
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // 2. WebSocket 연결
+      console.log('🔌 솔로: 웹소켓 연결 시도...');
+      gameWebSocket.setUser(nickname);
+      await gameWebSocket.connect();
+      console.log('✅ 솔로: WebSocket 연결 완료');
+
+      // 3. 방 생성 핸들러 등록
+      gameWebSocket.onMessage((message: GameMessage) => {
+        if (message.type === 'ROOM_CREATED') {
+          const roomCode = message.content || '';
+          console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
+
+          // 방 참가 + 게임 즉시 시작 (솔로 UI)
+          useGameStore.getState().joinGame(roomCode, true);
+          useGameStore.setState({
+            isSoloMode: true,
+            isGameStarted: true,
+            currentStage: 'SOLO_1',
+          });
+
+          setIsConnecting(false);
+        }
+      });
+
+      gameWebSocket.onError((error: string) => {
+        setJoinError(error);
+        setIsConnecting(false);
+      });
+
+      // 4. 방 생성 요청
+      gameWebSocket.createRoom();
+      console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
+
+    } catch (error) {
+      console.error('솔로 모드 시작 실패:', error);
+      setJoinError('서버 연결 실패 (게임 서버 확인 필요)');
+      gameWebSocket.disconnect();
+      setIsConnecting(false);
+    }
   };
 
   return (

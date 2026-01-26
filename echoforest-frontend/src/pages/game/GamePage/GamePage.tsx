@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+// 통합 
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '../../../store/useGameStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
@@ -6,7 +7,14 @@ import type { GameMessage, ServerPlayerState } from '../../../socket/GameWebSock
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
+import PauseOverlay from '../../../components/game/PauseOverlay';
+import { useGameVisibility } from '../../../hooks/useGameVisibility';
 import styles from './GamePage.module.css';
+// STT 저주 시스템 import
+import { useSpeechRecognition } from '../../../hooks/useSpeechRecognition';
+import { useSttStore } from '../../../store/useSttStore';
+import FloatingButton from '../../../components/stt/FloatingButton';
+import CurseStackBar from '../../../components/stt/CurseStackBar';
 
 const MAX_PLAYERS = 4;
 
@@ -21,6 +29,7 @@ export default function GamePage() {
     isSoloMode,
     currentStage,
     clearedStages,
+    pausedBy, // 일시정지 상태
     addPlayer,
     syncPlayersFromServer,
     removePlayerByNickname,
@@ -29,8 +38,71 @@ export default function GamePage() {
     startGameFromServer,
     selectStage,
     clearStage,
-    leaveGame
+    leaveGame,
+    setGamePaused // 일시정지 액션
   } = useGameStore();
+
+  // === STT 저주 시스템 훅 ===
+  const {
+    transcript,
+    interimTranscript,
+    isListening,
+  } = useSpeechRecognition();
+
+  const {
+    setBoosterMode,
+    boosterActive,
+    curseState,
+    processTranscript,
+    onStackUpdated,
+    onCurseTriggered,
+    onCurseReleased,
+  } = useSttStore();
+
+  const lastProcessedRef = useRef('');
+
+  // STT 최종 결과 처리
+  useEffect(() => {
+    if (transcript && transcript !== lastProcessedRef.current) {
+      lastProcessedRef.current = transcript;
+      processTranscript(transcript, true);
+    }
+  }, [transcript, processTranscript]);
+
+  // STT 중간 결과 처리 (부스터 모드에서 긍정어 감지용)
+  useEffect(() => {
+    if (interimTranscript) {
+      processTranscript(interimTranscript, false);
+    }
+  }, [interimTranscript, processTranscript]);
+
+  // === Stability & Pause Hooks ===
+  // 창 최소화 감지 Hook
+  const isBackground = useGameVisibility();
+
+  // 창 최소화 시 소켓 전송 & Ping
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
+
+    // [Backend Sync] 5초 Network Idle Kick 방지를 위한 3초 주기 Ping
+    const pingInterval = setInterval(() => {
+      // 연결된 상태에서만 Ping 전송
+      if (gameWebSocket.isConnected()) {
+        gameWebSocket.ping();
+      }
+    }, 3000);
+
+    return () => clearInterval(pingInterval);
+  }, [roomId, isSoloMode]);
+
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
+    if (isBackground) {
+      gameWebSocket.sendPauseRequest(roomId);
+    } else {
+      gameWebSocket.sendResumeRequest(roomId);
+    }
+  }, [isBackground, roomId, isSoloMode]);
 
   // --- 스테이지 ID 변환 유틸리티 ---
   // 내부용 ID ("MULTI_1") -> 통신용 번호 (1)
@@ -100,7 +172,7 @@ export default function GamePage() {
               id: msg.username,  // nickname을 고유 ID로 사용 (서버와 일치)
               nickname: msg.username,
               isHost: false,     // 나중에 들어온 사람은 Host가 아님 (보수적 판단)
-              x: msg.x,
+              x: msg.x, // 서버가 좌표를 줄 경우 사용 (빈자리 복구)
               y: msg.y
             };
             addPlayer(newPlayer);
@@ -190,8 +262,43 @@ export default function GamePage() {
           alert('방장에 의해 강제 퇴장되었습니다.');
           break;
 
+        case 'GAME_PAUSED':
+          // [NEW] 게임 일시정지 (content에 닉네임)
+          setGamePaused(msg.content || 'Unknown Player');
+          break;
+
+        case 'GAME_RESUMED':
+          // [NEW] 게임 재개
+          setGamePaused(null);
+          break;
+
         case 'ERROR':
           console.error('❌ WebSocket 에러:', msg.content);
+          break;
+
+        // === STT 저주 시스템 메시지 ===
+        case 'STACK_UPDATED':
+          // 저주 스택 업데이트
+          if (msg.stack !== undefined) {
+            onStackUpdated(msg.stack, msg.delta ?? 0, msg.reason);
+            console.log(`🔮 스택: ${msg.stack} (${msg.delta! > 0 ? '+' : ''}${msg.delta})`);
+          }
+          break;
+
+        case 'CURSE_TRIGGERED':
+          // 저주 발동
+          if (msg.cursedPlayerId) {
+            onCurseTriggered(msg.cursedPlayerId, msg.mapId ?? 1);
+            console.log(`💀 저주 발동! 대상: ${msg.cursedPlayerId}`);
+          }
+          break;
+
+        case 'CURSE_RELEASED':
+          // 저주 해제
+          if (msg.releasedPlayerId) {
+            onCurseReleased(msg.releasedPlayerId, msg.word ?? '');
+            console.log(`✨ 저주 해제! ${msg.releasedPlayerId}`);
+          }
           break;
       }
     });
@@ -342,7 +449,21 @@ export default function GamePage() {
           >
             ← 로비로 돌아가기
           </button>
+
+          {/* ===== STT 저주 UI ===== */}
+          <CurseStackBar
+            stack={curseState.stack}
+            cursedPlayer={curseState.cursedPlayer}
+            isListening={isListening}
+          />
         </div>
+
+        {/* 플로팅 부스터 버튼 */}
+        <FloatingButton
+          onPress={() => setBoosterMode(true)}
+          onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+          isActive={boosterActive}
+        />
       </div>
     );
   }
@@ -353,6 +474,7 @@ export default function GamePage() {
 
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
           <PhaserGame
@@ -370,10 +492,24 @@ export default function GamePage() {
           >
             🏆 테스트: 스테이지 클리어
           </button>
+
+          {/* ===== STT 저주 UI ===== */}
+          <CurseStackBar
+            stack={curseState.stack}
+            cursedPlayer={curseState.cursedPlayer}
+            isListening={isListening}
+          />
         </div >
 
         {/* 카메라 영역 (항상 표시) */}
         <CameraArea />
+
+        {/* 플로팅 부스터 버튼 */}
+        <FloatingButton
+          onPress={() => setBoosterMode(true)}
+          onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+          isActive={boosterActive}
+        />
       </div >
     );
   }
@@ -382,6 +518,7 @@ export default function GamePage() {
   if (isGameStarted && currentStage === null) {
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 스테이지 선택 영역 컴포넌트 */}
         <StageSelectScreen
           roomId={roomId}
@@ -400,6 +537,7 @@ export default function GamePage() {
   // ========== 대기실 화면 ==========
   return (
     <div className={styles.gameContainer}>
+      <PauseOverlay pausedBy={pausedBy} />
       {/* 게임 캔버스 (대기 화면) */}
       <div className={`pixel-box ${styles.canvasWrapper}`}>
         <PhaserGame

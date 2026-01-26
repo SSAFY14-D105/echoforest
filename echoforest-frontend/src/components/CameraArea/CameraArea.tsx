@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { liveKitService } from '../../socket/LiveKitService';
+import type { ParticipantInfo } from '../../socket/LiveKitService';
 import styles from './CameraArea.module.css';
 
 const PLAYER_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'];
@@ -20,13 +21,38 @@ export default function CameraArea() {
     const [isCameraEnabled, setIsCameraEnabled] = useState(true);
     const localVideoRef = useRef<HTMLVideoElement>(null);
 
+    // Remote Participants State
+    const [participantInfos, setParticipantInfos] = useState<ParticipantInfo[]>([]);
+
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
+
+
+
+    // Derived Players for Rendering
+    // Remote Video Refs map (key: identity or index)
+    const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+
+    // Derived Players for Rendering
+    const displayPlayers = players;
+
+    // Mock Participants Info
+    const displayParticipantInfos = participantInfos;
 
     // LiveKit Connection
     useEffect(() => {
         if (isSoloMode) return;
         if (!roomId || !nickname) return;
+
+        liveKitService.onParticipantsChange((infos) => {
+            setParticipantInfos(infos);
+        });
+
+        if (liveKitService.isConnected) {
+            setIsMicEnabled(liveKitService.isMicEnabled);
+            setIsCameraEnabled(liveKitService.isCameraEnabled);
+        }
+
         if (isLiveKitConnecting || liveKitService.isConnected) return;
 
         const connectLiveKit = async () => {
@@ -36,7 +62,6 @@ export default function CameraArea() {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
                 const userId = localStorage.getItem('loginId') || nickname;
                 await liveKitService.connect(roomId, userId, nickname);
-
                 setIsMicEnabled(liveKitService.isMicEnabled);
                 setIsCameraEnabled(liveKitService.isCameraEnabled);
             } catch (error) {
@@ -48,17 +73,21 @@ export default function CameraArea() {
 
         connectLiveKit();
 
-        // Cleanup
-        // Note: We might want to keep the connection if we navigate within the game, 
-        // but since CameraArea is mounted in GamePage, unmounting it usually means leaving the game.
         return () => {
-            // liveKitService.disconnect(); 
-            // Disconnect is handled in GamePage cleanup or leaveGame usually, 
-            // but if we move it here, we should be careful. 
-            // For now, let's keep it consistent: disconnect on unmount.
             liveKitService.disconnect();
         };
     }, [roomId, nickname, isSoloMode]);
+
+    // Remote Video Track Attachment
+    useEffect(() => {
+        displayParticipantInfos.forEach(info => {
+            if (info.identity === nickname) return;
+            const videoEl = remoteVideoRefs.current[info.identity];
+            if (videoEl && info.videoTrack) {
+                info.videoTrack.attach(videoEl);
+            }
+        });
+    }, [displayParticipantInfos, nickname]);
 
     const handleToggleMic = async () => {
         const newState = await liveKitService.toggleMic();
@@ -78,10 +107,17 @@ export default function CameraArea() {
 
     return (
         <div className={styles.cameraArea}>
+
+
             {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
-                const player = players[index];
-                const isMe = player?.nickname === nickname;
+                const player = displayPlayers[index];
                 const isEmpty = !player;
+                const isMe = player?.nickname === nickname; // In Mock mode, nickname might be 'Me' or 'UserA'
+
+                // 해당 슬롯 플레이어의 LiveKit 정보 찾기
+                const participantInfo = !isEmpty
+                    ? displayParticipantInfos.find(p => p.identity === player.nickname)
+                    : null;
 
                 if (isEmpty) {
                     return (
@@ -113,8 +149,24 @@ export default function CameraArea() {
                             </div>
                         ) : (
                             <div className={styles.cameraContent}>
-                                {/* Remote video placeholder */}
-                                P{index + 1}: {player.nickname}
+                                {/* Remote Video */}
+                                <video
+                                    ref={el => { if (el && player) remoteVideoRefs.current[player.nickname] = el; }}
+                                    autoPlay
+                                    playsInline
+                                    className={styles.remoteVideo}
+                                    style={{ display: participantInfo?.videoTrack && participantInfo.isCameraEnabled ? 'block' : 'none' }}
+                                />
+
+                                {(!participantInfo?.videoTrack || !participantInfo.isCameraEnabled) && (
+                                    <div className={styles.cameraOff}>
+                                        {participantInfo ? '📹' : '...'}
+                                    </div>
+                                )}
+
+                                <div className={styles.remoteLabel}>
+                                    P{index + 1}: {player.nickname}
+                                </div>
                             </div>
                         )}
 
