@@ -62,6 +62,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "NEXT_STAGE": // 다음 스테이지 (방장)
                     gameService.handleNextStage(session, messageDto);
                     break;
+                // ===== STT 저주 시스템 =====
+                case "SPEECH_BATCH": // 발화 배치 분석
+                    gameService.handleSpeechBatch(session, messageDto);
+                    break;
+                case "CURSE_RELEASE": // 저주 해제 요청
+                    gameService.handleCurseRelease(session, messageDto);
+                    break;
                 default:
                     log.warn("Unknown message type: {}", messageDto.getType());
             }
