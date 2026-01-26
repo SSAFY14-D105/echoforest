@@ -23,6 +23,12 @@ public class PlayerState {
     private boolean isGrounded = false; // 바닥에 닿았는지 여부
     private String anim = "idle_down"; // 현재 애니메이션 상태
 
+    // [NEW] 슬롯 번호 (0: 초록, 1: 파랑, 2: 노랑, 3: 보라)
+    private int colorIndex;
+
+    // [NEW] 마지막 입력 시간 (Idle 처리를 위해 필요)
+    private long lastInputTime = System.currentTimeMillis();
+
     // 3. AFK(잠수) 감지용
     private long lastUpdateTime = System.currentTimeMillis();
     private boolean isAfk = false;
@@ -42,6 +48,10 @@ public class PlayerState {
 
     // 6. 저주 상태 관리
     private Map<CurseType, Long> activeCurses = new ConcurrentHashMap<>();
+
+    // 7. 재접속 관리
+    private boolean isDisconnected = false;
+    private long disconnectTime = 0;
 
     // 7. TIME_BOMB 저주용 누적 데미지
     private double accumulatedDamage = 0;
@@ -94,6 +104,11 @@ public class PlayerState {
         this.isAfk = false;
     }
 
+    // [NEW] 입력 시간 갱신
+    public void updateInputTimestamp() {
+        this.lastInputTime = System.currentTimeMillis();
+    }
+
     /**
      * 물리 업데이트 (Tick Loop에서 호출)
      * 충돌 처리는 TileCollisionManager에서 별도로 수행
@@ -101,6 +116,15 @@ public class PlayerState {
      * @param dt 델타 타임 (초 단위, 예: 1/60 = 0.0167)
      */
     public void update(double dt) {
+        long now = System.currentTimeMillis();
+
+        // [NEW] 1초 이상 입력 패킷이 없으면 이동 입력을 0으로 초기화 (물리적 Idle)
+        if (now - this.lastInputTime > 1000) {
+            this.inputX = 0;
+            this.inputJump = false;
+            // 단, 중력은 아래에서 계속 적용됨 (자연스러운 낙하)
+        }
+
         if (isDead)
             return;
 

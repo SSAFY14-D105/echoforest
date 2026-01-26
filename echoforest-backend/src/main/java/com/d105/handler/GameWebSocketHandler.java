@@ -41,6 +41,15 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "MOVE":
                     gameService.handleMove(session, messageDto);
                     break;
+                case "PAUSE_GAME":
+                    gameService.handlePause(session, messageDto);
+                    break;
+                case "RESUME_GAME":
+                    gameService.handleResume(session, messageDto);
+                    break;
+                case "LIFT_CURSE_REQUEST":
+                    gameService.handleLiftCurseRequest(session, messageDto);
+                    break;
                 case "PING":
                     gameService.handlePing(session, messageDto);
                     break;
