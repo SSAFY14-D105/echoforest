@@ -4,7 +4,8 @@ export default class HeartGesture extends BaseGesture {
     constructor(config = {}) {
         super(config);
         this.thresholds = {
-            tipDistance: 0.15, // Max distance between fingers to consider "touching" (normalized by palm size)
+            // 접점 거리 임계값
+            tipDistance: 0.25,
             ...config
         };
     }
@@ -14,61 +15,73 @@ export default class HeartGesture extends BaseGesture {
             return { detected: false, score: 0, reason: 'Two hands required' };
         }
 
-        // Sort hands by x-coordinate to easily identify left/right in view
         const sortedHands = [...multiHandLandmarks].sort((a, b) => a[0].x - b[0].x);
-        const handL = sortedHands[0]; // Left side of screen
-        const handR = sortedHands[1]; // Right side of screen
+        const handL = sortedHands[0];
+        const handR = sortedHands[1];
 
-        // Heart typically involves meeting Thumb Tips and Index Tips
-        // Thumb Tip: index 4, Index Tip: index 8
-        const thumbL = handL[4];
-        const thumbR = handR[4];
-        const indexL = handL[8];
-        const indexR = handR[8];
+        const palmSize = metadata.palmSize;
 
-        const thumbDist = this.distance(thumbL, thumbR) / metadata.palmSize;
-        const indexDist = this.distance(indexL, indexR) / metadata.palmSize;
+        // ========================================
+        // 1. 핵심: 엄지와 검지가 만나는지 체크
+        // ========================================
+        const thumbDist = this.distance(handL[4], handR[4]) / palmSize;
+        const indexDist = this.distance(handL[8], handR[8]) / palmSize;
 
-        // 1. Proximity Check (Thumbs and Indices must be close)
         const isTouching = thumbDist < this.thresholds.tipDistance &&
             indexDist < this.thresholds.tipDistance;
 
-        // 2. Vertical Alignment Check (Index tips should be above thumb tips)
-        const isVertical = indexL.y < thumbL.y && indexR.y < thumbR.y;
+        // ========================================
+        // 2. 모양: 하트 형태인지 체크
+        // ========================================
 
-        // 3. Heart Shape Check (Index fingers should curve INWARDS to meet)
-        // Left hand (handL) index tip should be to the RIGHT of its MCP
-        // Right hand (handR) index tip should be to the LEFT of its MCP
-        const isCurvedL = indexL.x > handL[5].x;
-        const isCurvedR = indexR.x < handR[5].x;
-        const isHeartArch = isCurvedL && isCurvedR;
+        // 2-1. 수직 정렬
+        const isVertical = handL[8].y < handL[4].y && handR[8].y < handR[4].y;
 
-        // 4. Finger State (Optional/Relaxed)
-        // We no longer require other fingers to be folded, but we might want to check 
-        // if they aren't interfering too much. For now, let's keep it focused on Index/Thumb.
+        // 2-2. 아치 형태: 검지가 안쪽으로 굽어있어야 함
+        const isCurvedL = handL[8].x > handL[5].x;
+        const isCurvedR = handR[8].x < handR[5].x;
 
-        // 5. Scoring and Result
-        if (isTouching && isVertical && isHeartArch) {
-            const score = Math.max(0, 1 - (thumbDist + indexDist) / (this.thresholds.tipDistance * 2));
+        // 2-3. 검지 굽힘(Bent) 체크 - 세모 방지 (가장 강력한 조건) ✨
+        // 검지 뿌리(5) ↔ 검지 끝(8) 거리와 검지 첫마디(5-6) 거리 비교
+        // 펴져 있으면(세모) 비율이 ~2.2 이상
+        // 굽혀 있으면(하트) 비율이 < 2.0
+        const indexLenL = this.distance(handL[5], handL[8]);
+        const indexBaseL = this.distance(handL[5], handL[6]);
+        const isBentL = indexLenL < indexBaseL * 2.0;
+
+        const indexLenR = this.distance(handR[5], handR[8]);
+        const indexBaseR = this.distance(handR[5], handR[6]);
+        const isBentR = indexLenR < indexBaseR * 2.0;
+
+        const isHeartShape = isVertical && isCurvedL && isCurvedR && isBentL && isBentR;
+
+        // ========================================
+        // 3. 최종 판정
+        // ========================================
+        if (isTouching && isHeartShape) {
+            const score = Math.max(0.1, 1 - (thumbDist + indexDist) / (this.thresholds.tipDistance * 2));
             return {
                 detected: true,
                 score: score,
-                label: '양손 하트! ❤️',
+                label: '하트 ❤️',
                 emoji: '❤️',
-                details: { thumbDist, indexDist, isVertical, isHeartArch }
+                details: { thumbDist, indexDist }
             };
         }
 
+        // 실패 이유 확인
         let reason = 'Conditions not met';
-        if (!isTouching) reason = 'Fingers too far';
+        if (!isTouching) reason = `Too far (T:${thumbDist.toFixed(2)}, I:${indexDist.toFixed(2)})`;
         else if (!isVertical) reason = 'Hands upside down';
-        else if (!isHeartArch) reason = 'Index fingers not curved';
+        else if (!isCurvedL || !isCurvedR) reason = 'Index not curved inward';
+        else if (!isBentL) reason = `Left index straight (Ratio:${(indexLenL / indexBaseL).toFixed(1)})`;
+        else if (!isBentR) reason = `Right index straight (Ratio:${(indexLenR / indexBaseR).toFixed(1)})`;
 
         return {
             detected: false,
             score: 0,
             reason: reason,
-            details: { thumbDist, indexDist, isVertical, isHeartArch }
+            details: { thumbDist, indexDist, isVertical, isHeartShape, isBentL, isBentR }
         };
     }
 }
