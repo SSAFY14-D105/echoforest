@@ -338,7 +338,9 @@ public class GameRoom implements Runnable {
                 if (s.isOpen()) {
                     // 제외 대상이 아니거나, 제외 대상이 없으면 전송
                     if (excludeSessionId == null || !s.getId().equals(excludeSessionId)) {
-                        s.sendMessage(textMsg);
+                        synchronized (s) {
+                            s.sendMessage(textMsg);
+                        }
                     }
                 }
             }
@@ -360,7 +362,9 @@ public class GameRoom implements Runnable {
             TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(closeMsg));
             for (WebSocketSession s : sessions.values()) {
                 if (s.isOpen()) {
-                    s.sendMessage(textMsg);
+                    synchronized (s) {
+                        s.sendMessage(textMsg);
+                    }
                 }
             }
 
@@ -702,7 +706,9 @@ public class GameRoom implements Runnable {
             // 모든 세션에 전송
             for (WebSocketSession s : sessions.values()) {
                 if (s.isOpen()) {
-                    s.sendMessage(textMsg);
+                    synchronized (s) {
+                        s.sendMessage(textMsg);
+                    }
                 }
             }
         } catch (Exception e) {
