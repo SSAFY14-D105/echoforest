@@ -27,34 +27,17 @@ export default function CameraArea() {
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
 
-    // Mock Mode State (For UI Testing without Backend)
-    const [isMockMode, setIsMockMode] = useState(false);
 
+
+    // Derived Players for Rendering
     // Remote Video Refs map (key: identity or index)
     const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
-    const toggleMockMode = () => {
-        setIsMockMode(prev => !prev);
-    };
-
     // Derived Players for Rendering
-    const displayPlayers = isMockMode
-        ? [
-            { nickname: nickname || 'Me', isHost: true },
-            { nickname: 'SimUser1', isHost: false },
-            { nickname: 'SimUser2', isHost: false },
-            { nickname: 'SimUser3', isHost: false }
-        ]
-        : players;
+    const displayPlayers = players;
 
     // Mock Participants Info
-    const displayParticipantInfos = isMockMode
-        ? [
-            { identity: 'SimUser1', isSpeaking: true, isMuted: false, isCameraEnabled: true, videoTrack: null, audioTrack: null },
-            { identity: 'SimUser2', isSpeaking: false, isMuted: true, isCameraEnabled: false, videoTrack: null, audioTrack: null },
-            { identity: 'SimUser3', isSpeaking: false, isMuted: false, isCameraEnabled: true, videoTrack: null, audioTrack: null }
-        ]
-        : participantInfos;
+    const displayParticipantInfos = participantInfos;
 
     // LiveKit Connection
     useEffect(() => {
@@ -88,14 +71,12 @@ export default function CameraArea() {
             }
         };
 
-        if (!isMockMode) {
-            connectLiveKit();
-        }
+        connectLiveKit();
 
         return () => {
             liveKitService.disconnect();
         };
-    }, [roomId, nickname, isSoloMode, isMockMode]);
+    }, [roomId, nickname, isSoloMode]);
 
     // Remote Video Track Attachment
     useEffect(() => {
@@ -109,21 +90,11 @@ export default function CameraArea() {
     }, [displayParticipantInfos, nickname]);
 
     const handleToggleMic = async () => {
-        if (isMockMode) {
-            console.log('[Mock] Toggle Mic');
-            setIsMicEnabled(prev => !prev);
-            return;
-        }
         const newState = await liveKitService.toggleMic();
         setIsMicEnabled(newState);
     };
 
     const handleToggleCamera = async () => {
-        if (isMockMode) {
-            console.log('[Mock] Toggle Camera');
-            setIsCameraEnabled(prev => !prev);
-            return;
-        }
         const newState = await liveKitService.toggleCamera();
         setIsCameraEnabled(newState);
     };
@@ -136,44 +107,7 @@ export default function CameraArea() {
 
     return (
         <div className={styles.cameraArea}>
-            {/* Debug Toggle Button (Dev Only) */}
-            <div style={{ position: 'fixed', bottom: 150, right: 10, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-end' }}>
-                <button
-                    onClick={toggleMockMode}
-                    style={{
-                        fontSize: '10px',
-                        padding: '2px 5px',
-                        background: isMockMode ? '#ff4444' : '#444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        opacity: 0.7
-                    }}>
-                    {isMockMode ? 'Mock: ON' : 'Mock: OFF'}
-                </button>
-                {/* Manual Token Button */}
-                <button
-                    onClick={() => {
-                        const token = prompt('LiveKit Token을 입력하세요 (수동 연결):');
-                        if (token && roomId && nickname) {
-                            console.log('[Dev] Manual Token Connect:', token);
-                            liveKitService.connectWithToken(roomId, token, nickname);
-                        }
-                    }}
-                    style={{
-                        fontSize: '10px',
-                        padding: '2px 5px',
-                        background: '#2196F3',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        opacity: 0.7
-                    }}>
-                    🔑 Token
-                </button>
-            </div>
+
 
             {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
                 const player = displayPlayers[index];
