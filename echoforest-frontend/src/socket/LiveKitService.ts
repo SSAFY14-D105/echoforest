@@ -14,9 +14,10 @@ import {
     createLocalTracks
 } from 'livekit-client';
 import { LIVEKIT_SERVER_URL as API_LIVEKIT_SERVER_URL, getLiveKitToken } from '../apis/livekitApi';
+import { LIVEKIT_URL as CONFIG_LIVEKIT_URL } from '../config';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || API_LIVEKIT_SERVER_URL;
+const LIVEKIT_URL = CONFIG_LIVEKIT_URL || API_LIVEKIT_SERVER_URL;
 
 export interface ParticipantInfo {
     identity: string;

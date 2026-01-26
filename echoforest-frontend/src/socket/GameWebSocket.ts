@@ -5,6 +5,8 @@
  * - 로비에서 연결 후 GamePage로 이동해도 연결 유지
  * - getInstance()로 전역 인스턴스 접근
  */
+import { API_BASE_URL } from '../config';
+
 
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
@@ -136,7 +138,7 @@ class GameWebSocket {
         return new Promise((resolve, reject) => {
             try {
                 // JWT 토큰을 쿼리 파라미터로 전달 (백엔드 JwtHandshakeInterceptor 요구)
-                const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
+                const apiBase = API_BASE_URL;
                 const wsBase = apiBase.replace('http', 'ws').replace('/api', '/ws/game');
                 const wsUrl = `${wsBase}?token=${this.token}`;
                 this.ws = new WebSocket(wsUrl);

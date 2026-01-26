@@ -3,8 +3,10 @@
  * 백엔드에서 토큰을 발급받는 함수
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
-export const LIVEKIT_SERVER_URL = 'wss://i14d105.p.ssafy.io/livekit';
+import { API_BASE_URL, LIVEKIT_URL } from '../config';
+
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api'; // config.ts로 이동됨
+export const LIVEKIT_SERVER_URL = LIVEKIT_URL;
 
 /**
  * 토큰 발급 요청 타입
