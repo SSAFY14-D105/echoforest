@@ -54,7 +54,7 @@ public class GameRoom implements Runnable {
 
     // STT 저주 스택 (별도 관리) - GameService에서 사용
     private int curseStack = 0;
-    
+
     // 현재 맵 ID
     @Getter
     private int currentMapId = 1;
@@ -412,15 +412,17 @@ public class GameRoom implements Runnable {
 
     /**
      * 저주 스택 증가
+     * 
      * @param delta 증가량
      * @return 저주 발동 여부 (스택 >= 10 시 true)
      */
     public boolean addCurseStack(int delta) {
-        if (delta <= 0) return false;
-        
+        if (delta <= 0)
+            return false;
+
         this.curseStack += delta;
         log.info("🔮 Room {}: 저주 스택 +{} (현재: {}/{})", roomId, delta, curseStack, MAX_CURSE_STACK);
-        
+
         if (this.curseStack >= MAX_CURSE_STACK) {
             log.info("💀 Room {}: 저주 발동! (스택: {})", roomId, curseStack);
             return true;
@@ -699,8 +701,9 @@ public class GameRoom implements Runnable {
 
             // 모든 세션에 전송
             for (WebSocketSession s : sessions.values()) {
-                if (s.isOpen())
+                if (s.isOpen()) {
                     s.sendMessage(textMsg);
+                }
             }
         } catch (Exception e) {
             log.error("Broadcast Error in Room {}", roomId, e);
@@ -709,7 +712,8 @@ public class GameRoom implements Runnable {
 
     /**
      * 팀 저주 스택 증가 (내부 처리용)
-     * 주의: GameService.handleSpeechBatch()에서 boolean 반환 버전 addCurseStack(int)을 사용합니다.
+     * 주의: GameService.handleSpeechBatch()에서 boolean 반환 버전 addCurseStack(int)을
+     * 사용합니다.
      * 이 메서드는 handleSpeechAnalysis() 등 레거시 호출용입니다.
      * 
      * @param delta 증가량 (1, 3, 5 등)
