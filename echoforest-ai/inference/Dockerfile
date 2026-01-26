@@ -20,4 +20,4 @@ RUN mkdir -p /code/model_cache && chmod 777 /code/model_cache
 # 7. 실행 명령어
 # (FastAPI의 경우 uvicorn, Flask의 경우 python app.py 등 상황에 맞게 수정)
 # 예시: main.py 파일 안에 app 객체가 있는 경우
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
