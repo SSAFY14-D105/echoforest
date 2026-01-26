@@ -19,7 +19,7 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     protected getWorldHeight(): number {
-        return this.scale.height;
+        return 720;
     }
 
     protected getRequiredPlayers(): number {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
 import type { GameMessage } from '../../socket/GameWebSocket';
+import { API_BASE_URL } from '../../config';
 import styles from './JoinGameModal.module.css';
 
 interface JoinGameModalProps {
@@ -32,7 +33,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
 
         try {
             // 1. REST API로 방 정보 먼저 확인 (방 존재 여부 및 호스트 확인)
-            const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
+            const apiBase = API_BASE_URL;
             const response = await fetch(`${apiBase}/rooms/${roomCode}`);
 
             if (!response.ok) {

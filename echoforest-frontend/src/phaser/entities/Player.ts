@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 64;
+const BASE_PLAYER_SIZE = 48;
 
 // 물리 파라미터
 const PHYSICS = {
@@ -106,9 +106,10 @@ export class Player {
             this.sprite.clearTint();
         }
 
-        // 크기 배율 적용 (충돌 박스 64px 대비 시각적으로 1.5배 더 크게 표현)
-        // 기존 528px 원본 소스 기준
-        this.sprite.setScale((BASE_PLAYER_SIZE / 528) * this.sizeMultiplier * 1.5);
+        // 크기 배율 적용 (충돌 박스 48px 대비 시각적으로 2.5배 더 크게 표현 -> 약 120px)
+        // 원본 이미지 크기와 무관하게 고정된 픽셀 크기로 렌더링
+        const targetSize = BASE_PLAYER_SIZE * 2.5 * this.sizeMultiplier;
+        this.sprite.setDisplaySize(targetSize, targetSize);
     }
 
     public update(): void {
@@ -145,7 +146,9 @@ export class Player {
         }
 
         const { x, y } = this.body.position;
-        this.sprite.setPosition(x, y);
+        // [FIX] 스프라이트가 땅에 파묻히는 현상 보정 (Y축 위로 올림)
+        // 캐릭터 크기가 커지면 보정값도 비례해서 커져야 발바닥 위치가 유지됨
+        this.sprite.setPosition(x, y - (15 * this.sizeMultiplier));
 
         // 애니메이션 상태 업데이트 (로컬 플레이어만)
         if (this.isLocalPlayer) {

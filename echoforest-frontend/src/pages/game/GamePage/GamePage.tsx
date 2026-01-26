@@ -172,7 +172,7 @@ export default function GamePage() {
               id: msg.username,  // nickname을 고유 ID로 사용 (서버와 일치)
               nickname: msg.username,
               isHost: false,     // 나중에 들어온 사람은 Host가 아님 (보수적 판단)
-              x: msg.x,
+              x: msg.x, // 서버가 좌표를 줄 경우 사용 (빈자리 복구)
               y: msg.y
             };
             addPlayer(newPlayer);

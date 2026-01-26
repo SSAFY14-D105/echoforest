@@ -32,8 +32,12 @@ interface GameState {
     clearedStages: string[]; // 클리어한 스테이지 ID 목록
     onMoveCallback: ((x: number, y: number, anim?: string) => void) | null;  // 로컬 플레이어 이동 콜백
 
+    // 일시정지 상태 (멀티플레이용)
+    pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
+
     // 액션(함수)들
     setNickname: (name: string) => void;
+    setGamePaused: (username: string | null) => void; // 일시정지/재개 설정 (null=재개)
     joinGame: (roomId: string, isHost: boolean, initialStage?: number) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
@@ -221,5 +225,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (onMoveCallback) {
             onMoveCallback(x, y);
         }
-    }
+    },
+    setGamePaused: (username) => set({ pausedBy: username })
 }));

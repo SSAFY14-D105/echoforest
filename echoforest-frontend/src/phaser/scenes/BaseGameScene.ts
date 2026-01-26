@@ -11,7 +11,7 @@ import { createPlayerAnimations, preloadPlayerAssets, parseTiledMap, showFloatin
 export const PHYSICS = {
     MOVE_SPEED: 6,
     JUMP_POWER: -11,
-    PLAYER_SIZE: 64
+    PLAYER_SIZE: 48
 };
 
 /**
@@ -178,6 +178,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 cam.scrollY = 0;
             }
 
+            // [FIX] 모든 플레이어 스프라이트 가시성 및 위치 강제 복구
+            this.players.forEach((player) => {
+                const sprite = player.getSprite();
+                if (sprite && !player.isHidden) {
+                    sprite.setVisible(true);
+                    sprite.setActive(true);
+                    // 현재 위치로 스프라이트 동기화
+                    const pos = player.getPosition();
+                    sprite.setPosition(pos.x, pos.y);
+                }
+            });
+
             // [SNAP RE-RENDER] 강제 렌더링 리프레시
             this.scale?.refresh();
             this.game?.loop?.wake();
@@ -256,7 +268,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 맵의 전체 너비를 커버하며, 바닥보다 조금 아래에 배치하여 완전히 떨어졌을 때 발동
         this.matter.add.rectangle(
             this.getWorldWidth() / 2,
-            this.gameHeight + 50,
+            this.gameHeight + 300,
             this.getWorldWidth() * 2, // 넉넉하게 설정
             100,
             {
@@ -1295,10 +1307,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // 월드 바운드 클램핑
+        const maxScrollX = Math.max(0, this.getWorldWidth() - this.cameras.main.width);
         this.cameras.main.scrollX = Phaser.Math.Clamp(
             this.cameras.main.scrollX,
             0,
-            this.getWorldWidth() - this.cameras.main.width
+            maxScrollX
         );
     }
 
