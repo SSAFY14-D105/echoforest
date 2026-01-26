@@ -55,6 +55,10 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     autoCenter: Phaser.Scale.CENTER_BOTH
                 },
                 backgroundColor: '#2c3e50',
+                render: {
+                    pixelArt: true,
+                    antialias: false
+                },
                 // @ts-ignore - Phaser 3 config property
                 disableVisibilityChange: true, // 탭 전환/최소화 시에도 게임 루프 계속 실행
                 physics: {
