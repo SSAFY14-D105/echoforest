@@ -24,6 +24,9 @@ services:
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
 
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY}
+
       - DB_DRIVER=com.mysql.cj.jdbc.Driver
       - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
       - REDIS_HOST=redis
