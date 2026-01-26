@@ -107,7 +107,7 @@ export class LiveKitService {
     }
 
     // LiveKit Room 연결 (토큰 직접 입력 - 테스트용)
-    async connectWithToken(roomName: string, token: string, username: string): Promise<void> {
+    async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
         console.log(`[LiveKitService] 수동 연결 시도 #${myId} - Token 제공됨`);

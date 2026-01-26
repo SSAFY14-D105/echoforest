@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
 import LoginPage from './pages/auth/LoginPage/LoginPage';
-import LobbyPage from './pages/lobby/LobbyPage/LobbyPage';
-import GamePage from './pages/game/GamePage/GamePage';
+import LobbyPage from './pages/lobby/LobbyPage/LobbyPage.tsx';
+import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
 
 export default function App() {

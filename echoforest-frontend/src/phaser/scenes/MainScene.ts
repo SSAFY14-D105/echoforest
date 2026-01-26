@@ -151,7 +151,7 @@ export default class MainScene extends Phaser.Scene {
 
     update() {
         // 모든 플레이어 업데이트
-        this.players.forEach(player => player.update());
+        this.players.forEach((player: any) => player.update());
 
         // 카메라 업데이트
         this.updateCamera();

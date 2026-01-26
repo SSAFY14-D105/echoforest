@@ -1,5 +1,9 @@
 import BaseGameScene, { PHYSICS } from './BaseGameScene';
-import { Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper, Goal, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
+import {
+    Key, Lock, Spike, Spring, Elevator, MovableBlock, Bumper, MovingBumper,
+    PoisonMushroom, BlockButton, TogglePlatform, TriggerButton,
+    Signboard, GhostPlatform, Respawn
+} from '../gimmicks';
 import { useGameStore } from '../../store/useGameStore';
 
 /**
