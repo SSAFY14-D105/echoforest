@@ -39,6 +39,7 @@ out/
 ### 개발 시 필요 ###
 src/main/java/com/d105/privateUtil/
 src/test/resources/application-test.properties
+project_sources_for_ai.txt
 
 # .gitignore 파일 맨 아래에 추가
 mysql_data/

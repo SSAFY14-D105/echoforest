@@ -1,0 +1,5318 @@
+
+==================================================
+FILE: echoforest-backend/build.gradle
+==================================================
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.9'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.d105'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    implementation 'io.livekit:livekit-server:0.9.0'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+    implementation 'com.auth0:java-jwt:4.4.0'
+
+    // web-socket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.h2database:h2' // 나중에 mysql 추가 필요
+
+    // 유효성 검사 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
+
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // redis (Docker 연결용)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // 스프링 시큐리티
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // 유효성 검사
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+==================================================
+FILE: echoforest-backend/docker-compose.yml
+==================================================
+version: '3.8'
+
+services:
+  # ==========================================
+  # 0. 게임 서버 (Spring Boot)
+  # ==========================================
+  game-server:
+    image: echoforest-server:latest
+    container_name: echoforest-server
+    ports:
+      - "9001:9001" # 외부 접속 포트
+    environment:
+      # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+
+      # AI 모델 관련 환경 변수
+      - AI_MODEL_URL=${AI_MODEL_URL}
+      - AI_MODEL_API_KEY=${AI_MODEL_API_KEY}
+
+      # AI 서버용
+      - SENTIMENT_AI_URL=http://ai-server:8000
+
+      # DB 정보 환경 변수 주입 (보안 강화)
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY}
+
+      - DB_DRIVER=com.mysql.cj.jdbc.Driver
+      - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - livekit
+      - mysql
+      - redis
+      - ai-server
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 1. LiveKit Server (기존 작성 내용 유지)
+  # ==========================================
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: echoforest-livekit
+    command: --dev
+    ports:
+      - "60000-60200:60000-60200/udp" # 미디어 전송 (필수)
+      - "3478:3478/udp" # TURN
+      - "3478:3478/tcp" # TURN
+    environment:
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      # TURN 사용 시 외부 IP 자동 감지
+      - "LIVEKIT_NAT_1_IP_AUTO=true"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 2. MySQL (기존 작성 내용 유지)
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: echoforest-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: echoforest
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306" # 포트 충돌 방지
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql_data:/var/lib/mysql # 데이터 영구 저장 (프로젝트 폴더에 생김)
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 3. Redis (기존 작성 내용 유지)
+  # ==========================================
+  redis:
+    image: redis:alpine
+    container_name: echoforest-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 4. Nginx (웹 서버)
+  # ==========================================
+  nginx:
+    image: nginx:latest
+    container_name: echoforest-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - game-server
+      - livekit
+    networks:
+      - echo-net
+
+    # ==========================================
+    # 5. Jenkins (CI/CD)
+    # ==========================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: echoforest-jenkins
+    user: root
+    privileged: true
+    environment:
+      # Nginx 뒤에서 /jenkins 경로로 접속하기 위한 필수 설정
+      - JENKINS_OPTS="--prefix=/jenkins"
+      - JENKINS_ARGS="--prefix=/jenkins"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
+      - ./jenkins_home:/var/jenkins_home # 데이터 영구 저장 (현재 폴더에 저장)
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 6. AI Server
+  # ==========================================
+  ai-server:
+    image: echoforest-ai:latest
+    container_name: echoforest-ai
+    restart: always
+#    ports:
+#      - "8000:8000" # 테스트시 주석 해제
+    volumes:
+      - /home/ubuntu/model_cache:/code/model_cache
+    environment:
+      - HF_HOME=/code/model_cache
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'    # CPU 2코어 제한 (게임 서버 렉 방지)
+          memory: 4G     # 메모리 4GB 제한
+    networks:
+      - echo-net
+
+networks:
+  echo-net:
+    driver: bridge
+
+==================================================
+FILE: echoforest-backend/Dockerfile
+==================================================
+# ========================================================
+# 1. 빌드 단계 (Builder)
+# ========================================================
+FROM gradle:8.5-jdk21 AS builder
+
+WORKDIR /app
+
+# 프로젝트 소스 전체 복사
+COPY . .
+
+# ./gradlew 스크립트 대신, 이미 설치된 'gradle' 명령어를 직접 사용합니다.
+# 이렇게 하면 윈도우 줄바꿈(CRLF) 문제나 권한(Permission) 문제가 원천적으로 발생하지 않습니다.
+RUN gradle clean build -x test --no-daemon
+
+# ========================================================
+# 2. 실행 단계 (Runtime)
+# ========================================================
+FROM bellsoft/liberica-openjdk-alpine:21
+
+WORKDIR /app
+
+# 빌드 결과물(JAR) 복사
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+EXPOSE 9001
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+==================================================
+FILE: echoforest-backend/settings.gradle
+==================================================
+rootProject.name = 'demo'
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/AiProperties.java
+==================================================
+package com.d105.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+@Getter
+@Setter
+@Configuration
+@ConfigurationProperties(prefix = "ai.model")
+public class AiProperties {
+    private String url;    // AI 모델 API 엔드포인트
+    private String apiKey; // API Key
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/JwtAuthenticationFilter.java
+==================================================
+//package com.d105.config;
+//
+//import com.d105.util.JwtUtil;
+//import jakarta.servlet.FilterChain;
+//import jakarta.servlet.ServletException;
+//import jakarta.servlet.http.HttpServletRequest;
+//import jakarta.servlet.http.HttpServletResponse;
+//import lombok.RequiredArgsConstructor;
+//import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+//import org.springframework.security.core.Authentication;
+//import org.springframework.security.core.context.SecurityContextHolder;
+//import org.springframework.stereotype.Component;
+//import org.springframework.web.filter.OncePerRequestFilter;
+//
+//import java.io.IOException;
+//import java.util.Collections;
+//
+//@Component
+//@RequiredArgsConstructor
+//public class JwtAuthenticationFilter extends OncePerRequestFilter {
+//
+//    private final JwtUtil jwtUtil;
+//
+//    @Override
+//    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+//
+//        // 1. 헤더에서 토큰 추출
+//        String authorizationHeader = request.getHeader("Authorization");
+//
+//        // 2. 토큰이 있고, "Bearer "로 시작하는지 확인
+//        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+//            String token = authorizationHeader.substring(7); // "Bearer " 제거
+//
+//            // 3. 토큰 유효성 검사
+//            if (jwtUtil.validateToken(token)) {
+//                String loginId = jwtUtil.getLoginId(token);
+//
+//                // 4. 통과! (임시 인증 객체 생성)
+//                // 실제로는 DB에서 권한을 조회해야 하지만, 일단 단순하게 처리
+//                Authentication user = new UsernamePasswordAuthenticationToken(loginId, null, Collections.emptyList());
+//
+//                // 5. 시큐리티 관제센터(Context)에 "이 사람 로그인함" 도장 찍기
+//                SecurityContextHolder.getContext().setAuthentication(user);
+//            }
+//        }
+//
+//        // 6. 다음 필터로 넘기기
+//        filterChain.doFilter(request, response);
+//    }
+//}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/LiveKitProperties.java
+==================================================
+package com.d105.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+@Getter
+@Setter
+@Configuration
+@ConfigurationProperties(prefix = "livekit")
+public class LiveKitProperties {
+    private String url;
+    private String apiKey;
+    private String apiSecret;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/RedisConfig.java
+==================================================
+package com.d105.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+/**
+ * Redis 설정
+ */
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // 문자열 직렬화 (키, 값 모두)
+        StringRedisSerializer serializer = new StringRedisSerializer();
+        template.setKeySerializer(serializer);
+        template.setValueSerializer(serializer);
+        template.setHashKeySerializer(serializer);
+        template.setHashValueSerializer(serializer);
+
+        return template;
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/SecurityConfig.java
+==================================================
+package com.d105.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    // 비밀번호 암호화 기계 (BCrypt)
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable) // JWT 쓸 때는 CSRF 필요 없음
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .formLogin(AbstractHttpConfigurer::disable) // 기본 로그인 폼 끄기
+                .httpBasic(AbstractHttpConfigurer::disable) // HTTP Basic 인증 끄기
+                .authorizeHttpRequests(auth -> auth
+                        // 로그인, 회원가입, Swagger는 누구나 접근 가능
+                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/api/rooms/**",
+                                "/api/images/**", "/error")
+                        .permitAll()
+                        // 그 외 모든 요청은 인증 필요 (나중에 JWT 필터 추가 예정)
+                        .anyRequest().permitAll() // ⚠️ 개발 단계라 일단 모두 허용 (추후 .authenticated()로 변경)
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 1. 허용할 도메인 목록 (개발용 + 배포용 미리 추가)
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173", // 프론트엔드 로컬
+                "http://localhost:5174", // 프론트엔드 로컬 (포트 바뀔 경우 대비)
+                "https://i14d105.p.ssafy.io", // ⭐ 실제 배포 도메인 (HTTPS)
+                "http://i14d105.p.ssafy.io" // (혹시 모를 HTTP)
+        ));
+
+        // 2. 허용할 메서드 (OPTIONS 필수)
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // 3. 허용할 헤더
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // 4. 자격 증명 허용 (로그인 시 쿠키/헤더 전송을 위해 필수)
+        configuration.setAllowCredentials(true);
+
+        // 5. 설정 적용 경로
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+
+/*
+ * ============================================================================
+ * [미래의 SecurityConfig] JWT 필터 구현 후, 위 코드를 지우고 아래 주석을 해제하여 사용하세요.
+ * ============================================================================
+ *
+ * package com.d105.config;
+ *
+ * // [IMPORT 주의] JwtAuthenticationFsilter를 만든 후 경로에 맞게 임포트해야 합니다.
+ * // import com.d105.jwt.JwtAuthenticationFilter;
+ * import lombok.RequiredArgsConstructor;
+ * import org.springframework.context.annotation.Bean;
+ * import org.springframework.context.annotation.Configuration;
+ * import
+ * org.springframework.security.config.annotation.web.builders.HttpSecurity;
+ * import org.springframework.security.config.annotation.web.configuration.
+ * EnableWebSecurity;
+ * import org.springframework.security.config.annotation.web.configurers.
+ * AbstractHttpConfigurer;
+ * import org.springframework.security.config.http.SessionCreationPolicy;
+ * import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+ * import org.springframework.security.crypto.password.PasswordEncoder;
+ * import org.springframework.security.web.SecurityFilterChain;
+ * import org.springframework.security.web.authentication.
+ * UsernamePasswordAuthenticationFilter;
+ *
+ * @Configuration
+ *
+ * @EnableWebSecurity
+ *
+ * @RequiredArgsConstructor // [변경됨] final 필드(JwtFilter) 주입을 위해 필요
+ * public class SecurityConfig {
+ *
+ * // [추가됨] 나중에 만들 JwtAuthenticationFilter 주입
+ * // private final JwtAuthenticationFilter jwtAuthenticationFilter;
+ *
+ * @Bean
+ * public PasswordEncoder passwordEncoder() {
+ * return new BCryptPasswordEncoder();
+ * }
+ *
+ * @Bean
+ * public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+ * http
+ * .csrf(AbstractHttpConfigurer::disable)
+ * .cors(AbstractHttpConfigurer::disable)
+ * .formLogin(AbstractHttpConfigurer::disable)
+ * .httpBasic(AbstractHttpConfigurer::disable)
+ *
+ * // [추가됨] 중요: JWT는 세션을 안 쓰므로 STATELESS로 설정해야 함
+ * .sessionManagement(session ->
+ * session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+ *
+ * .authorizeHttpRequests(user -> user
+ * // 1. 허용할 경로들 (로그인, 회원가입, Swagger, 웹소켓 등)
+ * .requestMatchers(
+ * "/api/user/**",
+ * "/swagger-ui/**",
+ * "/v3/api-docs/**",
+ * "/ws/**",
+ * "/error"
+ * ).permitAll()
+ *
+ * // 2. [변경됨] 나머지 모든 요청은 인증된(Token 가진) 사람만 접근 가능
+ * .anyRequest().authenticated()
+ * );
+ *
+ * // [추가됨] JWT 필터를 "ID/PW 검사 필터" 앞에 끼워 넣기
+ * // http.addFilterBefore(jwtAuthenticationFilter,
+ * UsernamePasswordAuthenticationFilter.class);
+ *
+ * return http.build();
+ * }
+ * }
+ */
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/WebMvcConfig.java
+==================================================
+package com.d105.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    // 나중에 application.properties에서 경로를 바꿀 수 있게 변수화
+    // 기본값: 운영체제별 임시 폴더가 아닌, 프로젝트 실행 위치 기준 'uploads' 폴더
+    @Value("${file.upload-dir:./uploads/}")
+    private String uploadDir;
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 1. 접근 URL 패턴: /images/** 로 들어오는 요청을 잡음
+        // 2. 실제 파일 경로: 로컬 디스크의 uploadDir 위치로 연결
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + uploadDir);
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/config/WebSocketConfig.java
+==================================================
+package com.d105.config;
+
+import com.d105.handler.GameWebSocketHandler;
+import com.d105.interceptor.JwtHandshakeInterceptor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+
+@Configuration
+@EnableWebSocket
+@RequiredArgsConstructor
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    private final GameWebSocketHandler gameWebSocketHandler;
+    private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // ws://localhost:9001/ws/game 주소로 요청이 오면 handler가 처리하도록 등록
+        registry.addHandler(gameWebSocketHandler, "/ws/game")
+                .addInterceptors(jwtHandshakeInterceptor)
+                .setAllowedOrigins("*"); // 모든 도메인에서 접속 허용 (CORS 무시)
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/AiController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.image.AiGenerationReqDto;
+import com.d105.service.AiGenerationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@Slf4j
+@Tag(name = "AI", description = "AI 이미지 생성 API")
+@RestController
+@RequestMapping("/api/ai")
+@RequiredArgsConstructor
+public class AiController {
+
+    private final AiGenerationService aiGenerationService;
+
+    @Operation(summary = "AI 이미지 생성", description = "여러 장의 이미지를 기반으로 AI가 새로운 이미지를 생성하여 저장합니다.")
+    @PostMapping("/generate")
+    public ResponseEntity<?> generateImage(@Valid @RequestBody AiGenerationReqDto req) {
+        try {
+            // Service 호출 (프롬프트는 사용자가 입력한 값을 그대로 전달하거나, 내부에서 가공)
+            aiGenerationService.generateAndSaveImage(
+                    req.getSourceImages(),
+                    req.getPrompt(),
+                    req.getRoomId(),
+                    req.getUserId()
+            );
+
+            return ResponseEntity.ok(Map.of("message", "AI 이미지 생성 요청 성공"));
+
+        } catch (Exception e) {
+            log.error("AI Generation Error", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "AI 이미지 생성 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/HealthController.java
+==================================================
+package com.d105.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.util.HashMap;
+import java.util.Map;
+
+@Tag(name = "Health Check", description = "서버 상태 점검 API")
+@RestController
+@RequestMapping("/api/health")
+@RequiredArgsConstructor
+public class HealthController {
+
+    private final DataSource dataSource;
+    private final StringRedisTemplate redisTemplate;
+
+    @Operation(summary = "인프라 연결 상태 확인", description = "MySQL, Redis 연결 상태를 반환합니다.")
+    @GetMapping
+    public ResponseEntity<Map<String, String>> checkHealth() {
+        Map<String, String> status = new HashMap<>();
+        status.put("server", "UP");
+
+        // 1. MySQL 연결 확인
+        try (Connection connection = dataSource.getConnection()) {
+            if (connection.isValid(1)) {
+                status.put("database", "UP");
+            } else {
+                status.put("database", "DOWN (Timeout)");
+            }
+        } catch (Exception e) {
+            status.put("database", "DOWN (" + e.getMessage() + ")");
+        }
+
+        // 2. Redis 연결 확인
+        try {
+            redisTemplate.opsForValue().set("health_check", "ok");
+            String value = redisTemplate.opsForValue().get("health_check");
+            if ("ok".equals(value)) {
+                status.put("redis", "UP");
+            } else {
+                status.put("redis", "DOWN (Value mismatch)");
+            }
+        } catch (Exception e) {
+            status.put("redis", "DOWN (" + e.getMessage() + ")");
+        }
+
+        return ResponseEntity.ok(status);
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/ImageController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.image.ImageResponseDto;
+import com.d105.entity.Image;
+import com.d105.service.ImageService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Tag(name = "Image", description = "이미지 업로드/조회 API")
+@RestController
+@RequestMapping("/api/images")
+@RequiredArgsConstructor
+public class ImageController {
+
+    private final ImageService imageService;
+
+    /**
+     * 이미지 업로드 (파일 + DB 저장)
+     */
+    @Operation(summary = "이미지 업로드", description = "이미지 파일을 업로드하고 DB에 저장합니다. participantUserIds는 함께 찍은 유저 ID 목록 (최대 3명)")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam Long userId,
+            @RequestParam(required = false) Long mapId,
+            @RequestParam(required = false) Integer stageNumber,
+            @RequestParam(required = false) List<Long> participantUserIds,
+            @RequestParam(required = false) String roomCode,
+            @RequestParam(required = false, defaultValue = "MOTION") String imageType) {
+
+        try {
+            Image image = imageService.uploadImage(
+                    file, userId, mapId, stageNumber, participantUserIds, roomCode, imageType);
+
+            return ResponseEntity.ok(ImageResponseDto.from(image));
+
+        } catch (IOException e) {
+            log.error("Image upload failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "이미지 업로드 실패"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 내 이미지 목록 조회
+     */
+    @Operation(summary = "내 이미지 목록", description = "내가 업로드한 이미지 목록을 조회합니다.")
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyImages(@RequestParam Long userId) {
+        try {
+            List<Image> images = imageService.getMyImages(userId);
+            List<ImageResponseDto> response = images.stream()
+                    .map(ImageResponseDto::from)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 특정 방의 이미지 목록 조회
+     */
+    @Operation(summary = "방 이미지 목록", description = "특정 방에서 찍힌 이미지 목록을 조회합니다.")
+    @GetMapping("/room/{roomCode}")
+    public ResponseEntity<List<ImageResponseDto>> getRoomImages(@PathVariable String roomCode) {
+        List<Image> images = imageService.getRoomImages(roomCode);
+        List<ImageResponseDto> response = images.stream()
+                .map(ImageResponseDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 이미지 삭제
+     */
+    @Operation(summary = "이미지 삭제", description = "본인의 이미지를 삭제합니다.")
+    @DeleteMapping("/{imageId}")
+    public ResponseEntity<?> deleteImage(
+            @PathVariable Long imageId,
+            @RequestParam Long userId) {
+        try {
+            imageService.deleteImage(imageId, userId);
+            return ResponseEntity.ok(Map.of("message", "이미지 삭제 완료"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/LiveKitController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.token.TokenReqDto;
+import com.d105.dto.token.TokenResDto;
+import com.d105.service.LiveKitService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@Tag(name = "LiveKit", description = "화상 채팅 API (토큰 발급)")
+@CrossOrigin(origins = "*")  // 테스트용, 실제 배포 시에는 지워야함
+@RestController
+@RequestMapping("/api/livekit")
+@RequiredArgsConstructor
+public class LiveKitController {
+
+    private final LiveKitService liveKitService;
+
+    /**
+     * 클라이언트의 토큰 요청 처리
+     */
+    @Operation(summary = "LiveKit 토큰 발급", description = "게임 방 번호(roomId)를 기반으로 화상 채팅 접속 토큰을 생성합니다.")
+    @PostMapping("/token")
+    public ResponseEntity<TokenResDto> getToken(@RequestBody TokenReqDto request) {
+
+        String token = liveKitService.createToken(
+                request.getRoomId(),
+                request.getUserId(),
+                request.getUsername()
+        );
+
+        // TokenResDto를 사용하여 응답 반환
+        return ResponseEntity.ok(new TokenResDto(token));
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/RoomController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.RoomInfoDto;
+import com.d105.game.GameRoom;
+import com.d105.repository.GameRepository;
+import com.d105.service.RedisRoomService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 방 관리 REST API
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/rooms")
+@RequiredArgsConstructor
+@Tag(name = "Room", description = "게임 방 관리 API")
+public class RoomController {
+
+    private static final int MAX_PLAYERS = 4;
+
+    private final RedisRoomService redisRoomService;
+    private final GameRepository gameRepository;
+
+    /**
+     * 방 정보 조회
+     * - 입장 전 인원 수 확인 용
+     */
+    @GetMapping("/{roomId}")
+    @Operation(summary = "방 정보 조회", description = "방 코드로 방 정보를 조회합니다 (인원 수, 상태 등)")
+    public ResponseEntity<RoomInfoDto> getRoomInfo(@PathVariable String roomId) {
+        // 방 존재 여부 확인
+        if (!redisRoomService.roomExists(roomId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // 방 정보 조회
+        RoomInfoDto roomInfo = redisRoomService.getRoomInfo(roomId);
+        roomInfo.setMaxPlayers(MAX_PLAYERS);
+
+        return ResponseEntity.ok(roomInfo);
+    }
+
+    /**
+     * 내가 참가 중인 방 조회
+     * - 재접속 시 기존 방으로 복귀 용
+     */
+    @GetMapping("/my")
+    @Operation(summary = "내 방 조회", description = "현재 참가 중인 방 정보를 조회합니다 (재접속용)")
+    public ResponseEntity<Map<String, Object>> getMyRoom(@RequestParam String userId) {
+        String roomId = redisRoomService.getUserRoom(userId);
+
+        if (roomId == null || !redisRoomService.roomExists(roomId)) {
+            return ResponseEntity.ok(Map.of(
+                    "inRoom", false,
+                    "roomId", ""));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "inRoom", true,
+                "roomId", roomId));
+    }
+
+    /**
+     * 강제 퇴장 (방장 전용)
+     * - 방장이 특정 유저를 내보내기
+     */
+    @PostMapping("/{roomId}/kick")
+    @Operation(summary = "강제 퇴장", description = "방장이 특정 유저를 방에서 내보냅니다")
+    public ResponseEntity<Map<String, Object>> kickPlayer(
+            @PathVariable String roomId,
+            @RequestParam String hostId,
+            @RequestParam String targetUserId) {
+
+        // 방 존재 여부 확인
+        if (!redisRoomService.roomExists(roomId)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Room not found"));
+        }
+
+        // 방장 확인
+        String actualHostId = redisRoomService.getHostId(roomId);
+        if (actualHostId == null || !actualHostId.equals(hostId)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Only host can kick players"));
+        }
+
+        // 자기 자신은 강퇴 불가
+        if (hostId.equals(targetUserId)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Cannot kick yourself"));
+        }
+
+        // 해당 유저가 방에 있는지 확인
+        Set<String> players = redisRoomService.getPlayers(roomId);
+        if (players == null || !players.contains(targetUserId)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "User not in room"));
+        }
+
+        // 강제 퇴장 처리
+        redisRoomService.kickPlayer(roomId, targetUserId);
+
+        // GameRoom에서도 제거하고 알림 전송
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.kickPlayer(targetUserId);
+        }
+
+        log.info("User {} kicked from room {} by host {}", targetUserId, roomId, hostId);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "User kicked successfully"));
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/SpeechController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.SpeechAnalysisResultDto;
+import com.d105.service.GameService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@Slf4j
+@Tag(name = "Speech", description = "음성 분석 결과 수신 API")
+@RestController
+@RequestMapping("/api/speech")
+@RequiredArgsConstructor
+public class SpeechController {
+
+    private final GameService gameService;
+
+    @Operation(summary = "부정어 분석 결과 수신", description = "AI 서버로부터 분석된 부정어 스택 증가량을 수신합니다.")
+    @PostMapping("/analysis")
+    public ResponseEntity<?> receiveAnalysisResult(@RequestBody SpeechAnalysisResultDto dto) {
+        log.info("Received Speech Analysis: {}", dto);
+        try {
+            gameService.handleSpeechAnalysis(dto);
+            return ResponseEntity.ok(Map.of("message", "Success"));
+        } catch (Exception e) {
+            log.error("Speech Analysis Handling Error", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/controller/UserController.java
+==================================================
+package com.d105.controller;
+
+import com.d105.dto.user.LoginReqDto;
+import com.d105.dto.user.NicknameUpdateReqDto;
+import com.d105.dto.user.SignUpReqDto;
+import com.d105.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@Tag(name = "User", description = "회원 인증 API (회원가입, 로그인, 아이디 확인)")
+@RestController
+@RequestMapping("/api/user")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    @Operation(summary = "회원가입")
+    @PostMapping("/signup")
+    public ResponseEntity<?> signUp(@Valid @RequestBody SignUpReqDto req) {
+        userService.signUp(req);
+        return ResponseEntity.ok(Map.of("message", "회원가입 성공"));
+    }
+
+    @Operation(summary = "로그인 (JWT 토큰 + 닉네임 반환)")
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginReqDto req) {
+        // AuthService에서 Map<String, String> 형태로 반환받음
+        Map<String, String> result = userService.login(req);
+
+        // 프론트엔드로 전송: {"token": "...", "nickname": "..."}
+        return ResponseEntity.ok(result);
+    }
+
+    @Operation(summary = "아이디 중복 확인 (true: 중복, false: 사용 가능)")
+    @GetMapping("/check-id")
+    public ResponseEntity<?> checkId(@RequestParam String username) {
+        boolean exists = userService.checkIdDuplicate(username);
+        return ResponseEntity.ok(Map.of("isDuplicate", exists));
+    }
+
+    @Operation(summary = "닉네임 중복 확인 (true: 중복, false: 사용 가능)")
+    @GetMapping("/check-nickname")
+    public ResponseEntity<?> checkNickname(@RequestParam String nickname) {
+        boolean exists = userService.checkNicknameDuplicate(nickname);
+        return ResponseEntity.ok(Map.of("isDuplicate", exists));
+    }
+
+    @Operation(summary = "닉네임 수정", description = "로그인한 유저의 닉네임을 변경합니다.")
+    @PutMapping("/nickname")
+    public ResponseEntity<?> updateNickname(@Valid @RequestBody NicknameUpdateReqDto req) {
+        userService.updateNickname(req.getUserId(), req.getNewNickname());
+        return ResponseEntity.ok(Map.of("message", "닉네임 변경 성공"));
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/GameMessageDto.java
+==================================================
+package com.d105.dto;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "게임 웹소켓 통신용 메시지 규격")
+public class GameMessageDto {
+    @Schema(description = "메시지 타입", example = "JOIN", allowableValues = { "CREATE", "JOIN", "MOVE", "PING", "ERROR",
+            "ROOM_CREATED", "PAUSE_GAME", "GAME_PAUSED", "RESUME_GAME", "GAME_RESUMED", "PLAYER_DISCONNECTED",
+            "CURSE_STACK_UPDATE", "CURSE_TRIGGERED", "LIFT_CURSE_REQUEST", "CURSE_LIFTED" })
+    private String type;
+
+    @Schema(description = "방 번호 (JOIN/MOVE 필수, CREATE는 선택)", example = "room_1")
+    private String roomId;
+
+    @Schema(description = "플레이어 이름", example = "UserA")
+    private String username;
+
+    @Schema(description = "X 좌표", example = "100.5")
+    private Double x;
+
+    @Schema(description = "Y 좌표", example = "200.0")
+    private Double y;
+
+    @Schema(description = "X축 속도", example = "2.5")
+    private Double vx;
+
+    @Schema(description = "Y축 속도", example = "-1.2")
+    private Double vy;
+
+    @Schema(description = "캐릭터 애니메이션 상태", example = "walk_down")
+    private String anim;
+
+    @Schema(description = "방장 여부", example = "true")
+    private Boolean isHost;
+
+    @Schema(description = "플레이어 슬롯 번호 (색상)", example = "0")
+    private Integer colorIndex;
+
+    @Schema(description = "시스템 메시지 내용 (생성된 방 번호, 에러 메시지 등)", example = "8F3A21")
+    private String content;
+
+    // ===== STT 저주 시스템용 필드 =====
+    
+    @Schema(description = "SPEECH_BATCH: 발화 텍스트 목록")
+    private List<String> texts;
+
+    @Schema(description = "CURSE_RELEASE: 긍정어 (뽀뽀/사랑해/좋아해)")
+    private String word;
+
+    @Schema(description = "STACK_UPDATED: 현재 저주 스택 값", example = "7")
+    private Integer stack;
+
+    @Schema(description = "STACK_UPDATED: 스택 변화량", example = "3")
+    private Integer delta;
+
+    @Schema(description = "STACK_UPDATED: 변화 사유", example = "negative_word")
+    private String reason;
+
+    @Schema(description = "CURSE_TRIGGERED: 저주 대상 플레이어", example = "UserB")
+    private String cursedPlayerId;
+
+    @Schema(description = "CURSE_RELEASED: 저주 해제된 플레이어")
+    private String releasedPlayerId;
+
+    @Schema(description = "CURSE_TRIGGERED: 현재 맵 ID", example = "1")
+    private Integer mapId;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/image/AiGenerationReqDto.java
+==================================================
+package com.d105.dto.image;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+public class AiGenerationReqDto {
+
+    @Schema(description = "합성할 원본 이미지 파일 경로 리스트 (예: 2024-05-20/abc.webp)", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotEmpty(message = "원본 이미지는 최소 1장 이상이어야 합니다.")
+    private List<String> sourceImages;
+
+    @Schema(description = "사용자 입력 프롬프트 (예: 판타지 스타일로 바꿔줘)", example = "Fantasy forest background, magical atmosphere")
+    @NotBlank(message = "프롬프트는 필수입니다.")
+    private String prompt;
+
+    @Schema(description = "저장될 방 코드", example = "ABC1234")
+    @NotBlank(message = "방 코드는 필수입니다.")
+    private String roomId;
+
+    @Schema(description = "요청한 유저 ID", example = "1")
+    @NotNull(message = "유저 ID는 필수입니다.")
+    private Long userId;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/image/ImageResponseDto.java
+==================================================
+package com.d105.dto.image;
+
+import com.d105.entity.Image;
+import lombok.Builder;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 이미지 응답 DTO
+ */
+@Data
+@Builder
+public class ImageResponseDto {
+    private Long imageId;
+    private String fileName;
+    private String url;
+    private Long userId;
+    private String userNickname;
+    private Long mapId;
+    private Integer stageNumber;
+    private String roomCode;
+    private String imageType;
+    private List<ParticipantDto> participants; // 함께 찍은 유저들
+    private LocalDateTime createdAt;
+
+    public static ImageResponseDto from(Image image) {
+        List<ParticipantDto> participantDtos = image.getParticipants().stream()
+                .map(ip -> ParticipantDto.builder()
+                        .userId(ip.getUser().getId())
+                        .nickname(ip.getUser().getNickname())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ImageResponseDto.builder()
+                .imageId(image.getId())
+                .fileName(image.getFileName())
+                .url("/images/" + image.getFileName())
+                .userId(image.getUser().getId())
+                .userNickname(image.getUser().getNickname())
+                .mapId(image.getMap() != null ? image.getMap().getId() : null)
+                .stageNumber(image.getStageNumber())
+                .roomCode(image.getRoomCode())
+                .imageType(image.getImageType())
+                .participants(participantDtos)
+                .createdAt(image.getCreatedAt())
+                .build();
+    }
+
+    @Data
+    @Builder
+    public static class ParticipantDto {
+        private Long userId;
+        private String nickname;
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/RoomInfoDto.java
+==================================================
+package com.d105.dto;
+
+import lombok.Builder;
+import lombok.Data;
+
+import java.util.Set;
+
+/**
+ * 방 정보 조회 응답 DTO
+ */
+@Data
+@Builder
+public class RoomInfoDto {
+    private String roomId;
+    private String hostId;
+    private String status;
+    private int playerCount;
+    private int maxPlayers;
+    private Set<String> players;
+    private Set<String> readyPlayers;
+    private int currentStage;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/SpeechAnalysisResultDto.java
+==================================================
+package com.d105.dto;
+
+import lombok.Data;
+
+@Data
+public class SpeechAnalysisResultDto {
+    private String roomId;
+    private String username;
+    private int stackDelta; // 스택 증가량 (예: 5, 3, 1)
+    private String sentiment; // "NEGATIVE", "POSITIVE" (참고용)
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/token/TokenReqDto.java
+==================================================
+package com.d105.dto.token;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TokenReqDto {
+
+    @Schema(description = "입장할 게임 방 번호", example = "room_1")
+    private String roomId;
+
+    @Schema(description = "유저 고유 ID", example = "user_1234")
+    private String userId;
+
+    @Schema(description = "닉네임", example = "철수")
+    private String username;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/token/TokenResDto.java
+==================================================
+package com.d105.dto.token;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class TokenResDto {
+    // 생성된 LiveKit 접속용 JWT 토큰
+    private String token;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/user/LoginReqDto.java
+==================================================
+package com.d105.dto.user;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+@Data
+public class LoginReqDto {
+    @Schema(example = "ssafy123")
+    private String username;
+    @Schema(example = "password123!")
+    private String password;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/user/NicknameUpdateReqDto.java
+==================================================
+package com.d105.dto.user;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Data
+public class NicknameUpdateReqDto {
+    @Schema(description = "유저 ID (PK)", example = "1")
+    @NotNull(message = "유저 ID는 필수입니다.")
+    private Long userId;
+
+    @Schema(description = "변경할 새 닉네임", example = "새로운닉네임")
+    @NotBlank(message = "변경할 닉네임은 필수입니다.")
+    private String newNickname;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/dto/user/SignUpReqDto.java
+==================================================
+package com.d105.dto.user;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+@Data
+public class SignUpReqDto {
+
+    @Schema(description = "로그인 아이디 (영문, 숫자 4~20자)", example = "ssafy123")
+    @NotBlank(message = "아이디는 필수입니다.")
+    @Size(min = 4, max = 20, message = "아이디는 4~20자여야 합니다.")
+    @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "아이디는 영문과 숫자만 가능합니다.")
+    private String username;
+
+    @Schema(description = "비밀번호 (8자 이상)", example = "password123!")
+    @NotBlank(message = "비밀번호는 필수입니다.")
+    @Size(min = 8, message = "비밀번호는 최소 8자 이상이어야 합니다.")
+    private String password;
+
+    @Schema(description = "닉네임", example = "김싸피")
+    @NotBlank(message = "닉네임은 필수입니다.")
+    private String nickname;
+
+    @Schema(description = "이메일", example = "ssafy@ssafy.com")
+    @NotBlank(message = "이메일은 필수입니다.")
+    @Email(message = "올바른 이메일 형식이 아닙니다.")
+    private String email;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/EchoforestApplication.java
+==================================================
+package com.d105;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableJpaAuditing
+@EnableScheduling
+public class EchoforestApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(EchoforestApplication.class, args);
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/entity/Image.java
+==================================================
+package com.d105.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 이미지 엔티티 (모션 인식 캡처 사진)
+ */
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EntityListeners(AuditingEntityListener.class)
+@Table(name = "images")
+public class Image {
+
+    // 함께 찍은 유저들 (최대 3명)
+    @OneToMany(mappedBy = "image", cascade = CascadeType.ALL, orphanRemoval = true)
+    private final List<ImageParticipant> participants = new ArrayList<>();
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    // 사진을 찍은 유저 (업로더)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    // === 확장 필드 ===
+    @Column(nullable = false, length = 100)
+    private String fileName;
+    // 어느 맵에서 찍었는지
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "map_id")
+    private Map map;
+    // 몇 번째 스테이지에서 찍었는지
+    @Column(name = "stage_number")
+    private Integer stageNumber;
+    // 어느 방에서 찍었는지
+    @Column(name = "room_code", length = 10)
+    private String roomCode;
+    // 이미지 타입 (MOTION, RESULT 등)
+    @Column(name = "image_type", length = 20)
+    private String imageType;
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    // Soft Delete용 플래그 (삭제된 시간)
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Builder
+    public Image(User user, String fileName, Map map, Integer stageNumber,
+                 String roomCode, String imageType) {
+        this.user = user;
+        this.fileName = fileName;
+        this.map = map;
+        this.stageNumber = stageNumber;
+        this.roomCode = roomCode;
+        this.imageType = imageType != null ? imageType : "MOTION";
+    }
+
+    // 참여자 추가
+    public void addParticipant(User participant) {
+        ImageParticipant ip = new ImageParticipant(this, participant);
+        this.participants.add(ip);
+    }
+
+    // 논리적 삭제 (Soft Delete)
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/entity/ImageParticipant.java
+==================================================
+package com.d105.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * 이미지 참여자 (함께 찍은 유저)
+ */
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "image_participants")
+public class ImageParticipant {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_id", nullable = false)
+    private Image image;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    public ImageParticipant(Image image, User user) {
+        this.image = image;
+        this.user = user;
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/entity/Map.java
+==================================================
+package com.d105.entity;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Getter
+@NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
+@Table(name = "maps")
+public class Map {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String mapName;
+
+    // JSON 데이터를 Map이나 List 형태로 매핑 (Hibernate 6.x)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private java.util.Map<String, Object> tileData;
+
+    @Column(length = 100)
+    private String bgmPath;
+
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/entity/User.java
+==================================================
+package com.d105.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EntityListeners(AuditingEntityListener.class)
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String username; // 로그인 아이디 (login_id → username)
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false, unique = true, length = 20)
+    private String nickname;
+
+    @Column(nullable = false, length = 100)
+    private String email;
+
+    // 게임 통계
+    @Column(name = "kiss_count")
+    @ColumnDefault("0")
+    private Integer kissCount;
+
+    @Column(name = "curse_count")
+    @ColumnDefault("0")
+    private Integer curseCount;
+
+    @Column(name = "manner_score", precision = 4, scale = 1)
+    @ColumnDefault("36.5")
+    private BigDecimal mannerScore;
+
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
+    @Builder
+    public User(String username, String password, String nickname, String email) {
+        this.username = username;
+        this.password = password;
+        this.nickname = nickname;
+        this.email = email;
+        // 기본값 설정
+        this.kissCount = 0;
+        this.curseCount = 0;
+        this.mannerScore = new BigDecimal("36.5");
+    }
+
+    /**
+     * 닉네임 변경
+     */
+    public void changeNickname(String newNickname) {
+        this.nickname = newNickname;
+    }
+
+    /**
+     * 게임 통계 업데이트 메서드
+     *
+     * @param kissCount
+     * @param curseCount
+     */
+    public void updateGameStats(int kissCount, int curseCount) {
+        this.kissCount += kissCount;
+        this.curseCount += curseCount;
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/game/constant/CurseType.java
+==================================================
+package com.d105.game.constant;
+
+public enum CurseType {
+    BIG_AND_SLOW,   // 몸 커짐 + 이동속도 느려짐
+    TIME_BOMB,      // 시한부 (일정 시간 뒤 사망)
+    INVERT_CONTROL  // 좌우 반전
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/game/constant/RoomStatus.java
+==================================================
+package com.d105.game.constant;
+
+/**
+ * 방 상태
+ */
+public enum RoomStatus {
+    WAITING, // 대기 중 (Ready 대기)
+    PLAYING, // 게임 진행 중
+    ENDED // 종료됨
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/game/GameRoom.java
+==================================================
+package com.d105.game;
+
+import com.d105.dto.GameMessageDto;
+import com.d105.game.constant.CurseType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+@Slf4j
+public class GameRoom implements Runnable {
+
+    // Tick Duration (33ms = ~30 TPS)
+    // 50ms (20 TPS) -> 33ms (30 TPS) for smoother movement
+    private static final long TICK_DURATION = 33;
+    private static final long RECONNECT_TIMEOUT_MS = 3 * 60 * 1000; // 3분
+
+    public enum GameState {
+        RUNNING, PAUSED
+    }
+
+    private GameState state = GameState.RUNNING;
+    // 브로드캐스트 빈도 (20 TPS - 네트워크 최적화)
+    private static final double BROADCAST_INTERVAL = 1.0 / 20.0;
+    @Getter
+    private final String roomId;
+    private final ObjectMapper objectMapper;
+    // 타일맵 충돌 처리 매니저
+    private final TileCollisionManager collisionManager;
+    // 세션 관리 및 플레이어 상태 관리
+    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, PlayerState> players = new ConcurrentHashMap<>();
+    // 입력 큐 (Thread-Safe)
+    private final Queue<InputEvent> inputQueue = new ConcurrentLinkedQueue<>();
+    private volatile boolean isRunning = true;
+    private double broadcastAccumulator = 0;
+
+    // 방장 닉네임 (방장은 AFK 자동 퇴장 제외)
+    @Getter
+    private String hostUsername;
+
+    // [NEW] 슬롯 점유 상태 관리 (최대 4명) -- session ID 저장
+    private final String[] slots = new String[4];
+
+    // [NEW] 팀 공용 저주 스택 (Max 10)
+    @Getter
+    private int teamCurseStack = 0;
+    private static final int MAX_CURSE_STACK = 10;
+
+    // STT 저주 스택 (별도 관리) - GameService에서 사용
+    private int curseStack = 0;
+    
+    // 현재 맵 ID
+    @Getter
+    private int currentMapId = 1;
+
+    /**
+     * GameRoom 생성자
+     *
+     * @param roomId       방 ID
+     * @param objectMapper JSON 직렬화용
+     * @param mapData      타일맵 데이터 (null이면 기본 맵 사용)
+     */
+    public GameRoom(String roomId, ObjectMapper objectMapper, Map<String, Object> mapData) {
+        this.roomId = roomId;
+        this.objectMapper = objectMapper;
+
+        // 맵 데이터가 있으면 TileCollisionManager 생성, 없으면 기본 맵 사용
+        if (mapData != null) {
+            this.collisionManager = new TileCollisionManager(mapData);
+        } else {
+            // 기본 맵 데이터 생성 (15x20 맵, 바닥만 있음)
+            this.collisionManager = createDefaultCollisionManager();
+        }
+    }
+
+    /**
+     * 기본 충돌 매니저 생성 (테스트/폴백용)
+     */
+    private TileCollisionManager createDefaultCollisionManager() {
+        Map<String, Object> defaultMapData = new java.util.HashMap<>();
+        defaultMapData.put("tileSize", 40);
+
+        // 15행 x 20열 맵 생성 (마지막 행만 벽)
+        java.util.List<java.util.List<Integer>> tiles = new java.util.ArrayList<>();
+        for (int row = 0; row < 15; row++) {
+            java.util.List<Integer> rowData = new java.util.ArrayList<>();
+            for (int col = 0; col < 20; col++) {
+                if (row == 14) {
+                    rowData.add(1); // 바닥 (벽)
+                } else {
+                    rowData.add(0); // 빈 공간
+                }
+            }
+            tiles.add(rowData);
+        }
+        defaultMapData.put("tiles", tiles);
+
+        return new TileCollisionManager(defaultMapData);
+    }
+
+    // --- removePlayer 메소드 구현 ---
+    public void removePlayer(WebSocketSession session) {
+        String sessionId = session.getId();
+        PlayerState p = players.get(sessionId);
+
+        if (p == null) {
+            sessions.remove(sessionId);
+            return;
+        }
+
+        // 방장이 나가면 방 폭파 (기존 로직 유지)
+        if (p.getUsername().equals(hostUsername)) {
+            log.info("Host {} left. Closing room {}", hostUsername, roomId);
+            // 방장 퇴장 알림
+            GameMessageDto leaveMsg = new GameMessageDto();
+            leaveMsg.setType("PLAYER_LEFT");
+            leaveMsg.setRoomId(roomId);
+            leaveMsg.setUsername(p.getUsername());
+            leaveMsg.setContent("Host left.");
+            broadcast(leaveMsg, null);
+
+            this.isRunning = false;
+            sessions.remove(sessionId);
+            players.clear();
+            return;
+        }
+
+        // 게스트의 경우: 완전 삭제가 아닌 Disconnect 상태로 전환 (재접속 대기)
+        log.info("Player {} disconnected. Waiting for reconnect...", p.getUsername());
+        p.setDisconnected(true);
+        p.setDisconnectTime(System.currentTimeMillis());
+
+        // 세션 관리에서만 제거 (메시지 전송 불가)
+        sessions.remove(sessionId);
+
+        // Disconnect 알림 전송 for Client UI update (e.g. grey out)
+        GameMessageDto discMsg = new GameMessageDto();
+        discMsg.setType("PLAYER_DISCONNECTED");
+        discMsg.setRoomId(roomId);
+        discMsg.setUsername(p.getUsername());
+        broadcast(discMsg, null);
+
+        // 방에 활성 세션이 하나도 없으면 루프 종료 고민?
+        // -> 아니오, 방장이 남아있거나 재접속 대기중일 수 있으므로 유지.
+        // 다만 방장도 없고 모두 나갔다면 종료.
+        if (sessions.isEmpty()) {
+            this.isRunning = false;
+        }
+    }
+
+    /**
+     * 닉네임으로 플레이어 제거 (재접속 시 사용)
+     * 
+     * @return 제거된 플레이어가 있으면 true (재접속)
+     */
+    /**
+     * 닉네임으로 플레이어 찾아서 강제 퇴장 (Kick 등) - 필요 시 구현
+     * 현재는 재접속 로직이 addPlayer로 이동했으므로 단순화
+     */
+    public boolean removePlayerByUsername(String username) {
+        // 더 이상 재접속을 위해 미리 지우지 않음.
+        // addPlayer에서 처리하므로 여기서는 아무것도 하지 않거나 false 리턴.
+        return false;
+    }
+
+    /**
+     * 현재 방의 플레이어 수 반환
+     */
+    public int getPlayerCount() {
+        return players.size();
+    }
+
+    /**
+     * 해당 닉네임의 플레이어가 존재하는지 확인 (연결/비연결 불문)
+     */
+    public boolean hasPlayer(String username) {
+        for (PlayerState p : players.values()) {
+            if (p.getUsername().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void addPlayer(WebSocketSession session, String username) {
+        // [NEW] 재접속 체크
+        String oldSessionId = null;
+        PlayerState existingPlayer = null;
+
+        for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            PlayerState p = entry.getValue();
+            if (p.getUsername().equals(username) && p.isDisconnected()) {
+                oldSessionId = entry.getKey();
+                existingPlayer = p;
+                break;
+            }
+        }
+
+        // 재접속 처리
+        if (existingPlayer != null && oldSessionId != null) {
+            log.info("Player {} reconnected! Restoring state...", username);
+
+            // 1. Map Key 교체 (Old Session ID -> New Session ID)
+            players.remove(oldSessionId);
+            players.put(session.getId(), existingPlayer);
+            sessions.put(session.getId(), session);
+
+            // 2. 상태 복구
+            existingPlayer.setDisconnected(false);
+            existingPlayer.setDisconnectTime(0);
+
+            // 3. 슬롯 정보 업데이트
+            for (int i = 0; i < 4; i++) {
+                if (oldSessionId.equals(slots[i])) {
+                    slots[i] = session.getId();
+                    break;
+                }
+            }
+
+            // 4. 재접속 알림 (JOIN 대신 다른 메시지 사용 가능하나, 프론트 처리를 위해 일단 JOIN/UPDATE로 커버)
+            // 프론트엔드에서 '자신의 캐릭터'를 다시 인식하려면 JOIN 메시지 필요할 수 있음.
+            // JOIN 메시지는 GameService에서 보냄.
+
+            return;
+        }
+
+        // [신규 입장]
+        // 1. 빈 슬롯 찾기 (0번부터 순차 탐색)
+        int assignedSlot = -1;
+        for (int i = 0; i < 4; i++) {
+            if (slots[i] == null) {
+                slots[i] = session.getId();
+                assignedSlot = i;
+                break;
+            }
+        }
+
+        if (assignedSlot == -1) {
+            log.warn("Room {} is full, cannot add player {}", roomId, username);
+            return;
+        }
+
+        sessions.put(session.getId(), session);
+        // 초기 시작 위치 (100, 100)
+        PlayerState newPlayer = new PlayerState(username, 100, 100);
+        newPlayer.setColorIndex(assignedSlot); // [NEW] 슬롯 번호 할당
+        players.put(session.getId(), newPlayer);
+
+        // 첫 번째 플레이어가 방장
+        if (hostUsername == null) {
+            hostUsername = username;
+            log.info("Host set to {} in room {}", username, roomId);
+        }
+    } // 현재 명세에는 없으므로 패스, 혹은 가장 오래된 유저에게 부여 등.
+
+    /**
+     * 강제 퇴장 (방장이 특정 유저를 내보냄)
+     */
+    public void kickPlayer(String username) {
+        // username으로 세션 찾기
+        String targetSessionId = findSessionIdByUsername(username);
+        if (targetSessionId == null) {
+            return;
+        }
+
+        WebSocketSession targetSession = sessions.get(targetSessionId);
+
+        // 퇴장 처리
+        sessions.remove(targetSessionId);
+        players.remove(targetSessionId);
+
+        // 강퇴된 유저에게 알림
+        if (targetSession != null && targetSession.isOpen()) {
+            try {
+                GameMessageDto kickedMsg = new GameMessageDto();
+                kickedMsg.setType("KICKED");
+                kickedMsg.setRoomId(roomId);
+                kickedMsg.setContent("You have been kicked from the room");
+                targetSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(kickedMsg)));
+            } catch (Exception e) {
+                log.error("Failed to send kick message to {}", username, e);
+            }
+        }
+
+        // 다른 플레이어들에게 알림
+        GameMessageDto leaveMsg = new GameMessageDto();
+        leaveMsg.setType("PLAYER_LEFT");
+        leaveMsg.setRoomId(roomId);
+        leaveMsg.setUsername(username);
+        leaveMsg.setContent("Kicked by host");
+        broadcast(leaveMsg, null);
+
+        log.info("Player {} kicked from room {}", username, roomId);
+    }
+
+    /**
+     * 플레이어 위치 업데이트 (Client-Authoritative)
+     * 클라이언트가 보낸 좌표를 그대로 신뢰하고 저장
+     */
+    public void updatePlayerPosition(String sessionId, Double x, Double y, Double vx, Double vy, String anim) {
+        PlayerState player = players.get(sessionId);
+        if (player == null)
+            return;
+
+        // 마지막 업데이트 시간 갱신 (AFK 감지용)
+        player.touch();
+
+        player.setX(x);
+        player.setY(y);
+        if (vx != null)
+            player.setVx(vx);
+        if (vy != null)
+            player.setVy(vy);
+        if (anim != null)
+            player.setAnim(anim);
+
+        // [NEW] 물리적 Idle 방지를 위해 입력 시간 갱신 (패킷이 들어왔으므로 입력이 있는 것)
+        player.updateInputTimestamp();
+    }
+
+    /**
+     * 방 내의 참가자들에게 메시지를 전송하는 기능 (Broadcasting)
+     * Service 계층에서 세션 목록을 직접 순회하지 않도록 캡슐화함.
+     * * @param message 전송할 메시지 객체
+     *
+     * @param excludeSessionId 전송에서 제외할 세션 ID (본인 등) - null이면 전원 전송
+     */
+    public void broadcast(GameMessageDto message, String excludeSessionId) {
+        try {
+            TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(message));
+            for (WebSocketSession s : sessions.values()) {
+                if (s.isOpen()) {
+                    // 제외 대상이 아니거나, 제외 대상이 없으면 전송
+                    if (excludeSessionId == null || !s.getId().equals(excludeSessionId)) {
+                        s.sendMessage(textMsg);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Broadcast Error in Room {}", roomId, e);
+        }
+    }
+
+    /**
+     * 방 폭파 알림 (방장 퇴장 시)
+     */
+    public void broadcastRoomClosed() {
+        try {
+            GameMessageDto closeMsg = new GameMessageDto();
+            closeMsg.setType("ROOM_CLOSED");
+            closeMsg.setRoomId(roomId);
+            closeMsg.setContent("Host left the room");
+
+            TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(closeMsg));
+            for (WebSocketSession s : sessions.values()) {
+                if (s.isOpen()) {
+                    s.sendMessage(textMsg);
+                }
+            }
+
+            // 게임 루프 종료
+            this.isRunning = false;
+        } catch (Exception e) {
+            log.error("Broadcast Room Closed Error in Room {}", roomId, e);
+        }
+    }
+
+    // 입력 처리
+    public void handleInput(WebSocketSession session, String inputType) {
+        if (!players.containsKey(session.getId()))
+            return;
+        inputQueue.offer(new InputEvent(session.getId(), inputType));
+    }
+
+    // --- 닉네임으로 세션 ID 찾기 ---
+    public String findSessionIdByUsername(String username) {
+        for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            if (entry.getValue().getUsername().equals(username)) {
+                return entry.getKey(); // Session ID 반환
+            }
+        }
+        return null;
+    }
+
+    // --- 랜덤 플레이어 세션 ID 찾기 ---
+    public String getRandomPlayerSessionId() {
+        if (players.isEmpty())
+            return null;
+
+        List<String> keys = new ArrayList<>(players.keySet());
+        Random random = new Random();
+        return keys.get(random.nextInt(keys.size()));
+    }
+
+    // --- 랜덤 플레이어 username 찾기 (저주 대상 선정용) ---
+    public String getRandomPlayerUsername() {
+        if (players.isEmpty())
+            return null;
+
+        List<PlayerState> playerList = new ArrayList<>(players.values());
+        Random random = new Random();
+        return playerList.get(random.nextInt(playerList.size())).getUsername();
+    }
+
+    // ===== STT 저주 스택 메서드 =====
+
+    /**
+     * 저주 스택 증가
+     * @param delta 증가량
+     * @return 저주 발동 여부 (스택 >= 10 시 true)
+     */
+    public boolean addCurseStack(int delta) {
+        if (delta <= 0) return false;
+        
+        this.curseStack += delta;
+        log.info("🔮 Room {}: 저주 스택 +{} (현재: {}/{})", roomId, delta, curseStack, MAX_CURSE_STACK);
+        
+        if (this.curseStack >= MAX_CURSE_STACK) {
+            log.info("💀 Room {}: 저주 발동! (스택: {})", roomId, curseStack);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 현재 저주 스택 조회
+     */
+    public int getCurseStack() {
+        return this.curseStack;
+    }
+
+    /**
+     * 저주 스택 초기화 (저주 발동 후)
+     */
+    public void resetCurseStack() {
+        this.curseStack = 0;
+        log.info("🔮 Room {}: 저주 스택 초기화", roomId);
+    }
+
+    /**
+     * 현재 맵 ID 설정
+     */
+    public void setCurrentMapId(int mapId) {
+        this.currentMapId = mapId;
+    }
+
+    // 저주 이벤트 트리거 (기존 메서드 유지)
+    public void triggerCurseEvent(String targetSessionId, boolean isPositive) {
+        PlayerState p = players.get(targetSessionId);
+        if (p == null)
+            return;
+
+        if (isPositive) {
+            // 긍정적인 말: 모든 저주 해제
+            p.clearCurses();
+        } else {
+            // 부정적인 말: 랜덤 저주 적용
+            CurseType[] curses = CurseType.values();
+            CurseType randomCurse = curses[new Random().nextInt(curses.length)];
+            p.addCurse(randomCurse);
+        }
+    }
+
+    @Override
+    public void run() {
+        log.info("🚀 Game Loop Started (Relay Mode): {}", roomId);
+
+        while (isRunning) {
+            try {
+                // 1. AFK 체크 및 처리
+                checkAfkPlayers();
+
+                // 2. 자동 퇴장 처리 (10초 이상 업데이트 없음)
+                checkDisconnectedPlayers();
+
+                // [REVERTED] 3. 물리 업데이트 제거 (Client-Authoritative 충돌 방지)
+                // updatePhysics(0.05);
+
+                // 4. 브로드캐스트 (20 TPS)
+                broadcastState();
+
+                // 33ms 대기 (약 30 TPS)
+                Thread.sleep(33);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        log.info("🏁 Game Loop Ended: {}", roomId);
+    }
+
+    /**
+     * AFK 플레이어 체크 및 처리 (속도 0, 중력 적용)
+     */
+    private void checkAfkPlayers() {
+        for (PlayerState player : players.values()) {
+            player.checkAfkStatus();
+        }
+    }
+
+    /**
+     * 자동 퇴장 처리 (방장 제외)
+     * 방장은 AFK 상태여도 자동 퇴장하지 않음 (최소화/백그라운드 허용)
+     */
+    private void checkDisconnectedPlayers() {
+        long now = System.currentTimeMillis();
+        List<String> toRemove = new ArrayList<>();
+
+        for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
+            String sid = entry.getKey();
+            PlayerState p = entry.getValue();
+
+            // 방장은 예외? -> 방장도 연결 끊기면 처리해야 함.
+            // 단, 방장의 removePlayer 로직에서 이미 방 폭파가 처리되므로 여기까진 안 올 수 있음.
+            // 하지만 'Timeout'으로 인한 연결 끊김 처리는 여기서 수행.
+
+            if (p.isDisconnected()) {
+                // 이미 Disconnected 상태인 경우 -> 3분 체크
+                if (now - p.getDisconnectTime() > RECONNECT_TIMEOUT_MS) {
+                    toRemove.add(sid);
+                    log.info("Player {} removed due to reconnect timeout (3min)", p.getUsername());
+                }
+            } else {
+                // 활성 상태인데 업데이트가 너무 오래 없는 경우 (Network Failure)
+                // shouldDisconnect -> 10초 이상 업데이트 없음
+                if (p.shouldDisconnect()) {
+                    // Soft Disconnect 처리
+                    p.setDisconnected(true);
+                    p.setDisconnectTime(now);
+
+                    // 세션 맵에서 제거 (물리적 연결 끊김 간주)
+                    WebSocketSession s = sessions.remove(sid);
+                    if (s != null && s.isOpen()) {
+                        try {
+                            s.close();
+                        } catch (Exception ignore) {
+                        }
+                    }
+
+                    log.info("Player {} soft-disconnected due to inactivity (timeout)", p.getUsername());
+
+                    GameMessageDto discMsg = new GameMessageDto();
+                    discMsg.setType("PLAYER_DISCONNECTED");
+                    discMsg.setRoomId(roomId);
+                    discMsg.setUsername(p.getUsername());
+                    // broadcast 대상에서 본인은 이미 제외됨 (sessions에서 제거됨)
+                    broadcast(discMsg, null);
+                }
+            }
+        }
+
+        // 진짜 삭제 (3분 경과)
+        for (String sessionId : toRemove) {
+            PlayerState removed = players.remove(sessionId);
+
+            // 슬롯 정리
+            for (int i = 0; i < 4; i++) {
+                if (sessionId.equals(slots[i])) {
+                    slots[i] = null;
+                    break;
+                }
+            }
+
+            if (removed != null) {
+                // 완전히 나감 -> PLAYER_LEFT
+                GameMessageDto leaveMsg = new GameMessageDto();
+                leaveMsg.setType("PLAYER_LEFT");
+                leaveMsg.setRoomId(roomId);
+                leaveMsg.setUsername(removed.getUsername());
+                leaveMsg.setContent("Disconnected timeout");
+                broadcast(leaveMsg, null);
+            }
+        }
+
+        // 방에 아무도 없으면 (Disconnected 포함? 아니면 활성 세션 기준?)
+        // 재접속 기다리는 플레이어가 있으면 방 유지? -> 네, 유지.
+        // 단, players 맵이 비면 종료.
+        if (players.isEmpty()) {
+            this.isRunning = false;
+        }
+    }
+
+    // --- Pause / Resume Implementations ---
+
+    public void pause(String requestUser) {
+        // [CHANGED] 모든 플레이어가 일시정지 가능 (탭 이동 시)
+        this.state = GameState.PAUSED;
+        log.info("Room {} Paused by {}", roomId, requestUser);
+
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("GAME_PAUSED");
+        msg.setRoomId(roomId);
+        msg.setContent(requestUser); // 일시정지 유발자 전달
+        broadcast(msg, null);
+    }
+
+    public void resume(String requestUser) {
+        // [CHANGED] 모든 플레이어가 재개 가능 (탭 복귀 시)
+        this.state = GameState.RUNNING;
+        log.info("Room {} Resumed by {}", roomId, requestUser);
+
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("GAME_RESUMED");
+        msg.setRoomId(roomId);
+        msg.setContent(requestUser); // 재개 유발자 전달
+        broadcast(msg, null);
+    }
+
+    private void processInputs() {
+        while (!inputQueue.isEmpty()) {
+            InputEvent event = inputQueue.poll();
+            PlayerState p = players.get(event.sessionId);
+            if (p == null)
+                continue;
+
+            switch (event.inputType) {
+                case "LEFT_DOWN" -> p.setInputX(-1);
+                case "RIGHT_DOWN" -> p.setInputX(1);
+                case "LEFT_UP", "RIGHT_UP" -> p.setInputX(0);
+                case "JUMP" -> p.setInputJump(true); // 점프 예약
+            }
+
+            // [NEW] 입력 시간 갱신 (물리적 Idle 방지)
+            p.updateInputTimestamp();
+        }
+    }
+
+    private void updatePhysics(double dt) {
+        for (PlayerState player : players.values()) {
+            // 1. 물리 연산 (저주 효과, 이동, 중력 적용)
+            player.update(dt);
+
+            // 2. 타일맵 충돌 해결
+            collisionManager.resolveCollision(player);
+        }
+        // TODO: 게임 클리어/실패 조건 체크 로직 추가 가능
+    }
+
+    private void broadcastState() {
+        try {
+            // 전체 플레이어 상태를 리스트로 변환 (slots 순서대로)
+            List<Object> stateList = new ArrayList<>();
+
+            for (int i = 0; i < 4; i++) {
+                String sid = slots[i];
+                if (sid == null)
+                    continue;
+                PlayerState p = players.get(sid);
+                if (p == null)
+                    continue;
+
+                Map<String, Object> pData = new HashMap<>();
+                pData.put("serverTick", System.currentTimeMillis());
+                pData.put("id", p.getUsername());
+                // 소수점 2자리 반올림 (대역폭 절약)
+                pData.put("x", Math.round(p.getX() * 100) / 100.0);
+                pData.put("y", Math.round(p.getY() * 100) / 100.0);
+                pData.put("vx", p.getVx());
+                pData.put("vy", p.getVy());
+                pData.put("anim", p.getAnim()); // 애니메이션 상태 추가
+
+                // [NEW] 핵심 데이터 추가
+                pData.put("colorIndex", p.getColorIndex());
+                pData.put("isHost", p.getUsername().equals(this.hostUsername));
+
+                // 저주로 크기 변경 시 클라이언트에 전달
+                pData.put("width", p.getWidth());
+                pData.put("height", p.getHeight());
+                pData.put("hp", p.getHp());
+                pData.put("isDead", p.isDead());
+                pData.put("isAfk", p.isAfk()); // AFK 상태 추가
+                pData.put("curses", p.getActiveCurses().keySet());
+                stateList.add(pData);
+            }
+
+            GameMessageDto msg = new GameMessageDto();
+            msg.setType("UPDATE");
+            msg.setRoomId(roomId);
+            // [NEW] 팀 저주 스택 추가 (브로드캐스트에 포함)
+            msg.setContent(objectMapper.writeValueAsString(stateList));
+            // 별도 필드가 없으므로 content에 넣거나, DTO 확장이 필요할 수 있음.
+            // 하지만 Client는 UPDATE 메시지의 content(Player List) 외에 Room State도 필요함.
+            // 일단 GameMessageDto에 필드가 제한적이므로, 별도 메시지로 스택 업데이트를 보내거나
+            // UPDATE 메시지의 구조를 변경해야 함.
+            // 여기서는 안전하게 별도로 가거나, content 내부에 포함시킴.
+            // 하지만 content는 String(JSON)이므로, 구조를 바꾸면 프론트 파싱이 깨질 수 있음.
+            // 따라서 33ms마다 보내는 UPDATE에는 Player 정보만 넣고,
+            // 스택 변경 시에만 별도 메시지 전송 로직(addCurseStack)을 사용함.
+            // 다만, 중간 중간 싱크를 위해 가끔 보내는 것도 좋음.
+            // 일단 여기서는 Player List만 보냄.
+
+            TextMessage textMsg = new TextMessage(objectMapper.writeValueAsString(msg));
+
+            // 모든 세션에 전송
+            for (WebSocketSession s : sessions.values()) {
+                if (s.isOpen())
+                    s.sendMessage(textMsg);
+            }
+        } catch (Exception e) {
+            log.error("Broadcast Error in Room {}", roomId, e);
+        }
+    }
+
+    /**
+     * 팀 저주 스택 증가 (내부 처리용)
+     * 주의: GameService.handleSpeechBatch()에서 boolean 반환 버전 addCurseStack(int)을 사용합니다.
+     * 이 메서드는 handleSpeechAnalysis() 등 레거시 호출용입니다.
+     * 
+     * @param delta 증가량 (1, 3, 5 등)
+     */
+    public void addTeamCurseStack(int delta) {
+        this.teamCurseStack += delta;
+        log.info("Team Curse Stack Added: +{} -> {}", delta, teamCurseStack);
+
+        if (this.teamCurseStack >= MAX_CURSE_STACK) {
+            triggerRandomCurse();
+            this.teamCurseStack = 0; // 리셋
+        }
+
+        // 스택 업데이트 브로드캐스트
+        broadcastStackUpdate();
+    }
+
+    private void broadcastStackUpdate() {
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("CURSE_STACK_UPDATE");
+        msg.setRoomId(roomId);
+        msg.setContent(String.valueOf(teamCurseStack)); // Content에 현재 스택 담아 전송
+        broadcast(msg, null);
+    }
+
+    private void triggerRandomCurse() {
+        // 살아있는(연결된) 플레이어 중 랜덤 1명
+        List<String> activePlayers = new ArrayList<>();
+        for (String sessId : sessions.keySet()) {
+            if (players.containsKey(sessId)) {
+                activePlayers.add(sessId);
+            }
+        }
+
+        if (activePlayers.isEmpty())
+            return;
+
+        Random random = new Random();
+        String victimSessionId = activePlayers.get(random.nextInt(activePlayers.size()));
+        PlayerState victim = players.get(victimSessionId);
+
+        if (victim != null) {
+            log.info("Curses triggered on {}!", victim.getUsername());
+            // 저주 효과 적용 (PlayerState에 저주 추가)
+            // 예: "SIZE_UP", "FOG", "STUN" 등 타입 필요.
+            // 임시로 "TEST_CURSE" 또는 기존 로직 사용.
+            // 기존 triggerCurseEvent 호출?
+            applyCurseEffect(victim);
+
+            // 알림
+            GameMessageDto msg = new GameMessageDto();
+            msg.setType("CURSE_TRIGGERED");
+            msg.setRoomId(roomId);
+            msg.setUsername(victim.getUsername());
+            msg.setContent("Random Curse Activated!");
+            broadcast(msg, null);
+        }
+    }
+
+    /**
+     * 실제 저주 효과 적용
+     */
+    private void applyCurseEffect(PlayerState p) {
+        // 임시: 랜덤 저주 하나 선택
+        CurseType[] types = CurseType.values();
+        // None 제외
+        CurseType selected = types[new Random().nextInt(types.length)];
+
+        // 명세: "저주 해제: 버튼 + 긍정어" -> 즉, 시간제한이 아니라 '조건부 해제'일 가능성 큼.
+        // 따라서 Duration은 무시하고 Enum 타입으로 추가함.
+        p.addCurse(selected);
+    }
+
+    /**
+     * 저주 해제 시도 (버튼 + 긍정어)
+     */
+    public void attemptCurseLift(String username) {
+        String sessionId = findSessionIdByUsername(username);
+        if (sessionId == null)
+            return;
+
+        PlayerState p = players.get(sessionId);
+        if (p == null)
+            return;
+
+        // 모든 저주 해제
+        if (!p.getActiveCurses().isEmpty()) {
+            p.getActiveCurses().clear();
+            log.info("Curse Lifted for {}", username);
+
+            GameMessageDto msg = new GameMessageDto();
+            msg.setType("CURSE_LIFTED");
+            msg.setRoomId(roomId);
+            msg.setUsername(username);
+            msg.setContent("All curses lifted by positive speech!");
+            broadcast(msg, null);
+        }
+    }
+
+    // 내부 레코드 (InputEvent)
+    private record InputEvent(String sessionId, String inputType) {
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/game/PlayerState.java
+==================================================
+package com.d105.game;
+
+import com.d105.game.constant.CurseType;
+import lombok.Data;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Data
+public class PlayerState {
+    private String username;
+
+    // 1. 위치 및 물리 변수
+    private double x;
+    private double y;
+    private double vx = 0; // X축 속도
+    private double vy = 0; // Y축 속도 (중력 적용)
+
+    // 2. 캐릭터 스탯
+    private double width = 40.0; // 기본 크기
+    private double height = 40.0;
+    private int hp = 100; // 체력 (저주용)
+    private boolean isDead = false;
+    private boolean isGrounded = false; // 바닥에 닿았는지 여부
+    private String anim = "idle_down"; // 현재 애니메이션 상태
+
+    // [NEW] 슬롯 번호 (0: 초록, 1: 파랑, 2: 노랑, 3: 보라)
+    private int colorIndex;
+
+    // [NEW] 마지막 입력 시간 (Idle 처리를 위해 필요)
+    private long lastInputTime = System.currentTimeMillis();
+
+    // 3. AFK(잠수) 감지용
+    private long lastUpdateTime = System.currentTimeMillis();
+    private boolean isAfk = false;
+    private static final long AFK_THRESHOLD_MS = 500; // 1초간 업데이트 없으면 AFK
+    private static final long DISCONNECT_THRESHOLD_MS = 300000; // 5분간 업데이트 없으면 퇴장 대상
+    private static final double GROUND_Y = 560.0; // 바닥 Y 좌표 (맵에 맞게 조정)
+
+    // 4. 물리 상수 (튜닝 필요)
+    private static final double MOVE_SPEED = 300.0;
+    private static final double JUMP_FORCE = -600.0; // Y축 위로 점프 (음수)
+    private static final double GRAVITY = 50.0; // AFK 시 적용할 간단한 중력
+    private static final double TERMINAL_VELOCITY = 800.0; // 낙하 최대 속도
+
+    // 5. 입력 상태
+    private volatile int inputX = 0; // -1, 0, 1
+    private volatile boolean inputJump = false; // 점프 키 입력 여부
+
+    // 6. 저주 상태 관리
+    private Map<CurseType, Long> activeCurses = new ConcurrentHashMap<>();
+
+    // 7. 재접속 관리
+    private boolean isDisconnected = false;
+    private long disconnectTime = 0;
+
+    // 7. TIME_BOMB 저주용 누적 데미지
+    private double accumulatedDamage = 0;
+
+    public PlayerState(String username, double startX, double startY) {
+        this.username = username;
+        this.x = startX;
+        this.y = startY;
+        this.lastUpdateTime = System.currentTimeMillis();
+    }
+
+    /**
+     * AFK 상태 체크 및 처리
+     */
+    public void checkAfkStatus() {
+        long now = System.currentTimeMillis();
+        long elapsed = now - lastUpdateTime;
+
+        if (elapsed > AFK_THRESHOLD_MS) {
+            isAfk = true;
+            // AFK 시 속도 강제 0
+            vx = 0;
+
+            // 공중에 떠있으면 중력 적용 (간단한 낙하)
+            if (!isGrounded && y < GROUND_Y) {
+                y += GRAVITY; // 간단한 중력 적용
+                if (y >= GROUND_Y) {
+                    y = GROUND_Y;
+                    isGrounded = true;
+                    vy = 0;
+                }
+            }
+        } else {
+            isAfk = false;
+        }
+    }
+
+    /**
+     * 퇴장 대상인지 확인 (5분 이상 업데이트 없음)
+     */
+    public boolean shouldDisconnect() {
+        return (System.currentTimeMillis() - lastUpdateTime) > DISCONNECT_THRESHOLD_MS;
+    }
+
+    /**
+     * 업데이트 시간 갱신
+     */
+    public void touch() {
+        this.lastUpdateTime = System.currentTimeMillis();
+        this.isAfk = false;
+    }
+
+    // [NEW] 입력 시간 갱신
+    public void updateInputTimestamp() {
+        this.lastInputTime = System.currentTimeMillis();
+    }
+
+    /**
+     * 물리 업데이트 (Tick Loop에서 호출)
+     * 충돌 처리는 TileCollisionManager에서 별도로 수행
+     * 
+     * @param dt 델타 타임 (초 단위, 예: 1/60 = 0.0167)
+     */
+    public void update(double dt) {
+        long now = System.currentTimeMillis();
+
+        // [NEW] 1초 이상 입력 패킷이 없으면 이동 입력을 0으로 초기화 (물리적 Idle)
+        if (now - this.lastInputTime > 1000) {
+            this.inputX = 0;
+            this.inputJump = false;
+            // 단, 중력은 아래에서 계속 적용됨 (자연스러운 낙하)
+        }
+
+        if (isDead)
+            return;
+
+        // --- 1. 저주 효과 적용 ---
+        applyCurseEffects(dt);
+
+        // --- 2. 물리 연산 (X축: 이동) ---
+        // 저주(INVERT) 적용된 입력값 계산
+        int finalInputX = inputX;
+        if (activeCurses.containsKey(CurseType.INVERT_CONTROL)) {
+            finalInputX = -finalInputX; // 입력 반전
+        }
+
+        // 저주(BIG_AND_SLOW) 적용된 속도 계산
+        double currentSpeed = MOVE_SPEED;
+        if (activeCurses.containsKey(CurseType.BIG_AND_SLOW)) {
+            currentSpeed *= 0.5; // 속도 반감
+        }
+
+        this.vx = finalInputX * currentSpeed;
+        this.x += this.vx * dt;
+
+        // --- 3. 물리 연산 (Y축: 중력 & 점프) ---
+        // 점프 시도 (바닥에 있을 때만)
+        if (inputJump && isGrounded) {
+            this.vy = JUMP_FORCE;
+            this.isGrounded = false;
+            this.inputJump = false; // 점프 트리거 해제
+        }
+
+        // 중력 적용
+        this.vy += GRAVITY * dt;
+        if (this.vy > TERMINAL_VELOCITY)
+            this.vy = TERMINAL_VELOCITY;
+
+        // 위치 적용
+        this.y += this.vy * dt;
+    }
+
+    private void applyCurseEffects(double dt) {
+        long now = System.currentTimeMillis();
+
+        // [저주 1] TIME_BOMB: 일정 시간마다 HP 감소 (dt 기반 누적 데미지)
+        if (activeCurses.containsKey(CurseType.TIME_BOMB)) {
+            double damagePerSecond = 10.0;
+            accumulatedDamage += damagePerSecond * dt;
+
+            // 누적 데미지가 1 이상이면 HP 감소
+            if (accumulatedDamage >= 1.0) {
+                int damage = (int) accumulatedDamage;
+                this.hp -= damage;
+                accumulatedDamage -= damage;
+            }
+
+            if (this.hp <= 0) {
+                this.hp = 0;
+                this.isDead = true;
+            }
+        } else {
+            // TIME_BOMB 저주가 없으면 누적 데미지 초기화
+            accumulatedDamage = 0;
+        }
+
+        // [저주 2] BIG_AND_SLOW: 크기 변화
+        if (activeCurses.containsKey(CurseType.BIG_AND_SLOW)) {
+            this.width = 80.0; // 2배 커짐
+            this.height = 80.0;
+        } else {
+            this.width = 40.0; // 원상 복구
+            this.height = 40.0;
+        }
+    }
+
+    // 저주 추가
+    public void addCurse(CurseType type) {
+        activeCurses.put(type, System.currentTimeMillis());
+    }
+
+    // 저주 해제 (긍정적인 말 감지 시 호출)
+    public void removeCurse(CurseType type) {
+        activeCurses.remove(type);
+    }
+
+    // 모든 저주 해제
+    public void clearCurses() {
+        activeCurses.clear();
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/game/TileCollisionManager.java
+==================================================
+package com.d105.game;
+
+import java.util.List;
+import java.util.Map;
+
+public class TileCollisionManager {
+    private final int tileSize;
+    private final int rows;
+    private final int cols;
+    private final List<List<Integer>> mapData; // 0: 빈공간, 1: 벽(충돌)
+
+    @SuppressWarnings("unchecked")
+    public TileCollisionManager(Map<String, Object> tileDataJson) {
+        // JSON 파싱 (예외처리 생략, 데이터 구조에 맞춰 조정 필요)
+        this.tileSize = (int) tileDataJson.getOrDefault("tileSize", 40);
+        this.mapData = (List<List<Integer>>) tileDataJson.get("tiles");
+        this.rows = mapData.size();
+        this.cols = mapData.get(0).size();
+    }
+
+    /**
+     * AABB 충돌 체크 및 보정
+     * 플레이어의 다음 위치(nextX, nextY)가 벽과 겹치는지 확인하고, 겹친다면 이동 가능한 최대 위치를 반환
+     */
+    public void resolveCollision(PlayerState player) {
+        // 1. X축 이동 시도
+        double nextX = player.getX() + player.getVx() * 0.016; // 단순 예측
+        if (checkOverlap(nextX, player.getY(), player.getWidth(), player.getHeight())) {
+            player.setVx(0); // 벽에 부딪히면 속도 0
+            // (정밀하게 하려면 벽면에 딱 붙이는 보정 로직 필요)
+        }
+
+        // 2. Y축 이동 시도 (중력 포함)
+        double nextY = player.getY() + player.getVy() * 0.016;
+        if (checkOverlap(player.getX(), nextY, player.getWidth(), player.getHeight())) {
+            if (player.getVy() > 0) { // 아래로 떨어지다가 부딪힘 (바닥 착지)
+                player.setGrounded(true);
+                // 타일 위에 안착시키기 (Snap to Grid)
+                int tileY = (int) ((nextY + player.getHeight()) / tileSize);
+                player.setY(tileY * tileSize - player.getHeight() - 0.01);
+            } else {
+                // 위로 점프하다 천장에 부딪힘
+                int tileY = (int) (nextY / tileSize);
+                player.setY((tileY + 1) * tileSize + 0.01);
+            }
+            player.setVy(0);
+        } else {
+            // 공중 상태
+            player.setGrounded(false);
+        }
+    }
+
+    // 사각형(플레이어)이 벽 타일과 겹치는지 검사
+    private boolean checkOverlap(double x, double y, double w, double h) {
+        int leftTile = (int) (x / tileSize);
+        int rightTile = (int) ((x + w - 0.01) / tileSize);
+        int topTile = (int) (y / tileSize);
+        int bottomTile = (int) ((y + h - 0.01) / tileSize);
+
+        for (int r = topTile; r <= bottomTile; r++) {
+            for (int c = leftTile; c <= rightTile; c++) {
+                if (isSolid(r, c)) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSolid(int r, int c) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return true; // 맵 밖은 벽으로 처리
+        return mapData.get(r).get(c) == 1; // 1이면 벽
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/handler/GameWebSocketHandler.java
+==================================================
+package com.d105.handler;
+
+import com.d105.dto.GameMessageDto;
+import com.d105.service.GameService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class GameWebSocketHandler extends TextWebSocketHandler {
+
+    private final GameService gameService;
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public void handleTextMessage(WebSocketSession session, TextMessage message) {
+        String payload = message.getPayload();
+
+        if (payload == null || payload.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            GameMessageDto messageDto = objectMapper.readValue(payload, GameMessageDto.class);
+
+            switch (messageDto.getType()) {
+                case "CREATE": // 방 생성
+                    gameService.handleCreate(session, messageDto);
+                    break;
+                case "JOIN": // 방 참가
+                    gameService.handleJoin(session, messageDto);
+                    break;
+                case "MOVE":
+                    gameService.handleMove(session, messageDto);
+                    break;
+                case "PAUSE_GAME":
+                    gameService.handlePause(session, messageDto);
+                    break;
+                case "RESUME_GAME":
+                    gameService.handleResume(session, messageDto);
+                    break;
+                case "LIFT_CURSE_REQUEST":
+                    gameService.handleLiftCurseRequest(session, messageDto);
+                    break;
+                case "PING":
+                    gameService.handlePing(session, messageDto);
+                    break;
+                case "READY": // Ready 상태 변경
+                    gameService.handleReady(session, messageDto);
+                    break;
+                case "START_GAME": // 게임 시작 (방장)
+                    gameService.handleStartGame(session, messageDto);
+                    break;
+                case "NEXT_STAGE": // 다음 스테이지 (방장)
+                    gameService.handleNextStage(session, messageDto);
+                    break;
+                // ===== STT 저주 시스템 =====
+                case "SPEECH_BATCH": // 발화 배치 분석
+                    gameService.handleSpeechBatch(session, messageDto);
+                    break;
+                case "CURSE_RELEASE": // 저주 해제 요청
+                    gameService.handleCurseRelease(session, messageDto);
+                    break;
+                default:
+                    log.warn("Unknown message type: {}", messageDto.getType());
+            }
+
+        } catch (JsonProcessingException e) {
+            log.error("JSON Error: {}", payload);
+        } catch (Exception e) {
+            log.error("Handler Error", e);
+        }
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        gameService.handleLeave(session);
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/handler/GlobalExceptionHandler.java
+==================================================
+package com.d105.handler;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    // "이미 사용 중인 닉네임입니다" 같은 에러를 잡아서
+    // 500 대신 400(Bad Request)으로 바꿔주는 장치
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ResponseEntity
+                .badRequest() // 400 에러 코드
+                .body(Map.of("error", e.getMessage())); // 에러 메시지 그대로 전송
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/interceptor/JwtHandshakeInterceptor.java
+==================================================
+package com.d105.interceptor;
+
+import com.d105.util.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.util.Map;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class JwtHandshakeInterceptor implements HandshakeInterceptor {
+
+    private final JwtUtil jwtUtil;
+
+    /**
+     * 웹소켓 연결 전(Before Handshake)에 실행됩니다.
+     * return true -> 연결 허용
+     * return false -> 연결 거부 (401 Unauthorized 등)
+     */
+    @Override
+    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
+            WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+
+        // 1. 토큰 추출 (헤더 또는 쿼리 파라미터)
+        String token = extractToken(request);
+
+        // 2. 토큰이 없거나 유효하지 않으면 거부
+        if (token == null || !jwtUtil.validateToken(token)) {
+            log.warn("[WebSocket Handshake Failed] Invalid or missing token");
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+
+        // 3. 토큰에서 유저 정보(ID) 추출
+        String username = jwtUtil.getUsername(token);
+
+        // 4. 웹소켓 세션(attributes)에 저장
+        // 이렇게 저장하면 나중에 GameWebSocketHandler에서 session.getAttributes().get("username")로
+        // 꺼낼 수 있습니다.
+        attributes.put("username", username);
+
+        log.info("[WebSocket Handshake Success] User: {}", username);
+        return true;
+    }
+
+    @Override
+    public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
+            WebSocketHandler wsHandler, Exception exception) {
+        // 핸드셰이크 이후 로직 (필요 없음)
+    }
+
+    // 토큰 추출 헬퍼 메서드
+    private String extractToken(ServerHttpRequest request) {
+        // 1. Authorization 헤더 확인 (Bearer Token)
+        // Postman이나 백엔드 간 통신에서는 헤더 사용 가능
+        String authHeader = request.getHeaders().getFirst("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        // 2. 쿼리 파라미터 확인 (ws://...?token=xyz)
+        // 브라우저 기본 WebSocket 객체는 헤더 변경이 불가능하므로, 쿼리 파라미터를 많이 사용함
+        if (request instanceof ServletServerHttpRequest servletRequest) {
+            String queryToken = servletRequest.getServletRequest().getParameter("token");
+            if (queryToken != null && !queryToken.isEmpty()) {
+                return queryToken;
+            }
+        }
+
+        return null;
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/privateUtil/SourceMerger.java
+==================================================
+package com.d105.privateUtil;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
+
+public class SourceMerger {
+
+    // 1. 결과물이 저장될 파일명
+    private static final String OUTPUT_FILE_NAME = "project_sources_for_ai.txt";
+
+    // 2. 포함할 파일 확장자 목록
+    private static final Set<String> TARGET_EXTENSIONS = Set.of(
+            ".java", ".kt",   // 소스 코드
+            ".xml", ".yml", ".yaml", ".properties", // 설정 파일
+            ".gradle", "Dockerfile" // 빌드/배포 설정
+    );
+
+    // 3. 제외할 디렉토리 (빌드 결과물, 숨김 폴더 등)
+    private static final Set<String> IGNORED_DIRS = Set.of(
+            "build", "target", "out",
+            ".git", ".idea", ".gradle", ".mvn", "wrapper"
+    );
+
+    public static void main(String[] args) {
+        // 현재 프로젝트의 루트 경로 (실행 위치 기준)
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+
+        // ---------------------------------------------------------
+        // [변경됨] 저장 경로를 현재 클래스(SourceMerger)와 같은 폴더로 설정
+        // ---------------------------------------------------------
+        String packagePath = SourceMerger.class.getPackageName().replace('.', '/');
+        Path outputDir = projectRoot.resolve("src/main/java").resolve(packagePath);
+
+        // 만약 해당 경로를 찾지 못하면(프로젝트 구조가 다를 경우) 기본 루트 경로 사용
+        if (!Files.exists(outputDir)) {
+            System.out.println("⚠️ 소스 폴더를 찾을 수 없어 루트 경로에 저장합니다.");
+            outputDir = projectRoot;
+        }
+
+        Path outputPath = outputDir.resolve(OUTPUT_FILE_NAME);
+        // ---------------------------------------------------------
+
+        System.out.println("🚀 소스 코드 병합을 시작합니다...");
+        System.out.println("📂 탐색 경로: " + projectRoot.toAbsolutePath());
+        System.out.println("💾 저장 경로: " + outputPath.toAbsolutePath());
+
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
+             Stream<Path> paths = Files.walk(projectRoot)) {
+
+            // 람다식 내부에서 외부 변수(outputPath)를 사용하기 위해 final로 취급되어야 하므로,
+            // path 비교 로직에서 outputPath를 직접 넘기거나 필터링 로직 수정
+            Path finalOutputPath = outputPath;
+
+            long count = paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> shouldInclude(path, projectRoot, finalOutputPath))
+                    .sorted()
+                    .map(path -> writeFileContent(writer, path, projectRoot))
+                    .count();
+
+            System.out.println("✅ 완료! 총 " + count + "개의 파일이 병합되었습니다.");
+            System.out.println("📄 파일 확인: " + finalOutputPath.toAbsolutePath());
+
+        } catch (IOException e) {
+            System.err.println("❌ 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // 파일 포함 여부 결정 로직 (outputPath 인자 추가됨)
+    private static boolean shouldInclude(Path path, Path root, Path outputPath) {
+        // 방금 생성하고 있는 결과 파일은 제외 (무한 루프 방지 및 중복 방지)
+        if (path.equals(outputPath)) return false;
+
+        String fileName = path.getFileName().toString();
+
+        // 제외할 디렉토리에 포함된 파일인지 확인
+        Path relative = root.relativize(path);
+        for (Path part : relative) {
+            if (IGNORED_DIRS.contains(part.toString())) return false;
+        }
+
+        // 확장자 확인
+        for (String ext : TARGET_EXTENSIONS) {
+            if (fileName.endsWith(ext) || fileName.equals(ext)) return true;
+        }
+        return false;
+    }
+
+    private static int writeFileContent(BufferedWriter writer, Path path, Path root) {
+        try {
+            writer.write("\n" + "=".repeat(50) + "\n");
+            writer.write("FILE: " + root.relativize(path).toString().replace("\\", "/") + "\n");
+            writer.write("=".repeat(50) + "\n");
+
+            List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+            return 1;
+        } catch (IOException e) {
+            System.err.println("⚠️ 읽기 실패 (건너뜀): " + path);
+            return 0;
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/repository/GameRepository.java
+==================================================
+package com.d105.repository;
+
+import com.d105.game.GameRoom;
+import org.springframework.stereotype.Repository;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 게임 방(GameRoom) 인스턴스를 관리하는 저장소
+ * - 방 생성/조회/삭제
+ * - 나중에 Redis로 교체하기 좋은 위치
+ */
+@Repository
+public class GameRepository {
+
+    // 활성 게임 방 (roomId -> GameRoom)
+    private final Map<String, GameRoom> rooms = new ConcurrentHashMap<>();
+
+    /**
+     * 방 존재 여부 확인
+     */
+    public boolean roomExists(String roomId) {
+        return rooms.containsKey(roomId);
+    }
+
+    /**
+     * 방 조회 (없으면 null)
+     */
+    public GameRoom getRoom(String roomId) {
+        return rooms.get(roomId);
+    }
+
+    /**
+     * 방 등록
+     */
+    public void addRoom(String roomId, GameRoom room) {
+        rooms.put(roomId, room);
+    }
+
+    /**
+     * 방 삭제
+     */
+    public void removeRoom(String roomId) {
+        rooms.remove(roomId);
+    }
+
+    /**
+     * 방의 현재 플레이어 수 조회
+     */
+    public int getPlayerCount(String roomId) {
+        GameRoom room = rooms.get(roomId);
+        return room == null ? 0 : room.getPlayerCount();
+    }
+
+    /**
+     * 활성 방 개수
+     */
+    public int getActiveRoomCount() {
+        return rooms.size();
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/repository/ImageRepository.java
+==================================================
+package com.d105.repository;
+
+import com.d105.entity.Image;
+import com.d105.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public interface ImageRepository extends JpaRepository<Image, Long> {
+
+    // 특정 유저의 이미지 목록 (삭제되지 않은 것만)
+    List<Image> findByUserAndDeletedAtIsNullOrderByCreatedAtDesc(User user);
+
+    // 특정 방에서 찍은 이미지 목록 (삭제되지 않은 것만)
+    List<Image> findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(String roomCode);
+
+    // 기준 날짜보다 이전에 생성된 이미지 목록 조회 (스케줄러용 - 삭제 여부 상관없이 조회)
+    List<Image> findByCreatedAtBefore(LocalDateTime cutoffDate);
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/repository/MapRepository.java
+==================================================
+package com.d105.repository;
+
+import com.d105.entity.Map;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface MapRepository extends JpaRepository<Map, Long> {
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/repository/UserRepository.java
+==================================================
+package com.d105.repository;
+
+import com.d105.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+
+    boolean existsByUsername(String username);
+
+    boolean existsByNickname(String nickname);
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/scheduler/ImageCleanupScheduler.java
+==================================================
+package com.d105.scheduler;
+
+import com.d105.service.ImageService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ImageCleanupScheduler {
+
+    private final ImageService imageService;
+
+    /**
+     * 매일 새벽 3시에 실행
+     * 7일 지난 이미지 파일을 자동으로 삭제합니다.
+     * Cron 표현식: 초 분 시 일 월 요일
+     */
+    @Scheduled(cron = "0 0 3 * * *")
+    public void cleanupOldImages() {
+        log.info("🧹 Start cleanup of old images...");
+
+        try {
+            int count = imageService.deleteOldImages();
+            log.info("✨ Cleanup finished. Deleted {} old images.", count);
+        } catch (Exception e) {
+            log.error("❌ Cleanup failed", e);
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/AiGenerationService.java
+==================================================
+package com.d105.service;
+
+import com.d105.config.AiProperties;
+import com.d105.util.ByteArrayMultipartFile;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URI;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AiGenerationService {
+
+    private static final String BASE_STYLE_PROMPT = "high quality, detailed, fantasy art style, ";
+    private final AiProperties aiProperties;
+    private final ImageService imageService;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper;
+
+    public void generateAndSaveImage(List<String> sourceImages, String userPrompt, String roomId, Long userId) {
+        log.info("Requesting AI Image generation for user: {}", userId);
+        try {
+            // 0. 프롬프트 가공
+            String finalPrompt = userPrompt + ", " + BASE_STYLE_PROMPT;
+
+            // 1. 요청 헤더
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + aiProperties.getApiKey());
+
+            // 2. 요청 바디
+            Map<String, Object> body = new java.util.HashMap<>();
+            body.put("model", "gpt-image-1.5");
+            body.put("prompt", finalPrompt);
+            body.put("n", 1);
+            body.put("size", "1024x1024");
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+            // 3. API 호출
+            String genUrl = aiProperties.getUrl();
+            if (genUrl.contains("/edits")) {
+                genUrl = genUrl.replace("/edits", "/generations");
+            }
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    URI.create(genUrl),
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+
+            // 4. 응답 파싱
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode dataNode = root.path("data");
+
+                if (dataNode.isArray() && !dataNode.isEmpty()) {
+                    byte[] imageBytes;
+
+                    if (dataNode.get(0).has("url")) {
+                        String imageUrl = dataNode.get(0).path("url").asText();
+                        log.info("Image generated at URL: {}", imageUrl);
+                        imageBytes = restTemplate.getForObject(new URI(imageUrl), byte[].class);
+                    } else if (dataNode.get(0).has("b64_json")) {
+                        String base64Image = dataNode.get(0).path("b64_json").asText();
+                        imageBytes = Base64.getDecoder().decode(base64Image);
+                    } else {
+                        throw new RuntimeException("No image data found in response");
+                    }
+
+                    if (imageBytes == null) {
+                        throw new RuntimeException("Failed to download image from URL");
+                    }
+
+                    // 6. 이미지 포맷 자동 감지
+                    String extension = detectExtension(imageBytes);
+                    String mimeType = ".jpg".equals(extension) ? "image/jpeg" : "image/png";
+
+                    // 7. MultipartFile 생성 [수정됨]
+                    // MockMultipartFile -> ByteArrayMultipartFile 로 변경하여 빌드 에러 해결
+                    MultipartFile multipartFile = new ByteArrayMultipartFile(
+                            "ai_generated" + extension,
+                            "ai_generated" + extension,
+                            mimeType,
+                            imageBytes
+                    );
+
+                    // 8. ImageService 저장
+                    imageService.uploadImage(multipartFile, userId, null, null, null, roomId, "RESULT");
+                    log.info("AI Image generated and saved successfully.");
+                }
+            } else {
+                log.error("AI API Error: {}", response.getStatusCode());
+                log.error("Response Body: {}", response.getBody());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to generate AI image", e);
+            throw new RuntimeException("AI 이미지 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    private String detectExtension(byte[] data) {
+        if (data == null || data.length < 4) return ".png";
+        if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF) return ".jpg";
+        if (data[0] == (byte) 0x89 && data[1] == (byte) 0x50 && data[2] == (byte) 0x4E && data[3] == (byte) 0x47)
+            return ".png";
+        return ".png";
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/AiSentimentService.java
+==================================================
+package com.d105.service;
+
+import com.d105.config.AiProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * AI 서버 감정 분석 서비스
+ * 
+ * AI 서버의 /analyze/batch 엔드포인트를 호출하여
+ * 부정어 분석 및 저주 스택 증가량을 계산합니다.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AiSentimentService {
+
+    private final AiProperties aiProperties;
+    private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    /**
+     * 배치 텍스트 분석
+     * 
+     * @param texts 분석할 텍스트 목록
+     * @return 총 스택 증가량 (total_stack_delta)
+     */
+    public int analyzeBatch(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // 1. 요청 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // 2. 요청 바디 생성
+            Map<String, Object> body = Map.of("texts", texts);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+            // 3. AI 서버 URL 구성 (/api/v1/analyze/batch)
+            String aiUrl = aiProperties.getUrl();
+            if (aiUrl == null || aiUrl.isEmpty()) {
+                log.warn("AI 서버 URL이 설정되지 않았습니다. 스택 증가 없이 진행합니다.");
+                return 0;
+            }
+            
+            // URL이 base URL만 있는 경우 엔드포인트 추가
+            if (!aiUrl.contains("/analyze/batch")) {
+                if (aiUrl.endsWith("/")) {
+                    aiUrl = aiUrl + "api/v1/analyze/batch";
+                } else {
+                    aiUrl = aiUrl + "/api/v1/analyze/batch";
+                }
+            }
+
+            log.debug("AI 서버 호출: {} with {} texts", aiUrl, texts.size());
+
+            // 4. API 호출
+            ResponseEntity<String> response = restTemplate.exchange(
+                    URI.create(aiUrl),
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+
+            // 5. 응답 파싱
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                int totalStackDelta = root.path("total_stack_delta").asInt(0);
+                int negativeCount = root.path("negative_count").asInt(0);
+
+                log.info("AI 분석 완료: {} 개 부정어 감지, 스택 증가량: {}", negativeCount, totalStackDelta);
+                return totalStackDelta;
+            } else {
+                log.error("AI 서버 응답 오류: {}", response.getStatusCode());
+                return 0;
+            }
+
+        } catch (Exception e) {
+            log.error("AI 서버 호출 실패: {}", e.getMessage());
+            // AI 서버 실패 시에도 게임은 계속 진행되도록 0 반환
+            return 0;
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/GameService.java
+==================================================
+package com.d105.service;
+
+import com.d105.dto.GameMessageDto;
+import com.d105.game.GameRoom;
+import com.d105.repository.GameRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+
+import java.io.IOException;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class GameService {
+
+    // 최대 인원 제한 (4명)
+    private static final int MAX_PLAYERS = 4;
+
+    // 의존성 주입
+    private final GameRepository gameRepository;
+    private final RedisRoomService redisRoomService;
+    private final AiSentimentService aiSentimentService;
+    private final ObjectMapper objectMapper;
+
+    // 가상 스레드 실행기 (각 GameRoom의 Tick Loop를 돌리기 위함)
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+    /**
+     * 방 생성 (CREATE)
+     */
+    public void handleCreate(WebSocketSession session, GameMessageDto message) throws IOException {
+        String username = message.getUsername();
+
+        // 1. Redis에 방 생성 (방 코드 자동 생성)
+        String roomId = redisRoomService.createRoom(username);
+
+        // 2. GameRoom 생성 (null: 기본 맵 사용)
+        GameRoom newRoom = new GameRoom(roomId, objectMapper, null);
+        gameRepository.addRoom(roomId, newRoom);
+
+        // 3. 별도의 가상 스레드에서 게임 루프 실행
+        executor.submit(newRoom);
+
+        // 4. 플레이어 입장 처리
+        joinProcess(session, newRoom, username);
+
+        // 5. 방 생성 완료 알림 (방 코드 전송)
+        sendSystemMessage(session, "ROOM_CREATED", roomId);
+        log.info("Created GameRoom: {} by host: {}", roomId, username);
+    }
+
+    /**
+     * 방 참가 (JOIN) - 게임 중 난입 및 재접속 지원
+     */
+    public void handleJoin(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+
+        // 1. Redis에서 방 존재 여부 체크 (게임 중 상태도 허용)
+        if (!redisRoomService.roomExists(roomId)) {
+            sendError(session, "Room not found: " + roomId);
+            return;
+        }
+
+        // 2. GameRoom 가져오기 (없으면 생성)
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            room = new GameRoom(roomId, objectMapper, null);
+            gameRepository.addRoom(roomId, room);
+            executor.submit(room);
+        }
+
+        // 3. 재접속 여부 확인
+        // GameRoom에 해당 유저(닉네임)가 이미 있는지 확인
+        boolean isReconnect = room.hasPlayer(username);
+        if (isReconnect) {
+            log.info("Player {} rejoining room {} (Reconnect likely)", username, roomId);
+        }
+
+        // 4. 인원 제한 검사 (재접속이 아닌 경우에만)
+        // 재접속일 경우 이미 room.players에 포함되어 있으므로 카운트 체크 패스
+        if (!isReconnect && redisRoomService.getPlayerCount(roomId) >= MAX_PLAYERS) {
+            sendError(session, "Room is full");
+            return;
+        }
+
+        // 5. Redis에 플레이어 추가
+        redisRoomService.joinRoom(roomId, username);
+
+        // 6. 입장 처리 (GameRoom.addPlayer 내에서 재접속/신규 분기 처리)
+        joinProcess(session, room, username);
+
+        // 7. 재접속인 경우 별도 메시지 전송
+        if (isReconnect) {
+            sendSystemMessage(session, "RECONNECTED", roomId);
+        }
+    }
+
+    /**
+     * (공통) 입장 처리 로직
+     */
+    private void joinProcess(WebSocketSession session, GameRoom room, String username) {
+        String roomId = room.getRoomId();
+
+        // 세션 속성 저장
+        session.getAttributes().put("roomId", roomId);
+        session.getAttributes().put("username", username);
+
+        // GameRoom에 플레이어 등록 (세션 + 상태 통합 관리)
+        room.addPlayer(session, username);
+
+        log.info("User joined room: {}, User: {}", roomId, username);
+
+        // 입장 메시지 생성
+        GameMessageDto joinMsg = new GameMessageDto();
+        joinMsg.setType("JOIN");
+        joinMsg.setRoomId(roomId);
+        joinMsg.setUsername(username);
+        joinMsg.setX(100.0); // 초기 좌표
+        joinMsg.setY(100.0);
+        joinMsg.setAnim("idle_down");
+
+        room.broadcast(joinMsg, session.getId());
+    }
+
+    /**
+     * 이동 처리 (Client-Authoritative)
+     * 클라이언트가 보낸 좌표를 그대로 신뢰하고 저장
+     */
+    public void handleMove(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        GameRoom room = gameRepository.getRoom(roomId);
+
+        if (room == null)
+            return;
+
+        // Client-Authoritative: 클라이언트가 보낸 좌표를 그대로 사용
+        Double x = message.getX();
+        Double y = message.getY();
+        Double vx = message.getVx();
+        Double vy = message.getVy();
+        String anim = message.getAnim();
+
+        // [DEBUG] 수신 데이터 확인 (배포 후 제거)
+        if (anim != null && !anim.equals("idle")) {
+            log.info("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
+                    session.getId().substring(0, 8), vx, vy, anim);
+        }
+
+        // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
+        if (x != null && y != null) {
+            room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim);
+        }
+    }
+
+    /**
+     * AI 분석 결과 처리 (SpeechController에서 호출)
+     */
+    public void handleSpeechAnalysis(com.d105.dto.SpeechAnalysisResultDto dto) {
+        GameRoom room = gameRepository.getRoom(dto.getRoomId());
+        if (room == null)
+            return;
+
+        // 스택 증가 (dto.getStackDelta())
+        // 만약 예외적으로 0이거나 음수는 무시할지 결정.
+        if (dto.getStackDelta() > 0) {
+            log.info("Applying Curse Stack Delta: +{} for Room {}", dto.getStackDelta(), dto.getRoomId());
+            room.addTeamCurseStack(dto.getStackDelta());
+        }
+    }
+
+    /**
+     * 저주 해제 요청 처리 (클라이언트가 긍정어 감지 후 요청)
+     */
+    public void handleLiftCurseRequest(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.attemptCurseLift(username);
+        }
+    }
+
+    /**
+     * 핑퐁
+     */
+    public void handlePing(WebSocketSession session, GameMessageDto message) throws IOException {
+        GameMessageDto pong = new GameMessageDto();
+        pong.setType("PONG");
+        pong.setContent(message.getContent());
+        sendMessage(session, pong);
+    }
+
+    /**
+     * Pause Game
+     */
+    public void handlePause(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.pause(username);
+        }
+    }
+
+    /**
+     * Resume Game
+     */
+    public void handleResume(WebSocketSession session, GameMessageDto message) {
+        String roomId = message.getRoomId();
+        String username = message.getUsername();
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.resume(username);
+        }
+    }
+
+    /**
+     * 퇴장 처리
+     */
+    public void handleLeave(WebSocketSession session) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId != null && username != null) {
+            // Redis에서 퇴장 처리 (방장이면 방 폭파)
+            boolean roomDestroyed = redisRoomService.leaveRoom(roomId, username);
+
+            // GameRoom에서도 제거
+            GameRoom room = gameRepository.getRoom(roomId);
+            if (room != null) {
+                if (roomDestroyed) {
+                    // 방 폭파: 남은 플레이어들에게 알림
+                    room.broadcastRoomClosed();
+                    gameRepository.removeRoom(roomId);
+                    log.info("Room {} destroyed (host left)", roomId);
+                } else {
+                    room.removePlayer(session);
+
+                    // 방에 사람이 없으면 방 삭제
+                    if (room.getPlayerCount() == 0) {
+                        redisRoomService.deleteRoom(roomId);
+                        gameRepository.removeRoom(roomId);
+                        log.info("Room {} destroyed (empty)", roomId);
+                    }
+                }
+            }
+            log.info("User {} left room {}", username, roomId);
+        }
+    }
+
+    /**
+     * Ready 상태 변경
+     */
+    public void handleReady(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 방장은 Ready 불필요
+        String hostId = redisRoomService.getHostId(roomId);
+        if (hostId != null && hostId.equals(username)) {
+            sendError(session, "Host cannot ready, use start button");
+            return;
+        }
+
+        // Ready 상태 토글 또는 설정
+        boolean isReady = "true".equals(message.getContent());
+        redisRoomService.setReady(roomId, username, isReady);
+
+        // Ready 상태 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto readyMsg = new GameMessageDto();
+            readyMsg.setType("READY_STATUS");
+            readyMsg.setRoomId(roomId);
+            readyMsg.setUsername(username);
+            readyMsg.setContent(String.valueOf(isReady));
+            room.broadcast(readyMsg, null);
+        }
+
+        log.info("User {} ready: {} in room {}", username, isReady, roomId);
+    }
+
+    /**
+     * 게임 시작 (방장만 가능)
+     */
+    public void handleStartGame(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 게임 시작 시도
+        boolean started = redisRoomService.startGame(roomId, username);
+
+        if (!started) {
+            // 실패 이유 확인
+            String hostId = redisRoomService.getHostId(roomId);
+            if (!username.equals(hostId)) {
+                sendError(session, "Only host can start the game");
+            } else if (!redisRoomService.isAllReady(roomId)) {
+                sendError(session, "Not all players are ready");
+            } else {
+                sendError(session, "Cannot start game");
+            }
+            return;
+        }
+
+        // 게임 시작 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto startMsg = new GameMessageDto();
+            startMsg.setType("GAME_START");
+            startMsg.setRoomId(roomId);
+            startMsg.setContent("1"); // 스테이지 1
+            room.broadcast(startMsg, null);
+        }
+
+        log.info("Game started in room {} by host {}", roomId, username);
+    }
+
+    // =========================================================
+    // Private Helpers
+    // =========================================================
+
+    private void sendMessage(WebSocketSession session, Object message) throws IOException {
+        if (session.isOpen()) {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+        }
+    }
+
+    private void sendError(WebSocketSession session, String errorMessage) throws IOException {
+        GameMessageDto errorDto = new GameMessageDto();
+        errorDto.setType("ERROR");
+        errorDto.setContent(errorMessage);
+        sendMessage(session, errorDto);
+    }
+
+    private void sendSystemMessage(WebSocketSession session, String type, String content) throws IOException {
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType(type);
+        msg.setContent(content);
+        sendMessage(session, msg);
+    }
+
+    /**
+     * 다음 스테이지로 진행 (방장만 가능)
+     */
+    public void handleNextStage(WebSocketSession session, GameMessageDto message) throws IOException {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            sendError(session, "Not in a room");
+            return;
+        }
+
+        // 방장 확인
+        String hostId = redisRoomService.getHostId(roomId);
+        if (!username.equals(hostId)) {
+            sendError(session, "Only host can advance stage");
+            return;
+        }
+
+        // Redis에서 스테이지 진행
+        int nextStage = redisRoomService.nextStage(roomId);
+
+        // 모든 플레이어에게 브로드캐스트
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            GameMessageDto stageMsg = new GameMessageDto();
+            stageMsg.setType("STAGE_CHANGE");
+            stageMsg.setRoomId(roomId);
+            stageMsg.setContent(String.valueOf(nextStage));
+            room.broadcast(stageMsg, null);
+        }
+
+        log.info("Room {} advanced to stage {}", roomId, nextStage);
+    }
+
+    // =========================================================
+    // STT 저주 시스템 핸들러
+    // =========================================================
+
+    /**
+     * 발화 배치 처리 (SPEECH_BATCH)
+     * 
+     * 1. AI 서버에 배치 분석 요청
+     * 2. 스택 증가량 적용
+     * 3. 스택 업데이트 브로드캐스트
+     * 4. 스택 >= 10 시 저주 발동
+     */
+    public void handleSpeechBatch(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null) {
+            log.warn("SPEECH_BATCH: 세션에 roomId 없음");
+            return;
+        }
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            log.warn("SPEECH_BATCH: 방을 찾을 수 없음 - {}", roomId);
+            return;
+        }
+
+        var texts = message.getTexts();
+        if (texts == null || texts.isEmpty()) {
+            log.debug("SPEECH_BATCH: 빈 텍스트 목록");
+            return;
+        }
+
+        log.info("🎤 Room {}: SPEECH_BATCH 수신 ({} 개 발화)", roomId, texts.size());
+
+        // 1. AI 서버에 배치 분석 요청
+        int delta = aiSentimentService.analyzeBatch(texts);
+
+        if (delta > 0) {
+            // 2. 스택 증가
+            boolean curseTrigger = room.addCurseStack(delta);
+            int currentStack = room.getCurseStack();
+
+            // 3. STACK_UPDATED 브로드캐스트
+            GameMessageDto stackMsg = new GameMessageDto();
+            stackMsg.setType("STACK_UPDATED");
+            stackMsg.setRoomId(roomId);
+            stackMsg.setStack(currentStack);
+            stackMsg.setDelta(delta);
+            stackMsg.setReason("negative_word");
+            room.broadcast(stackMsg, null);
+
+            // 4. 저주 발동 검사
+            if (curseTrigger) {
+                triggerCurse(room);
+            }
+        }
+    }
+
+    /**
+     * 저주 해제 요청 처리 (CURSE_RELEASE)
+     * 
+     * 긍정어(뽀뽀/사랑해/좋아해)로 저주 해제 시도
+     */
+    public void handleCurseRelease(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null) {
+            log.warn("CURSE_RELEASE: 세션 정보 없음");
+            return;
+        }
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null) {
+            log.warn("CURSE_RELEASE: 방을 찾을 수 없음 - {}", roomId);
+            return;
+        }
+
+        String word = message.getWord();
+        log.info("💖 Room {}: CURSE_RELEASE from {} with word '{}'", roomId, username, word);
+
+        // 발화자의 저주 해제 처리
+        String sessionId = room.findSessionIdByUsername(username);
+        if (sessionId != null) {
+            room.triggerCurseEvent(sessionId, true); // isPositive = true
+
+            // CURSE_RELEASED 브로드캐스트
+            GameMessageDto releaseMsg = new GameMessageDto();
+            releaseMsg.setType("CURSE_RELEASED");
+            releaseMsg.setRoomId(roomId);
+            releaseMsg.setReleasedPlayerId(username);
+            releaseMsg.setWord(word);
+            room.broadcast(releaseMsg, null);
+
+            log.info("✨ Room {}: {} 의 저주 해제됨 (긍정어: {})", roomId, username, word);
+        }
+    }
+
+    /**
+     * 저주 발동 처리
+     */
+    private void triggerCurse(GameRoom room) {
+        // 랜덤 플레이어 선택
+        String cursedUsername = room.getRandomPlayerUsername();
+        if (cursedUsername == null) {
+            log.warn("저주 발동 실패: 플레이어 없음");
+            return;
+        }
+
+        // 저주 적용
+        String sessionId = room.findSessionIdByUsername(cursedUsername);
+        if (sessionId != null) {
+            room.triggerCurseEvent(sessionId, false); // isPositive = false
+        }
+
+        // 스택 초기화
+        room.resetCurseStack();
+
+        // CURSE_TRIGGERED 브로드캐스트
+        GameMessageDto curseMsg = new GameMessageDto();
+        curseMsg.setType("CURSE_TRIGGERED");
+        curseMsg.setRoomId(room.getRoomId());
+        curseMsg.setCursedPlayerId(cursedUsername);
+        curseMsg.setMapId(room.getCurrentMapId());
+        room.broadcast(curseMsg, null);
+
+        log.info("💀 Room {}: {} 에게 저주 발동! (Map: {})", 
+                room.getRoomId(), cursedUsername, room.getCurrentMapId());
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/ImageService.java
+==================================================
+package com.d105.service;
+
+import com.d105.entity.Image;
+import com.d105.entity.Map;
+import com.d105.entity.User;
+import com.d105.repository.ImageRepository;
+import com.d105.repository.MapRepository;
+import com.d105.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ImageService {
+
+    private final ImageRepository imageRepository;
+    private final UserRepository userRepository;
+    private final MapRepository mapRepository;
+
+    @Value("${file.upload-dir:./uploads/}")
+    private String uploadDir;
+
+    /**
+     * 이미지 업로드 (날짜별 폴더링 + DB 저장)
+     */
+    @Transactional
+    public Image uploadImage(MultipartFile file, Long userId, Long mapId,
+                             Integer stageNumber, List<Long> participantUserIds,
+                             String roomCode, String imageType) throws IOException {
+
+        // 1. 유저 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        // 2. 날짜별 폴더 생성 (예: ./uploads/2024-05-20/)
+        String dateFolder = LocalDate.now().toString(); // YYYY-MM-DD
+        Path uploadPath = Paths.get(uploadDir, dateFolder);
+
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // 3. 파일명 생성 (UUID + 확장자)
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null && originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : ".webp";
+        String uuidFileName = UUID.randomUUID() + extension;
+
+        // DB에 저장될 파일 경로 (날짜/파일명)
+        String savedFileName = dateFolder + "/" + uuidFileName;
+
+        // 4. 파일 저장
+        Path filePath = uploadPath.resolve(uuidFileName);
+        Files.write(filePath, file.getBytes());
+
+        // 5. 관련 엔티티 조회 (선택적)
+        Map map = mapId != null ? mapRepository.findById(mapId).orElse(null) : null;
+
+        // 6. Image 엔티티 생성
+        Image image = Image.builder()
+                .user(user)
+                .fileName(savedFileName)
+                .map(map)
+                .stageNumber(stageNumber)
+                .roomCode(roomCode)
+                .imageType(imageType != null ? imageType : "MOTION")
+                .build();
+
+        // 7. 함께 찍은 유저들 추가
+        if (participantUserIds != null && !participantUserIds.isEmpty()) {
+            for (Long participantId : participantUserIds) {
+                if (!participantId.equals(userId)) {
+                    userRepository.findById(participantId).ifPresent(image::addParticipant);
+                }
+            }
+        }
+
+        // 8. 저장
+        Image savedImage = imageRepository.save(image);
+        log.info("Image uploaded: {} by user {}", savedFileName, userId);
+
+        return savedImage;
+    }
+
+    /**
+     * 내 이미지 목록 조회 (삭제 안 된 것만)
+     */
+    public List<Image> getMyImages(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        // deletedAt이 NULL인 데이터만 조회
+        return imageRepository.findByUserAndDeletedAtIsNullOrderByCreatedAtDesc(user);
+    }
+
+    /**
+     * 특정 방의 이미지 목록 조회 (삭제 안 된 것만)
+     */
+    public List<Image> getRoomImages(String roomCode) {
+        // deletedAt이 NULL인 데이터만 조회
+        return imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomCode);
+    }
+
+    /**
+     * 이미지 삭제 (Soft Delete - 사용자 요청)
+     * - 파일 유지
+     * - DB 컬럼 업데이트 (deletedAt = now)
+     */
+    @Transactional
+    public void deleteImage(Long imageId, Long userId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found: " + imageId));
+
+        if (!image.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot delete other user's image");
+        }
+
+        // 실제 파일 삭제 및 DB 삭제를 하지 않고, 플래그만 변경
+        image.softDelete();
+
+        // (JPA Dirty Checking으로 인해 save 호출 없이도 트랜잭션 종료 시 update 쿼리 실행됨)
+        log.info("Image soft-deleted by user: {}", imageId);
+    }
+
+    /**
+     * 오래된 이미지 일괄 삭제 (Hard Delete - 스케줄러)
+     * - 7일 지난 이미지는 Soft Delete 여부와 상관없이 완전히 삭제 (용량 확보)
+     */
+    @Transactional
+    public int deleteOldImages() {
+        // 1. 기준 시간 설정 (현재로부터 7일 전)
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(7);
+
+        // 2. 삭제 대상 이미지 조회 (createdAt 기준)
+        // Soft Delete된 이미지도 7일 지났으면 여기서 조회되어 영구 삭제됨
+        List<Image> oldImages = imageRepository.findByCreatedAtBefore(cutoffDate);
+        int deletedCount = 0;
+
+        for (Image image : oldImages) {
+            // 파일 삭제 (Hard Delete)
+            deletePhysicalFile(image.getFileName());
+            // DB 데이터 삭제 (Hard Delete)
+            imageRepository.delete(image);
+            deletedCount++;
+        }
+
+        // 3. 비어있는 폴더 정리
+        cleanupEmptyFolders();
+
+        return deletedCount;
+    }
+
+    // 파일 삭제 헬퍼 메서드
+    private void deletePhysicalFile(String fileName) {
+        try {
+            Path filePath = Paths.get(uploadDir, fileName);
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            log.warn("Failed to delete file: {}", fileName, e);
+        }
+    }
+
+    /**
+     * 비어있는 폴더 정리
+     */
+    private void cleanupEmptyFolders() {
+        try (Stream<Path> paths = Files.walk(Paths.get(uploadDir), 1)) {
+            paths.filter(Files::isDirectory)
+                    .filter(path -> !path.equals(Paths.get(uploadDir)))
+                    .forEach(this::deleteFolderIfEmpty);
+        } catch (IOException e) {
+            log.warn("Failed to scan folders for cleanup", e);
+        }
+    }
+
+    private void deleteFolderIfEmpty(Path folderPath) {
+        try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(folderPath)) {
+            if (!dirStream.iterator().hasNext()) {
+                Files.delete(folderPath);
+                log.info("Deleted empty folder: {}", folderPath);
+            }
+        } catch (IOException e) {
+            log.warn("Failed to delete folder: {}", folderPath, e);
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/LiveKitService.java
+==================================================
+package com.d105.service;
+
+import com.d105.config.LiveKitProperties;
+import io.livekit.server.AccessToken;
+import io.livekit.server.RoomJoin;
+import io.livekit.server.RoomName;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class LiveKitService {
+
+    private final LiveKitProperties livekitProperties;
+
+    /**
+     * LiveKit SDK 0.9.0+ 기준 토큰 생성
+     */
+    public String createToken(String roomId, String userId, String username) {
+        // 1. 액세스 토큰 생성 (API Key, Secret 사용)
+        AccessToken token = new AccessToken(
+                livekitProperties.getApiKey(),
+                livekitProperties.getApiSecret()
+        );
+
+        // 2. 유저 정보 세팅
+        token.setName(username);
+        token.setIdentity(userId);
+
+        // 3. 권한 설정
+        // VideoGrant 객체를 통째로 만드는 것이 아니라, 필요한 권한 객체(RoomJoin, RoomName 등)를 추가합니다.
+        token.addGrants(new RoomJoin(true));   // 방 입장 허용
+        token.addGrants(new RoomName(roomId));  // 입장할 방 이름 설정
+
+        // (선택) 만약 발언 권한 등을 명시적으로 제어해야 한다면 아래와 같은 클래스가 있는지 확인 후 추가 가능
+        // token.addGrants(new CanPublish(true));
+        // 기본적으로 RoomJoin(true) 상태면 대부분의 권한이 열려있습니다.
+
+        // 4. JWT 변환
+        return token.toJwt();
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/RedisRoomService.java
+==================================================
+package com.d105.service;
+
+import com.d105.game.constant.RoomStatus;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Redis 기반 방 관리 서비스
+ * - 방 생성/삭제
+ * - 플레이어 입장/퇴장
+ * - Ready 상태 관리
+ * - 게임 내 통계 (뽀뽀/저주)
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class RedisRoomService {
+
+    // Redis 키 접두사
+    private static final String ROOM_KEY = "room:";
+    private static final String PLAYERS_SUFFIX = ":players";
+    private static final String READY_SUFFIX = ":ready";
+    private static final String KISS_SUFFIX = ":kiss";
+    private static final String CURSE_SUFFIX = ":curse";
+    private static final String USER_ROOM_KEY = "user:";
+    // TTL 설정 (좀비 방 방지)
+    private static final Duration ROOM_TTL = Duration.ofHours(2); // 대기 방 2시간
+    private static final Duration GAME_TTL = Duration.ofHours(4); // 게임 중 4시간
+    private static final Duration USER_ROOM_TTL = Duration.ofHours(2); // 유저-방 매핑 2시간
+
+    private final UserService userService;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    // =========================================================
+    // 방 생성/삭제
+    // =========================================================
+
+    /**
+     * 방 생성 (6자리 코드 반환)
+     */
+    public String createRoom(String hostId) {
+        String roomId = generateRoomCode();
+
+        // 방 정보 저장 (Hash)
+        String roomKey = ROOM_KEY + roomId;
+        redisTemplate.opsForHash().put(roomKey, "hostId", hostId);
+        redisTemplate.opsForHash().put(roomKey, "status", RoomStatus.WAITING.name());
+        redisTemplate.opsForHash().put(roomKey, "currentStage", "0");
+        redisTemplate.opsForHash().put(roomKey, "createdAt", String.valueOf(System.currentTimeMillis()));
+
+        // 방장을 players에 추가 (Ready는 하지 않음)
+        String playersKey = ROOM_KEY + roomId + PLAYERS_SUFFIX;
+        redisTemplate.opsForSet().add(playersKey, hostId);
+
+        // 유저-방 매핑
+        String userRoomKey = USER_ROOM_KEY + hostId + ":room";
+        redisTemplate.opsForValue().set(userRoomKey, roomId);
+
+        // TTL 설정 (좀비 방 방지)
+        redisTemplate.expire(roomKey, ROOM_TTL);
+        redisTemplate.expire(playersKey, ROOM_TTL);
+        redisTemplate.expire(userRoomKey, USER_ROOM_TTL);
+
+        log.info("Room created: {} by host: {} (TTL: {})", roomId, hostId, ROOM_TTL);
+        return roomId;
+    }
+
+    /**
+     * 방 삭제 (모든 관련 키 제거)
+     */
+    public void deleteRoom(String roomId) {
+        redisTemplate.delete(ROOM_KEY + roomId);
+        redisTemplate.delete(ROOM_KEY + roomId + PLAYERS_SUFFIX);
+        redisTemplate.delete(ROOM_KEY + roomId + READY_SUFFIX);
+        redisTemplate.delete(ROOM_KEY + roomId + KISS_SUFFIX);
+        redisTemplate.delete(ROOM_KEY + roomId + CURSE_SUFFIX);
+        log.info("Room deleted: {}", roomId);
+    }
+
+    /**
+     * 방 존재 여부 확인
+     */
+    public boolean roomExists(String roomId) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(ROOM_KEY + roomId));
+    }
+
+    /**
+     * 6자리 대문자 방 코드 생성
+     */
+    private String generateRoomCode() {
+        return UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+    }
+
+    // =========================================================
+    // 플레이어 입장/퇴장
+    // =========================================================
+
+    /**
+     * 방 참가
+     */
+    public boolean joinRoom(String roomId, String userName) {
+        if (!roomExists(roomId)) {
+            return false;
+        }
+
+        // players에 추가
+        redisTemplate.opsForSet().add(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
+
+        // 유저-방 매핑 (TTL 포함)
+        String userRoomKey = USER_ROOM_KEY + userName + ":room";
+        redisTemplate.opsForValue().set(userRoomKey, roomId);
+        redisTemplate.expire(userRoomKey, USER_ROOM_TTL);
+
+        log.info("User {} joined room {}", userName, roomId);
+        return true;
+    }
+
+    /**
+     * 방 나가기
+     *
+     * @return true: 방이 폭파됨 (방장 퇴장), false: 일반 퇴장
+     */
+    public boolean leaveRoom(String roomId, String userName) {
+        // 방장인지 확인
+        String hostId = getHostId(roomId);
+
+        // players에서 제거
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
+
+        // ready에서 제거
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userName);
+
+        // 유저-방 매핑 제거
+        redisTemplate.delete(USER_ROOM_KEY + userName + ":room");
+
+        // 방장이 나가면 방 폭파
+        if (hostId != null && hostId.equals(userName)) {
+            saveRoomStatsToDB(roomId);
+
+            // 남은 플레이어들의 유저-방 매핑도 제거
+            Set<String> remainingPlayers = getPlayers(roomId);
+            for (String playerName : remainingPlayers) {
+                redisTemplate.delete(USER_ROOM_KEY + playerName + ":room");
+            }
+            deleteRoom(roomId);
+            log.info("Room {} destroyed (host left)", roomId);
+            return true;
+        }
+
+        log.info("User {} left room {}", userName, roomId);
+        return false;
+    }
+
+    /**
+     * 방 내 플레이어 목록
+     */
+    public Set<String> getPlayers(String roomId) {
+        return redisTemplate.opsForSet().members(ROOM_KEY + roomId + PLAYERS_SUFFIX);
+    }
+
+    /**
+     * 플레이어 수
+     */
+    public long getPlayerCount(String roomId) {
+        Long count = redisTemplate.opsForSet().size(ROOM_KEY + roomId + PLAYERS_SUFFIX);
+        return count != null ? count : 0;
+    }
+
+    // =========================================================
+    // Ready 상태 관리
+    // =========================================================
+
+    /**
+     * Ready 상태 설정
+     */
+    public void setReady(String roomId, String userName, boolean isReady) {
+        String readyKey = ROOM_KEY + roomId + READY_SUFFIX;
+        if (isReady) {
+            redisTemplate.opsForSet().add(readyKey, userName);
+        } else {
+            redisTemplate.opsForSet().remove(readyKey, userName);
+        }
+        log.info("User {} ready status: {} in room {}", userName, isReady, roomId);
+    }
+
+    /**
+     * Ready 플레이어 목록
+     */
+    public Set<String> getReadyPlayers(String roomId) {
+        return redisTemplate.opsForSet().members(ROOM_KEY + roomId + READY_SUFFIX);
+    }
+
+    /**
+     * 방장 제외 전원 Ready 확인
+     */
+    public boolean isAllReady(String roomId) {
+        long playerCount = getPlayerCount(roomId);
+        Long readyCount = redisTemplate.opsForSet().size(ROOM_KEY + roomId + READY_SUFFIX);
+
+        if (readyCount == null)
+            readyCount = 0L;
+
+        // 방장 제외한 인원 = 전체 - 1
+        // 방장 제외 전원이 Ready여야 함
+        return playerCount > 1 && readyCount == (playerCount - 1);
+    }
+
+    // =========================================================
+    // 방 정보 조회
+    // =========================================================
+
+    /**
+     * 방장 ID 조회
+     */
+    public String getHostId(String roomId) {
+        Object hostId = redisTemplate.opsForHash().get(ROOM_KEY + roomId, "hostId");
+        return hostId != null ? hostId.toString() : null;
+    }
+
+    /**
+     * 방 상태 조회
+     */
+    public RoomStatus getStatus(String roomId) {
+        Object status = redisTemplate.opsForHash().get(ROOM_KEY + roomId, "status");
+        return status != null ? RoomStatus.valueOf(status.toString()) : null;
+    }
+
+    /**
+     * 현재 스테이지 조회
+     */
+    public int getCurrentStage(String roomId) {
+        Object stage = redisTemplate.opsForHash().get(ROOM_KEY + roomId, "currentStage");
+        return stage != null ? Integer.parseInt(stage.toString()) : 0;
+    }
+
+    // =========================================================
+    // 게임 시작/진행
+    // =========================================================
+
+    /**
+     * 게임 시작 (방장만 호출 가능)
+     *
+     * @return true: 시작 성공, false: 조건 미충족
+     */
+    public boolean startGame(String roomId, String userName) {
+        // 방장 확인
+        String hostId = getHostId(roomId);
+        if (hostId == null || !hostId.equals(userName)) {
+            log.warn("Non-host {} tried to start game in room {}", userName, roomId);
+            return false;
+        }
+
+        // 전원 Ready 확인 (방장 제외)
+        if (!isAllReady(roomId)) {
+            log.warn("Not all players ready in room {}", roomId);
+            return false;
+        }
+
+        // 상태 변경
+        String roomKey = ROOM_KEY + roomId;
+        redisTemplate.opsForHash().put(roomKey, "status", RoomStatus.PLAYING.name());
+        redisTemplate.opsForHash().put(roomKey, "currentStage", "1");
+
+        // 게임 시작 시 TTL 연장 (4시간)
+        redisTemplate.expire(roomKey, GAME_TTL);
+        redisTemplate.expire(ROOM_KEY + roomId + PLAYERS_SUFFIX, GAME_TTL);
+        redisTemplate.expire(ROOM_KEY + roomId + READY_SUFFIX, GAME_TTL);
+        redisTemplate.expire(ROOM_KEY + roomId + KISS_SUFFIX, GAME_TTL);
+        redisTemplate.expire(ROOM_KEY + roomId + CURSE_SUFFIX, GAME_TTL);
+
+        log.info("Game started in room {} (TTL extended to {})", roomId, GAME_TTL);
+        return true;
+    }
+
+    /**
+     * 다음 스테이지로 이동
+     */
+    public int nextStage(String roomId) {
+        int currentStage = getCurrentStage(roomId);
+        int nextStage = currentStage + 1;
+        redisTemplate.opsForHash().put(ROOM_KEY + roomId, "currentStage", String.valueOf(nextStage));
+        log.info("Room {} moved to stage {}", roomId, nextStage);
+        return nextStage;
+    }
+
+    /**
+     * 게임 종료
+     */
+    public void endGame(String roomId) {
+        redisTemplate.opsForHash().put(ROOM_KEY + roomId, "status", RoomStatus.ENDED.name());
+        log.info("Game ended in room {}", roomId);
+    }
+
+    // =========================================================
+    // 게임 내 통계 (뽀뽀왕)
+    // =========================================================
+
+    /**
+     * 뽀뽀 횟수 증가
+     */
+    public void incrementKiss(String roomId, String userName) {
+        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + KISS_SUFFIX, userName, 1);
+    }
+
+    /**
+     * 저주 횟수 증가
+     */
+    public void incrementCurse(String roomId, String userName) {
+        redisTemplate.opsForHash().increment(ROOM_KEY + roomId + CURSE_SUFFIX, userName, 1);
+    }
+
+    /**
+     * 뽀뽀 횟수 조회
+     */
+    public int getKissCount(String roomId, String userName) {
+        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + KISS_SUFFIX, userName);
+        return count != null ? Integer.parseInt(count.toString()) : 0;
+    }
+
+    /**
+     * 저주 횟수 조회
+     */
+    public int getCurseCount(String roomId, String userName) {
+        Object count = redisTemplate.opsForHash().get(ROOM_KEY + roomId + CURSE_SUFFIX, userName);
+        return count != null ? Integer.parseInt(count.toString()) : 0;
+    }
+
+    // =========================================================
+    // REST API 지원 메서드
+    // =========================================================
+
+    /**
+     * 방 정보 조회 (DTO 반환)
+     */
+    public com.d105.dto.RoomInfoDto getRoomInfo(String roomId) {
+        return com.d105.dto.RoomInfoDto.builder()
+                .roomId(roomId)
+                .hostId(getHostId(roomId))
+                .status(getStatus(roomId) != null ? getStatus(roomId).name() : null)
+                .playerCount((int) getPlayerCount(roomId))
+                .players(getPlayers(roomId))
+                .readyPlayers(getReadyPlayers(roomId))
+                .currentStage(getCurrentStage(roomId))
+                .build();
+    }
+
+    /**
+     * 유저가 현재 참가 중인 방 조회
+     */
+    public String getUserRoom(String userName) {
+        return redisTemplate.opsForValue().get(USER_ROOM_KEY + userName + ":room");
+    }
+
+    /**
+     * 강제 퇴장 (Redis에서 제거)
+     */
+    public void kickPlayer(String roomId, String userName) {
+        // players에서 제거
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + PLAYERS_SUFFIX, userName);
+
+        // ready에서 제거
+        redisTemplate.opsForSet().remove(ROOM_KEY + roomId + READY_SUFFIX, userName);
+
+        // 유저-방 매핑 제거
+        redisTemplate.delete(USER_ROOM_KEY + userName + ":room");
+
+        log.info("User {} kicked from room {}", userName, roomId);
+    }
+
+    /**
+     * 방의 모든 플레이어 통계를 DB로 이관하는 헬퍼 메서드
+     *
+     * @param roomId
+     */
+    private void saveRoomStatsToDB(String roomId) {
+        try {
+            // 1. 방에 기록된 모든 플레이어 조회 (이미 나간 유저도 통계가 남아있을 수 있으므로 KISS/CURSE 키 기준 조회 권장하나,
+            // 현재 구조상 플레이어 목록(Set)에 있는 사람 혹은 통계 키를 순회해야 함.
+            // 간단하게 현재 방에 남아있는 사람 + 방금 나간 방장(이미 Set에선 빠짐)을 처리해야 하지만,
+            // Redis의 Hash Key(KISS_SUFFIX)의 모든 Key(유저ID)를 가져오는 것이 가장 정확함.
+
+            Set<Object> userNamesWithKiss = redisTemplate.opsForHash().keys(ROOM_KEY + roomId + KISS_SUFFIX);
+            Set<Object> userNamesWithCurse = redisTemplate.opsForHash().keys(ROOM_KEY + roomId + CURSE_SUFFIX);
+
+            // 두 집합 합치기 (통계가 존재하는 모든 유저)
+            Set<Object> allUserNames = new java.util.HashSet<>();
+            allUserNames.addAll(userNamesWithKiss);
+            allUserNames.addAll(userNamesWithCurse);
+
+            for (Object userNameObj : allUserNames) {
+                String username = userNameObj.toString();
+
+                int kissCount = getKissCount(roomId, username);
+                int curseCount = getCurseCount(roomId, username);
+
+                // DB 저장 호출
+                userService.saveGameStats(username, kissCount, curseCount);
+            }
+            log.info("Saved stats for {} users in room {}", allUserNames.size(), roomId);
+
+        } catch (Exception e) {
+            log.error("Failed to save room stats to DB for room {}", roomId, e);
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/service/UserService.java
+==================================================
+package com.d105.service;
+
+import com.d105.dto.user.LoginReqDto;
+import com.d105.dto.user.SignUpReqDto;
+import com.d105.entity.User;
+import com.d105.repository.UserRepository;
+import com.d105.util.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+    // 회원가입
+    @Transactional
+    public Long signUp(SignUpReqDto req) {
+        if (userRepository.existsByUsername(req.getUsername())) {
+            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
+        }
+        if (userRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        String encodedPassword = passwordEncoder.encode(req.getPassword());
+
+        User user = User.builder()
+                .username(req.getUsername())
+                .password(encodedPassword)
+                .nickname(req.getNickname())
+                .email(req.getEmail())
+                .build();
+
+        return userRepository.save(user).getId();
+    }
+
+    // 로그인
+    public Map<String, String> login(LoginReqDto req) {
+        // 1. 아이디로 유저 조회
+        User user = userRepository.findByUsername(req.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
+
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // 3. 토큰 생성
+        String token = jwtUtil.createToken(user.getId(), user.getUsername());
+
+        // 4. 토큰과 닉네임을 Map에 담아서 반환
+        return Map.of(
+                "token", token,
+                "nickname", user.getNickname());
+    }
+
+    // 아이디 중복 확인
+    public boolean checkIdDuplicate(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    // 닉네임 중복 확인
+    public boolean checkNicknameDuplicate(String nickname) {
+        return userRepository.existsByNickname(nickname);
+    }
+
+
+    // 닉네임 수정
+    @Transactional
+    public void updateNickname(Long userId, String newNickname) {
+        // 1. 유저 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+
+        // 2. 닉네임 중복 검사 (본인의 현재 닉네임과 같다면 통과)
+        if (!user.getNickname().equals(newNickname) && userRepository.existsByNickname(newNickname)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        // 3. 변경 적용
+        user.changeNickname(newNickname);
+    }
+
+    // 게임 종료 후 통계 일괄 저장
+    @Transactional
+    public void saveGameStats(String username, int kissCount, int curseCount) {
+        // 0건이면 업데이트 불필요
+        if (kissCount == 0 && curseCount == 0) {
+            return;
+        }
+
+        userRepository.findByUsername(username).ifPresentOrElse(
+                user -> {
+                    user.updateGameStats(kissCount, curseCount);
+                    log.info("Updated stats for user {}: +{} kisses, +{} curses",
+                            username, kissCount, curseCount);
+                },
+                () -> log.warn("Failed to update stats: User {} not found", username)
+        );
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/util/ByteArrayMultipartFile.java
+==================================================
+package com.d105.util;
+
+import org.springframework.lang.NonNull;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.*;
+import java.nio.file.Files;
+
+/**
+ * MockMultipartFile을 대체하기 위한 프로덕션용 MultipartFile 구현체
+ * (spring-test 라이브러리에 의존하지 않아 배포 시에도 문제없이 동작함)
+ */
+public class ByteArrayMultipartFile implements MultipartFile {
+
+    private final String name;
+    private final String originalFilename;
+    private final String contentType;
+    private final byte[] content;
+
+    public ByteArrayMultipartFile(String name, String originalFilename, String contentType, byte[] content) {
+        this.name = name;
+        this.originalFilename = originalFilename;
+        this.contentType = contentType;
+        this.content = content != null ? content : new byte[0];
+    }
+
+    @Override
+    @NonNull
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public String getOriginalFilename() {
+        return this.originalFilename;
+    }
+
+    @Override
+    public String getContentType() {
+        return this.contentType;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.content.length == 0;
+    }
+
+    @Override
+    public long getSize() {
+        return this.content.length;
+    }
+
+    @Override
+    @NonNull
+    public byte[] getBytes() throws IOException {
+        return this.content;
+    }
+
+    @Override
+    @NonNull
+    public InputStream getInputStream() throws IOException {
+        return new ByteArrayInputStream(this.content);
+    }
+
+    @Override
+    public void transferTo(@NonNull File dest) throws IOException, IllegalStateException {
+        try (FileOutputStream fos = new FileOutputStream(dest)) {
+            fos.write(this.content);
+        }
+    }
+
+    @Override
+    public void transferTo(@NonNull java.nio.file.Path dest) throws IOException, IllegalStateException {
+        Files.write(dest, this.content);
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/java/com/d105/util/JwtUtil.java
+==================================================
+package com.d105.util;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.Date;
+
+@Component
+public class JwtUtil {
+    
+    // Jenkins 환경변수에서 주입 (application.properties 경유)
+    @Value("${jwt.secret-key}")
+    private String secretKey;
+    
+    @Value("${jwt.access-token-validity:86400000}")
+    private long accessTokenValidity; // 기본값: 24시간 (밀리초)
+
+    // 토큰 생성 (로그인 성공 시)
+    public String createToken(Long userId, String username) {
+        return JWT.create()
+                .withSubject(username) // 토큰 제목 (아이디)
+                .withClaim("userId", userId) // PK값도 넣어둠
+                .withExpiresAt(new Date(System.currentTimeMillis() + accessTokenValidity)) // 만료 시간
+                .sign(Algorithm.HMAC256(secretKey)); // 서명
+    }
+
+    // 1. 토큰에서 아이디(Claim) 꺼내기
+    public String getUsername(String token) {
+        return JWT.require(Algorithm.HMAC256(secretKey))
+                .build().verify(token)
+                .getSubject();
+    }
+
+    // 2. 토큰이 유효한지 검사하기 (위조 여부, 만료 여부)
+    public boolean validateToken(String token) {
+        try {
+            JWT.require(Algorithm.HMAC256(secretKey)).build().verify(token);
+            return true;
+        } catch (Exception e) {
+            return false; // 유효하지 않음
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/main/resources/application.properties
+==================================================
+# ==========================================
+# 1. ?? ?? ??
+# ==========================================
+server.port=9001
+spring.application.name=echoforest
+# ==========================================
+# 2. Database ?? (H2 vs MySQL ?? ??)
+# ==========================================
+# [??]
+# - DB_URL ????? ???(Docker ?) ? ?? ?? (MySQL)
+# - ???(?? ??) ???? jdbc:h2:mem:testdb ?? (H2 In-Memory)
+# ????: ?? ??(MySQL)? ??? H2 ???? ??
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3307/echoforest?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+# JPA ??
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+# ==========================================
+# 3. Redis ??
+# ==========================================
+# ??: redis / ??: localhost
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=${REDIS_PORT:6379}
+# ==========================================
+# 4. LiveKit ??
+# ==========================================
+# ??: ws://livekit:7880 / ??: ws://localhost:7880 (?? ?? IP)
+livekit.url=${LIVEKIT_URL:ws://localhost:7880}
+livekit.api-key=${LIVEKIT_API_KEY:devkey}
+livekit.api-secret=${LIVEKIT_API_SECRET:secret}
+# ==========================================
+# 5. ?? ??
+# ==========================================
+logging.level.root=INFO
+logging.level.com.d105=DEBUG
+# ==========================================
+# 6. [?? ???] Java 21 ?? ??? ???
+# ==========================================
+spring.threads.virtual.enabled=true
+server.forward-headers-strategy=native
+# ==========================================
+# 7. JWT Configuration (Jenkins ENV)
+# ==========================================
+jwt.secret-key=${JWT_SECRET_KEY}
+jwt.access-token-validity=${JWT_ACCESS_TOKEN_VALIDITY:86400000}
+# ==========================================
+# 8. AI Model Configuration
+# ==========================================
+ai.model.url=${AI_MODEL_URL}
+ai.model.api-key=${AI_MODEL_API_KEY}
+# RestTemplate ???? ?? (AI ??? ?? ? ???? ????)
+spring.cloud.http.client.connect-timeout=5000
+spring.cloud.http.client.read-timeout=30000
+# ==========================================
+# 9. Internal Sentiment AI Server (?? ?? ???)
+# ==========================================
+# ?? ?? ?: SENTIMENT_AI_URL ???? ?(http://ai-server:8000) ??
+# ?? ??? ?: ??? http://localhost:8000 ??
+ai.sentiment.url=${SENTIMENT_AI_URL:http://localhost:8000}
+
+==================================================
+FILE: echoforest-backend/src/test/java/com/d105/EchoforestApplicationTests.java
+==================================================
+package com.d105;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class EchoforestApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+
+==================================================
+FILE: echoforest-backend/src/test/java/com/d105/service/AiServiceIntegrationTest.java
+==================================================
+package com.d105.service;
+
+import com.d105.config.AiProperties;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
+// [수정] properties 속성을 추가하여 테스트 실행 시 DB 드라이버와 URL을 H2로 강제 설정합니다.
+// 이렇게 하면 외부 환경 변수(DB_DRIVER 등)가 있더라도 무시하고 H2 설정을 사용하게 되어 에러가 해결됩니다.
+@SpringBootTest
+@Disabled // 실제 API 호출을 막으려면 이 주석을 푸세요 (평소 빌드 때는 막아두는게 좋음)
+class AiServiceIntegrationTest {
+
+    @Autowired
+    private AiGenerationService aiGenerationService;
+
+    @Autowired
+    private AiProperties aiProperties;
+
+    @Test
+    @DisplayName("실제 AI API 호출 테스트 (과금 주의)")
+    void generateImage_RealCall() {
+        // given
+        // 실제 API 키가 로드되었는지 확인 (로그로 찍지 마세요!)
+        System.out.println("API URL: " + aiProperties.getUrl());
+
+        List<String> mockImages = List.of("dummy_path_1.png"); // 실제로는 무시됨 (프롬프트 테스트용)
+        String prompt = "A cute cat sitting on a keyboard, pixel art style";
+        String roomId = "TEST_ROOM";
+        Long userId = 1L; // DB에 존재하는 유저 ID여야 함 (없으면 에러날 수 있음)
+
+        // when & then
+        // 실제 API를 호출하므로 예외가 발생하지 않으면 성공으로 간주
+        // (단, ImageService.uploadImage 쪽에서 DB 유저 조회 실패가 날 수 있으므로 
+        //  이 부분은 Mocking하거나, 테스트용 DB에 유저를 미리 넣어야 완벽함)
+
+        // 여기서는 "AI 요청이 성공적으로 전송되는지"까지만 확인하기 위해
+        // 서비스 내부 로직 에러(유저 없음 등)는 발생할 수 있음을 감안합니다.
+        try {
+            aiGenerationService.generateAndSaveImage(mockImages, prompt, roomId, userId);
+        } catch (Exception e) {
+            // "User not found" 에러는 AI 통신 성공 이후 로직이므로 통신 자체는 성공했다고 판단 가능
+            // 하지만 "AI API Error"나 "Connection refused"가 뜨면 실패임
+            System.out.println("테스트 중 발생한 예외: " + e.getMessage());
+
+            // 만약 "401 Unauthorized" 같은게 뜨면 키 설정 문제임
+        }
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/test/java/com/d105/service/ImageServiceTest.java
+==================================================
+package com.d105.service;
+
+import com.d105.entity.Image;
+import com.d105.entity.User;
+import com.d105.repository.ImageRepository;
+import com.d105.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest
+@Transactional // 테스트 끝나면 DB 롤백
+class ImageServiceTest {
+
+    @Autowired
+    private ImageService imageService;
+
+    @Autowired
+    private ImageRepository imageRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EntityManager entityManager; // EntityManager 주입 추가
+
+    @Value("${file.upload-dir:./uploads/}")
+    private String uploadDir;
+
+    // 테스트용 유저 생성 헬퍼
+    private User createTestUser() {
+        User user = User.builder()
+                .username("testuser_" + System.currentTimeMillis())
+                .password("password")
+                .nickname("tester_" + System.currentTimeMillis())
+                .email("test@example.com")
+                .build();
+        return userRepository.save(user);
+    }
+
+    // 테스트 끝나면 생성된 파일들 정리
+    @AfterEach
+    void cleanupFiles() throws IOException {
+        Path rootPath = Paths.get(uploadDir);
+        if (Files.exists(rootPath)) {
+            try (Stream<Path> walk = Files.walk(rootPath)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("이미지 업로드 시 날짜 폴더에 파일이 생성되고 DB에 저장된다")
+    void uploadImage_Success() throws IOException {
+        // given
+        User user = createTestUser();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.webp", "image/webp", "dummy content".getBytes());
+
+        // when
+        Image savedImage = imageService.uploadImage(
+                file, user.getId(), null, 1, null, "ROOM1", "MOTION");
+
+        // then
+        // 1. DB 저장 확인
+        assertThat(savedImage.getId()).isNotNull();
+        assertThat(savedImage.getFileName()).contains(LocalDate.now().toString()); // 날짜 폴더 포함 여부
+
+        // 2. 파일 시스템 생성 확인
+        Path filePath = Paths.get(uploadDir, savedImage.getFileName());
+        assertThat(Files.exists(filePath)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Soft Delete: 사용자 삭제 시 파일은 남고 DB deletedAt만 설정된다")
+    void softDelete_Success() throws IOException {
+        // given
+        User user = createTestUser();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "soft.webp", "image/webp", "content".getBytes());
+        Image image = imageService.uploadImage(file, user.getId(), null, 1, null, "ROOM1", "MOTION");
+
+        // when
+        imageService.deleteImage(image.getId(), user.getId());
+
+        // then
+        Image deletedImage = imageRepository.findById(image.getId()).orElseThrow();
+
+        // 1. deletedAt이 설정되어야 함
+        assertThat(deletedImage.getDeletedAt()).isNotNull();
+
+        // 2. 파일은 여전히 존재해야 함
+        Path filePath = Paths.get(uploadDir, image.getFileName());
+        assertThat(Files.exists(filePath)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Soft Delete 된 이미지는 조회 목록에서 제외된다")
+    void getMyImages_FiltersDeleted() throws IOException {
+        // given
+        User user = createTestUser();
+        // 이미지 2개 업로드
+        MockMultipartFile file1 = new MockMultipartFile("f1", "1.webp", "image/webp", "c1".getBytes());
+        MockMultipartFile file2 = new MockMultipartFile("f2", "2.webp", "image/webp", "c2".getBytes());
+
+        Image img1 = imageService.uploadImage(file1, user.getId(), null, 1, null, "R1", "MOTION");
+        Image img2 = imageService.uploadImage(file2, user.getId(), null, 1, null, "R1", "MOTION");
+
+        // img1만 삭제
+        imageService.deleteImage(img1.getId(), user.getId());
+
+        // when
+        List<Image> myImages = imageService.getMyImages(user.getId());
+
+        // then
+        assertThat(myImages).hasSize(1);
+        assertThat(myImages.get(0).getId()).isEqualTo(img2.getId());
+    }
+
+    @Test
+    @DisplayName("스케줄러: 7일 지난 이미지는 파일과 DB에서 완전 삭제된다")
+    void deleteOldImages_HardDelete() throws IOException {
+        // given
+        User user = createTestUser();
+        MockMultipartFile file = new MockMultipartFile("old", "old.webp", "image/webp", "old".getBytes());
+        Image image = imageService.uploadImage(file, user.getId(), null, 1, null, "R1", "MOTION");
+        Path filePath = Paths.get(uploadDir, image.getFileName());
+
+        // 강제로 생성일(createdAt)을 8일 전으로 조작
+        // @CreatedDate, updatable=false 설정 때문에 repository.save()로는 수정되지 않음 -> Native Query 사용
+        imageRepository.flush(); // INSERT 쿼리 확정
+
+        //  네이티브 쿼리에서 파라미터 바인딩 오류 방지를 위해 위치 기반 파라미터(?1, ?2) 사용
+        entityManager.createNativeQuery("UPDATE images SET created_at = ?1 WHERE id = ?2")
+                .setParameter(1, LocalDateTime.now().minusDays(8))
+                .setParameter(2, image.getId())
+                .executeUpdate();
+
+        // 영속성 컨텍스트 초기화 (DB에서 다시 조회하도록)
+        entityManager.clear();
+
+        // when
+        int deletedCount = imageService.deleteOldImages();
+
+        // then
+        // 1. 삭제된 개수 확인
+        assertThat(deletedCount).isEqualTo(1);
+
+        // 2. DB에서 완전히 사라졌는지 확인
+        assertThat(imageRepository.findById(image.getId())).isEmpty();
+
+        // 3. 파일도 사라졌는지 확인
+        assertThat(Files.exists(filePath)).isFalse();
+    }
+}
+
+==================================================
+FILE: echoforest-backend/src/test/resources/application.properties
+==================================================
+# ?? ???? ?? (?? ???? ??? ???!)
+ai.model.url=https://gms.ssafy.io/gmsapi/api.openai.com/v1/images/generations
+ai.model.api-key=S14P12D105-3574ca22-3743-4897-9da1-39591fcbdffe
+# ???? H2 DB
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+spring.datasource.username=sa
+spring.datasource.password=
+# JPA ?? (H2? ?? ??)
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
