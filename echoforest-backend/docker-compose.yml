@@ -5,7 +5,7 @@ services:
   # 0. 게임 서버 (Spring Boot)
   # ==========================================
   game-server:
-    build: . # 현재 폴더의 Dockerfile로 빌드
+    image: echoforest-server:latest
     container_name: echoforest-server
     ports:
       - "9001:9001" # 외부 접속 포트
@@ -137,12 +137,8 @@ services:
   # 6. AI Server
   # ==========================================
   ai-server:
+    image: echoforest-ai:latest
     container_name: echoforest-ai
-    build:
-      # [중요] docker-compose.yml 파일 위치 기준, AI 프로젝트 폴더 경로
-      # 예: backend 폴더와 ai 폴더가 나란히 있다면 ../echoforest-ai
-      context: ../echoforest-ai
-      dockerfile: Dockerfile
     restart: always
 #    ports:
 #      - "8000:8000" # 테스트시 주석 해제
