@@ -3,6 +3,7 @@ import { useGameStore } from './store/useGameStore';
 import LoginPage from './pages/auth/LoginPage/LoginPage';
 import LobbyPage from './pages/lobby/LobbyPage/LobbyPage';
 import GamePage from './pages/game/GamePage/GamePage';
+import { isTokenExpired } from './utils/authUtils';
 
 export default function App() {
   const { nickname, roomId, setNickname } = useGameStore();
@@ -13,7 +14,11 @@ export default function App() {
     const token = localStorage.getItem('token');
     const storedNickname = localStorage.getItem('nickname');
 
-    if (token && storedNickname && !nickname) {
+    // [변경] 토큰 만료 체크
+    if (token && isTokenExpired(token)) {
+      console.warn('[App] Token expired. Logging out.');
+      useGameStore.getState().logout(); // 스토어의 로그아웃 액션 호출 (localStorage 정리)
+    } else if (token && storedNickname && !nickname) {
       console.log('[App] Session restored:', storedNickname);
       setNickname(storedNickname);
     }
