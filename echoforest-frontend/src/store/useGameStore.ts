@@ -58,8 +58,7 @@ interface GameState {
     backToStageSelect: () => void;
     setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
-
-
+    logout: () => void; // 로그아웃 액션
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -224,5 +223,23 @@ export const useGameStore = create<GameState>((set, get) => ({
             onMoveCallback(x, y);
         }
     },
+    logout: () => {
+        // 1. localStorage 정리
+        localStorage.removeItem('token');
+        localStorage.removeItem('loginId');
+        localStorage.removeItem('nickname');
+
+        // 2. 상태 초기화 (nickname이 null이 되면 App.tsx에서 LoginPage로 전환됨)
+        set({
+            nickname: '',
+            roomId: '',
+            isHost: false,
+            players: [],
+            isGameStarted: false,
+            isSoloMode: false,
+            currentStage: null,
+            pausedBy: null
+        });
+    }
 
 }));

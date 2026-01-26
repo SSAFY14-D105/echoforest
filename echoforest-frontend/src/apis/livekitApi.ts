@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_URL, LIVEKIT_URL } from '../config';
+import { httpClient } from './httpClient';
 
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api'; // config.ts로 이동됨
 export const LIVEKIT_SERVER_URL = LIVEKIT_URL;
@@ -33,9 +34,8 @@ export async function fetchLiveKitToken(
 ): Promise<LiveKitTokenResponse> {
     console.log('📡 API 호출:', `${API_BASE_URL}/livekit/token`, request);
 
-    const response = await fetch(`${API_BASE_URL}/livekit/token`, {
+    const response = await httpClient('/livekit/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
     });
 

@@ -3,9 +3,7 @@
  * 백엔드 연동 시 BASE_URL과 실제 API 엔드포인트를 수정하세요.
  */
 
-import { API_BASE_URL } from '../config';
-
-const BASE_URL = API_BASE_URL;
+import { httpClient } from './httpClient';
 
 /**
  * HTTP 상태 코드별 에러 메시지 반환
@@ -76,9 +74,8 @@ export interface CheckIdResponse {
  * 로그인 API
  */
 export async function login(req: LoginRequest): Promise<LoginResponse> {
-    const res = await fetch(`${BASE_URL}/user/login`, {
+    const res = await httpClient('/user/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
     });
 
@@ -107,9 +104,8 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
  * 회원가입 API
  */
 export async function signup(req: SignupRequest): Promise<SignupResponse> {
-    const res = await fetch(`${BASE_URL}/user/signup`, {
+    const res = await httpClient('/user/signup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(req),
     });
 
@@ -124,9 +120,8 @@ export async function signup(req: SignupRequest): Promise<SignupResponse> {
  * 아이디 중복 확인 API
  */
 export async function checkLoginId(username: string): Promise<CheckIdResponse> {
-    const res = await fetch(`${BASE_URL}/user/check-id?username=${encodeURIComponent(username)}`, {
+    const res = await httpClient(`/user/check-id?username=${encodeURIComponent(username)}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
     });
 
     if (!res.ok) {
