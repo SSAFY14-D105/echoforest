@@ -340,7 +340,9 @@ public class GameService {
 
     private void sendMessage(WebSocketSession session, Object message) throws IOException {
         if (session.isOpen()) {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            synchronized (session) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+            }
         }
     }
 
@@ -518,7 +520,7 @@ public class GameService {
         curseMsg.setMapId(room.getCurrentMapId());
         room.broadcast(curseMsg, null);
 
-        log.info("💀 Room {}: {} 에게 저주 발동! (Map: {})", 
+        log.info("💀 Room {}: {} 에게 저주 발동! (Map: {})",
                 room.getRoomId(), cursedUsername, room.getCurrentMapId());
     }
 }
