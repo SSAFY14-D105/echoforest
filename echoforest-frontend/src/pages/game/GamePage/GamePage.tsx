@@ -429,6 +429,25 @@ export default function GamePage() {
   };
   // TODO: 백엔드 WebSocket 연동 후 삭제 - 테스트용 가상 플레이어 추가 함수 끝
 
+  // TODO: 백엔드 WebSocket 연동 후 삭제 - 테스트용 가상 플레이어 추가 함수 끝
+
+
+  // 방 코드 복사 핸들러
+  const handleCopyRoomId = async () => {
+    if (!roomId) return;
+    try {
+      await navigator.clipboard.writeText(roomId);
+      // 간단한 알림 (나중에 Toast 컴포넌트로 대체 가능)
+      // alert는 게임 흐름을 끊을 수 있으므로, console 로그만 찍거나 비침투적 방식 권장
+      // 여기서는 사용자 피드백을 위해 임시로 alert 사용하거나, 버튼 텍스트 변경 등을 고려할 수 있음.
+      // 일단 요구사항대로 alert 사용.
+      alert(`방 코드(${roomId})가 복사되었습니다!`);
+    } catch (err) {
+      console.error('복사 실패:', err);
+      alert('방 코드 복사에 실패했습니다.');
+    }
+  };
+
 
   // ========== 혼자하기 모드 화면 (카메라 없음, 로비 복귀 버튼) ==========
   if (isSoloMode && isGameStarted && currentStage !== null) {
@@ -484,6 +503,7 @@ export default function GamePage() {
           />
           <div className={styles.gameInfo}>
             🎮 Stage {stageNum} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
+            <button className={styles.copyBtn} onClick={handleCopyRoomId} title="방 코드 복사">📋</button>
           </div>
           {/* TODO: 스테이지 클리어 테스트 버튼 - 나중에 삭제 */}
           <button
@@ -546,8 +566,9 @@ export default function GamePage() {
           isSoloMode={isSoloMode}
         />
         <div className={styles.gameInfo}>
-          🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span> |
-          👥 {players.length}/{MAX_PLAYERS}
+          🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span>
+          <button className={styles.copyBtn} onClick={handleCopyRoomId} title="방 코드 복사">📋</button>
+          | 👥 {players.length}/{MAX_PLAYERS}
         </div>
         {/* 로비로 돌아가기 버튼 (우상단) */}
         <button
