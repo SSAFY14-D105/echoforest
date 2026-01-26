@@ -718,6 +718,83 @@
                  "width":18,
                  "x":1503.95,
                  "y":248
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":63,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"isDefault",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":8,
+                 "y":236.541666666667
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":64,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":30,
+                 "y":236.54
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":65,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":52,
+                 "y":236.54
+                }, 
+                {
+                 "gid":96,
+                 "height":18,
+                 "id":66,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"playerIndex",
+                         "type":"int",
+                         "value":3
+                        }],
+                 "rotation":0,
+                 "type":"Respawn",
+                 "visible":false,
+                 "width":18,
+                 "x":74,
+                 "y":236.54
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -726,7 +803,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":62,
+ "nextobjectid":67,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

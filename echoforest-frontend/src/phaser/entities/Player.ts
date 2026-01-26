@@ -26,6 +26,7 @@ export class Player {
     private body: MatterJS.BodyType;
     private sprite: Phaser.GameObjects.Sprite;
     public colorName: string;
+    public colorIndex: number;
 
     public readonly id: string;
     public readonly nickname: string;
@@ -60,6 +61,7 @@ export class Player {
         this.scene = scene;
         this.id = config.id;
         this.nickname = config.nickname;
+        this.colorIndex = config.colorIndex;
         this.color = PLAYER_COLORS[config.colorIndex % PLAYER_COLORS.length];
         this.isLocalPlayer = config.isLocalPlayer;
 
@@ -465,6 +467,7 @@ export class Player {
     }
 
     public setColor(colorIndex: number): void {
+        this.colorIndex = colorIndex;
         const newColor = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
         const colors = ['green', 'blue', 'orange', 'purple'];
         const newColorName = colors[colorIndex % colors.length];
