@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -15,8 +16,7 @@ import java.util.Map;
 
 /**
  * AI 서버 감정 분석 서비스
- * 
- * AI 서버의 /analyze/batch 엔드포인트를 호출하여
+ * * AI 서버의 /analyze/batch 엔드포인트를 호출하여
  * 부정어 분석 및 저주 스택 증가량을 계산합니다.
  */
 @Slf4j
@@ -24,14 +24,21 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AiSentimentService {
 
-    private final AiProperties aiProperties;
+    // private final AiProperties aiProperties; // 제거 또는 이미지 생성시에만 사용
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
+     * docker-compose의 SENTIMENT_AI_URL 값을 가져옵니다.
+     * 값 예시: http://ai-server:8000
+     * application.properties의 키 이름(ai.sentiment.url)과 일치해야 합니다.
+     */
+    @Value("${ai.sentiment.url}")
+    private String sentimentAiUrl;
+
+    /**
      * 배치 텍스트 분석
-     * 
-     * @param texts 분석할 텍스트 목록
+     * * @param texts 분석할 텍스트 목록
      * @return 총 스택 증가량 (total_stack_delta)
      */
     public int analyzeBatch(List<String> texts) {
@@ -48,20 +55,21 @@ public class AiSentimentService {
             Map<String, Object> body = Map.of("texts", texts);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-            // 3. AI 서버 URL 구성 (/api/v1/analyze/batch)
-            String aiUrl = aiProperties.getUrl();
+            // 3. AI 서버 URL 구성
+            // 기존 aiProperties.getUrl() 대신 주입받은 sentimentAiUrl 사용
+            String aiUrl = sentimentAiUrl;
+
             if (aiUrl == null || aiUrl.isEmpty()) {
-                log.warn("AI 서버 URL이 설정되지 않았습니다. 스택 증가 없이 진행합니다.");
+                log.warn("AI 서버 URL(ai.sentiment.url)이 설정되지 않았습니다. 스택 증가 없이 진행합니다.");
                 return 0;
             }
-            
+
             // URL이 base URL만 있는 경우 엔드포인트 추가
+            // http://ai-server:8000 -> http://ai-server:8000/api/v1/analyze/batch
             if (!aiUrl.contains("/analyze/batch")) {
-                if (aiUrl.endsWith("/")) {
-                    aiUrl = aiUrl + "api/v1/analyze/batch";
-                } else {
-                    aiUrl = aiUrl + "/api/v1/analyze/batch";
-                }
+                // 슬래시 중복 방지 처리
+                String baseUrl = aiUrl.endsWith("/") ? aiUrl.substring(0, aiUrl.length() - 1) : aiUrl;
+                aiUrl = baseUrl + "/api/v1/analyze/batch";
             }
 
             log.debug("AI 서버 호출: {} with {} texts", aiUrl, texts.size());
