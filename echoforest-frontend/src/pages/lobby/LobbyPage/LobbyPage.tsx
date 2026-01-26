@@ -9,7 +9,7 @@ import styles from './LobbyPage.module.css';
 export default function LobbyPage() {
   const {
     nickname,
-    joinGame, startSoloGame
+    joinGame
   } = useGameStore();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
