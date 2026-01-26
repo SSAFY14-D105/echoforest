@@ -58,6 +58,10 @@ interface GameState {
     backToStageSelect: () => void;
     setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
+
+    // Pause 상태 관리
+    pausedBy: string | null;
+    setGamePaused: (nickname: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -71,7 +75,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     currentStage: null,
     clearedStages: [],
     onMoveCallback: null,
-    pausedBy: null, // [FIX] 초기값 설정
+    pausedBy: null,
+
+    setGamePaused: (nickname) => set({ pausedBy: nickname }),
 
     setNickname: (name) => set({ nickname: name }),
     joinGame: (roomId, isHost, initialStage = 0) => {
@@ -197,22 +203,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         currentStage: `MULTI_${stage}`,
         readyPlayers: []  // 게임 시작 시 Ready 상태 초기화
     }),
-    startSoloGame: () => {
-        const { nickname } = get();
-        const soloRoomCode = `SOLO-${Math.floor(1000 + Math.random() * 9000)}`;
-        const soloPlayer: Player = {
-            id: `solo-player-${Date.now()}`,
-            nickname: nickname || 'Solo Player',
-            isHost: true
-        };
+    startSoloGame: async () => {
+        // 테스트용: 혼자서 멀티플레이 방 생성
+        // WebSocket 연결 및 방 생성 로직은 LobbyPage에서 처리
         set({
-            roomId: soloRoomCode,
+            isSoloMode: true,  // 솔로 모드 플래그 유지 (UI 구분용)
             isHost: true,
-            isSoloMode: true,
-            players: [soloPlayer],
-            readyPlayers: [],
-            isGameStarted: true,
-            currentStage: 'SOLO_1' // 혼자하기 1부터 시작
         });
     },
     selectStage: (stageId) => set({ currentStage: stageId }),
