@@ -90,7 +90,7 @@ public class PlayerState {
     }
 
     /**
-     * 퇴장 대상인지 확인 (10초 이상 업데이트 없음)
+     * 퇴장 대상인지 확인 (5분 이상 업데이트 없음)
      */
     public boolean shouldDisconnect() {
         return (System.currentTimeMillis() - lastUpdateTime) > DISCONNECT_THRESHOLD_MS;
