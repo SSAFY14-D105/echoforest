@@ -59,9 +59,7 @@ interface GameState {
     setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
 
-    // Pause 상태 관리
-    pausedBy: string | null;
-    setGamePaused: (nickname: string | null) => void;
+
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -226,5 +224,5 @@ export const useGameStore = create<GameState>((set, get) => ({
             onMoveCallback(x, y);
         }
     },
-    setGamePaused: (username) => set({ pausedBy: username })
+
 }));

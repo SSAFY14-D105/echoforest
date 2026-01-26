@@ -49,7 +49,7 @@ export class Player {
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
     private _isDead: boolean = false;
-    private _isGrounded: boolean = true;
+
 
     // 목표 위치 (원격 플레이어 보간용)
     private targetPos: { x: number, y: number } | null = null;
@@ -115,7 +115,7 @@ export class Player {
         this.sprite.setDisplaySize(displaySize, displaySize);
     }
 
-    public update(): void {
+    public update(isGrounded: boolean): void {
         // 원격 플레이어 보간 이동
         if (!this.isLocalPlayer && this.targetPos) {
             const currentX = this.body.position.x;
@@ -155,7 +155,7 @@ export class Player {
 
         // 애니메이션 상태 업데이트 (로컬 플레이어만)
         if (this.isLocalPlayer) {
-            this.updateAnimation();
+            this.updateAnimation(isGrounded);
         }
 
         // 비주얼 효과 업데이트
@@ -167,7 +167,7 @@ export class Player {
         }
     }
 
-    private updateAnimation(): void {
+    private updateAnimation(isGrounded: boolean): void {
         // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 강제 사망 상태)
         if (this._isDead || this.curseHP <= 0) {
             if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
@@ -177,15 +177,15 @@ export class Player {
         }
 
         const velocity = this.body.velocity;
-        // 바닥 접촉 여부 (물리 충돌 데이터 기반 필드 사용)
-        const isCurrentlyGrounded = this._isGrounded;
+        // 바닥 접촉 여부 (Scene에서 전달받은 값 사용)
+        // const isGrounded = Math.abs(velocity.y) < 0.2; // [FIX] 기존 속도 기반 체크 제거
 
         // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
         if (Math.abs(velocity.x) > 0.5) {
             this.sprite.setFlipX(velocity.x < 0);
         }
 
-        if (!isCurrentlyGrounded) {
+        if (!isGrounded) {
             // 공중 상태 (점프 또는 추락)
             if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
                 this.sprite.play(`player_jump_${this.colorName}`);
@@ -510,9 +510,7 @@ export class Player {
         this.scene.matter.body.setVelocity(this.body, { x, y });
     }
 
-    public setGrounded(grounded: boolean): void {
-        this._isGrounded = grounded;
-    }
+
 
     public setPosition(x: number, y: number): void {
         this.scene.matter.body.setPosition(this.body, { x, y });

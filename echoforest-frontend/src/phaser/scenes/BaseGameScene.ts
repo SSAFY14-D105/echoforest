@@ -439,11 +439,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const labelB = pair.bodyB.label || '';
             const normal = pair.collision.normal;
 
+            const isSensorA = pair.bodyA.isSensor;
+            const isSensorB = pair.bodyB.isSensor;
+
             // 플레이어 바닥 접촉 감지 (코요테 타임 리셋)
-            if (this.players.has(labelA) && normal.y < -0.5) {
+            // [FIX] 상대방이 센서인 경우 바닥으로 간주하지 않음
+            if (this.players.has(labelA) && normal.y < -0.5 && !isSensorB) {
                 this.groundedFrames.set(labelA, this.COYOTE_FRAMES);
             }
-            if (this.players.has(labelB) && normal.y > 0.5) {
+            if (this.players.has(labelB) && normal.y > 0.5 && !isSensorA) {
                 this.groundedFrames.set(labelB, this.COYOTE_FRAMES);
             }
 
@@ -1043,8 +1047,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.players.forEach((player, label) => {
             // 코요테 타임(groundedFrames)이 남아있으면 땅에 닿은 것으로 간주
             const isGrounded = (this.groundedFrames.get(label) || 0) > 0;
-            player.setGrounded(isGrounded);
-            player.update();
+            player.update(isGrounded);
         });
 
         // 엘리베이터 무게 계산 및 업데이트
