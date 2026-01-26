@@ -42,6 +42,20 @@ export default function GamePage() {
   // 창 최소화 시 소켓 전송
   useEffect(() => {
     if (!roomId || isSoloMode) return;
+
+    // [Backend Sync] 5초 Network Idle Kick 방지를 위한 3초 주기 Ping
+    const pingInterval = setInterval(() => {
+      // 연결된 상태에서만 Ping 전송
+      if (gameWebSocket.isConnected()) {
+        gameWebSocket.ping();
+      }
+    }, 3000);
+
+    return () => clearInterval(pingInterval);
+  }, [roomId, isSoloMode]);
+
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
     if (isBackground) {
       gameWebSocket.sendPauseRequest(roomId);
     } else {
