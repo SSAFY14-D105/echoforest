@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 48;
+const BASE_PLAYER_SIZE = 60;
 
 // 물리 파라미터
 const PHYSICS = {
@@ -36,6 +36,7 @@ export class Player {
     private currentCurseId: string | null = null;
     private sizeMultiplier: number = 1;
     private speedMultiplier: number = 1;
+    private jumpMultiplier: number = 1;
     private reverseControls: boolean = false;
 
     // HP 저주용
@@ -48,6 +49,7 @@ export class Player {
     private _isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
     private _isDead: boolean = false;
+    private _isGrounded: boolean = true;
 
     // 목표 위치 (원격 플레이어 보간용)
     private targetPos: { x: number, y: number } | null = null;
@@ -78,6 +80,7 @@ export class Player {
         }
         // 플레이어 스프라이트 생성
         this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
+        this.sprite.setOrigin(0.5, 1); // 하단 중앙을 기준으로 설정하여 충돌체 하단과 일치시키기 용이하게 함
         this.sprite.play(`player_idle_${this.colorName}`);
         this.sprite.setDepth(10); // 기믹보다 위로 배치
     }
@@ -86,6 +89,7 @@ export class Player {
         const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
         const body = this.scene.matter.add.rectangle(x, y, size, size, {
             label: this.id,
+            friction: PHYSICS.FRICTION,
             frictionStatic: PHYSICS.STATIC_FRICTION,
             frictionAir: PHYSICS.AIR_FRICTION,
             restitution: PHYSICS.RESTITUTION,
@@ -106,10 +110,9 @@ export class Player {
             this.sprite.clearTint();
         }
 
-        // 크기 배율 적용 (충돌 박스 48px 대비 시각적으로 2.5배 더 크게 표현 -> 약 120px)
-        // 원본 이미지 크기와 무관하게 고정된 픽셀 크기로 렌더링
-        const targetSize = BASE_PLAYER_SIZE * 2.5 * this.sizeMultiplier;
-        this.sprite.setDisplaySize(targetSize, targetSize);
+        // 크기 배율 적용 (충돌 박스 60px 대비 시각적으로 3배 더 크게 표현)
+        const displaySize = BASE_PLAYER_SIZE * this.sizeMultiplier * 3.0;
+        this.sprite.setDisplaySize(displaySize, displaySize);
     }
 
     public update(): void {
@@ -146,9 +149,9 @@ export class Player {
         }
 
         const { x, y } = this.body.position;
-        // [FIX] 스프라이트가 땅에 파묻히는 현상 보정 (Y축 위로 올림)
-        // 캐릭터 크기가 커지면 보정값도 비례해서 커져야 발바닥 위치가 유지됨
-        this.sprite.setPosition(x, y - (15 * this.sizeMultiplier));
+        const currentBodyHeight = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        // 스프라이트의 origin이 (0.5, 1)이므로 y 좌표를 몸체 하단(y + height/2)에 맞춤
+        this.sprite.setPosition(x, y + currentBodyHeight / 2);
 
         // 애니메이션 상태 업데이트 (로컬 플레이어만)
         if (this.isLocalPlayer) {
@@ -174,15 +177,15 @@ export class Player {
         }
 
         const velocity = this.body.velocity;
-        // 바닥 접촉 여부 (움직임이 아주 작을 때)
-        const isGrounded = Math.abs(velocity.y) < 0.2;
+        // 바닥 접촉 여부 (물리 충돌 데이터 기반 필드 사용)
+        const isCurrentlyGrounded = this._isGrounded;
 
         // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
         if (Math.abs(velocity.x) > 0.5) {
             this.sprite.setFlipX(velocity.x < 0);
         }
 
-        if (!isGrounded) {
+        if (!isCurrentlyGrounded) {
             // 공중 상태 (점프 또는 추락)
             if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
                 this.sprite.play(`player_jump_${this.colorName}`);
@@ -338,6 +341,7 @@ export class Player {
         this.currentCurseId = curseId;
         this.sizeMultiplier = curse.sizeMultiplier;
         this.speedMultiplier = curse.speedMultiplier;
+        this.jumpMultiplier = curse.jumpMultiplier ?? 1;
         this.reverseControls = curse.reverseControls ?? false;
 
         // HP 저주 처리
@@ -401,6 +405,7 @@ export class Player {
         this.currentCurseId = null;
         this.sizeMultiplier = 1;
         this.speedMultiplier = 1;
+        this.jumpMultiplier = 1;
         this.reverseControls = false;
 
         this.stopHPDrain();
@@ -426,6 +431,10 @@ export class Player {
 
     public getSpeedMultiplier(): number {
         return this.speedMultiplier;
+    }
+
+    public getJumpMultiplier(): number {
+        return this.jumpMultiplier;
     }
 
     public setColor(colorIndex: number): void {
@@ -499,6 +508,10 @@ export class Player {
 
     public setVelocity(x: number, y: number): void {
         this.scene.matter.body.setVelocity(this.body, { x, y });
+    }
+
+    public setGrounded(grounded: boolean): void {
+        this._isGrounded = grounded;
     }
 
     public setPosition(x: number, y: number): void {

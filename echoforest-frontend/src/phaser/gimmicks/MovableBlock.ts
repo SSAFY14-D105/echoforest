@@ -7,6 +7,8 @@ export interface MovableBlockConfig {
     width: number;
     height: number;
     requiredPlayers: number;
+    texture?: string;
+    frame?: string | number;
 }
 
 /**
@@ -16,17 +18,23 @@ export interface MovableBlockConfig {
 export class MovableBlock {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private graphics?: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
     private text: Phaser.GameObjects.Text;
 
     public readonly id: string;
+    public readonly targetBlockId?: number;
     private width: number;
     private height: number;
     private requiredPlayers: number;
+    private _isVisible: boolean = true;
     private moveSpeed: number = 2;
 
     private pushersLeft: number = 0;
     private pushersRight: number = 0;
+
+    private lockedX: number;
+    private wasMovedThisFrame: boolean = false;
 
     constructor(scene: Phaser.Scene, config: MovableBlockConfig) {
         this.scene = scene;
@@ -34,16 +42,28 @@ export class MovableBlock {
         this.width = config.width;
         this.height = config.height;
         this.requiredPlayers = config.requiredPlayers;
+        this.lockedX = config.x;
+        this.targetBlockId = (config as any).targetBlockId;
 
-        // 정적 바디 (물리 충돌로 밀리지 않음)
+        // 동적 바디 (중력 적용)
         this.body = this.scene.matter.add.rectangle(config.x, config.y, this.width, this.height, {
-            isStatic: true,
+            isStatic: false,
             label: `block-${this.id}`,
-            friction: 0.1,
+            friction: 1,
+            frictionStatic: 1,
+            frictionAir: 0.05,
             restitution: 0
         });
 
-        this.graphics = this.scene.add.graphics();
+        this.scene.matter.body.setInertia(this.body, Infinity); // 회전 방지
+        this.scene.matter.body.setMass(this.body, 1000); // 플레이어 충돌로 쉽게 밀리지 않도록 질량 증가
+
+        if (config.texture) {
+            this.sprite = this.scene.add.sprite(config.x, config.y, config.texture, config.frame);
+            this.sprite.setDisplaySize(this.width, this.height);
+        } else {
+            this.graphics = this.scene.add.graphics();
+        }
 
         this.text = this.scene.add.text(config.x, config.y, '', {
             fontSize: '12px',
@@ -89,49 +109,93 @@ export class MovableBlock {
     // 외부에서 호출하는 이동 메서드
     public moveRight(): void {
         const currentPos = this.body.position;
+        const nextX = currentPos.x + this.moveSpeed;
         this.scene.matter.body.setPosition(this.body, {
-            x: currentPos.x + this.moveSpeed,
+            x: nextX,
             y: currentPos.y
         });
+        this.lockedX = nextX;
+        this.wasMovedThisFrame = true;
     }
 
     public moveLeft(): void {
         const currentPos = this.body.position;
+        const nextX = currentPos.x - this.moveSpeed;
         this.scene.matter.body.setPosition(this.body, {
-            x: currentPos.x - this.moveSpeed,
+            x: nextX,
             y: currentPos.y
         });
+        this.lockedX = nextX;
+        this.wasMovedThisFrame = true;
     }
 
     // 밀기 인원 정보 업데이트 (시각적 피드백용, 이동은 BaseGameScene에서 처리)
     public update(pushersLeft: number, pushersRight: number): void {
         this.pushersLeft = pushersLeft;
         this.pushersRight = pushersRight;
+
+        // X축 고정 로직: 이번 프레임에 논리적 이동이 없었다면 강제로 X를 lockedX로 스냅
+        // Y축은 건드리지 않아 중력 낙하 유지
+        if (!this.wasMovedThisFrame) {
+            const currentPos = this.body.position;
+            const currentVel = this.body.velocity;
+
+            // 미세한 차이라도 있으면 강제 고정 및 X 속도 초기화
+            if (Math.abs(currentPos.x - this.lockedX) > 0.01) {
+                this.scene.matter.body.setPosition(this.body, { x: this.lockedX, y: currentPos.y });
+                this.scene.matter.body.setVelocity(this.body, { x: 0, y: currentVel.y });
+            }
+        }
+
         this.updateVisuals();
+        this.wasMovedThisFrame = false; // 플래그 초기화
+    }
+
+    public setVisible(visible: boolean): void {
+        this._isVisible = visible;
+        if (this.sprite) this.sprite.setVisible(visible);
+        if (this.graphics) this.graphics.setVisible(visible);
+        this.text.setVisible(visible);
+
+        // 비활성 상태일 때는 물리 연산 정지 및 상호작용 방지
+        this.body.isStatic = !visible;
+        this.body.isSensor = !visible;
+    }
+
+    public getIsVisible(): boolean {
+        return this._isVisible;
     }
 
     private updateVisuals(): void {
+        if (!this._isVisible) return;
         const pos = this.body.position;
         const maxPushers = Math.max(this.pushersLeft, this.pushersRight);
         const isActivated = maxPushers >= this.requiredPlayers;
 
-        this.graphics.clear();
-        this.graphics.fillStyle(isActivated ? 0x4CAF50 : 0x795548, 1);
-        this.graphics.fillRect(
-            pos.x - this.width / 2,
-            pos.y - this.height / 2,
-            this.width,
-            this.height
-        );
+        if (this.sprite) {
+            this.sprite.setPosition(pos.x, pos.y);
+            // 스프라이트의 경우 색상 변경은 틴트(Tint) 등을 사용할 수 있으나 일단 위치만 동기화
+        }
 
-        // 테두리
-        this.graphics.lineStyle(2, 0x5D4037, 1);
-        this.graphics.strokeRect(
-            pos.x - this.width / 2,
-            pos.y - this.height / 2,
-            this.width,
-            this.height
-        );
+        if (this.graphics) {
+            this.graphics.clear();
+            this.graphics.fillStyle(isActivated ? 0x4CAF50 : 0x795548, 1);
+            this.graphics.fillRect(
+                pos.x - this.width / 2,
+                pos.y - this.height / 2,
+                this.width,
+                this.height
+            );
+
+            // 테두리
+            this.graphics.lineStyle(2, 0x5D4037, 1);
+            this.graphics.strokeRect(
+                pos.x - this.width / 2,
+                pos.y - this.height / 2,
+                this.width,
+                this.height
+            );
+        }
 
         // 밀기 인원 표시
         const leftInfo = this.pushersLeft > 0 ? `←${this.pushersLeft}` : '';
@@ -146,6 +210,7 @@ export class MovableBlock {
             this.scene.matter.world.remove(this.body);
         }
         this.graphics?.destroy();
+        this.sprite?.destroy();
         this.text?.destroy();
     }
 }

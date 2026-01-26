@@ -19,7 +19,13 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     protected getWorldHeight(): number {
-        return 720;
+        // TMJ 파싱을 통해 계산된 필드값 사용 (또는 기본값)
+        const data = this.cache.json.get('stage_01');
+        if (data && data.height) {
+            const targetTileSize = this.scale.height / data.height;
+            return data.height * targetTileSize;
+        }
+        return this.scale.height;
     }
 
     protected getRequiredPlayers(): number {

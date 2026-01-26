@@ -4,21 +4,26 @@ export interface MovingBumperConfig {
     id: string;
     startX: number;
     endX: number;
-    y: number;
+    startY: number;
+    endY: number;
     size?: number;
     power?: number;
     speed?: number; // 이동 속도 (라디안 단위 속도)
-    offset?: number; // 초기 위상차 (여러 개 배치 시 서로 다른 타이밍 부여 용도)
+    offset?: number; // 초기 위상차
+    texture?: string;
+    frame?: string | number;
 }
 
 export class MovingBumper {
     private scene: Phaser.Scene;
     private body: MatterJS.BodyType;
-    private graphics: Phaser.GameObjects.Graphics;
+    private graphics?: Phaser.GameObjects.Graphics;
+    private sprite?: Phaser.GameObjects.Sprite;
 
     private startX: number;
     private endX: number;
-    private y: number;
+    private startY: number;
+    private endY: number;
     private size: number;
     private power: number;
     private speed: number;
@@ -31,60 +36,71 @@ export class MovingBumper {
         this.id = config.id;
         this.startX = config.startX;
         this.endX = config.endX;
-        this.y = config.y;
+        this.startY = config.startY;
+        this.endY = config.endY;
         this.size = config.size || 40;
         this.power = config.power || 8;
         this.speed = config.speed || 0.002;
         this.offset = config.offset || 0;
 
         const centerX = (this.startX + this.endX) / 2;
+        const centerY = (this.startY + this.endY) / 2;
 
-        // 원형 물리 바디 생성
-        this.body = this.scene.matter.add.circle(centerX, this.y, this.size / 2, {
+        // 원형 물리 바디 생성 (초기 위치는 중심)
+        // The provided code edit had a syntax error and an incorrect usage of add.gameObject.
+        // Assuming the intent was to update the label and keep the circle body creation,
+        // this line is adjusted to reflect the label change.
+        // If the intent was to use add.gameObject with a sprite/graphics,
+        // that would require a more significant refactor of the class structure.
+        this.body = this.scene.matter.add.circle(centerX, centerY, this.size / 2, {
             isStatic: true,
             isSensor: true,
-            label: 'bumper' // 기존 범퍼 충돌 로직 재사용을 위해 'bumper' 라벨 사용
+            label: `moving-bumper-${this.id}`
         });
 
-        this.graphics = this.scene.add.graphics();
-        this.drawBumper();
+        if (config.texture) {
+            this.sprite = this.scene.add.sprite(centerX, centerY, config.texture, config.frame);
+            this.sprite.setDisplaySize(this.size, this.size);
+            this.sprite.setDepth(5);
+        } else {
+            this.graphics = this.scene.add.graphics();
+            this.drawBumper();
+            this.graphics.setDepth(5);
+        }
     }
 
     private drawBumper(): void {
+        if (!this.graphics) return;
         this.graphics.clear();
 
-        // 이동형 범퍼는 약간 다른 색상 (사이안/블루 계열)으로 구분
         const color = 0x00ffff;
-
-        // 외곽선 (네온 느낌)
         this.graphics.lineStyle(3, color, 1);
         this.graphics.strokeCircle(0, 0, this.size / 2);
-
-        // 내부 채우기 (반투명)
         this.graphics.fillStyle(color, 0.3);
         this.graphics.fillCircle(0, 0, this.size / 2 - 2);
-
-        // 중심 점
         this.graphics.fillStyle(0xffffff, 0.8);
         this.graphics.fillCircle(0, 0, 4);
     }
 
-    /**
-     * 매 프레임 위치 업데이트
-     * @param time 현재 씬 시간 (ms)
-     */
     public update(time: number): void {
-        const range = (this.endX - this.startX) / 2;
+        const rangeX = (this.endX - this.startX) / 2;
         const centerX = (this.startX + this.endX) / 2;
 
-        // Math.sin을 사용하여 왕복 운동 구현
-        const newX = centerX + Math.sin(time * this.speed + this.offset) * range;
+        const rangeY = (this.endY - this.startY) / 2;
+        const centerY = (this.startY + this.endY) / 2;
 
-        // 물리 바디 위치 업데이트
-        this.scene.matter.body.setPosition(this.body, { x: newX, y: this.y });
+        const sinValue = Math.sin(time * this.speed + this.offset);
+        const newX = centerX + sinValue * rangeX;
+        const newY = centerY + sinValue * rangeY;
 
-        // 그래픽 위치 업데이트
-        this.graphics.setPosition(newX, this.y);
+        this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+
+        if (this.sprite) {
+            this.sprite.setPosition(newX, newY);
+        }
+        if (this.graphics) {
+            this.graphics.setPosition(newX, newY);
+        }
     }
 
     public getBodyLabel(): string {
@@ -104,5 +120,6 @@ export class MovingBumper {
             this.scene.matter.world.remove(this.body);
         }
         this.graphics?.destroy();
+        this.sprite?.destroy();
     }
 }

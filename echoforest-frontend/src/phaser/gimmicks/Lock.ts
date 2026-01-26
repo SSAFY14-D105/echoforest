@@ -12,13 +12,15 @@ export class Lock {
     private isUnlocked: boolean = false;
 
     public readonly id: string;
+    public readonly targetGoalId?: number;
 
     private width: number;
     private height: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 64, texture?: string, frame?: string | number, angle: number = 0) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 64, texture?: string, frame?: string | number, angle: number = 0, targetGoalId?: number) {
         this.scene = scene;
         this.id = id;
+        this.targetGoalId = targetGoalId;
         this.width = width;
         this.height = height;
 

@@ -6,6 +6,8 @@ import Stage1Scene from './scenes/Stage1Scene';
 import Stage2Scene from './scenes/Stage2Scene';
 import Stage3Scene from './scenes/Stage3Scene';
 import Solo2Scene from './scenes/Solo2Scene';
+import Solo3Scene from './scenes/Solo3Scene';
+import Solo4Scene from './scenes/Solo4Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
@@ -75,6 +77,8 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             gameRef.current.scene.add('Stage2Scene', Stage2Scene, false);
             gameRef.current.scene.add('Stage3Scene', Stage3Scene, false);
             gameRef.current.scene.add('Solo2Scene', Solo2Scene, false);
+            gameRef.current.scene.add('Solo3Scene', Solo3Scene, false);
+            gameRef.current.scene.add('Solo4Scene', Solo4Scene, false);
 
         }
 
