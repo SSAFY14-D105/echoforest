@@ -1,3 +1,4 @@
+// 스택 표시 UI
 import styles from './CurseStackBar.module.css';
 
 interface CurseStackBarProps {

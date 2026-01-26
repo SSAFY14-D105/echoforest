@@ -1,3 +1,4 @@
+// 부스터 버튼 UI
 import { useState, useCallback } from 'react';
 import styles from './FloatingButton.module.css';
 

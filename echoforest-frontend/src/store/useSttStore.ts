@@ -1,3 +1,4 @@
+// 상태 관리 + 비즈니스 로직
 import { create } from 'zustand';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import { useGameStore } from './useGameStore';
@@ -18,11 +19,11 @@ export interface WarningModal {
 }
 
 export interface CurseState {
-    stack: number;           // 0~10
-    cursedPlayer: string | null;
-    isCollecting: boolean;
-    queueCount: number;
-    countdown: number;
+    stack: number;             // 0~10 저주 스택
+    cursedPlayer: string | null;  // 저주 걸린 플레이어
+    isCollecting: boolean;     // 배치 수집 중
+    queueCount: number;        // 큐에 쌓인 발화 수
+    countdown: number;         // 다음 전송까지 남은 초
 }
 
 export interface SttState {
@@ -121,24 +122,46 @@ export const useSttStore = create<SttState>((set, get) => ({
             if (foundPositive) {
                 console.log(`💖 긍정어 감지: ${foundPositive}`);
 
-                set({
-                    lastDetectedWord: foundPositive,
-                    wordType: 'positive',
-                    boosterActive: true,
-                    warningModal: {
-                        isVisible: true,
-                        level: 0,
-                        emoji: '💖',
-                        title: '부스터 발동!',
-                        message: `"${foundPositive}" 감지!\n저주가 해제됩니다!`,
-                        keyword: foundPositive,
-                    },
-                });
+                const isCursed = state.curseState.cursedPlayer !== null;
 
-                // WebSocket으로 저주 해제 요청
-                const { roomId } = useGameStoreCompat();
-                if (roomId && gameWebSocket.isConnected()) {
-                    sendCurseRelease(roomId, foundPositive);
+                if (isCursed) {
+                    // 저주가 걸린 상태 → 저주 해제!
+                    set({
+                        lastDetectedWord: foundPositive,
+                        wordType: 'positive',
+                        boosterActive: true,
+                        warningModal: {
+                            isVisible: true,
+                            level: 0,
+                            emoji: '✨',
+                            title: '저주 해제!',
+                            message: `"${foundPositive}"로 저주가 해제됩니다!`,
+                            keyword: foundPositive,
+                        },
+                    });
+
+                    // WebSocket으로 저주 해제 요청 (저주 상태일 때만!)
+                    const { roomId } = useGameStoreCompat();
+                    if (roomId && gameWebSocket.isConnected()) {
+                        sendCurseRelease(roomId, foundPositive);
+                        console.log(`✨ 저주 해제 요청 전송: ${foundPositive}`);
+                    }
+                } else {
+                    // 저주가 없는 상태 → 긍정어 발동 알림만
+                    set({
+                        lastDetectedWord: foundPositive,
+                        wordType: 'positive',
+                        boosterActive: true,
+                        warningModal: {
+                            isVisible: true,
+                            level: 0,
+                            emoji: '💖',
+                            title: '긍정어 발동!',
+                            message: `"${foundPositive}" 감지!\n(저주 상태가 아닙니다)`,
+                            keyword: foundPositive,
+                        },
+                    });
+                    console.log(`💖 긍정어 발동 (저주 없음): ${foundPositive}`);
                 }
 
                 // 3초 후 모달 숨김
@@ -307,8 +330,9 @@ function startBatchTimer() {
     }, BATCH_INTERVAL_MS);
 }
 
+
 // 배치 전송
-function sendBatch() {
+async function sendBatch() {
     const { speechQueue } = useSttStore.getState();
 
     if (speechQueue.length === 0) {
@@ -325,10 +349,13 @@ function sendBatch() {
 
     console.log(`📤 배치 전송: ${speechQueue.length}개 발화`);
 
-    // WebSocket으로 전송
+    // 모든 모드에서 WebSocket 사용 (게임 서버 → AI 서버 체인)
     const { roomId } = useGameStoreCompat();
+
     if (roomId && gameWebSocket.isConnected()) {
         sendSpeechBatch(roomId, speechQueue);
+    } else {
+        console.warn('⚠️ WebSocket 미연결 - 배치 전송 실패');
     }
 
     // 큐 초기화
@@ -343,17 +370,25 @@ function sendBatch() {
     });
 }
 
+
+
 // 헬퍼: GameStore에서 roomId 가져오기
-function useGameStoreCompat(): { roomId: string } {
-    return useGameStore.getState();
+function useGameStoreCompat(): { roomId: string; isSoloMode: boolean; nickname: string } {
+    const state = useGameStore.getState();
+    return {
+        roomId: state.roomId || '',
+        isSoloMode: state.isSoloMode || false,
+        nickname: state.nickname || '',
+    };
 }
+
 
 // WebSocket 헬퍼 함수
 function sendSpeechBatch(roomId: string, texts: string[]) {
     gameWebSocket.send({
         type: 'SPEECH_BATCH' as any,
         roomId,
-        content: JSON.stringify(texts),
+        texts,  // ⚠️ texts 직접 전송 (content가 아님!)
     });
     console.log(`📤 SPEECH_BATCH 전송: ${texts.length}개`);
 }
@@ -362,7 +397,7 @@ function sendCurseRelease(roomId: string, word: string) {
     gameWebSocket.send({
         type: 'CURSE_RELEASE' as any,
         roomId,
-        content: word,
+        word,  // ⚠️ word 필드 사용 (content가 아님!)
     });
     console.log(`📤 CURSE_RELEASE 전송: "${word}"`);
 }

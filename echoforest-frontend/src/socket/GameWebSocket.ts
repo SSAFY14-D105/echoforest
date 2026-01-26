@@ -1,3 +1,4 @@
+// WebSocket 통신 
 /**
  * 게임 WebSocket 클라이언트 (싱글톤)
  * 백엔드 GameMessageDto와 동일한 형식 사용
@@ -5,6 +6,7 @@
  * - 로비에서 연결 후 GamePage로 이동해도 연결 유지
  * - getInstance()로 전역 인스턴스 접근
  */
+import { API_BASE_URL } from '../config.ts';
 
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
@@ -34,7 +36,12 @@ export type MessageType =
     | 'CURSE_RELEASE'     // Client→Server: 저주 해제 요청 (content: 긍정어)
     | 'STACK_UPDATED'     // Server→All: 스택 업데이트 (stack, delta, reason)
     | 'CURSE_TRIGGERED'   // Server→All: 저주 발동 (cursedPlayerId, mapId)
-    | 'CURSE_RELEASED';   // Server→All: 저주 해제됨 (releasedPlayerId, word)
+    | 'CURSE_RELEASED'    // Server→All: 저주 해제됨 (releasedPlayerId, word)
+    // Pause/Resume (Stability)
+    | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
+    | 'RESUME_GAME'   // Client->Server: 재개 요청
+    | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
+    | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
 
 // UPDATE 메시지에서 오는 플레이어 상태
 export interface ServerPlayerState {
@@ -146,7 +153,7 @@ class GameWebSocket {
         return new Promise((resolve, reject) => {
             try {
                 // JWT 토큰을 쿼리 파라미터로 전달 (백엔드 JwtHandshakeInterceptor 요구)
-                const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api';
+                const apiBase = API_BASE_URL;
                 const wsBase = apiBase.replace('http', 'ws').replace('/api', '/ws/game');
                 const wsUrl = `${wsBase}?token=${this.token}`;
                 this.ws = new WebSocket(wsUrl);
@@ -318,6 +325,28 @@ class GameWebSocket {
     sendLeave(roomId: string) {
         this.send({
             type: 'LEAVE',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
+    /**
+     * 일시정지 요청
+     */
+    sendPauseRequest(roomId: string) {
+        this.send({
+            type: 'PAUSE_GAME',
+            roomId: roomId,
+            username: this.username
+        });
+    }
+
+    /**
+     * 재개 요청
+     */
+    sendResumeRequest(roomId: string) {
+        this.send({
+            type: 'RESUME_GAME',
             roomId: roomId,
             username: this.username
         });

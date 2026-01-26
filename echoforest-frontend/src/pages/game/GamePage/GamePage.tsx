@@ -1,3 +1,4 @@
+// 통합 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '../../../store/useGameStore';
 import type { Player } from '../../../store/useGameStore';
@@ -6,6 +7,8 @@ import type { GameMessage, ServerPlayerState } from '../../../socket/GameWebSock
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
+import PauseOverlay from '../../../components/game/PauseOverlay';
+import { useGameVisibility } from '../../../hooks/useGameVisibility';
 import styles from './GamePage.module.css';
 // STT 저주 시스템 import
 import { useSpeechRecognition } from '../../../hooks/useSpeechRecognition';
@@ -26,6 +29,7 @@ export default function GamePage() {
     isSoloMode,
     currentStage,
     clearedStages,
+    pausedBy, // 일시정지 상태
     addPlayer,
     syncPlayersFromServer,
     removePlayerByNickname,
@@ -34,7 +38,8 @@ export default function GamePage() {
     startGameFromServer,
     selectStage,
     clearStage,
-    leaveGame
+    leaveGame,
+    setGamePaused // 일시정지 액션
   } = useGameStore();
 
   // === STT 저주 시스템 훅 ===
@@ -70,6 +75,34 @@ export default function GamePage() {
       processTranscript(interimTranscript, false);
     }
   }, [interimTranscript, processTranscript]);
+
+  // === Stability & Pause Hooks ===
+  // 창 최소화 감지 Hook
+  const isBackground = useGameVisibility();
+
+  // 창 최소화 시 소켓 전송 & Ping
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
+
+    // [Backend Sync] 5초 Network Idle Kick 방지를 위한 3초 주기 Ping
+    const pingInterval = setInterval(() => {
+      // 연결된 상태에서만 Ping 전송
+      if (gameWebSocket.isConnected()) {
+        gameWebSocket.ping();
+      }
+    }, 3000);
+
+    return () => clearInterval(pingInterval);
+  }, [roomId, isSoloMode]);
+
+  useEffect(() => {
+    if (!roomId || isSoloMode) return;
+    if (isBackground) {
+      gameWebSocket.sendPauseRequest(roomId);
+    } else {
+      gameWebSocket.sendResumeRequest(roomId);
+    }
+  }, [isBackground, roomId, isSoloMode]);
 
   // --- 스테이지 ID 변환 유틸리티 ---
   // 내부용 ID ("MULTI_1") -> 통신용 번호 (1)
@@ -227,6 +260,16 @@ export default function GamePage() {
           console.log('🚨 방에서 강제 퇴장되었습니다.');
           leaveGame();
           alert('방장에 의해 강제 퇴장되었습니다.');
+          break;
+
+        case 'GAME_PAUSED':
+          // [NEW] 게임 일시정지 (content에 닉네임)
+          setGamePaused(msg.content || 'Unknown Player');
+          break;
+
+        case 'GAME_RESUMED':
+          // [NEW] 게임 재개
+          setGamePaused(null);
           break;
 
         case 'ERROR':
@@ -406,7 +449,21 @@ export default function GamePage() {
           >
             ← 로비로 돌아가기
           </button>
+
+          {/* ===== STT 저주 UI ===== */}
+          <CurseStackBar
+            stack={curseState.stack}
+            cursedPlayer={curseState.cursedPlayer}
+            isListening={isListening}
+          />
         </div>
+
+        {/* 플로팅 부스터 버튼 */}
+        <FloatingButton
+          onPress={() => setBoosterMode(true)}
+          onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+          isActive={boosterActive}
+        />
       </div>
     );
   }
@@ -417,6 +474,7 @@ export default function GamePage() {
 
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 게임 캔버스 */}
         <div className={`pixel-box ${styles.canvasWrapper}`}>
           <PhaserGame
@@ -460,6 +518,7 @@ export default function GamePage() {
   if (isGameStarted && currentStage === null) {
     return (
       <div className={styles.gameContainer}>
+        <PauseOverlay pausedBy={pausedBy} />
         {/* 스테이지 선택 영역 컴포넌트 */}
         <StageSelectScreen
           roomId={roomId}
@@ -478,6 +537,7 @@ export default function GamePage() {
   // ========== 대기실 화면 ==========
   return (
     <div className={styles.gameContainer}>
+      <PauseOverlay pausedBy={pausedBy} />
       {/* 게임 캔버스 (대기 화면) */}
       <div className={`pixel-box ${styles.canvasWrapper}`}>
         <PhaserGame
