@@ -1,17 +1,64 @@
-// 상태 관리 + 비즈니스 로직
+/**
+ * useSttStore - STT 상태 관리 + 비즈니스 로직
+ * 
+ * 로그 플로우:
+ * 1. [최종 인식] 문장 → 2. [배치 추가] → 3. [배치 전송] → 4. [서버 응답]
+ */
 import { create } from 'zustand';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import { useGameStore } from './useGameStore';
 
-// 긍정어 목록 (프론트엔드 로컬 매칭)
-const POSITIVE_WORDS = ['뽀뽀', '사랑해', '좋아해'];
+// === 로깅 헬퍼 (통일된 접두사) ===
+const LOG_PREFIX = '✅[STT]';
+const log = {
+    info: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ${msg}`, ...args),
+    success: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ✅ ${msg}`, ...args),
+    warn: (msg: string, ...args: any[]) => console.warn(`${LOG_PREFIX} ⚠️ ${msg}`, ...args),
+    error: (msg: string, ...args: any[]) => console.error(`${LOG_PREFIX} ❌ ${msg}`, ...args),
 
-// 배치 전송 간격 (5초)
+    // 배치 관련
+    batchAdd: (text: string, queueSize: number, queue: string[]) => {
+        console.log(`${LOG_PREFIX} 📥 [배치 추가] "${text}" (큐: ${queueSize}개)`, queue);
+    },
+    batchSend: (count: number, texts: string[]) => {
+        console.log(`${LOG_PREFIX} 📤 [배치 전송] ${count}개 문장 → 게임서버`, texts);
+    },
+    batchTimer: (action: 'start' | 'tick' | 'end', seconds?: number) => {
+        if (action === 'start') {
+            console.log(`${LOG_PREFIX} ⏱️ [타이머] ${seconds}초 후 전송 예정`);
+        } else if (action === 'end') {
+            console.log(`${LOG_PREFIX} ⏱️ [타이머] 완료 - 전송 시작`);
+        }
+    },
+
+    // 서버 통신
+    serverSend: (type: string, data: any) => {
+        console.log(`${LOG_PREFIX} 🌐 [→ 게임서버] ${type}`, data);
+    },
+    serverReceive: (type: string, data: any) => {
+        console.log(`${LOG_PREFIX} 🌐 [← 게임서버] ${type}`, data);
+    },
+
+    // 저주 관련
+    curse: (action: string, data: any) => {
+        console.log(`${LOG_PREFIX} 💀 [저주] ${action}`, data);
+    },
+    positive: (word: string, isCursed: boolean) => {
+        if (isCursed) {
+            console.log(`${LOG_PREFIX} 💖 [긍정어] "${word}" → 저주 해제 시도`);
+        } else {
+            console.log(`${LOG_PREFIX} 💖 [긍정어] "${word}" (저주 없음)`);
+        }
+    }
+};
+
+// 긍정어 목록
+const POSITIVE_WORDS = ['뽀뽀', '사랑해', '좋아해'];
 const BATCH_INTERVAL_MS = 5000;
 
 export interface WarningModal {
     isVisible: boolean;
-    level: number;      // 1=critical, 2=severe, 3=mild, 0=booster
+    level: number;
     emoji: string;
     title: string;
     message: string;
@@ -19,64 +66,43 @@ export interface WarningModal {
 }
 
 export interface CurseState {
-    stack: number;             // 0~10 저주 스택
-    cursedPlayer: string | null;  // 저주 걸린 플레이어
-    isCollecting: boolean;     // 배치 수집 중
-    queueCount: number;        // 큐에 쌓인 발화 수
-    countdown: number;         // 다음 전송까지 남은 초
+    stack: number;
+    cursedPlayer: string | null;
+    isCollecting: boolean;
+    queueCount: number;
+    countdown: number;
 }
 
 export interface SttState {
-    // STT 상태
     isListening: boolean;
     transcript: string;
     lastDetectedWord: string | null;
     wordType: 'positive' | 'negative' | null;
-
-    // 부스터 모드
     isBoosterMode: boolean;
     boosterActive: boolean;
-
-    // 저주 상태
     curseState: CurseState;
-
-    // 배치 처리
     speechQueue: string[];
-
-    // 경고 모달
     warningModal: WarningModal;
-
-    // 분석 결과
     analysisResult: string | null;
     penaltyLevel: number | null;
-
-    // 액션
     setBoosterMode: (active: boolean) => void;
     processTranscript: (text: string, isFinal: boolean) => void;
     hideWarningModal: () => void;
-
-    // WebSocket 콜백
     onStackUpdated: (stack: number, delta: number, reason?: string) => void;
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => void;
     onCurseReleased: (releasedPlayerId: string, word: string) => void;
-
-    // 초기화
     reset: () => void;
 }
 
-// 배치 타이머
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useSttStore = create<SttState>((set, get) => ({
-    // 초기 상태
     isListening: false,
     transcript: '',
     lastDetectedWord: null,
     wordType: null,
-
     isBoosterMode: false,
     boosterActive: false,
-
     curseState: {
         stack: 0,
         cursedPlayer: null,
@@ -84,9 +110,7 @@ export const useSttStore = create<SttState>((set, get) => ({
         queueCount: 0,
         countdown: 0,
     },
-
     speechQueue: [],
-
     warningModal: {
         isVisible: false,
         level: 0,
@@ -94,17 +118,14 @@ export const useSttStore = create<SttState>((set, get) => ({
         title: '',
         message: '',
     },
-
     analysisResult: null,
     penaltyLevel: null,
 
-    // 부스터 모드 설정
     setBoosterMode: (active: boolean) => {
+        log.info(`부스터 모드: ${active ? 'ON 🟢' : 'OFF 🔴'}`);
         set({ isBoosterMode: active });
-        console.log(`🎯 부스터 모드: ${active ? 'ON' : 'OFF'}`);
     },
 
-    // 텍스트 처리
     processTranscript: (text: string, isFinal: boolean) => {
         const state = get();
         const cleanText = text.trim();
@@ -113,19 +134,15 @@ export const useSttStore = create<SttState>((set, get) => ({
 
         set({ transcript: cleanText });
 
-        // 1. 긍정어 체크 (부스터 모드에서만)
+        // 긍정어 체크 (부스터 모드에서만)
         if (state.isBoosterMode) {
-            const foundPositive = POSITIVE_WORDS.find(word =>
-                cleanText.includes(word)
-            );
+            const foundPositive = POSITIVE_WORDS.find(word => cleanText.includes(word));
 
             if (foundPositive) {
-                console.log(`💖 긍정어 감지: ${foundPositive}`);
-
                 const isCursed = state.curseState.cursedPlayer !== null;
+                log.positive(foundPositive, isCursed);
 
                 if (isCursed) {
-                    // 저주가 걸린 상태 → 저주 해제!
                     set({
                         lastDetectedWord: foundPositive,
                         wordType: 'positive',
@@ -140,14 +157,11 @@ export const useSttStore = create<SttState>((set, get) => ({
                         },
                     });
 
-                    // WebSocket으로 저주 해제 요청 (저주 상태일 때만!)
                     const { roomId } = useGameStoreCompat();
                     if (roomId && gameWebSocket.isConnected()) {
                         sendCurseRelease(roomId, foundPositive);
-                        console.log(`✨ 저주 해제 요청 전송: ${foundPositive}`);
                     }
                 } else {
-                    // 저주가 없는 상태 → 긍정어 발동 알림만
                     set({
                         lastDetectedWord: foundPositive,
                         wordType: 'positive',
@@ -161,10 +175,8 @@ export const useSttStore = create<SttState>((set, get) => ({
                             keyword: foundPositive,
                         },
                     });
-                    console.log(`💖 긍정어 발동 (저주 없음): ${foundPositive}`);
                 }
 
-                // 3초 후 모달 숨김
                 setTimeout(() => {
                     set({
                         boosterActive: false,
@@ -176,9 +188,11 @@ export const useSttStore = create<SttState>((set, get) => ({
             }
         }
 
-        // 2. 최종 결과만 배치 큐에 추가
+        // 최종 결과만 배치 큐에 추가
         if (isFinal) {
             const queue = [...state.speechQueue, cleanText];
+            log.batchAdd(cleanText, queue.length, queue);
+
             set({
                 speechQueue: queue,
                 curseState: {
@@ -188,23 +202,24 @@ export const useSttStore = create<SttState>((set, get) => ({
                 }
             });
 
-            console.log(`📝 배치 큐 추가: "${cleanText}" (총 ${queue.length}개)`);
-
-            // 배치 타이머 시작 (이미 있으면 스킵)
             if (!batchTimer) {
                 startBatchTimer();
             }
         }
     },
 
-    // 경고 모달 숨김
     hideWarningModal: () => {
         set({ warningModal: { ...get().warningModal, isVisible: false } });
     },
 
-    // 스택 업데이트 콜백
     onStackUpdated: (stack: number, delta: number, reason?: string) => {
-        console.log(`🔮 스택 업데이트: ${stack} (${delta > 0 ? '+' : ''}${delta}) - ${reason || ''}`);
+        const prevStack = get().curseState.stack;
+        log.serverReceive('STACK_UPDATED', {
+            이전: prevStack,
+            현재: stack,
+            변화: delta > 0 ? `+${delta}` : delta,
+            사유: reason || 'negative_word'
+        });
 
         set({
             curseState: {
@@ -215,9 +230,8 @@ export const useSttStore = create<SttState>((set, get) => ({
         });
     },
 
-    // 저주 발동 콜백
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => {
-        console.log(`💀 저주 발동! 대상: ${cursedPlayerId}, 맵: ${mapId}`);
+        log.curse('발동! 💀💀💀', { 대상: cursedPlayerId, 맵ID: mapId });
 
         set({
             curseState: {
@@ -234,15 +248,13 @@ export const useSttStore = create<SttState>((set, get) => ({
             },
         });
 
-        // 5초 후 모달 숨김
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
         }, 5000);
     },
 
-    // 저주 해제 콜백
     onCurseReleased: (releasedPlayerId: string, word: string) => {
-        console.log(`✨ 저주 해제! ${releasedPlayerId}님이 "${word}"로 해제`);
+        log.curse('해제됨 ✨', { 대상: releasedPlayerId, 긍정어: word });
 
         set({
             curseState: {
@@ -258,14 +270,13 @@ export const useSttStore = create<SttState>((set, get) => ({
             },
         });
 
-        // 3초 후 모달 숨김
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
         }, 3000);
     },
 
-    // 초기화
     reset: () => {
+        log.info('STT 상태 초기화');
         if (batchTimer) {
             clearTimeout(batchTimer);
             batchTimer = null;
@@ -299,9 +310,11 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 }));
 
-// 배치 타이머 시작
+// 배치 타이머
 function startBatchTimer() {
     const countdown = BATCH_INTERVAL_MS / 1000;
+    log.batchTimer('start', countdown);
+
     useSttStore.setState({
         curseState: {
             ...useSttStore.getState().curseState,
@@ -309,7 +322,6 @@ function startBatchTimer() {
         }
     });
 
-    // 카운트다운
     let remaining = countdown;
     const countdownInterval = setInterval(() => {
         remaining--;
@@ -325,17 +337,18 @@ function startBatchTimer() {
 
     batchTimer = setTimeout(() => {
         clearInterval(countdownInterval);
+        log.batchTimer('end');
         sendBatch();
         batchTimer = null;
     }, BATCH_INTERVAL_MS);
 }
-
 
 // 배치 전송
 async function sendBatch() {
     const { speechQueue } = useSttStore.getState();
 
     if (speechQueue.length === 0) {
+        log.info('[배치] 전송할 문장 없음 - 스킵');
         useSttStore.setState({
             curseState: {
                 ...useSttStore.getState().curseState,
@@ -347,18 +360,16 @@ async function sendBatch() {
         return;
     }
 
-    console.log(`📤 배치 전송: ${speechQueue.length}개 발화`);
+    log.batchSend(speechQueue.length, speechQueue);
 
-    // 모든 모드에서 WebSocket 사용 (게임 서버 → AI 서버 체인)
     const { roomId } = useGameStoreCompat();
 
     if (roomId && gameWebSocket.isConnected()) {
         sendSpeechBatch(roomId, speechQueue);
     } else {
-        console.warn('⚠️ WebSocket 미연결 - 배치 전송 실패');
+        log.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
     }
 
-    // 큐 초기화
     useSttStore.setState({
         speechQueue: [],
         curseState: {
@@ -370,9 +381,6 @@ async function sendBatch() {
     });
 }
 
-
-
-// 헬퍼: GameStore에서 roomId 가져오기
 function useGameStoreCompat(): { roomId: string; isSoloMode: boolean; nickname: string } {
     const state = useGameStore.getState();
     return {
@@ -382,24 +390,24 @@ function useGameStoreCompat(): { roomId: string; isSoloMode: boolean; nickname: 
     };
 }
 
-
-// WebSocket 헬퍼 함수
 function sendSpeechBatch(roomId: string, texts: string[]) {
+    log.serverSend('SPEECH_BATCH', { roomId, texts, 문장수: texts.length });
+    log.info('→ 게임서버가 AI서버(/api/v1/analyze/batch)에 분석 요청 예정');
+
     gameWebSocket.send({
         type: 'SPEECH_BATCH' as any,
         roomId,
-        texts,  // ⚠️ texts 직접 전송 (content가 아님!)
+        texts,
     });
-    console.log(`📤 SPEECH_BATCH 전송: ${texts.length}개`);
 }
 
 function sendCurseRelease(roomId: string, word: string) {
+    log.serverSend('CURSE_RELEASE', { roomId, word });
     gameWebSocket.send({
         type: 'CURSE_RELEASE' as any,
         roomId,
-        word,  // ⚠️ word 필드 사용 (content가 아님!)
+        word,
     });
-    console.log(`📤 CURSE_RELEASE 전송: "${word}"`);
 }
 
 export default useSttStore;
