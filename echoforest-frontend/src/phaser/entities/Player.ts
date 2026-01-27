@@ -96,7 +96,10 @@ export class Player {
             frictionStatic: PHYSICS.STATIC_FRICTION,
             frictionAir: PHYSICS.AIR_FRICTION,
             restitution: PHYSICS.RESTITUTION,
-            isSensor: false // 모든 플레이어 물리 충돌 활성화 (상호작용 및 기믹 호환성 복구)
+            isSensor: false, // 모든 플레이어 물리 충돌 활성화
+            collisionFilter: {
+                category: 0x0002
+            }
         });
 
         // 회전 완전 고정 (피코파크 스타일)
