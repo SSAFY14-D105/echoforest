@@ -69,6 +69,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "CURSE_RELEASE": // 저주 해제 요청
                     gameService.handleCurseRelease(session, messageDto);
                     break;
+                // ===== Map Object Sync (Hybrid Authority) =====
+                case "GIMMICK_UPDATE": // 엘리베이터 등 자동 기믹 동기화 (Host -> Clients)
+                    gameService.handleGimmickUpdate(session, messageDto);
+                    break;
+                case "BLOCK_UPDATE": // 미는 박스 동기화 (Interactor -> Clients)
+                    gameService.handleBlockUpdate(session, messageDto);
+                    break;
                 default:
                     log.warn("Unknown message type: {}", messageDto.getType());
             }
