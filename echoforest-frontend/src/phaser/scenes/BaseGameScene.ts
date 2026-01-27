@@ -6,6 +6,9 @@ import type { Player as StorePlayer } from '../../store/useGameStore';
 import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 import { getRandomCurseId } from '../config/curseConfig';
 import { createPlayerAnimations, preloadPlayerAssets, parseTiledMap, showFloatingText, setupTiledBackground as setupTiledBg } from '../utils';
+// CollisionSystem은 향후 통합 시 사용 예정
+// import { CollisionSystem } from '../systems';
+
 
 // 물리 파라미터
 export const PHYSICS = {
@@ -153,8 +156,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 씬 중지/삭제 시 클린업 등록
             // shutdown()에서 리스너 제거 및 자원 해제를 담당함
-            this.events.off('shutdown'); // 중복 등록 방지
-            this.events.off('destroy');
+            this.events.off('shutdown', this.shutdown, this); // 중복 등록 방지
+            this.events.off('destroy', this.shutdown, this);
 
             this.events.on('shutdown', this.shutdown, this);
             this.events.on('destroy', this.shutdown, this);
@@ -208,10 +211,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const cam = this.cameras.main;
 
             // 1. 카메라 좌표 안전장치
-            if (!Number.isFinite(cam.scrollX) || !Number.isFinite(cam.scrollY)) {
-                cam.scrollX = 0;
-                cam.scrollY = 0;
-            }
+            // 1. 카메라 좌표 복구
+            this.updateCamera();
             cam.dirty = true;
 
             // 2. 모든 플레이어 스프라이트 완전 재생성 (Hard Reset)
@@ -1687,8 +1688,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // [MERGE FIX] positions 변수가 정의되지 않아 에러 발생
         // 로컬 플레이어 외의 다른 플레이어들의 위치도 고려할지 여부
         // dev-frontend 로직은 모든 플레이어의 위치를 고려하는 것으로 보임
-        const positions = Array.from(this.players.values()).map(p => p.getPosition());
-        if (positions.length === 0) positions.push(pos); // 최소한 자기 자신은 포함
+        // [FIX] 카메라 동기화 버그 수정: 오직 '나(Local Player)'만 바라보도록 수정
+        // const positions = Array.from(this.players.values()).map(p => p.getPosition());
+        // if (positions.length === 0) positions.push(pos); // 최소한 자기 자신은 포함
 
         const centerX = pos.x;
 
@@ -1699,9 +1701,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             0.1
         );
 
-        const minY = Math.min(...positions.map(p => p.y));
-        const maxY = Math.max(...positions.map(p => p.y));
-        const centerY = (minY + maxY) / 2;
+        // const minY = Math.min(...positions.map(p => p.y));
+        // const maxY = Math.max(...positions.map(p => p.y));
+        // const centerY = (minY + maxY) / 2;
+        const centerY = pos.y; // [FIX] 내 위치만 바라봄
 
         const newScrollY = Phaser.Math.Linear(
             this.cameras.main.scrollY,
