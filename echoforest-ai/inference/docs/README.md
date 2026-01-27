@@ -1,20 +1,20 @@
-# 📚 `docs/` - API 명세서
+# 📂 `docs/` - API 명세서
 
 AI 서버의 API 인터페이스 문서입니다.
 
----
-
-## 📄 파일 구조
-
-```
-docs/
-├── API_SPEC.md    # API 명세서 (본 저장소 핵심)
-└── README.md      # 본 문서
-```
+> 전체 개요는 [../README.md](../README.md)를 참조하세요.
 
 ---
 
-## 📡 핵심 API
+## 📄 파일 목록
+
+| 파일 | 내용 |
+|------|------|
+| `API_SPEC.md` | 상세 API 명세서 (요청/응답 예시 포함) |
+
+---
+
+## 📡 핵심 API 요약
 
 ### 배치 분석 (게임 서버 호출용) ⭐
 
@@ -23,7 +23,7 @@ POST /api/v1/analyze/batch
 Content-Type: application/json
 
 {
-    "texts": ["야 바보야", "너 멍청이다", "씨발"]
+    "texts": ["야 바보야", "씨발"]
 }
 ```
 
@@ -31,29 +31,18 @@ Content-Type: application/json
 ```json
 {
     "results": [...],
-    "total_count": 3,
-    "negative_count": 3,
-    "total_stack_delta": 7
+    "total_count": 2,
+    "negative_count": 2,
+    "total_stack_delta": 6
 }
 ```
 
-게임 서버는 `total_stack_delta` 값을 팀 저주 스택에 더하면 됩니다!
-
----
-
-## 🔮 스택 시스템 요약
-
-| 심각도 | 라벨 | 스택 증가량 |
-|--------|------|-------------|
-| 1 | `critical` | **+5** |
-| 2 | `severe` | **+3** |
-| 3 | `mild` | **+1** |
-| 0 | `clean` | 0 |
+게임 서버는 `total_stack_delta`만 팀 스택에 더하면 됩니다!
 
 ---
 
 ## 🔗 관련 문서
 
 - [API_SPEC.md](API_SPEC.md): 상세 API 명세
-- [../README.md](../README.md): AI 서버 전체 개요
+- [../README.md](../README.md): 전체 개요 및 원리
 - [../app/README.md](../app/README.md): 소스 코드 설명
