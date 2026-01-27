@@ -35,6 +35,9 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
 
+      # LiveKit
+      - LIVEKIT_PUBLIC_IP=${LIVEKIT_PUBLIC_IP}
+
       - DB_DRIVER=com.mysql.cj.jdbc.Driver
       - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
       - REDIS_HOST=redis
@@ -63,7 +66,7 @@ services:
     environment:
       - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
       # TURN 사용 시 외부 IP 자동 감지
-      - "LIVEKIT_NAT_1_IP_AUTO=true"
+      - "LIVEKIT_NAT_1_IP=${LIVEKIT_PUBLIC_IP}"
     networks:
       - echo-net
 
