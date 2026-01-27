@@ -267,11 +267,39 @@ export class Player {
      * @param vy 서버에서 받은 Y 속도 (점프 판정용)
      * @param anim 서버에서 받은 애니메이션 상태
      */
-    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string): void {
+    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string, isDead?: boolean, curses?: string[]): void {
         this.targetPos = { x, y };
         this.remoteVx = vx;
         if (vy !== undefined) this.remoteVy = vy;
         if (anim !== undefined) this.remoteAnim = anim;
+
+        // [NEW] 원격 플레이어 상태 동기화 (죽음 및 저주)
+        if (isDead !== undefined) {
+            // 원격 플레이어도 죽음 상태면 _isDead 설정 (물리 영향 등은 die() 로직 참조)
+            if (isDead) {
+                this._isDead = true;
+                // 애니메이션은 applyRemoteAnimation에서 처리
+            } else {
+                this._isDead = false;
+            }
+        }
+
+        if (curses) {
+            // 현재 적용된 저주와 비교하여 다르면 적용
+            // 단순화를 위해 마지막 저주만 적용하거나, 목록 전체를 순회하며 적용
+            // 여기서는 가장 최근 저주(배열 마지막)를 적용한다고 가정, 혹은 목록에 있는 것들 적용
+            // 기존 저주와 다르면 초기화 후 재적용 방식이 안전함
+
+            const newCurseId = curses.length > 0 ? curses[curses.length - 1] : null; // 예시: 가장 최근 저주
+
+            if (this.currentCurseId !== newCurseId) {
+                if (newCurseId) {
+                    this.applyCurse(newCurseId);
+                } else {
+                    this.removeCurse();
+                }
+            }
+        }
     }
 
     /**
@@ -562,6 +590,14 @@ export class Player {
 
     // Goal 입장 시 플레이어 숨기기
     private _isHidden: boolean = false;
+
+    public get isDead(): boolean {
+        return this._isDead;
+    }
+
+    public get currentCurses(): string[] {
+        return this.currentCurseId ? [this.currentCurseId] : [];
+    }
 
     public hide(): void {
         if (this._isHidden) return;

@@ -11,7 +11,7 @@ import Solo4Scene from './scenes/Solo4Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
-    onSendState?: (x: number, y: number, vx: number, vy: number, anim: string) => void;
+    onSendState?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
     isSoloMode?: boolean;
 }
 
