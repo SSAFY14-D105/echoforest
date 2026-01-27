@@ -665,14 +665,25 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private triggerDeath(reason: string): void {
         if (this.isDead) return;
 
-        console.log(`[${this.getSceneKey()}] Death triggered by ${reason}. Requesting Global Reset...`);
+        console.log(`[${this.getSceneKey()}] Death triggered by ${reason}.`);
+        this.isDead = true; // [FIX] 즉시 isDead 설정
 
-        // [Global Reset] 서버에 리셋 요청 전송 (중복 방지는 서버/상태값으로 처리)
-        // 누군가 죽었다는 것을 감지한 모든 클라이언트가 보낼 수 있음 (서버가 브로드캐스트)
-        const roomId = useGameStore.getState().roomId;
-        if (roomId) {
-            gameWebSocket.sendGameReset(roomId);
+        // 로컬 플레이어 사망 애니메이션 재생
+        const myPlayer = this.players.get(this.myPlayerId);
+        if (myPlayer) {
+            myPlayer.die(); // _isDead = true 설정 및 속도 0
         }
+
+        console.log(`[BaseGameScene] Waiting 1000ms for death animation before Global Reset...`);
+        this.time.delayedCall(1000, () => {
+            const roomId = useGameStore.getState().roomId;
+            if (roomId) {
+                console.log(`[BaseGameScene] Sending GAME_RESET for room ${roomId}`);
+                gameWebSocket.sendGameReset(roomId);
+            } else {
+                console.error('[BaseGameScene] Cannot send GAME_RESET: No roomId found');
+            }
+        });
     }
 
     /**
@@ -686,13 +697,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         console.log(`[${this.getSceneKey()}] 🔄 Executing Global Game Reset...`);
 
         // 1. 모든 플레이어 리스폰
-        if (this.spawnPoint) {
-            this.players.forEach(p => {
-                p.respawn(this.spawnPoint!.x, this.spawnPoint!.y);
-                p.setVelocity(0, 0); // 속도 0
-                // p.revive(); // 만약 Player 클래스에 부활 메서드가 있다면 호출 (현재는 respawn이 처리한다고 가정)
-            });
-        }
+        // 1. 모든 플레이어 리스폰
+        this.players.forEach(p => {
+            // 각 플레이어의 색상/순서에 맞는 스폰 포인트 계산
+            const index = p.colorIndex ?? 0;
+            const spawn = this.getSpawnPoint(index);
+
+            p.respawn(spawn.x, spawn.y);
+            p.setVelocity(0, 0); // 속도 0
+        });
 
         // 2. 모든 MovableBlock 리셋
         this.movableBlocks.forEach(block => {
