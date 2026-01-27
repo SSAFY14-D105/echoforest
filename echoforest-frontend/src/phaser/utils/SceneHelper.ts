@@ -47,8 +47,14 @@ export function setupTiledBackground(
     const startCameraY = Math.max(0, worldHeight - screenHeight);
     const bgY = (screenHeight / 2) + (startCameraY * scrollFactor);
 
+    // [FIX] 타일 간 틈새(Gap) 방지를 위해 2px 정도 겹치게 배치
+    const overlap = 2;
+    const effectiveWidth = scaledWidth - overlap;
+
     for (let i = 0; i < numTiles; i++) {
-        const x = i * scaledWidth + (scaledWidth / 2);
+        // 중심 좌표 계산: (인덱스 * 유효너비) + (실제너비 / 2)
+        // 겹치는 만큼 왼쪽으로 당겨짐
+        const x = i * effectiveWidth + (scaledWidth / 2);
         const bg = scene.add.image(x, bgY, textureKey);
 
         bg.setScale(scale);
