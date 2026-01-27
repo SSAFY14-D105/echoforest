@@ -58,15 +58,16 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     container_name: echoforest-livekit
+    entrypoint: ["/bin/sh", "/livekit-entrypoint.sh"]
     ports:
-      - "60000-60200:60000-60200/udp" # 미디어 전송 (필수)
+      - "60000-60200:60000-60200/udp" # 미디어 전송
       - "3478:3478/udp" # TURN
       - "3478:3478/tcp" # TURN
+    volumes:
+      - ./livekit-entrypoint.sh:/livekit-entrypoint.sh:ro
     environment:
-      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
-      - "LIVEKIT_NAT_1_IP=${LIVEKIT_PUBLIC_IP}"
-      - "LIVEKIT_RTC_PORT_RANGE_START=60000"
-      - "LIVEKIT_RTC_PORT_RANGE_END=60200"
+      - "LIVEKIT_API_KEY=${LIVEKIT_API_KEY}"
+      - "LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}"
     networks:
       - echo-net
 
