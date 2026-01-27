@@ -600,6 +600,7 @@ export class Player {
 
         // 2. 스프라이트 새로 생성
         this.sprite = this.scene.add.sprite(this.body.position.x, this.body.position.y, `player_${this.colorName}_standing`);
+        this.sprite.setOrigin(0.5, 1); // [FIX] 생성자와 동일하게 Origin 설정 (안하면 바닥에 묻힘)
 
         // [FALLBACK] 비주얼 프록시(도형) 생성 - 비활성화
         // this.visualProxy = this.scene.add.graphics();
