@@ -62,7 +62,7 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-    nickname: '',
+    nickname: localStorage.getItem('nickname') || '',
     roomId: '',
     isHost: false,
     players: [],
@@ -76,7 +76,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
 
-    setNickname: (name) => set({ nickname: name }),
+    setNickname: (name) => {
+        localStorage.setItem('nickname', name); // [FIX] 닉네임 영구 저장
+        set({ nickname: name });
+    },
     joinGame: (roomId, isHost, initialStage = 0) => {
         const { nickname } = get();
         const newPlayer: Player = {
