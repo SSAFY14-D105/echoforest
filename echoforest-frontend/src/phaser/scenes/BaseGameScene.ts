@@ -1466,24 +1466,68 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     };
 
-    // 재귀적으로 위에 있는 모든 플레이어 수 계산 (Support Chain)
+    // 재귀적으로 위에 있는 모든 플레이어 수 계산 (AABB Overlap + Support Chain)
     private calculateTotalWeight(bottomLabel: string): number {
-        const visited = new Set<string>();
         const playersFound = new Set<string>();
-        const queue = [bottomLabel];
+
+        // 1. [Direct Check] 엘리베이터 ID인 경우, 직접 영역 겹침 검사 수행
+        // 물리 엔진의 충돌 이벤트(collisionStart/Active)가 불안정할 수 있으므로
+        // 매 프레임 위치 기반으로 확실하게 체크합니다.
+        if (bottomLabel.startsWith('elevator-')) {
+            const elevatorId = bottomLabel.replace('elevator-', '');
+            const elevator = this.elevators.find(e => e.id === elevatorId);
+
+            if (elevator) {
+                const elevatorBounds = elevator.getBody().bounds;
+                // 약간의 여유(Tolerance)를 두어 감지 범위 확장
+                // 위쪽으로 조금 더 높게 확인하여(Top - 10px) 발이 살짝 닿아도 인정
+                const checkBounds = {
+                    minX: elevatorBounds.min.x,
+                    maxX: elevatorBounds.max.x,
+                    minY: elevatorBounds.min.y - 20, // 위쪽으로 20px 감지 영역 확장
+                    maxY: elevatorBounds.max.y
+                };
+
+                this.players.forEach(player => {
+                    const playerBounds = player.getBody().bounds;
+
+                    // AABB Overlap Check
+                    const overlaps = (
+                        playerBounds.max.x > checkBounds.minX &&
+                        playerBounds.min.x < checkBounds.maxX &&
+                        playerBounds.max.y > checkBounds.minY && // 발바닥(MaxY)이 감지 영역 상단(MinY)보다 아래에 있음
+                        playerBounds.min.y < checkBounds.maxY
+                    );
+
+                    if (overlaps) {
+                        playersFound.add(player.nickname);
+                    }
+                });
+            }
+        }
+
+        // 2. [Chain Check] SupportMap을 이용한 추가/연쇄 감지 (기존 로직 유지)
+        // 플레이어 위에 플레이어가 있는 경우 처리
+        const queue = Array.from(playersFound); // 이미 찾은 플레이어들부터 시작
+        // 만약 엘리베이터 위 플레이어가 없다면 bottomLabel(엘리베이터) 자체에서 시작해야 함
+        if (queue.length === 0) queue.push(bottomLabel);
+
+        const visited = new Set<string>();
 
         while (queue.length > 0) {
             const current = queue.shift()!;
             if (visited.has(current)) continue;
             visited.add(current);
 
+            // 현재 객체 위에 있는 다른 객체들 확인
             const supported = this.supportMap.get(current);
             if (supported) {
                 supported.forEach(topLabel => {
+                    // 플레이어라면 카운트
                     if (this.players.has(topLabel)) {
                         playersFound.add(topLabel);
                     }
-                    queue.push(topLabel); // 다음 층 플레이어도 체크
+                    queue.push(topLabel); // 연쇄 감지
                 });
             }
         }
