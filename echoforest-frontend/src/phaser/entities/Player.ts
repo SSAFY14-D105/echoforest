@@ -311,6 +311,8 @@ export class Player {
                 targetAnim = `player_walk_${this.colorName}`;
             } else if (this.remoteAnim.includes('idle')) {
                 targetAnim = `player_idle_${this.colorName}`;
+            } else if (this.remoteAnim.includes('dead')) { // [NEW] 사망 애니메이션 동기화
+                targetAnim = `player_dead_${this.colorName}`;
             }
 
             if (targetAnim && this.sprite.anims.currentAnim?.key !== targetAnim) {
