@@ -140,9 +140,16 @@ export default function CameraArea() {
                         {/* Video Area */}
                         {isMe ? (
                             <div className={styles.cameraContent}>
-                                {isCameraEnabled ? (
-                                    <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} />
-                                ) : (
+                                {/* Always render video element, hide with CSS when camera off */}
+                                <video
+                                    ref={localVideoRef}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    className={styles.localVideo}
+                                    style={{ display: isCameraEnabled ? 'block' : 'none' }}
+                                />
+                                {!isCameraEnabled && (
                                     <div className={styles.cameraOff}>📹</div>
                                 )}
                                 <span className={styles.playerLabel}>나</span>
