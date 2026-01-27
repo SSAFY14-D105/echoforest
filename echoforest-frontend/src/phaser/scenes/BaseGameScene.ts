@@ -208,10 +208,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const cam = this.cameras.main;
 
             // 1. 카메라 좌표 안전장치
-            if (!Number.isFinite(cam.scrollX) || !Number.isFinite(cam.scrollY)) {
-                cam.scrollX = 0;
-                cam.scrollY = 0;
-            }
+            // 1. 카메라 좌표 복구
+            this.updateCamera();
             cam.dirty = true;
 
             // 2. 모든 플레이어 스프라이트 완전 재생성 (Hard Reset)
