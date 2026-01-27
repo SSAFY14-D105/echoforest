@@ -90,6 +90,8 @@ export interface GameMessage {
     cursedPlayerId?: string;    // CURSE_TRIGGERED용
     releasedPlayerId?: string;  // CURSE_RELEASED용
     mapId?: number;             // 저주 효과 맵 ID
+    isDead?: boolean;           // 플레이어 상태 동기화용
+    curses?: string[];          // 플레이어 상태 동기화용
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -283,7 +285,7 @@ class GameWebSocket {
      * @param vy Y 속도
      * @param anim 애니메이션 키
      */
-    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string) {
+    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) {
         this.send({
             type: 'MOVE',
             roomId: roomId,
@@ -292,7 +294,9 @@ class GameWebSocket {
             y: y,
             vx: vx,
             vy: vy,
-            anim: anim
+            anim: anim,
+            isDead: isDead,
+            curses: curses
         });
     }
 

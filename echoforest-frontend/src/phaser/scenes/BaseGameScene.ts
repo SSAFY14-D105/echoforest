@@ -51,6 +51,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private activeSignboard: Signboard | null = null;
     private popupContainer: Phaser.GameObjects.Container | null = null;
 
+    // React로부터 전달받는 콜백 함수들
+    public onFailCallback?: () => void;
+    public onSuccessCallback?: () => void;
+    // [FIX] 상태 전송 콜백 시그니처 변경 (isDead, curses 추가)
+    public sendStateCallback?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
+    public updateReadyStatusCallback?: (isReady: boolean) => void;
+
     // 지지 관계 추적 (밑에 있는 것의 label -> 위에 있는 것들의 label Set)
     private supportMap: Map<string, Set<string>> = new Map();
     // 밀기 관계 추적 (블록 label -> 왼쪽/오른쪽에서 미는 플레이어 label Set)
@@ -76,9 +83,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private static persistentCurses: Map<string, string> = new Map();
 
     // ===== Authoritative Server 모델용 =====
-    // 서버 상태 전송 콜백 (GamePage에서 설정)
-    // x, y, vx, vy, anim
-    protected sendStateCallback: ((x: number, y: number, vx: number, vy: number, anim: string) => void) | null = null;
+
 
     // 상태 전송 쓰로틀링 (50ms마다 전송 = 20 TPS)
     private lastStateSendTime: number = 0;
@@ -199,7 +204,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     player.setVelocity(0, 0); // 속도 정지
 
                     // 즉시 상태 전송 (위치 변경 없이 속도만 0으로)
-                    this.sendStateCallback(currentPos.x, currentPos.y, 0, 0, 'idle_down');
+                    // [FIX] 저주 및 사망 상태 포함
+                    const curses = player.currentCurses;
+                    this.sendStateCallback(currentPos.x, currentPos.y, 0, 0, 'idle_down', player.isDead, curses);
                 }
             }
         } else {
@@ -993,11 +1000,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
-    // === Authoritative Server 모델 지원 ===
-    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string) => void): void {
-        this.sendStateCallback = callback;
-    }
-
     public setIsSoloMode(isSolo: boolean): void {
         this.isSoloMode = isSolo;
     }
@@ -1037,20 +1039,34 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     } else {
                         // 원격 플레이어: 보간 이동 + 방향/애니메이션 동기화
                         const isTeleport = dx > 100 || dy > 100;
-                        const serverVx = storePlayer.params?.vx ?? 0;
-                        const serverVy = storePlayer.params?.vy ?? 0;
-                        const serverAnim = storePlayer.params?.anim;
+                        const serverAnim = storePlayer.params?.anim; // Keep if needed, or remove if unused
 
                         if (isTeleport) {
                             player.setPosition(storePlayer.x, storePlayer.y);
                         }
 
-                        // 항상 상태 업데이트 (위치, 속도, 애니메이션)
-                        player.setRemoteState(storePlayer.x, storePlayer.y, serverVx, serverVy, serverAnim);
+                        // 원격 플레이어 동기화
+                        if (!isLocal && existingPlayer) {
+                            // [FIX] 저주 및 사망 상태 동기화 추가
+                            const curses = (storePlayer as any).curses || [];
+                            const isDead = (storePlayer as any).isDead || false;
 
-                        // 방향 및 애니메이션 적용
-                        player.applyRemoteDirection();
-                        player.applyRemoteAnimation();
+                            // storePlayer.anim이 없으면 params.anim 사용
+                            const anim = (storePlayer as any).anim || serverAnim;
+
+                            existingPlayer.setRemoteState(
+                                storePlayer.x,
+                                storePlayer.y,
+                                storePlayer.vx ?? 0,
+                                storePlayer.vy ?? 0,
+                                anim,
+                                isDead,
+                                curses
+                            );
+
+                            existingPlayer.applyRemoteDirection();
+                            existingPlayer.applyRemoteAnimation();
+                        }
                     }
 
                     // [FIX] 색상 인덱스 동기화 (접속 초기 colorIndex 지연 대응)
@@ -1670,7 +1686,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     currentAnim = 'walk';
                 }
 
-                this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim);
+                // 현재 저주 상태 가져오기
+                const curses = myPlayer.hasCurse() && myPlayer['currentCurseId'] ? [myPlayer['currentCurseId']] : [];
+
+                this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim, this.isDead || myPlayer['_isDead'], curses);
                 this.lastStateSendTime = now;
             }
         }
