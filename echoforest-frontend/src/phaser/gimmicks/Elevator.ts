@@ -130,4 +130,12 @@ export class Elevator {
         this.sprite?.destroy();
         this.text?.destroy();
     }
+
+    /**
+     * 서버 데이터로 위치 동기화 (Host-Authoritative)
+     */
+    public sync(data: { x: number; y: number }): void {
+        this.scene.matter.body.setPosition(this.body, { x: this.x, y: data.y });
+        this.updateVisuals();
+    }
 }

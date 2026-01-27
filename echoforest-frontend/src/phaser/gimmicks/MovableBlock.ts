@@ -213,5 +213,26 @@ export class MovableBlock {
         this.sprite?.destroy();
         this.text?.destroy();
     }
+
+    /**
+     * 서버 데이터로 위치 동기화 (Hybrid Authority)
+     * 내가 밀고 있지 않을 때만 호출됨
+     */
+    public sync(data: { x: number; y: number }): void {
+        const currentPos = this.body.position;
+
+        // 부드러운 보정 (Lerp)
+        const lerpFactor = 0.5; // 즉각 반응을 위해 다소 높게 설정
+        const newX = currentPos.x + (data.x - currentPos.x) * lerpFactor;
+        const newY = currentPos.y + (data.y - currentPos.y) * lerpFactor; // Y축은 보통 중력에 의하므로 크게 차이 안 날 것
+
+        this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+
+        // 속도 초기화 (튀는 현상 방지)
+        this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });
+
+        this.lockedX = newX; // 고정 위치도 업데이트
+        this.updateVisuals();
+    }
 }
 
