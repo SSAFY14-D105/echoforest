@@ -1685,8 +1685,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // [MERGE FIX] positions 변수가 정의되지 않아 에러 발생
         // 로컬 플레이어 외의 다른 플레이어들의 위치도 고려할지 여부
         // dev-frontend 로직은 모든 플레이어의 위치를 고려하는 것으로 보임
-        const positions = Array.from(this.players.values()).map(p => p.getPosition());
-        if (positions.length === 0) positions.push(pos); // 최소한 자기 자신은 포함
+        // [FIX] 카메라 동기화 버그 수정: 오직 '나(Local Player)'만 바라보도록 수정
+        // const positions = Array.from(this.players.values()).map(p => p.getPosition());
+        // if (positions.length === 0) positions.push(pos); // 최소한 자기 자신은 포함
 
         const centerX = pos.x;
 
@@ -1697,9 +1698,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             0.1
         );
 
-        const minY = Math.min(...positions.map(p => p.y));
-        const maxY = Math.max(...positions.map(p => p.y));
-        const centerY = (minY + maxY) / 2;
+        // const minY = Math.min(...positions.map(p => p.y));
+        // const maxY = Math.max(...positions.map(p => p.y));
+        // const centerY = (minY + maxY) / 2;
+        const centerY = pos.y; // [FIX] 내 위치만 바라봄
 
         const newScrollY = Phaser.Math.Linear(
             this.cameras.main.scrollY,
