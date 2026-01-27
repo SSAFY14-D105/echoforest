@@ -153,8 +153,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 씬 중지/삭제 시 클린업 등록
             // shutdown()에서 리스너 제거 및 자원 해제를 담당함
-            this.events.off('shutdown'); // 중복 등록 방지
-            this.events.off('destroy');
+            this.events.off('shutdown', this.shutdown, this); // 중복 등록 방지
+            this.events.off('destroy', this.shutdown, this);
 
             this.events.on('shutdown', this.shutdown, this);
             this.events.on('destroy', this.shutdown, this);
