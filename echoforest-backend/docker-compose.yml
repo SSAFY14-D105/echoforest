@@ -58,13 +58,28 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     container_name: echoforest-livekit
-    entrypoint: ["/bin/sh", "/livekit-entrypoint.sh"]
+    # Script file mount issues 방지를 위해 인라인 스크립트 사용
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /etc/livekit
+        cat <<EOF > /etc/livekit/livekit.yaml
+        port: 7880
+        rtc:
+          port_range_start: 60000
+          port_range_end: 60200
+          use_external_ip: true
+        keys:
+          "$${LIVEKIT_API_KEY}": "$${LIVEKIT_API_SECRET}"
+        EOF
+        
+        echo "Starting LiveKit with generated config..."
+        /livekit-server --config /etc/livekit/livekit.yaml
     ports:
-      - "60000-60200:60000-60200/udp" # 미디어 전송
-      - "3478:3478/udp" # TURN
-      - "3478:3478/tcp" # TURN
-    volumes:
-      - ./livekit-entrypoint.sh:/livekit-entrypoint.sh:ro
+      - "60000-60200:60000-60200/udp"
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
     environment:
       - "LIVEKIT_API_KEY=${LIVEKIT_API_KEY}"
       - "LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}"
