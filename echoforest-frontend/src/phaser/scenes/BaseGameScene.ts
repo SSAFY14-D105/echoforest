@@ -665,19 +665,55 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private triggerDeath(reason: string): void {
         if (this.isDead) return;
 
-        this.isDead = true;
-        console.log(`[${this.getSceneKey()}] Death triggered by ${reason}. Restarting scene...`);
+        console.log(`[${this.getSceneKey()}] Death triggered by ${reason}. Requesting Global Reset...`);
 
-        // 모든 플레이어 정지 및 사망 모션 적용
-        this.players.forEach(p => {
-            p.setVelocity(0, 0);
-            p.die();
+        // [Global Reset] 서버에 리셋 요청 전송 (중복 방지는 서버/상태값으로 처리)
+        // 누군가 죽었다는 것을 감지한 모든 클라이언트가 보낼 수 있음 (서버가 브로드캐스트)
+        const roomId = useGameStore.getState().roomId;
+        if (roomId) {
+            gameWebSocket.sendGameReset(roomId);
+        }
+    }
+
+    /**
+     * 전체 게임 리셋 (서버 요청 수신 시 실행)
+     */
+    private resetGame(): void {
+        if (this.isDead) { // 이미 죽음 처리가 진행 중이었다면 해제
+            this.isDead = false;
+        }
+
+        console.log(`[${this.getSceneKey()}] 🔄 Executing Global Game Reset...`);
+
+        // 1. 모든 플레이어 리스폰
+        if (this.spawnPoint) {
+            this.players.forEach(p => {
+                p.respawn(this.spawnPoint!.x, this.spawnPoint!.y);
+                p.setVelocity(0, 0); // 속도 0
+                // p.revive(); // 만약 Player 클래스에 부활 메서드가 있다면 호출 (현재는 respawn이 처리한다고 가정)
+            });
+        }
+
+        // 2. 모든 MovableBlock 리셋
+        this.movableBlocks.forEach(block => {
+            if (block.reset) {
+                block.reset();
+            }
         });
 
-        // 0.5초 후 재시작
-        this.time.delayedCall(500, () => {
-            this.scene.restart();
+        // 3. 모든 Elevator 리셋
+        this.elevators.forEach(elevator => {
+            if (elevator.reset) {
+                elevator.reset();
+            }
         });
+
+        // 4. 소모성/상태형 오브젝트 리셋 [NEW]
+        this.keys.forEach(key => key.reset());
+        this.locks.forEach(lock => lock.reset());
+        this.poisonMushrooms.forEach(mushroom => mushroom.reset());
+
+        // 5. 기타 기믹 리셋 필요 시 추가 (예: 버튼 상태, 도어 닫기 등)
     }
 
     private handleBumperCollision(labelA: string, labelB: string): void {
@@ -1428,12 +1464,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private setupSocketListeners(): void {
         gameWebSocket.on('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.on('BLOCK_UPDATE', this.onBlockUpdate);
+        gameWebSocket.on('GAME_RESET', this.onGameReset);
     }
 
     private cleanupSocketListeners(): void {
         // [FIX] removeListener -> off (GameWebSocket 구현에 맞춤)
         gameWebSocket.off('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.off('BLOCK_UPDATE', this.onBlockUpdate);
+        gameWebSocket.off('GAME_RESET', this.onGameReset);
     }
 
     private onGimmickUpdate = (msg: GameMessage) => {
@@ -1464,6 +1502,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         } catch (e) {
             console.error('Failed to parse BLOCK_UPDATE:', e);
         }
+    };
+
+    private onGameReset = () => {
+        this.resetGame();
     };
 
     // 재귀적으로 위에 있는 모든 플레이어 수 계산 (AABB Overlap + Support Chain)

@@ -29,6 +29,8 @@ export class MovableBlock {
     private requiredPlayers: number;
     private _isVisible: boolean = true;
     private moveSpeed: number = 2;
+    private initialX: number;
+    private initialY: number;
 
     private pushersLeft: number = 0;
     private pushersRight: number = 0;
@@ -43,15 +45,17 @@ export class MovableBlock {
         this.height = config.height;
         this.requiredPlayers = config.requiredPlayers;
         this.lockedX = config.x;
+        this.initialX = config.x;
+        this.initialY = config.y;
         this.targetBlockId = (config as any).targetBlockId;
 
         // 동적 바디 (중력 적용)
         this.body = this.scene.matter.add.rectangle(config.x, config.y, this.width, this.height, {
             isStatic: false,
             label: `block-${this.id}`,
-            friction: 1,
-            frictionStatic: 1,
-            frictionAir: 0.05,
+            friction: 0, // [FIX] 타일 이음새 걸림 방지
+            frictionStatic: 0,
+            frictionAir: 0.1, // [FIX] 공기 저항으로 제동
             restitution: 0
         });
 
@@ -145,25 +149,34 @@ export class MovableBlock {
 
             const newX = Phaser.Math.Linear(currentPos.x, this.serverTarget.x, lerpFactorX);
 
-            // Y축 동기화 (Deadzone 적용):
-            // 차이가 작으면(바닥에 닿아 있는 등) 물리 엔진의 중력을 따르고,
-            // 차이가 크면(낙하, 상승 등) 서버 위치로 강제 이동
+            // friction을 0으로 설정하여 타일 이음새 걸림 방지 (createBody에서 설정 권장하지만 여기서도 확인)
+            // this.body.friction = 0; // (필요 시 주석 해제하여 동적 적용)
+
+            // Y축 동기화 (Deadzone 대폭 확대):
+            // 10px 이내의 차이는 물리 엔진(중력)에 맡겨서 바닥에 자연스럽게 안착되도록 함
+            // 호스트와 미세하게 높이가 달라도 클라이언트는 굳이 그 높이를 맞추려다 공중에 뜰 필요 없음
             let newY = currentPos.y;
             const diffY = Math.abs(currentPos.y - this.serverTarget.y);
 
-            // 1px 이상 차이나면 서버 위치 추종 (공중 낙하 등)
-            if (diffY > 1) {
+            // 10px 이상 차이나면 서버 위치 추종 (공중 낙하, 엘리베이터 이동 등 큰 변화 시)
+            if (diffY > 10) {
                 newY = Phaser.Math.Linear(currentPos.y, this.serverTarget.y, lerpFactorY);
             } else {
-                // 차이가 작으면 물리 엔진 값 유지 (바닥 밀착 유도)
+                // 차이가 작으면 로컬 물리 엔진(중력) 유지
+                // [CRITICAL] Sleep 상태 방지: 강제로 깨워 중력 적용 (공중 부양 방지)
+                if ((this.body as any).isSleeping) {
+                    (this.body as any).isSleeping = false;
+                }
             }
 
             this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
 
             // 속도 제어
-            if (diffY > 1) {
+            // Y축 속도는 강제 이동 시에만 초기화하고, 그 외에는 물리 엔진의 낙하 속도 유지
+            if (diffY > 10) {
                 this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
             } else {
+                // X축만 0으로 제어하고 Y축(낙하)은 건드리지 않음
                 this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });
             }
 
@@ -259,7 +272,21 @@ export class MovableBlock {
      */
     public sync(data: { x: number; y: number }): void {
         this.serverTarget = { x: data.x, y: data.y };
+        this.serverTarget = { x: data.x, y: data.y };
         // update 루프에서 보간 처리
+    }
+
+    /**
+     * 초기 상태로 리셋
+     */
+    public reset(): void {
+        this.scene.matter.body.setPosition(this.body, { x: this.initialX, y: this.initialY });
+        this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+        this.lockedX = this.initialX;
+        this.serverTarget = null;
+        this.pushersLeft = 0;
+        this.pushersRight = 0;
+        this.updateVisuals();
     }
 }
 

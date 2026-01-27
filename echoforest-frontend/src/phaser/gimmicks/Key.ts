@@ -6,26 +6,30 @@ import Phaser from 'phaser';
  */
 export class Key {
     private scene: Phaser.Scene;
-    private body: MatterJS.BodyType;
+    private body!: MatterJS.BodyType;
     private sprite?: Phaser.GameObjects.Sprite;
     private graphics?: Phaser.GameObjects.Graphics;
     private isCollected: boolean = false;
 
     public readonly id: string;
     public readonly linkedLockId: string;
+    private initialX: number;
+    private initialY: number;
+    private width: number;
+    private height: number;
+    private angle: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, id: string, linkedLockId: string, width: number = 24, height: number = 24, texture?: string, frame?: string | number, angle: number = 0) {
         this.scene = scene;
         this.id = id;
         this.linkedLockId = linkedLockId;
+        this.initialX = x;
+        this.initialY = y;
+        this.width = width;
+        this.height = height;
+        this.angle = angle;
 
-        // 열쇠 물리 바디 (센서로 설정 - 물리적 충돌 없이 감지만)
-        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
-            isSensor: true,
-            isStatic: true,
-            label: `key-${id}`,
-            angle: Phaser.Math.DegToRad(angle)
-        });
+        this.createBody();
 
         if (texture) {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
@@ -40,6 +44,15 @@ export class Key {
             this.graphics.setAngle(angle);
             this.graphics.setDepth(5);
         }
+    }
+
+    private createBody(): void {
+        this.body = this.scene.matter.add.rectangle(this.initialX, this.initialY, this.width, this.height, {
+            isSensor: true,
+            isStatic: true,
+            label: `key-${this.id}`,
+            angle: Phaser.Math.DegToRad(this.angle)
+        });
     }
 
     private drawKey(): void {
@@ -60,9 +73,24 @@ export class Key {
         this.isCollected = true;
         this.graphics?.setVisible(false);
         this.sprite?.setVisible(false);
-        this.scene.matter.world.remove(this.body);
+        if (this.body) this.scene.matter.world.remove(this.body);
 
         console.log(`[Key] Collected: ${this.id}, unlocks Lock: ${this.linkedLockId}`);
+    }
+
+    public reset(): void {
+        if (!this.isCollected) return; // 이미 수집되지 않았다면 스킵
+
+        this.isCollected = false;
+
+        // 시각 효과 복구
+        if (this.sprite) this.sprite.setVisible(true);
+        if (this.graphics) this.graphics.setVisible(true);
+
+        // 물리 바디 재생성 (기존 바디는 이미 제거되었음)
+        this.createBody();
+
+        console.log(`[Key] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {
