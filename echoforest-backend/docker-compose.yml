@@ -61,7 +61,7 @@ services:
       - "3478:3478/udp" # TURN
       - "3478:3478/tcp" # TURN
     environment:
-      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}"
+      - LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
       # TURN 사용 시 외부 IP 자동 감지
       - "LIVEKIT_NAT_1_IP_AUTO=true"
     networks:
