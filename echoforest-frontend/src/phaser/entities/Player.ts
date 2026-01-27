@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CURSES } from '../config/curseConfig';
 
 const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
-const BASE_PLAYER_SIZE = 60;
+const BASE_PLAYER_SIZE = 60; // 기본 히트박스 및 스프라이트 크기
 
 // 물리 파라미터
 const PHYSICS = {
@@ -113,10 +113,18 @@ export class Player {
             this.sprite.clearTint();
         }
 
-        // 크기 배율 적용 (충돌 박스 60px 대비 시각적으로 3배 더 크게 표현)
-        // [MERGE] dev-frontend의 3배 확대 적용 + 기존의 visualProxy 비활성화 유지
-        const displaySize = BASE_PLAYER_SIZE * this.sizeMultiplier * 3.0;
-        this.sprite.setDisplaySize(displaySize, displaySize);
+        // 상태에 따른 크기 결정 (원본 픽셀 배율 2배 유지)
+        let width = 80 * this.sizeMultiplier;
+        let height = 80 * this.sizeMultiplier;
+
+        // 죽음 상태 체크 (HP 기반 또는 강제 사망 상태)
+        if (this._isDead || this.curseHP <= 0) {
+            // 죽은 모션일 때는 원본 이미지 비율(48*24)의 2배인 96*48 적용
+            width = 130 * this.sizeMultiplier;
+            height = 65 * this.sizeMultiplier;
+        }
+
+        this.sprite.setDisplaySize(width, height);
 
         // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
         // if (this.visualProxy) {
