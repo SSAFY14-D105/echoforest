@@ -42,7 +42,7 @@ public class AiGenerationService {
     private final ImageService imageService;
     private final ImageRepository imageRepository;
     private final UserRepository userRepository; // 이메일 조회용
-//    private final EmailService emailService;     // 이메일 발송용
+    private final EmailService emailService;     // 이메일 발송용
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper;
 
@@ -226,7 +226,7 @@ public class AiGenerationService {
                         """.formatted(user.getNickname());
 
                 // 이메일 서비스 호출 (비동기 처리를 고려할 수도 있음)
-//                emailService.sendEmailWithImage(email, subject, body, imageBytes, fileName);
+                emailService.sendEmailWithImage(email, subject, body, imageBytes, fileName);
             }
         });
     }
