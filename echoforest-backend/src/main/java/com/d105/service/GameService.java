@@ -523,4 +523,40 @@ public class GameService {
         log.info("💀 Room {}: {} 에게 저주 발동! (Map: {})",
                 room.getRoomId(), cursedUsername, room.getCurrentMapId());
     }
+
+    // =========================================================
+    // Map Object Synchronization Handlers (Hybrid Authority)
+    // =========================================================
+
+    /**
+     * 엘리베이터 등 자동 기믹 동기화 (Host -> Clients)
+     * 호스트가 보낸 위치 정보를 다른 클라이언트에게 중계합니다.
+     */
+    public void handleGimmickUpdate(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 보낸 사람(Host)을 제외하고 브로드캐스트
+            room.broadcast(message, session.getId());
+        }
+    }
+
+    /**
+     * 미는 박스 동기화 (Interactor -> Clients)
+     * 박스를 밀고 있는 유저가 보낸 위치 정보를 다른 클라이언트에게 중계합니다.
+     */
+    public void handleBlockUpdate(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 보낸 사람(Interactor)을 제외하고 브로드캐스트
+            room.broadcast(message, session.getId());
+        }
+    }
 }
