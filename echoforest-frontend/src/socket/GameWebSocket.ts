@@ -286,18 +286,24 @@ class GameWebSocket {
      * @param anim 애니메이션 키
      */
     sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) {
-        this.send({
-            type: 'MOVE',
+        if (!this.isConnected()) return;
+
+        // [DEBUG] 전송 데이터 확인 (1초에 한 번 정도만 출력 추천하지만, 여기선 매번 출력은 부담되므로 샘플링하거나 일단 전체 출력)
+        // console.log(`[SendState] Vel(${vx.toFixed(2)}, ${vy.toFixed(2)})`);
+
+        const message: GameMessage = {
+            type: 'MOVE', // 서버의 handleMove 매핑
             roomId: roomId,
-            username: this.username,
             x: x,
             y: y,
             vx: vx,
             vy: vy,
             anim: anim,
+            content: '', // 필수 필드
             isDead: isDead,
             curses: curses
-        });
+        };
+        this.ws?.send(JSON.stringify(message));
     }
 
     /**
