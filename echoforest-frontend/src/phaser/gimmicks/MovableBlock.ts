@@ -129,21 +129,41 @@ export class MovableBlock {
         this.wasMovedThisFrame = true;
     }
 
+    // 서버 동기화용 목표 위치
+    private serverTarget: { x: number, y: number } | null = null;
+
     // 밀기 인원 정보 업데이트 (시각적 피드백용, 이동은 BaseGameScene에서 처리)
     public update(pushersLeft: number, pushersRight: number): void {
         this.pushersLeft = pushersLeft;
         this.pushersRight = pushersRight;
 
-        // X축 고정 로직: 이번 프레임에 논리적 이동이 없었다면 강제로 X를 lockedX로 스냅
-        // Y축은 건드리지 않아 중력 낙하 유지
-        if (!this.wasMovedThisFrame) {
+        if (this.serverTarget) {
+            // [Remote Client] 서버 목표 위치로 보간 이동
             const currentPos = this.body.position;
-            const currentVel = this.body.velocity;
+            const lerpFactor = 0.15; // Elevator와 동일한 보간 계수
+            const newX = Phaser.Math.Linear(currentPos.x, this.serverTarget.x, lerpFactor);
+            const newY = Phaser.Math.Linear(currentPos.y, this.serverTarget.y, lerpFactor);
 
-            // 미세한 차이라도 있으면 강제 고정 및 X 속도 초기화
-            if (Math.abs(currentPos.x - this.lockedX) > 0.01) {
-                this.scene.matter.body.setPosition(this.body, { x: this.lockedX, y: currentPos.y });
-                this.scene.matter.body.setVelocity(this.body, { x: 0, y: currentVel.y });
+            this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+            // 속도 초기화
+            this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });
+
+            this.lockedX = newX; // 고정 위치 업데이트
+
+        } else {
+            // [Local Interactor] 물리 및 로직 기반 이동
+
+            // X축 고정 로직: 이번 프레임에 논리적 이동이 없었다면 강제로 X를 lockedX로 스냅
+            // Y축은 건드리지 않아 중력 낙하 유지
+            if (!this.wasMovedThisFrame) {
+                const currentPos = this.body.position;
+                const currentVel = this.body.velocity;
+
+                // 미세한 차이라도 있으면 강제 고정 및 X 속도 초기화
+                if (Math.abs(currentPos.x - this.lockedX) > 0.01) {
+                    this.scene.matter.body.setPosition(this.body, { x: this.lockedX, y: currentPos.y });
+                    this.scene.matter.body.setVelocity(this.body, { x: 0, y: currentVel.y });
+                }
             }
         }
 
@@ -219,20 +239,8 @@ export class MovableBlock {
      * 내가 밀고 있지 않을 때만 호출됨
      */
     public sync(data: { x: number; y: number }): void {
-        const currentPos = this.body.position;
-
-        // 부드러운 보정 (Lerp)
-        const lerpFactor = 0.5; // 즉각 반응을 위해 다소 높게 설정
-        const newX = currentPos.x + (data.x - currentPos.x) * lerpFactor;
-        const newY = currentPos.y + (data.y - currentPos.y) * lerpFactor; // Y축은 보통 중력에 의하므로 크게 차이 안 날 것
-
-        this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
-
-        // 속도 초기화 (튀는 현상 방지)
-        this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });
-
-        this.lockedX = newX; // 고정 위치도 업데이트
-        this.updateVisuals();
+        this.serverTarget = { x: data.x, y: data.y };
+        // update 루프에서 보간 처리
     }
 }
 
