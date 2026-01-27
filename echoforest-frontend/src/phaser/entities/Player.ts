@@ -586,6 +586,10 @@ export class Player {
         return this.body.label || this.id;
     }
 
+    public getBody(): MatterJS.BodyType {
+        return this.body;
+    }
+
     public hardResetVisuals(): void {
         console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
 
