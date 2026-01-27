@@ -79,16 +79,16 @@ export default function GamePage() {
     addPlayer(myPlayer);
   }, [isSoloMode]);
 
-  // === 콜백 함수 ===
-  const handleSendState = useCallback((x: number, y: number, vx: number, vy: number, anim: string) => {
-    if (roomId && !isSoloMode) {
-      let finalAnim = anim;
-      if (isHost && currentStage) {
-        finalAnim = `${anim}|s:${currentStage}`;
-      }
-      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, finalAnim);
+  // Player state 전송 (Phaser -> React -> Socket)
+  const handleSendState = (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => {
+    if (isHost && roomId) {
+      // Host는 바로 전송
+      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses);
+    } else if (roomId) {
+      // Client도 바로 전송 (서버 중계)
+      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses);
     }
-  }, [roomId, isSoloMode, isHost, currentStage]);
+  };
 
   const handleToggleReady = () => {
     if (!roomId || isSoloMode) return;
