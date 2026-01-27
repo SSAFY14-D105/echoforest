@@ -165,6 +165,13 @@ export class LiveKitService {
 
         this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
             console.log('🎥 트랙 구독:', track.kind, participant.identity);
+
+            // 오디오 트랙은 자동으로 재생되도록 attach
+            if (track.kind === Track.Kind.Audio) {
+                const audioElement = track.attach();
+                audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
+            }
+
             this.notifyParticipantUpdate();
         });
 
@@ -238,7 +245,7 @@ export class LiveKitService {
             }
 
             console.log('✅ LiveKit Room 연결 성공');
-            this.setupLocalTracks(myId);
+            await this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
         } catch (err: any) {
