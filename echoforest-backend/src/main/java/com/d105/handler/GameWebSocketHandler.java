@@ -62,6 +62,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "NEXT_STAGE": // 다음 스테이지 (방장)
                     gameService.handleNextStage(session, messageDto);
                     break;
+                case "GAME_RESET": // 게임 리셋 (협동 실패)
+                    gameService.handleGameReset(session, messageDto);
+                    break;
                 // ===== STT 저주 시스템 =====
                 case "SPEECH_BATCH": // 발화 배치 분석
                     gameService.handleSpeechBatch(session, messageDto);
