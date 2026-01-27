@@ -33,15 +33,22 @@ export type MessageType =
     | 'KICKED'        // Server→Client: 강제 퇴장됨
     // STT 저주 시스템 (추가)
     | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
-    | 'CURSE_RELEASE'     // Client→Server: 저주 해제 요청 (content: 긍정어)
-    | 'STACK_UPDATED'     // Server→All: 스택 업데이트 (stack, delta, reason)
+    | 'STACK_UPDATED'     // Server→All: 스택 변경 (stack, delta, reason)
     | 'CURSE_TRIGGERED'   // Server→All: 저주 발동 (cursedPlayerId, mapId)
+    | 'CURSE_RELEASE'     // Client→Server: 저주 해제 요청 (content: 긍정어)
     | 'CURSE_RELEASED'    // Server→All: 저주 해제됨 (releasedPlayerId, word)
+    // Map Object Sync (Hybrid Authority)
+    | 'GIMMICK_UPDATE'    // Host -> Server -> Clients: 자동 기믹 위치 동기화
+    | 'BLOCK_UPDATE'      // Interactor -> Server -> Clients: 박스 위치 동기화
     // Pause/Resume (Stability)
     | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
     | 'RESUME_GAME'   // Client->Server: 재개 요청
     | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
     | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
+
+// ... (Interface declarations remain same) ...
+
+
 
 // UPDATE 메시지에서 오는 플레이어 상태
 export interface ServerPlayerState {
@@ -97,6 +104,29 @@ class GameWebSocket {
 
     private constructor() {
         // private constructor for singleton
+    }
+
+    // 이벤트 리스너 맵 (MessageType -> Handler[])
+    private listeners: Map<string, Array<(message: GameMessage) => void>> = new Map();
+
+    /**
+     * 특정 메시지 타입에 대한 리스너 등록
+     */
+    public on(type: MessageType, handler: (message: GameMessage) => void) {
+        if (!this.listeners.has(type)) {
+            this.listeners.set(type, []);
+        }
+        this.listeners.get(type)?.push(handler);
+    }
+
+    /**
+     * 리스너 제거
+     */
+    public off(type: MessageType, handler: (message: GameMessage) => void) {
+        const handlers = this.listeners.get(type);
+        if (handlers) {
+            this.listeners.set(type, handlers.filter(h => h !== handler));
+        }
     }
 
     /**
@@ -177,7 +207,14 @@ class GameWebSocket {
                             this.onErrorHandler?.(message.content || '알 수 없는 오류');
                         }
 
+                        // 1. 레거시 핸들러 실행
                         this.onMessageHandler?.(message);
+
+                        // 2. 이벤트 리스너 실행
+                        const listeners = this.listeners.get(message.type);
+                        if (listeners) {
+                            listeners.forEach(handler => handler(message));
+                        }
                     } catch (e) {
                         console.error('메시지 파싱 오류:', e);
                     }
@@ -349,6 +386,58 @@ class GameWebSocket {
             type: 'RESUME_GAME',
             roomId: roomId,
             username: this.username
+        });
+    }
+
+    /**
+     * 발화 배치 분석 요청 (STT)
+     */
+    sendSpeechBatch(roomId: string, texts: string[]) {
+        this.send({
+            type: 'SPEECH_BATCH',
+            roomId: roomId,
+            username: this.username,
+            texts: texts
+        });
+    }
+
+    /**
+     * 저주 해제 요청 (긍정어)
+     */
+    sendCurseRelease(roomId: string, positiveWord: string) {
+        this.send({
+            type: 'CURSE_RELEASE',
+            roomId: roomId,
+            username: this.username,
+            word: positiveWord
+        });
+    }
+
+    /**
+     * 자동 기믹(엘리베이터 등) 동기화 - 호스트 전용
+     * @param roomId 방 ID
+     * @param data 기믹 상태 리스트 (JSON stringified)
+     */
+    sendGimmickUpdate(roomId: string, data: string) {
+        this.send({
+            type: 'GIMMICK_UPDATE',
+            roomId: roomId,
+            username: this.username,
+            content: data
+        });
+    }
+
+    /**
+     * 미는 박스 동기화 - 인터랙터 전용
+     * @param roomId 방 ID
+     * @param data 박스 상태 리스트 (JSON stringified)
+     */
+    sendBlockUpdate(roomId: string, data: string) {
+        this.send({
+            type: 'BLOCK_UPDATE',
+            roomId: roomId,
+            username: this.username,
+            content: data
         });
     }
 

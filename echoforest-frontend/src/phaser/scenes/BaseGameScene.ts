@@ -6,6 +6,8 @@ import type { Player as StorePlayer } from '../../store/useGameStore';
 import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 import { getRandomCurseId } from '../config/curseConfig';
 import { createPlayerAnimations, preloadPlayerAssets, parseTiledMap, showFloatingText, setupTiledBackground as setupTiledBg } from '../utils';
+import { gameWebSocket } from '../../socket/GameWebSocket';
+import type { GameMessage } from '../../socket/GameWebSocket';
 // CollisionSystem은 향후 통합 시 사용 예정
 // import { CollisionSystem } from '../systems';
 
@@ -83,6 +85,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 에러 로그 쓰로틀링 (1초마다)
     private lastErrorLogTime: number = 0;
     private readonly STATE_SEND_INTERVAL: number = 33;
+    private lastGimmickUpdateTime: number = 0;
+    private lastBlockUpdateTime: number = 0;
+    private readonly SYNC_INTERVAL: number = 50; // 20 TPS
+
     // 초기 배치 여부 (씬 시작/재시작 시 스폰 지점 강제 적용용)
     private isInitialPlacement: boolean = true;
     // 솔로 모드 여부 (로컬 물리 사용)
@@ -144,6 +150,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.setupCollisions();
             this.syncPlayersFromStore();
             this.subscribeToStore();
+
+            // 소켓 리스너 등록
+            this.setupSocketListeners();
 
             // 배경색 설정 (HEAD)
             // 맵이 안 보일 때 대비
@@ -1161,6 +1170,59 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         });
 
+        // === 3. Object Sync Broadcast (Hybrid Authority) ===
+        if (!this.isSoloMode && this.myPlayerId) {
+            const now = this.time.now;
+            const roomId = useGameStore.getState().roomId;
+
+            if (roomId) {
+                // (A) Host controls automated gimmicks (Elevators)
+
+                const amIHost = useGameStore.getState().isHost;
+
+                if (amIHost && now - this.lastGimmickUpdateTime > this.SYNC_INTERVAL) {
+                    if (this.elevators.length > 0) {
+                        const data = this.elevators.map(e => ({
+                            id: e.id,
+                            x: e.getPosition().x,
+                            y: e.getPosition().y
+                        }));
+                        gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(data));
+                    }
+                    this.lastGimmickUpdateTime = now;
+                }
+
+                // (B) Interactors control MovableBlocks (Everyone who pushes)
+                if (now - this.lastBlockUpdateTime > this.SYNC_INTERVAL) {
+                    const pushedBlocks: any[] = [];
+
+                    this.movableBlocks.forEach(block => {
+                        const label = block.getBody().label;
+
+                        // 내가 밀고 있는 블록인지 확인
+                        const pushLeft = this.pushMapLeft.get(label);
+                        const pushRight = this.pushMapRight.get(label);
+
+                        const isPushingLeft = pushLeft?.has(this.myPlayerId);
+                        const isPushingRight = pushRight?.has(this.myPlayerId);
+
+                        if (isPushingLeft || isPushingRight) {
+                            pushedBlocks.push({
+                                id: block.id,
+                                x: block.getPosition().x,
+                                y: block.getPosition().y
+                            });
+                        }
+                    });
+
+                    if (pushedBlocks.length > 0) {
+                        gameWebSocket.sendBlockUpdate(roomId, JSON.stringify(pushedBlocks));
+                    }
+                    this.lastBlockUpdateTime = now;
+                }
+            }
+        }
+
         this.updateCamera();
         this.handleLocalPlayerInput();
         // [REMOVED] 개별 카메라 모드에서는 플레이어가 카메라 밖으로 나갈 수 있어야 함
@@ -1354,6 +1416,49 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+
+
+    // === Socket Listeners ===
+    private setupSocketListeners(): void {
+        gameWebSocket.on('GIMMICK_UPDATE', this.onGimmickUpdate);
+        gameWebSocket.on('BLOCK_UPDATE', this.onBlockUpdate);
+    }
+
+    private cleanupSocketListeners(): void {
+        // [FIX] removeListener -> off (GameWebSocket 구현에 맞춤)
+        gameWebSocket.off('GIMMICK_UPDATE', this.onGimmickUpdate);
+        gameWebSocket.off('BLOCK_UPDATE', this.onBlockUpdate);
+    }
+
+    private onGimmickUpdate = (msg: GameMessage) => {
+        if (!msg.content) return;
+        try {
+            const updates = JSON.parse(msg.content);
+            updates.forEach((data: any) => {
+                const elevator = this.elevators.find(e => e.id === data.id);
+                if (elevator) {
+                    elevator.sync({ x: data.x, y: data.y });
+                }
+            });
+        } catch (e) {
+            console.error('Failed to parse GIMMICK_UPDATE:', e);
+        }
+    };
+
+    private onBlockUpdate = (msg: GameMessage) => {
+        if (!msg.content) return;
+        try {
+            const updates = JSON.parse(msg.content);
+            updates.forEach((data: any) => {
+                const block = this.movableBlocks.find(b => b.id === data.id);
+                if (block) {
+                    block.sync({ x: data.x, y: data.y });
+                }
+            });
+        } catch (e) {
+            console.error('Failed to parse BLOCK_UPDATE:', e);
+        }
+    };
 
     // 재귀적으로 위에 있는 모든 플레이어 수 계산 (Support Chain)
     private calculateTotalWeight(bottomLabel: string): number {
@@ -1819,6 +1924,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 등록된 이벤트 제거 (본인)
             this.events.off('shutdown', this.shutdown, this);
             this.events.off('destroy', this.shutdown, this);
+
+            // 소켓 리스너 제거
+            this.cleanupSocketListeners();
 
         } catch (error) {
             console.error(`[${this.getSceneKey()}] Error during shutdown: `, error);
