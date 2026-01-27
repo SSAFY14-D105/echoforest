@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 0. 게임 서버 (Spring Boot)
+  # ==========================================
+  game-server:
+    image: echoforest-server:latest
+    container_name: echoforest-server
+#    ports:
+#      - "9001:9001" # 외부 접속 포트
+    environment:
+      # 도커 내부에서는 'localhost' 대신 '서비스 이름'을 씁니다.
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+
+      # AI 모델 관련 환경 변수
+      - AI_MODEL_URL=${AI_MODEL_URL}
+      - AI_MODEL_API_KEY=${AI_MODEL_API_KEY}
+
+      # AI 서버용
+      - SENTIMENT_AI_URL=http://ai-server:8000
+
+      # DB 정보 환경 변수 주입 (보안 강화)
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      # JWT
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY}
+
+      # MAIL SEND
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+
+      # LiveKit
+      - LIVEKIT_PUBLIC_IP=${LIVEKIT_PUBLIC_IP}
+
+      - DB_DRIVER=com.mysql.cj.jdbc.Driver
+      - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - livekit
+      - mysql
+      - redis
+      - ai-server
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 1. LiveKit Server (기존 작성 내용 유지)
+  # ==========================================
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: echoforest-livekit
+    command: --dev
+    ports:
+      - "60000-60200:60000-60200/udp" # 미디어 전송 (필수)
+      - "3478:3478/udp" # TURN
+      - "3478:3478/tcp" # TURN
+    environment:
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      # TURN 사용 시 외부 IP 자동 감지
+      - "LIVEKIT_NAT_1_IP=${LIVEKIT_PUBLIC_IP}"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 2. MySQL (기존 작성 내용 유지)
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: echoforest-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: echoforest
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306" # 포트 충돌 방지
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql_data:/var/lib/mysql # 데이터 영구 저장 (프로젝트 폴더에 생김)
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 3. Redis (기존 작성 내용 유지)
+  # ==========================================
+  redis:
+    image: redis:alpine
+    container_name: echoforest-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 4. Nginx (웹 서버)
+  # ==========================================
+  nginx:
+    image: nginx:latest
+    container_name: echoforest-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+      # Jenkins가 빌드한 React 결과물을 Nginx가 서빙하는 폴더로 연결
+      # 호스트의 ./echoforest-frontend/dist 폴더 -> 컨테이너의 /usr/share/nginx/html
+      - ./echoforest-frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - game-server
+      - livekit
+    networks:
+      - echo-net
+
+    # ==========================================
+    # 5. Jenkins (CI/CD)
+    # ==========================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: echoforest-jenkins
+    user: root
+    privileged: true
+    environment:
+      # Nginx 뒤에서 /jenkins 경로로 접속하기 위한 필수 설정
+      - JENKINS_OPTS="--prefix=/jenkins"
+      - JENKINS_ARGS="--prefix=/jenkins"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
+      - ./jenkins_home:/var/jenkins_home # 데이터 영구 저장 (현재 폴더에 저장)
+      # 호스트의 현재 폴더(.)를 Jenkins 작업 공간과 연결해 빌드 결과물 공유
+      - ./:/var/jenkins_home/workspace/echoforest-deploy
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 6. AI Server
+  # ==========================================
+  ai-server:
+    image: echoforest-ai:latest
+    container_name: echoforest-ai
+    restart: always
+#    ports:
+#      - "8000:8000" # 테스트시 주석 해제
+    volumes:
+      - /home/ubuntu/model_cache:/code/model_cache
+    environment:
+      - HF_HOME=/code/model_cache
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'    # CPU 2코어 제한 (게임 서버 렉 방지)
+          memory: 4G     # 메모리 4GB 제한
+    networks:
+      - echo-net
+
+networks:
+  echo-net:
+    driver: bridge

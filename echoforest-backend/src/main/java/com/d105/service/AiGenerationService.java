@@ -1,0 +1,258 @@
+package com.d105.service;
+
+import com.d105.config.AiProperties;
+import com.d105.dto.image.ImageResponseDto;
+import com.d105.entity.Image;
+import com.d105.entity.User;
+import com.d105.repository.ImageRepository;
+import com.d105.repository.UserRepository;
+import com.d105.util.ByteArrayMultipartFile;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AiGenerationService {
+
+    // B급 감성 프롬프트
+    private static final String B_GRADE_STYLE_PROMPT =
+            "Make a hilarious B-grade movie poster or meme collage. " +
+                    "Combine these people into one chaotic image. " +
+                    "Style: Bad photoshop, kitsch, exaggerated, cheesy effects, dramatic lighting. " +
+                    "Concept: A chaotic team assembling for a ridiculous mission. " +
+                    "Make sure every person is visible in a funny way. ";
+
+    private final AiProperties aiProperties;
+    private final ImageService imageService;
+    private final ImageRepository imageRepository;
+    private final UserRepository userRepository; // 이메일 조회용
+    private final EmailService emailService;     // 이메일 발송용
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper;
+
+    @Value("${file.upload-dir:./uploads/}")
+    private String uploadDir;
+
+    /**
+     * [메인 로직] DB에 저장된 방 이미지를 사용하여 AI 합성
+     */
+    @Transactional
+    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String userPrompt, String roomId, Long userId) {
+        log.info("Requesting AI Image generation for user: {}, Room: {}", userId, roomId);
+        try {
+            // 1. 이미지 선별 (DB에서 가져오기)
+            List<String> selectedImagePaths = selectOneImagePerUser(roomId);
+
+            if (selectedImagePaths.isEmpty()) {
+                if (sourceImages != null && !sourceImages.isEmpty()) {
+                    selectedImagePaths = sourceImages;
+                } else {
+                    throw new IllegalArgumentException("합성에 사용할 이미지가 없습니다.");
+                }
+            }
+
+            // 2. 파일 읽기 및 Base64 변환
+            List<String> base64Images = new ArrayList<>();
+            for (String imagePath : selectedImagePaths) {
+                Path path = Paths.get(uploadDir, imagePath);
+                if (Files.exists(path)) {
+                    byte[] bytes = Files.readAllBytes(path);
+                    base64Images.add(Base64.getEncoder().encodeToString(bytes));
+                }
+            }
+
+            // 3. API 호출 및 저장/전송
+            return callAiApiAndSave(base64Images, userPrompt, roomId, userId);
+
+        } catch (Exception e) {
+            log.error("Failed to generate AI image", e);
+            throw new RuntimeException("AI 이미지 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * [테스트용] 사용자가 직접 업로드한 파일 4개를 사용하여 AI 합성
+     */
+    @Transactional
+    public ImageResponseDto generateTestImage(List<MultipartFile> files, String userPrompt, Long userId) {
+        log.info("Requesting TEST AI Image generation for user: {}", userId);
+        try {
+            if (files == null || files.isEmpty()) {
+                throw new IllegalArgumentException("테스트할 이미지가 없습니다.");
+            }
+
+            // 1. MultipartFile -> Base64 변환
+            List<String> base64Images = new ArrayList<>();
+            for (MultipartFile file : files) {
+                base64Images.add(Base64.getEncoder().encodeToString(file.getBytes()));
+            }
+
+            // 2. API 호출 및 저장/전송 (방 번호는 TEST_ROOM 고정)
+            return callAiApiAndSave(base64Images, userPrompt, "TEST_ROOM", userId);
+
+        } catch (Exception e) {
+            log.error("Failed to generate TEST AI image", e);
+            throw new RuntimeException("테스트 이미지 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * AI API 호출 공통 로직
+     */
+    private ImageResponseDto callAiApiAndSave(List<String> base64Images, String userPrompt, String roomId, Long userId) {
+        // 프롬프트 결합
+        String finalPrompt = B_GRADE_STYLE_PROMPT + (userPrompt != null ? userPrompt : "");
+        log.info("Final Prompt: {}", finalPrompt);
+
+        // API 요청 헤더
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + aiProperties.getApiKey());
+
+        // API 요청 바디
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", "gpt-image-1.5");
+        body.put("prompt", finalPrompt);
+        body.put("n", 1);
+        body.put("size", "1024x1024");
+        body.put("images", base64Images);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        // API URL 설정
+        String genUrl = aiProperties.getUrl();
+        if (genUrl.contains("/edits")) {
+            genUrl = genUrl.replace("/edits", "/generations");
+        }
+
+        // 호출
+        ResponseEntity<String> response = restTemplate.exchange(
+                URI.create(genUrl),
+                HttpMethod.POST,
+                entity,
+                String.class
+        );
+
+        return processResponseAndSave(response, roomId, userId);
+    }
+
+    /**
+     * 응답 처리 + 저장(RESULT 타입) + 이메일 전송
+     */
+    private ImageResponseDto processResponseAndSave(ResponseEntity<String> response, String roomId, Long userId) {
+        try {
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode dataNode = root.path("data");
+
+                if (dataNode.isArray() && !dataNode.isEmpty()) {
+                    byte[] imageBytes = null;
+
+                    // 1. 이미지 데이터 추출
+                    if (dataNode.get(0).has("url")) {
+                        String imageUrl = dataNode.get(0).path("url").asText();
+                        imageBytes = restTemplate.getForObject(new URI(imageUrl), byte[].class);
+                    } else if (dataNode.get(0).has("b64_json")) {
+                        String base64Image = dataNode.get(0).path("b64_json").asText();
+                        imageBytes = Base64.getDecoder().decode(base64Image);
+                    }
+
+                    if (imageBytes == null) {
+                        throw new RuntimeException("이미지 데이터를 찾을 수 없습니다.");
+                    }
+
+                    String extension = detectExtension(imageBytes);
+                    String mimeType = ".jpg".equals(extension) ? "image/jpeg" : "image/png";
+
+                    // 2. MultipartFile로 변환
+                    MultipartFile multipartFile = new ByteArrayMultipartFile(
+                            "ai_result" + extension,
+                            "ai_result" + extension,
+                            mimeType,
+                            imageBytes
+                    );
+
+                    // 3. DB 및 파일 저장 (imageType = "RESULT" 지정)
+                    Image savedImage = imageService.uploadImage(
+                            multipartFile, userId, null, null, null, roomId, "RESULT"
+                    );
+                    log.info("AI Image saved successfully: {} (Type: RESULT)", savedImage.getId());
+
+                    // 4. [이메일 전송 로직]
+                    sendEmailToUser(userId, imageBytes, savedImage.getFileName());
+
+                    return ImageResponseDto.from(savedImage);
+                }
+            }
+            throw new RuntimeException("AI API 응답 오류: " + response.getStatusCode());
+        } catch (Exception e) {
+            log.error("Error processing AI response", e);
+            throw new RuntimeException("결과 처리 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    private void sendEmailToUser(Long userId, byte[] imageBytes, String fileName) {
+        // 유저 정보 조회
+        userRepository.findById(userId).ifPresent(user -> {
+            String email = user.getEmail();
+            if (email != null && !email.isEmpty()) {
+                String subject = "[EchoForest] 당신의 멋진 게임 결과 이미지가 도착했습니다!";
+                String body = """
+                        <html>
+                        <body>
+                            <h3>안녕하세요, %s님!</h3>
+                            <p>"메아리의 숲"에서의 소중한 추억을 이미지를 보내드립니다.</p>
+                            <p>친구 혹은 가족들과 함께한 오늘의 추억을 간직하세요! 🥰</p>
+                            <br/>
+                            <p>감사합니다.</p>
+                        </body>
+                        </html>
+                        """.formatted(user.getNickname());
+
+                // 이메일 서비스 호출 (비동기 처리를 고려할 수도 있음)
+                emailService.sendEmailWithImage(email, subject, body, imageBytes, fileName);
+            }
+        });
+    }
+
+    private List<String> selectOneImagePerUser(String roomId) {
+        List<Image> roomImages = imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId);
+        if (roomImages.isEmpty()) return Collections.emptyList();
+
+        Map<Long, List<Image>> imagesByUser = roomImages.stream()
+                .collect(Collectors.groupingBy(img -> img.getUser().getId()));
+
+        List<String> selectedPaths = new ArrayList<>();
+        Random random = new Random();
+
+        for (List<Image> userPhotos : imagesByUser.values()) {
+            if (!userPhotos.isEmpty()) {
+                Image randomPick = userPhotos.get(random.nextInt(userPhotos.size()));
+                selectedPaths.add(randomPick.getFileName());
+            }
+        }
+        return selectedPaths;
+    }
+
+    private String detectExtension(byte[] data) {
+        if (data == null || data.length < 4) return ".png";
+        if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF) return ".jpg";
+        return ".png";
+    }
+}
