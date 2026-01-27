@@ -439,9 +439,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 }
             }
 
-            // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위)
-            if (labelA.startsWith('elevator-') || labelB.startsWith('elevator-') ||
-                (this.players.has(labelA) && this.players.has(labelB))) {
+            // 지지 관계 체크 (엘리베이터 위 또는 플레이어 위, 또는 일반 블록 위)
+            // [FIX] 플레이어가 포함된 모든 충돌에 대해 지지 관계 가능성 체크
+            if (this.players.has(labelA) || this.players.has(labelB)) {
                 this.handleSupportStart(pair);
             }
 
