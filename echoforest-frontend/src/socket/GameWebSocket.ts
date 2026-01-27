@@ -40,6 +40,9 @@ export type MessageType =
     // Map Object Sync (Hybrid Authority)
     | 'GIMMICK_UPDATE'    // Host -> Server -> Clients: 자동 기믹 위치 동기화
     | 'BLOCK_UPDATE'      // Interactor -> Server -> Clients: 박스 위치 동기화
+    | 'BLOCK_UPDATE'      // Interactor -> Server -> Clients: 박스 위치 동기화
+    // Global Reset
+    | 'GAME_RESET'        // Client<->Server: 게임 리셋 (협동 실패)
     // Pause/Resume (Stability)
     | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
     | 'RESUME_GAME'   // Client->Server: 재개 요청
@@ -438,6 +441,18 @@ class GameWebSocket {
             roomId: roomId,
             username: this.username,
             content: data
+        });
+    }
+
+    /**
+     * 게임 리셋 요청 - 사망 시 등
+     * @param roomId 방 ID
+     */
+    sendGameReset(roomId: string) {
+        this.send({
+            type: 'GAME_RESET',
+            roomId: roomId,
+            username: this.username
         });
     }
 
