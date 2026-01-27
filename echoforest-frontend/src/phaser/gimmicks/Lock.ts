@@ -6,7 +6,7 @@ import Phaser from 'phaser';
  */
 export class Lock {
     private scene: Phaser.Scene;
-    private body: MatterJS.BodyType;
+    private body!: MatterJS.BodyType;
     private sprite?: Phaser.GameObjects.Sprite;
     private graphics?: Phaser.GameObjects.Graphics;
     private isUnlocked: boolean = false;
@@ -14,23 +14,23 @@ export class Lock {
     public readonly id: string;
     public readonly targetGoalId?: number;
 
+    private initialX: number;
+    private initialY: number;
     private width: number;
     private height: number;
+    private angle: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 64, texture?: string, frame?: string | number, angle: number = 0, targetGoalId?: number) {
         this.scene = scene;
         this.id = id;
         this.targetGoalId = targetGoalId;
+        this.initialX = x;
+        this.initialY = y;
         this.width = width;
         this.height = height;
+        this.angle = angle;
 
-        // 자물쇠 물리 바디 (센서로 설정 - 통과 가능)
-        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
-            isStatic: true,
-            isSensor: true,
-            label: `lock-${id}`,
-            angle: Phaser.Math.DegToRad(angle)
-        });
+        this.createBody();
 
         if (texture) {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
@@ -47,18 +47,28 @@ export class Lock {
         }
     }
 
+    private createBody(): void {
+        // 자물쇠 물리 바디 (처음에는 Static Collision으로 막힘)
+        this.body = this.scene.matter.add.rectangle(this.initialX, this.initialY, this.width, this.height, {
+            isStatic: true,
+            isSensor: true, // [REVERT] 원래 설계대로 센서(통과 가능)로 복구
+            label: `lock-${this.id}`,
+            angle: Phaser.Math.DegToRad(this.angle)
+        });
+    }
+
     private drawLock(width: number, height: number): void {
         if (!this.graphics) return;
         this.graphics.clear();
-        // 빨간색 자물쇠 (잠김 상태 - 반투명하게 변경하여 통과 가능함을 암시)
-        this.graphics.fillStyle(0xE74C3C, 0.5);
+        // 빨간색 자물쇠 (잠김 상태 - 불투명)
+        this.graphics.fillStyle(0xE74C3C, 1.0);
         this.graphics.fillRect(-width / 2, -height / 2, width, height);
         // 테두리
-        this.graphics.lineStyle(2, 0xE74C3C, 1);
+        this.graphics.lineStyle(2, 0xC0392B, 1);
         this.graphics.strokeRect(-width / 2, -height / 2, width, height);
 
         // 자물쇠 아이콘 (노란색 구멍)
-        this.graphics.fillStyle(0xFFD700, 0.8);
+        this.graphics.fillStyle(0xFFD700, 1.0);
         this.graphics.fillCircle(0, -height / 4, 6);
         this.graphics.fillRect(-3, -height / 4, 6, height / 3);
     }
@@ -77,9 +87,24 @@ export class Lock {
         this.isUnlocked = true;
         this.graphics?.setVisible(false);
         this.sprite?.setVisible(false);
-        this.scene.matter.world.remove(this.body);
+        if (this.body) this.scene.matter.world.remove(this.body);
 
         console.log(`[Lock] Unlocked: ${this.id}`);
+    }
+
+    public reset(): void {
+        if (!this.isUnlocked) return;
+
+        this.isUnlocked = false;
+
+        // 시각 효과 복구
+        if (this.sprite) this.sprite.setVisible(true);
+        if (this.graphics) this.graphics.setVisible(true);
+
+        // 물리 바디 재생성
+        this.createBody();
+
+        console.log(`[Lock] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {

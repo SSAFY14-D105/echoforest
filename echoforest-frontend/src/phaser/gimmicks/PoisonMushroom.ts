@@ -6,23 +6,26 @@ import Phaser from 'phaser';
  */
 export class PoisonMushroom {
     private scene: Phaser.Scene;
-    private body: MatterJS.BodyType;
+    private body!: MatterJS.BodyType;
     private sprite?: Phaser.GameObjects.Sprite;
     private graphics?: Phaser.GameObjects.Graphics;
     private isTriggered: boolean = false;
 
     public readonly id: string;
+    private initialX: number;
+    private initialY: number;
+    private width: number;
+    private height: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 32, texture?: string, frame?: string | number) {
         this.scene = scene;
         this.id = id;
+        this.initialX = x;
+        this.initialY = y;
+        this.width = width;
+        this.height = height;
 
-        // 독버섯 물리 바디 (센서로 설정)
-        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
-            isSensor: true,
-            isStatic: true,
-            label: `mushroom-${id}`
-        });
+        this.createBody();
 
         if (texture) {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
@@ -35,6 +38,15 @@ export class PoisonMushroom {
             this.graphics.setPosition(x, y);
             this.graphics.setDepth(5);
         }
+    }
+
+    private createBody(): void {
+        // 독버섯 물리 바디 (센서로 설정)
+        this.body = this.scene.matter.add.rectangle(this.initialX, this.initialY, this.width, this.height, {
+            isSensor: true,
+            isStatic: true,
+            label: `mushroom-${this.id}`
+        });
     }
 
     private drawMushroom(width: number, height: number): void {
@@ -63,9 +75,24 @@ export class PoisonMushroom {
         // 시각적으로 제거 및 위치 동기화 중단
         this.sprite?.setVisible(false);
         this.graphics?.setVisible(false);
-        this.scene.matter.world.remove(this.body);
+        if (this.body) this.scene.matter.world.remove(this.body);
 
         console.log(`[PoisonMushroom] Triggered and removed: ${this.id}`);
+    }
+
+    public reset(): void {
+        if (!this.isTriggered) return;
+
+        this.isTriggered = false;
+
+        // 시각 효과 복구
+        if (this.sprite) this.sprite.setVisible(true);
+        if (this.graphics) this.graphics.setVisible(true);
+
+        // 물리 바디 재생성
+        this.createBody();
+
+        console.log(`[PoisonMushroom] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {

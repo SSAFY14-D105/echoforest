@@ -159,4 +159,15 @@ export class Elevator {
         this.serverTarget = { x: this.x, y: data.y }; // X는 고정, Y는 서버 데이터
         // 즉시 이동하지 않고 update 루프에서 보간 처리
     }
+
+    /**
+     * 초기 상태로 리셋 (사망 시)
+     */
+    public reset(): void {
+        // 물리 바디 위치 강제 이동
+        this.scene.matter.body.setPosition(this.body, { x: this.x, y: this.initialY });
+        this.currentWeight = 0;
+        this.serverTarget = null;
+        this.updateVisuals();
+    }
 }

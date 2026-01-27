@@ -601,6 +601,25 @@ export class Player {
         return this.body;
     }
 
+    /**
+     * 플레이어 리스폰 (위치 이동 및 상태 초기화)
+     */
+    public respawn(x: number, y: number): void {
+        console.log(`[Player] Respawning ${this.nickname} at (${x}, ${y})`);
+
+        this._isDead = false;
+        this.curseHP = 100; // HP 초기화
+        this.stopHPDrain(); // 드레인 저주 중지
+
+        // 위치 이동 및 물리 초기화
+        this.setPosition(x, y);
+        this.setVelocity(0, 0);
+        this.scene.matter.body.setAngularVelocity(this.body, 0);
+
+        // 비주얼 복구
+        this.hardResetVisuals();
+    }
+
     public hardResetVisuals(): void {
         console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
 
