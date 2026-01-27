@@ -55,7 +55,7 @@ export class Player {
 
     // 목표 위치 (원격 플레이어 보간용)
     private targetPos: { x: number, y: number } | null = null;
-    private readonly LERP_FACTOR = 0.15; // 0.2 -> 0.15: 더 부드럽게 (지연 시간은 미세하게 증가)
+    // private readonly LERP_FACTOR = 0.15; // Velocity 기반 이동으로 변경되어 더 이상 사용되지 않음
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
@@ -148,19 +148,36 @@ export class Player {
                 if (distSq > 10000) {
                     this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
                 } else {
-                    // 선형 보간 (Lerp)
-                    // LERP_FACTOR를 0.2 -> 0.15로 낮추어 더 부드럽게 이동 (지연은 약간 늘어남)
-                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, this.LERP_FACTOR);
-                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, this.LERP_FACTOR);
+                    // [IMPROVED] 위치 강제 설정 대신 속도를 통해 이동 (물리 충돌 유지)
+                    // P 컨트롤러와 유사한 방식으로 목표 지점으로 향하는 속도 계산
+                    const errorX = this.targetPos.x - currentX;
+                    const errorY = this.targetPos.y - currentY;
 
-                    // 위치 변경
-                    this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+                    // 거리에 비례한 속도 적용 (최대 속도 제한 필요 가능성 있음)
+                    // Lerp 효과를 내기 위해 오차의 일정 비율만큼 속도로 사용
+                    const kP = 0.15; // 비례 상수 (Lerp Factor와 유사)
+
+                    // 수직 이동은 중력의 영향을 받으므로, 서버에서 받은 Y위치에 강하게 맞추기보다
+                    // 수평 이동 위주로 물리 엔진에 맡기고, 위치 오차가 클 때만 강제 보정
+
+                    // 1. 수평 이동: 속도 제어
+                    this.scene.matter.body.setVelocity(this.body, {
+                        x: errorX * kP * (1000 / this.scene.game.loop.delta), // 프레임 보정
+                        y: this.body.velocity.y // Y축은 중력 유지 (필요 시 보정)
+                    });
+
+                    // 2. 수직 위치 보정 (점프/낙하 동기화를 위해)
+                    // Y축 오차가 크면 위치를 직접 수정하되, 바닥에 붙어있을 때는 부드럽게
+                    if (Math.abs(errorY) > 5) {
+                        this.scene.matter.body.setPosition(this.body, {
+                            x: currentX, // X는 유지 (충돌 중일 수 있음)
+                            y: Phaser.Math.Linear(currentY, this.targetPos.y, 0.2)
+                        });
+                    }
                 }
             }
 
-            // 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시)
-            // 원격 플레이어는 서버 좌표를 추종하므로 속도를 0으로 유지
-            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+            // [FIX] 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시) -> 제거됨, 물리 연산 허용
             this.scene.matter.body.setAngularVelocity(this.body, 0);
         }
 
