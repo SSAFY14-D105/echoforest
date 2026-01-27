@@ -503,6 +503,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 this.handleBlockPush(pair);
             }
 
+            // [FIX] Active 상태에서도 지지 관계 지속 업데이트 (원격 플레이어 감지 강화)
+            if (this.players.has(labelA) || this.players.has(labelB)) {
+                this.handleSupportStart(pair);
+            }
+
             // 블록-블록 측면 접촉 체크
             if (labelA.startsWith('block-') && labelB.startsWith('block-')) {
                 if (Math.abs(normal.x) > 0.5) {
