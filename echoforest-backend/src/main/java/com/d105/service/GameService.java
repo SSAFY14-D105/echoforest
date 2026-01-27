@@ -524,6 +524,28 @@ public class GameService {
                 room.getRoomId(), cursedUsername, room.getCurrentMapId());
     }
 
+    /**
+     * 게임 리셋 요청 처리 (협동 실패 시)
+     * 플레이어 사망 등으로 인해 게임을 처음 상태로 되돌립니다.
+     */
+    public void handleGameReset(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // GAME_RESET 브로드캐스트
+            GameMessageDto resetMsg = new GameMessageDto();
+            resetMsg.setType("GAME_RESET");
+            resetMsg.setRoomId(roomId);
+            resetMsg.setContent("reset");
+            room.broadcast(resetMsg, null);
+
+            log.info("🔄 Room {}: Game Reset triggered by {}", roomId, message.getUsername());
+        }
+    }
+
     // =========================================================
     // Map Object Synchronization Handlers (Hybrid Authority)
     // =========================================================
