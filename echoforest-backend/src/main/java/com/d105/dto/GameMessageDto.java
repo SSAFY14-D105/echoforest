@@ -50,7 +50,7 @@ public class GameMessageDto {
     private String content;
 
     // ===== STT 저주 시스템용 필드 =====
-    
+
     @Schema(description = "SPEECH_BATCH: 발화 텍스트 목록")
     private List<String> texts;
 
@@ -74,4 +74,11 @@ public class GameMessageDto {
 
     @Schema(description = "CURSE_TRIGGERED: 현재 맵 ID", example = "1")
     private Integer mapId;
+
+    // ===== Player State Sync (Client-Authoritative) =====
+    @Schema(description = "플레이어 사망 여부")
+    private Boolean isDead;
+
+    @Schema(description = "현재 적용된 저주 목록 (Visual Sync)")
+    private List<String> curses;
 }

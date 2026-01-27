@@ -156,7 +156,7 @@ public class GameService {
 
         // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
         if (x != null && y != null) {
-            room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim);
+            room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, message.getIsDead(), message.getCurses());
         }
     }
 

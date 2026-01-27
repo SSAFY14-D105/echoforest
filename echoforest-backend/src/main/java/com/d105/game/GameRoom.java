@@ -14,7 +14,6 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class GameRoom implements Runnable {
@@ -283,9 +282,14 @@ public class GameRoom implements Runnable {
                 continue;
 
             // DTO Mapping
-            Set<String> activeCurses = p.getActiveCurses().keySet().stream()
-                    .map(Enum::name)
-                    .collect(Collectors.toSet());
+            // Use Client-Reported Visual Curses for synchronization
+            Set<String> activeCurses = p.getVisibleCurses();
+            // If empty, maybe fallback to server state?
+            // For now, trust client. If client sends empty list, it means no curses.
+            if (activeCurses.isEmpty() && !p.getActiveCurses().isEmpty()) {
+                // Fallback to server state if client hasn't sent anything yet?
+                // But client sends every few ms. Let's stick to visibleCurses.
+            }
 
             PlayerUpdateDto dto = PlayerUpdateDto.builder()
                     .serverTick(System.currentTimeMillis())
@@ -330,7 +334,8 @@ public class GameRoom implements Runnable {
         return sessionManager.findSessionIdByUsername(username) != null;
     }
 
-    public void updatePlayerPosition(String sessionId, Double x, Double y, Double vx, Double vy, String anim) {
+    public void updatePlayerPosition(String sessionId, Double x, Double y, Double vx, Double vy, String anim,
+            Boolean isDead, List<String> curses) {
         PlayerState p = sessionManager.getPlayer(sessionId);
         if (p != null) {
             p.touch();
@@ -344,6 +349,11 @@ public class GameRoom implements Runnable {
                 p.setVy(vy);
             if (anim != null)
                 p.setAnim(anim);
+            if (isDead != null)
+                p.setDead(isDead);
+            if (curses != null)
+                p.setVisibleCurses(curses);
+
             p.updateInputTimestamp();
         }
     }
