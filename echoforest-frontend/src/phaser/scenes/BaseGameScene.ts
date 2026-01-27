@@ -6,6 +6,9 @@ import type { Player as StorePlayer } from '../../store/useGameStore';
 import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 import { getRandomCurseId } from '../config/curseConfig';
 import { createPlayerAnimations, preloadPlayerAssets, parseTiledMap, showFloatingText, setupTiledBackground as setupTiledBg } from '../utils';
+// CollisionSystem은 향후 통합 시 사용 예정
+// import { CollisionSystem } from '../systems';
+
 
 // 물리 파라미터
 export const PHYSICS = {
