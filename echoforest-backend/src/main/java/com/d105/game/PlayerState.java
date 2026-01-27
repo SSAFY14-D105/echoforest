@@ -84,4 +84,20 @@ public class PlayerState {
     public void clearCurses() {
         activeCurses.clear();
     }
+
+    // Client-Reported Visual Curses (for broadcasting to others)
+    private java.util.Set<String> visibleCurses = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    public void setVisibleCurses(java.util.List<String> curses) {
+        if (curses != null) {
+            // Replace entirely
+            this.visibleCurses = new java.util.HashSet<>(curses);
+        } else {
+            this.visibleCurses.clear();
+        }
+    }
+
+    public java.util.Set<String> getVisibleCurses() {
+        return this.visibleCurses;
+    }
 }
