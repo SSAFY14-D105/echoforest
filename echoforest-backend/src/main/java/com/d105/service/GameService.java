@@ -12,6 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -135,28 +136,34 @@ public class GameService {
      * 클라이언트가 보낸 좌표를 그대로 신뢰하고 저장
      */
     public void handleMove(WebSocketSession session, GameMessageDto message) {
-        String roomId = message.getRoomId();
-        GameRoom room = gameRepository.getRoom(roomId);
+        try {
+            String roomId = message.getRoomId();
+            GameRoom room = gameRepository.getRoom(roomId);
+    
+            if (room == null)
+                return;
+    
+            // Client-Authoritative: 클라이언트가 보낸 좌표를 그대로 사용
+            Double x = message.getX();
+            Double y = message.getY();
+            Double vx = message.getVx();
+            Double vy = message.getVy();
+            String anim = message.getAnim();
 
-        if (room == null)
-            return;
+            // [DEBUG] 수신 데이터 확인
+            // anim != null && !anim.equals("idle")) {
+            // ("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
+            //  
 
-        // Client-Authoritative: 클라이언트가 보낸 좌표를 그대로 사용
-        Double x = message.getX();
-        Double y = message.getY();
-        Double vx = message.getVx();
-        Double vy = message.getVy();
-        String anim = message.getAnim();
-
-        // [DEBUG] 수신 데이터 확인 (배포 후 제거)
-        if (anim != null && !anim.equals("idle")) {
-            log.info("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
-                    session.getId().substring(0, 8), vx, vy, anim);
-        }
-
-        // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
-        if (x != null && y != null) {
-            room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, message.getIsDead(), message.getCurses());
+            // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
+            if (x != null && y != null) {
+                Boolean isDead = message.getIsDead();
+                List<String> curses = message.getCurses();
+                
+                room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, isDead, curses);
+            }
+        } catch (Exception e) {
+            log.error("[MOVE Error] Failed to process move message: {}", message.toString(), e);
         }
     }
 
