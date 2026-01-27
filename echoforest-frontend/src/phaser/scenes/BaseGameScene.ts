@@ -1000,6 +1000,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void): void {
+        this.sendStateCallback = callback;
+    }
+
     public setIsSoloMode(isSolo: boolean): void {
         this.isSoloMode = isSolo;
     }
