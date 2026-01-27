@@ -151,22 +151,17 @@ export class MovableBlock {
             let newY = currentPos.y;
             const diffY = Math.abs(currentPos.y - this.serverTarget.y);
 
-            // 5px 이상 차이나면 서버 위치 추종 (공중 낙하 등)
-            if (diffY > 5) {
+            // 1px 이상 차이나면 서버 위치 추종 (공중 낙하 등)
+            if (diffY > 1) {
                 newY = Phaser.Math.Linear(currentPos.y, this.serverTarget.y, lerpFactorY);
             } else {
                 // 차이가 작으면 물리 엔진 값 유지 (바닥 밀착 유도)
-                // 단, 미세한 떨림 방지를 위해 속도가 거의 0이면 위치 고정 고려 가능하나
-                // 여기서는 단순히 업데이트를 안 함으로써 중력을 따르게 함
             }
 
             this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
 
-            // 속도 제어: 
-            // - X축 속도는 0으로 초기화하여 미끄러짐 방지
-            // - Y축 속도는 낙하 중일 수 있으므로 유지해야 함 (setPosition을 안 했을 경우)
-            //   단, 강제 이동(newY 변경) 시에는 0으로 초기화
-            if (diffY > 5) {
+            // 속도 제어
+            if (diffY > 1) {
                 this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
             } else {
                 this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });

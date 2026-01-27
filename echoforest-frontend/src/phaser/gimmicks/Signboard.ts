@@ -40,7 +40,10 @@ export class Signboard {
             isSensor: true,
             isStatic: true,
             label: `signboard-${this.id}`,
-            angle: Phaser.Math.DegToRad(angle)
+            angle: Phaser.Math.DegToRad(angle),
+            collisionFilter: {
+                mask: 0x0002 // Player만 감지 (박스 등 무시)
+            }
         });
 
         // 안내판 그래픽 또는 스프라이트
