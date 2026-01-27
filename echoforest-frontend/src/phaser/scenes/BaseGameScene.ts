@@ -543,15 +543,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
     // 지지 관계 시작 처리
+    // 지지 관계 시작 처리
     private handleSupportStart(pair: any): void {
-        // 충돌 법선(Normal) 체크: 상하 충돌인지 확인
-        // normal.y의 절대값이 크면 상하 충돌, normal.x의 절대값이 크면 측면 충돌
-        const normal = pair.collision.normal;
-        if (Math.abs(normal.y) < 0.5) {
-            // 측면 충돌인 경우 무시
-            return;
-        }
-
         const bodyA = pair.bodyA;
         const bodyB = pair.bodyB;
 
@@ -562,6 +555,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (bodyA.position.y > bodyB.position.y) {
             top = bodyB;
             bottom = bodyA;
+        }
+
+        // [Improvement] 법선(Normal) 체크 대신 위치 차이로 상하 관계 확실히 결정
+        // Y 좌표 차이가 일정 이상 나야 위/아래로 인정 (너무 겹치거나 옆에 있는 경우 제외)
+        // 충돌 박스 높이를 고려하면 좋지만, 우선 간단하게 중심점 기준으로 판단
+        const dy = Math.abs(bodyA.position.y - bodyB.position.y);
+        if (dy < 10) { // 너무 같은 높이면 측면 충돌일 가능성 높음
+            return;
         }
 
         const topLabel = top.label;
