@@ -139,10 +139,10 @@ public class GameService {
         try {
             String roomId = message.getRoomId();
             GameRoom room = gameRepository.getRoom(roomId);
-    
+
             if (room == null)
                 return;
-    
+
             // Client-Authoritative: 클라이언트가 보낸 좌표를 그대로 사용
             Double x = message.getX();
             Double y = message.getY();
@@ -153,13 +153,13 @@ public class GameService {
             // [DEBUG] 수신 데이터 확인
             // anim != null && !anim.equals("idle")) {
             // ("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
-            //  
+            //
 
             // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
             if (x != null && y != null) {
                 Boolean isDead = message.getIsDead();
                 List<String> curses = message.getCurses();
-                
+
                 room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, isDead, curses);
             }
         } catch (Exception e) {
@@ -400,6 +400,22 @@ public class GameService {
         }
 
         log.info("Room {} advanced to stage {}", roomId, nextStage);
+    }
+
+    /**
+     * 스테이지 클리어 처리 (개별 플레이어)
+     */
+    public void handleStageClear(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.handleStageClear(username);
+        }
     }
 
     // =========================================================
