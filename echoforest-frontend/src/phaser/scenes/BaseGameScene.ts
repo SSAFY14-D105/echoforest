@@ -56,7 +56,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     public onFailCallback?: () => void;
     public onSuccessCallback?: () => void;
     // [FIX] 상태 전송 콜백 시그니처 변경 (isDead, curses 추가)
-    public sendStateCallback?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
+    public sendStateCallback?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     public updateReadyStatusCallback?: (isReady: boolean) => void;
 
     // 지지 관계 추적 (밑에 있는 것의 label -> 위에 있는 것들의 label Set)
@@ -1007,7 +1007,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
-    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void): void {
+    public setSendStateCallback(callback: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void): void {
         this.sendStateCallback = callback;
     }
 
@@ -1727,7 +1727,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     syncAnim += `|s:${match[1]}`;
                 }
 
-                this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses);
+                this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses, myPlayer.isHidden);
                 this.lastStateSendTime = now;
             }
         }

@@ -20,7 +20,7 @@ interface WaitingRoomProps {
     pausedBy: string | null;
     myReady: boolean;
     allReady: boolean;
-    onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
+    onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     onCopyRoomId: () => void;
     onLeave: () => void;
     onToggleReady: () => void;
