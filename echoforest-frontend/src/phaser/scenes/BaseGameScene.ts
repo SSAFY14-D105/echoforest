@@ -1793,10 +1793,16 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             myPlayer.hide();
                             enteredGoal = true;
 
+                            // [FIX] 개별 클라이언트가 도착하면 즉시 서버로 신호 전송 (서버에서 전원 도착 여부 판별)
+                            console.log(`[${this.getSceneKey()}] 🎉 Player entered goal! Sending signal...`);
+                            this.onStageComplete();
+
+                            /*
                             if (goal.isComplete()) {
                                 console.log(`[${this.getSceneKey()}] 🎉 Stage Complete!`);
                                 this.onStageComplete();
                             }
+                            */
                             break;
                         }
                     }
