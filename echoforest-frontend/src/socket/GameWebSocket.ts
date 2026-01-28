@@ -68,6 +68,7 @@ export interface ServerPlayerState {
     height: number;
     hp: number;
     isDead: boolean;
+    isHidden?: boolean;  // [NEW] 골인 등 숨김 상태
     isAfk?: boolean;     // AFK 상태
     curses: string[];
     serverTick?: number;
@@ -94,6 +95,7 @@ export interface GameMessage {
     releasedPlayerId?: string;  // CURSE_RELEASED용
     mapId?: number;             // 저주 효과 맵 ID
     isDead?: boolean;           // 플레이어 상태 동기화용
+    isHidden?: boolean;         // [NEW] 플레이어 숨김 상태 동기화용
     curses?: string[];          // 플레이어 상태 동기화용
 }
 
@@ -288,7 +290,7 @@ class GameWebSocket {
      * @param vy Y 속도
      * @param anim 애니메이션 키
      */
-    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) {
+    sendPlayerState(roomId: string, x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) {
         if (!this.isConnected()) return;
 
         // [DEBUG] 전송 데이터 확인 (1초에 한 번 정도만 출력 추천하지만, 여기선 매번 출력은 부담되므로 샘플링하거나 일단 전체 출력)
@@ -304,6 +306,7 @@ class GameWebSocket {
             anim: anim,
             content: '', // 필수 필드
             isDead: isDead,
+            isHidden: isHidden, // [NEW] 숨김 상태 전송
             curses: curses
         };
         this.ws?.send(JSON.stringify(message));

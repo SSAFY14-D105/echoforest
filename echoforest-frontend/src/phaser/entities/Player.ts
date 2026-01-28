@@ -267,7 +267,7 @@ export class Player {
      * @param vy 서버에서 받은 Y 속도 (점프 판정용)
      * @param anim 서버에서 받은 애니메이션 상태
      */
-    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string, isDead?: boolean, curses?: string[]): void {
+    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string, isDead?: boolean, curses?: string[], isHidden?: boolean): void {
         this.targetPos = { x, y };
         this.remoteVx = vx;
         if (vy !== undefined) this.remoteVy = vy;
@@ -281,6 +281,15 @@ export class Player {
                 // 애니메이션은 applyRemoteAnimation에서 처리
             } else {
                 this._isDead = false;
+            }
+        }
+
+        // [NEW] 숨김 상태 동기화
+        if (isHidden !== undefined) {
+            if (isHidden) {
+                this.hide();
+            } else {
+                this.show();
             }
         }
 
