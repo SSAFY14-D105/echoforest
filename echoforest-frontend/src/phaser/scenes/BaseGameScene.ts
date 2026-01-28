@@ -409,7 +409,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 플레이어 목록이나 닉네임이 변경된 경우만 동기화
             if (currentPlayersJson !== prevPlayersJson || currentNickname !== prevNickname) {
-                console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
+                //console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
                 prevPlayersJson = currentPlayersJson;
                 prevNickname = currentNickname;
                 this.syncPlayersFromStore();

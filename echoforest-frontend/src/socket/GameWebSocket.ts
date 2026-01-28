@@ -248,7 +248,7 @@ class GameWebSocket {
     send(message: GameMessage) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             if (message.type !== 'MOVE') {
-                console.log('📤 전송:', message);
+                //console.log('📤 전송:', message);
             }
             this.ws.send(JSON.stringify(message));
         } else {
