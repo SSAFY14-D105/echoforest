@@ -12,6 +12,7 @@ export interface Player {
     height?: number; // 플레이어 높이 (저주로 변할 수 있음)
     hp?: number;     // 체력
     isDead?: boolean; // 사망 여부
+    isHidden?: boolean; // 숨김 상태 (골인 등)
 
     curses?: string[]; // 적용된 저주 목록
     colorIndex?: number; // 색상 인덱스 (서버 순서 기반 고정, 0=Green, 1=Blue...)
@@ -43,7 +44,7 @@ interface GameState {
     addPlayer: (player: Player) => void;
     setPlayers: (players: Player[]) => void;  // 전체 플레이어 설정
     // syncPlayersFromServer: 서버로부터 받은 플레이어 목록을 동기화 (정렬 후 색상 할당)
-    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
+    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; isHidden?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
     updatePlayerPosition: (nickname: string, x: number, y: number) => void;  // 위치 업데이트용
     // Ready 상태 관리
@@ -137,6 +138,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     height: serverPlayer.height,
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
+                    isHidden: serverPlayer.isHidden,
                     curses: serverPlayer.curses,
                     params: serverPlayer,
                     colorIndex: colorIndex,
@@ -154,6 +156,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     height: serverPlayer.height,
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
+                    isHidden: serverPlayer.isHidden,
                     curses: serverPlayer.curses,
                     isHost: isHost,
                     isLocal: false,
