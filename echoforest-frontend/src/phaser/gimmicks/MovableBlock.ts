@@ -9,6 +9,7 @@ export interface MovableBlockConfig {
     requiredPlayers: number;
     texture?: string;
     frame?: string | number;
+    targetBlockId?: string;
 }
 
 /**

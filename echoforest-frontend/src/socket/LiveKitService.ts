@@ -154,17 +154,17 @@ export class LiveKitService {
         if (!this.room) return;
 
         this.room.on(RoomEvent.ParticipantConnected, () => {
-            console.log('📥 참가자 입장');
+            //console.log('📥 참가자 입장');
             this.notifyParticipantUpdate();
         });
 
         this.room.on(RoomEvent.ParticipantDisconnected, () => {
-            console.log('📤 참가자 퇴장');
+            //console.log('📤 참가자 퇴장');
             this.notifyParticipantUpdate();
         });
 
         this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
-            console.log('🎥 트랙 구독:', track.kind, participant.identity);
+            //console.log('🎥 트랙 구독:', track.kind, participant.identity);
 
             // 오디오 트랙은 자동으로 재생되도록 attach
             if (track.kind === Track.Kind.Audio) {

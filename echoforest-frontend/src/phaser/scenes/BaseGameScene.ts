@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { Player } from '../entities/Player';
 import type { PlayerConfig } from '../entities/Player';
@@ -33,21 +34,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     protected storeUnsubscribe?: () => void;
 
     // 기믹들
-    protected keys: Key[] = [];
-    protected locks: Lock[] = [];
-    protected spikes: Spike[] = [];
-    protected goals: Goal[] = [];
-    protected springs: Spring[] = [];
-    protected elevators: Elevator[] = [];
-    protected movableBlocks: MovableBlock[] = [];
-    protected bumpers: Bumper[] = [];
-    protected movingBumpers: MovingBumper[] = [];
-    protected poisonMushrooms: PoisonMushroom[] = [];
-    protected blockButtons: BlockButton[] = [];
-    protected togglePlatforms: TogglePlatform[] = [];
-    protected triggerButtons: TriggerButton[] = [];
-    protected signboards: Signboard[] = [];
-    protected ghostPlatforms: GhostPlatform[] = [];
+    public keys: Key[] = [];
+    public locks: Lock[] = [];
+    public spikes: Spike[] = [];
+    public goals: Goal[] = [];
+    public springs: Spring[] = [];
+    public elevators: Elevator[] = [];
+    public movableBlocks: MovableBlock[] = [];
+    public bumpers: Bumper[] = [];
+    public movingBumpers: MovingBumper[] = [];
+    public poisonMushrooms: PoisonMushroom[] = [];
+    public blockButtons: BlockButton[] = [];
+    public togglePlatforms: TogglePlatform[] = [];
+    public triggerButtons: TriggerButton[] = [];
+    public signboards: Signboard[] = [];
+    public ghostPlatforms: GhostPlatform[] = [];
     private activeSignboard: Signboard | null = null;
     private popupContainer: Phaser.GameObjects.Container | null = null;
 
@@ -72,7 +73,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스폰 위치 및 맵 오프셋 (Tiled 등에서 설정 가능)
     protected spawnPoint: { x: number; y: number } | null = null;
-    protected spawnPoints: Respawn[] = [];
+    public spawnPoints: Respawn[] = [];
     protected offsetY: number = 0;
 
     // 플레이어 상태
@@ -375,7 +376,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
      * @param textureKey 배경 이미지 키
      * @param scrollFactor 시차 효과 (0: 고정, 1: 맵과 동일 속도)
      */
-    protected setupTiledBackground(textureKey: string, scrollFactor: number = 0.5): void {
+    /**
+     * 배경 이미지를 맵 전체 너비에 걸쳐 타일링합니다.
+     * 핵심 로직은 utils/SceneHelper.ts로 분리되었습니다.
+     * @param textureKey 배경 이미지 키
+     * @param scrollFactor 시차 효과 (0: 고정, 1: 맵과 동일 속도)
+     */
+    public setupTiledBackground(textureKey: string, scrollFactor: number = 0.5): void {
         setupTiledBg(this, textureKey, this.getWorldWidth(), this.getWorldHeight(), scrollFactor);
     }
 
@@ -403,7 +410,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 플레이어 목록이나 닉네임이 변경된 경우만 동기화
             if (currentPlayersJson !== prevPlayersJson || currentNickname !== prevNickname) {
-                console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
+                //console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
                 prevPlayersJson = currentPlayersJson;
                 prevNickname = currentNickname;
                 this.syncPlayersFromStore();
@@ -1004,6 +1011,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.sendStateCallback = callback;
     }
 
+    public roomId: string | null = null;
+    public setRoomId(roomId: string | null) {
+        this.roomId = roomId;
+    }
+
     public setIsSoloMode(isSolo: boolean): void {
         this.isSoloMode = isSolo;
     }
@@ -1061,9 +1073,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             // [DEBUG] 원격 플레이어 데이터 확인
                             if (storePlayer.nickname !== this.myPlayerId) {
                                 // 60프레임마다 한 번만 로그 출력 (너무 많음 방지)
+                                /*
                                 if (this.game.loop.frame % 60 === 0) {
                                     console.log(`[Sync] Remote ${storePlayer.nickname}: Pos(${storePlayer.x?.toFixed(1)}, ${storePlayer.y?.toFixed(1)}), Vel(${storePlayer.vx?.toFixed(2)}, ${storePlayer.vy?.toFixed(2)}), Dead:${isDead}, Curses:${curses}`);
                                 }
+                                */
                             }
 
                             existingPlayer.setRemoteState(
@@ -1205,6 +1219,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         });
 
         // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
+        /*
         if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
             const p = this.players.get(this.myPlayerId);
             if (p) {
@@ -1212,6 +1227,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
             }
         }
+        */
 
 
         // 이동형 범퍼 업데이트
@@ -1727,9 +1743,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // 좌우 이동
         /* [DEBUG] 입력 상태 및 속도 로깅 */
+        /*
         if (this.game.loop.frame % 60 === 0) {
             console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
         }
+        */
 
         if (!myPlayer.isHidden) {
             if (leftKey.isDown) {
@@ -1864,7 +1882,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
-        // 기본 구현: 콘솔 로그만
+        console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
+
+        if (this.roomId && gameWebSocket.isConnected()) {
+            gameWebSocket.sendStageClear(this.roomId);
+
+            // UI 피드백: "다른 멤버를 기다리는 중..."
+            this.showFloatingText(
+                this.cameras.main.midPoint.x,
+                this.cameras.main.midPoint.y - 100,
+                "다른 팀원을 기다리는 중...",
+                0x00ffff
+            );
+        } else {
+            console.warn('[Stage] Cannot send clear: Room ID missing or WS disconnected');
+        }
     }
 
     /**
