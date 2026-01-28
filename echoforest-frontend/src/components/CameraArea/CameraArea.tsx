@@ -60,8 +60,8 @@ export default function CameraArea() {
             setIsLiveKitConnecting(true);
             try {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
-                const userId = localStorage.getItem('loginId') || nickname;
-                await liveKitService.connect(roomId, userId, nickname);
+                // [FIX] nickname을 identity로 사용하여 다른 플레이어와 매칭
+                await liveKitService.connect(roomId, nickname, nickname);
                 setIsMicEnabled(liveKitService.isMicEnabled);
                 setIsCameraEnabled(liveKitService.isCameraEnabled);
             } catch (error) {
@@ -77,6 +77,13 @@ export default function CameraArea() {
             liveKitService.disconnect();
         };
     }, [roomId, nickname, isSoloMode]);
+
+    // [FIX] localVideoRef가 DOM에 attach된 후 LiveKit에 설정
+    useEffect(() => {
+        if (localVideoRef.current && liveKitService.isConnected) {
+            liveKitService.setLocalVideoElement(localVideoRef.current);
+        }
+    }, [localVideoRef.current, liveKitService.isConnected]);
 
     // Remote Video Track Attachment
     useEffect(() => {
