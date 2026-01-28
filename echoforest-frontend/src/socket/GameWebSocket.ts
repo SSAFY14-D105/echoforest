@@ -204,7 +204,7 @@ class GameWebSocket {
                         const message: GameMessage = JSON.parse(event.data);
                         // UPDATE 메시지는 너무 빈번하므로 로그에서 제외
                         if (message.type !== 'UPDATE') {
-                            console.log('📩 수신:', message);
+                            // console.log('📩 수신:', message);
                         }
 
                         // 에러 메시지 처리
