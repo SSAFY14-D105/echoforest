@@ -1067,9 +1067,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             // [DEBUG] 원격 플레이어 데이터 확인
                             if (storePlayer.nickname !== this.myPlayerId) {
                                 // 60프레임마다 한 번만 로그 출력 (너무 많음 방지)
+                                /*
                                 if (this.game.loop.frame % 60 === 0) {
                                     console.log(`[Sync] Remote ${storePlayer.nickname}: Pos(${storePlayer.x?.toFixed(1)}, ${storePlayer.y?.toFixed(1)}), Vel(${storePlayer.vx?.toFixed(2)}, ${storePlayer.vy?.toFixed(2)}), Dead:${isDead}, Curses:${curses}`);
                                 }
+                                */
                             }
 
                             existingPlayer.setRemoteState(
@@ -1211,6 +1213,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         });
 
         // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
+        /*
         if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
             const p = this.players.get(this.myPlayerId);
             if (p) {
@@ -1218,6 +1221,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
             }
         }
+        */
 
 
         // 이동형 범퍼 업데이트
@@ -1733,9 +1737,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // 좌우 이동
         /* [DEBUG] 입력 상태 및 속도 로깅 */
+        /*
         if (this.game.loop.frame % 60 === 0) {
             console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
         }
+        */
 
         if (!myPlayer.isHidden) {
             if (leftKey.isDown) {
