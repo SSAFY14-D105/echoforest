@@ -68,6 +68,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "STAGE_CLEAR": // 스테이지 클리어 (개별 인원)
                     gameService.handleStageClear(session, messageDto);
                     break;
+                case "STAGE_EXIT": // 스테이지 클리어 취소 (골 탈출)
+                    gameService.handleStageExit(session, messageDto);
+                    break;
                 // ===== STT 저주 시스템 =====
                 case "SPEECH_BATCH": // 발화 배치 분석
                     gameService.handleSpeechBatch(session, messageDto);
