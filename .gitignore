@@ -1,0 +1,81 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments (Conda, venv)
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+anaconda3/
+miniconda3/
+miniforge3/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ / PyCharm
+.idea/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project Specific Data (Large Files)
+# 데이터 수집 관련
+fine-turning/data_collection/raw_audio/*.mp3
+fine-turning/data_collection/raw_audio/*.m4a
+fine-turning/data_collection/raw_audio/*.wav
+
+# 텍스트 데이터나 결과물은 공유 (주석 처리됨 = Git에 올라감)
+# fine-turning/data_collection/raw_data/
+# fine-turning/data_collection/stt_data/
+# fine-turning/data_collection/output/
+
+# 학습 결과 및 모델 체크포인트
+# 용량이 너무 크다면(100MB+) 아래 확장자만 막거나 LFS 사용 권장
+# *.pt
+# *.pth
+# *.ckpt
+# fine-turning/results/
+# fine-turning/results_stt/
+# fine-turning/saved_models/
+
+# 전처리된 데이터 (공유)
+# fine-turning/preprocessing/train_stt/

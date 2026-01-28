@@ -34,11 +34,12 @@ def transcribe_all():
     
     for audio_path in audio_files:
         filename = os.path.basename(audio_path)
-        file_id = os.path.splitext(filename)[0] # 확장자 제거 (예: audio_1)
+        file_id = os.path.splitext(filename)[0]
         
-        save_path = os.path.join(OUTPUT_DIR, f"{file_id}.txt")
+        # 파일명 뒤에 _whisper 추가 (구분용)
+        save_path = os.path.join(OUTPUT_DIR, f"{file_id}_whisper.txt")
         
-        # 이미 변환된 파일이면 건너뛰기 (이어하기 기능)
+        # 이미 변환된 파일이면 건너뛰기
         if os.path.exists(save_path):
             print(f"Skipping {filename} (Already transcribed)")
             continue
@@ -48,7 +49,7 @@ def transcribe_all():
         try:
             result = model.transcribe(audio_path, language='ko')
             
-            # 발화 단위(segment)로 줄바꿈 처리 (청킹 최적화)
+            # 발화 단위(segment)로 줄바꿈 처리 - Whisper 기본 기능 사용
             segments = [seg['text'].strip() for seg in result['segments']]
             full_text = "\n".join(segments)
             
