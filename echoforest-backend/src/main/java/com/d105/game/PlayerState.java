@@ -21,6 +21,7 @@ public class PlayerState {
     private double height = 40.0; // 커짐 저주용
     private int hp = 100; // 저주용 HP
     private boolean isDead = false;
+    private boolean isFinished = false; // 스테이지 완료 여부
     private String anim = "idle_down";
 
     // 슬롯 번호 (0: 초록, 1: 파랑, 2: 노랑, 3: 보라)
