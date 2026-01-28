@@ -1,40 +1,25 @@
-import { useState } from 'react';
 import styles from './LoginPage.module.css';
 import LoginForm from '../../../components/LoginForm/LoginForm';
-import SignupForm from '../../../components/SignupForm/SignupForm';
 
 interface Props {
-  onLogin: (nickname: string) => void;
+  onLoginSuccess: (nickname: string) => void;
+  onBack: () => void;
 }
 
-type Mode = 'login' | 'signup';
-
-export default function LoginPage({ onLogin }: Props) {
-  const [mode, setMode] = useState<Mode>('login');
-
-  const handleSignupSuccess = () => {
-    setMode('login');
-  };
-
+export default function LoginPage({ onLoginSuccess, onBack }: Props) {
   return (
     <div className={styles.container}>
+      {/* 배경 이미지 */}
       <img
         className={styles.bgImage}
-        src="/assets/backgrounds/login_bg.gif"
+        src="/assets/backgrounds/login_page.png"
         alt="Login Background"
       />
-      <div className={`${styles.box} pixel-box`}>
-        {mode === 'login' ? (
-          <LoginForm
-            onLoginSuccess={onLogin}
-            onSwitchMode={() => setMode('signup')}
-          />
-        ) : (
-          <SignupForm
-            onSignupSuccess={handleSignupSuccess}
-            onSwitchMode={() => setMode('login')}
-          />
-        )}
+
+      {/* 로그인 폼 영역 */}
+      <div className={styles.formWrapper}>
+        <h1 className={styles.title}>로그인</h1>
+        <LoginForm onLoginSuccess={onLoginSuccess} onSwitchMode={onBack} />
       </div>
     </div>
   );

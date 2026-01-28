@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
-import LoginPage from './pages/auth/LoginPage/LoginPage';
+import MainPage from './pages/auth/MainPage/MainPage';
 import LobbyPage from './pages/lobby/LobbyPage/LobbyPage.tsx';
 import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
@@ -30,9 +30,9 @@ export default function App() {
     return <div style={{ width: '100vw', height: '100vh', backgroundColor: '#2d2d2d' }} />;
   }
 
-  // 1. 닉네임이 없으면 -> 로그인 페이지
+  // 1. 닉네임이 없으면 -> 메인 페이지 (로그인/회원가입 선택)
   if (!nickname) {
-    return <LoginPage onLogin={(id) => setNickname(id)} />;
+    return <MainPage onLogin={(id) => setNickname(id)} />;
   }
 
   if (!roomId) {

@@ -1,0 +1,76 @@
+/* 메인 랜딩 페이지 컨테이너 */
+.container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 배경 이미지 (main_page.png) */
+.bgImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+/* 메뉴 래퍼 - 화면 중앙보다 살짝 위로 + 왼쪽으로 이동 */
+.menuWrapper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* 왼쪽으로 이동 + 위로 살짝 */
+    transform: translate(-100px);
+}
+
+/* 메뉴 아이템들 */
+.menuItems {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* 메뉴 버튼 (텍스트 스타일 강화) */
+.menuButton {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-family: var(--font-title);
+    font-size: 56px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+
+    /* 픽셀 아트 느낌의 두꺼운 테두리 효과 */
+    text-shadow:
+        4px 4px 0px #000,
+        -2px -2px 0px #000,
+        2px -2px 0px #000,
+        -2px 2px 0px #000,
+        2px 2px 0px #000;
+}
+
+.menuButton:hover {
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+/* 나뭇잎 아이콘 키움 (약 2배) */
+.leafIcon {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+    filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.5));
+}
