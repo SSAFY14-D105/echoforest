@@ -461,6 +461,25 @@ public class GameRoom implements Runnable {
         }
 
         // 2. 모든 플레이어가 완료했는지 확인
+        checkStageCompletion();
+    }
+
+    public void handleStageExit(String username) {
+        String sid = sessionManager.findSessionIdByUsername(username);
+        if (sid == null)
+            return;
+
+        PlayerState player = sessionManager.getPlayer(sid);
+        if (player == null)
+            return;
+
+        if (player.isFinished()) {
+            player.setFinished(false);
+            log.info("Player {} left goal (unfinished) stage {}", username, currentMapId);
+        }
+    }
+
+    private void checkStageCompletion() {
         log.info("[DEBUG] Checking Stage Completion...");
         boolean allFinished = true;
         int activePlayerCount = 0;
