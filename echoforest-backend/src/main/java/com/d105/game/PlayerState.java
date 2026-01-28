@@ -22,6 +22,10 @@ public class PlayerState {
     private int hp = 100; // 저주용 HP
     private boolean isDead = false;
     private boolean isFinished = false; // 스테이지 완료 여부
+
+    // [NEW] 숨김 상태 (골인 등)
+    private boolean isHidden = false;
+
     private String anim = "idle_down";
 
     // 슬롯 번호 (0: 초록, 1: 파랑, 2: 노랑, 3: 보라)
