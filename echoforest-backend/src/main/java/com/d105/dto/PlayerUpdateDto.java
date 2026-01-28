@@ -1,5 +1,6 @@
 package com.d105.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,14 +22,18 @@ public class PlayerUpdateDto {
 
     // Core Data
     private int colorIndex;
+    @JsonProperty("isHost")
     private boolean isHost;
 
     // Status
     private double width;
     private double height;
     private int hp;
+    @JsonProperty("isDead")
     private boolean isDead;
+    @JsonProperty("isHidden")
     private boolean isHidden; // [NEW] 숨김 상태 (골인 등)
+    @JsonProperty("isAfk")
     private boolean isAfk;
 
     // Active Curses
