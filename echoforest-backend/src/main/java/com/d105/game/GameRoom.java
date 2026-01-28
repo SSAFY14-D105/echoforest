@@ -305,6 +305,7 @@ public class GameRoom implements Runnable {
                     .height(p.getHeight())
                     .hp(p.getHp())
                     .isDead(p.isDead())
+                    .isHidden(p.isHidden()) // [NEW] 필드 추가
                     .isAfk(p.isAfk())
                     .curses(activeCurses)
                     .build();
@@ -335,7 +336,7 @@ public class GameRoom implements Runnable {
     }
 
     public void updatePlayerPosition(String sessionId, Double x, Double y, Double vx, Double vy, String anim,
-            Boolean isDead, List<String> curses) {
+            Boolean isDead, List<String> curses, Boolean isHidden) {
         PlayerState p = sessionManager.getPlayer(sessionId);
         if (p != null) {
             p.touch();
@@ -351,6 +352,8 @@ public class GameRoom implements Runnable {
                 p.setAnim(anim);
             if (isDead != null)
                 p.setDead(isDead);
+            if (isHidden != null)
+                p.setHidden(isHidden);
             if (curses != null)
                 p.setVisibleCurses(curses);
 

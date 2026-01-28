@@ -79,6 +79,9 @@ public class GameMessageDto {
     @Schema(description = "플레이어 사망 여부")
     private Boolean isDead;
 
+    @Schema(description = "플레이어 숨김 여부 (골인 등)")
+    private Boolean isHidden; // [NEW] 필드 추가
+
     @Schema(description = "현재 적용된 저주 목록 (Visual Sync)")
     private List<String> curses;
 }

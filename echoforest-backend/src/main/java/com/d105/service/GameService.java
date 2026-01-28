@@ -11,7 +11,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.util.Set;
+
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -159,8 +159,9 @@ public class GameService {
             if (x != null && y != null) {
                 Boolean isDead = message.getIsDead();
                 List<String> curses = message.getCurses();
+                Boolean isHidden = message.getIsHidden(); // [NEW] 필드 추가
 
-                room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, isDead, curses);
+                room.updatePlayerPosition(session.getId(), x, y, vx, vy, anim, isDead, curses, isHidden);
             }
         } catch (Exception e) {
             log.error("[MOVE Error] Failed to process move message: {}", message.toString(), e);
