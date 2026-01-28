@@ -3,17 +3,18 @@ import { useGameStore } from '../../store/useGameStore';
 import MapManager from '../utils/MapManager';
 
 /**
- * Solo3Scene - tutorial_map.tmj를 사용하는 혼자하기 3 씬
+ * Solo5Scene
+ * 'forest_test_map.tmj' 맵을 사용하여 MapManager 시스템을 테스트하는 스테이지.
  */
-export default class Solo3Scene extends BaseGameScene {
+export default class Solo5Scene extends BaseGameScene {
     private mapManager?: MapManager;
 
     constructor() {
-        super({ key: 'Solo3Scene' });
+        super({ key: 'Solo5Scene' });
     }
 
     protected getSceneKey(): string {
-        return 'Solo3Scene';
+        return 'Solo5Scene';
     }
 
     protected getWorldWidth(): number {
@@ -30,56 +31,55 @@ export default class Solo3Scene extends BaseGameScene {
 
     preload() {
         super.preload();
-        // 튜토리얼 맵 로드
-        this.load.tilemapTiledJSON('tutorial_map', 'assets/maps/tutorial_map.tmj');
+        // 1. 맵 파일 로드 (Tiled JSON)
+        this.load.tilemapTiledJSON('forest_test_map', 'assets/maps/forest_test_map.tmj');
 
-        // 타일셋 로드 (Tiled의 name과 일치시킴)
-        // 1. tiles_tileset: 지형 및 기본 기믹
+        // 2. 타일셋 로드
+        // Tiled의 tileset name ('tiles_tileset')과 매칭
         this.load.spritesheet('tiles_tileset', 'assets/tilesets/tilemap.png', { frameWidth: 18, frameHeight: 18, spacing: 1 });
-        // 2. players_tileset: 범퍼 등 특수 기믹
         this.load.spritesheet('players_tileset', 'assets/tilesets/tilemap-characters.png', { frameWidth: 24, frameHeight: 24, spacing: 1 });
 
-        // 배경 이미지 로드
+        // 3. 배경 이미지 로드
         this.load.image('background_image', 'assets/backgrounds/background_image.png');
     }
 
     protected shouldCreateDefaultFloor(): boolean {
+        // Tiled Map에서 바닥(Solid)을 처리하므로 기본 바닥 생성 방지
         return false;
     }
 
     create() {
-        console.log('[Solo3Scene] Initializing tutorial map');
+        console.log('[Solo5Scene] Initializing forest_test_map');
 
-        // MapManager 초기화 (맵 로드)
-        this.mapManager = new MapManager(this, 'tutorial_map');
+        // 4. MapManager 초기화
+        this.mapManager = new MapManager(this, 'forest_test_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 타일셋 연결
+        // 5. 맵 생성 (Tileset Name, Phaser Cache Key, Background Key)
         this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
 
-        // 기믹 생성 (BaseGameScene의 create()에서 자동으로 호출됨)
         super.create();
     }
 
     protected createGimmicks(): void {
+        // 6. 기믹 생성 위임
         this.mapManager?.createObjects();
     }
 
     protected getGoalConfig(): { texture?: string; frame?: string | number; width?: number; height?: number } {
+        // forest_test_map.tmj에서 Goal의 GID는 113. (firstgid=1 이므로 frame=112)
         return {
             texture: 'tiles_tileset',
-            frame: 121, // 깃발 타일 (GID 122 -> Index 121)
+            frame: 112,
             width: 64,
             height: 64
         };
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo3Scene] 🎉 Tutorial Stage Complete! Moving to Forest Stage...');
-
-        // 1초 뒤에 스테이지 선택 상태를 SOLO_4로 변경 (React 및 Phaser 전환 유도)
-        this.time.delayedCall(1000, () => {
-            useGameStore.getState().selectStage('SOLO_4');
-        });
+        console.log('[Solo5Scene] 🎉 Stage Complete!');
+        // 스테이지 클리어 처리 및 선택 화면으로 이동
+        useGameStore.getState().clearStage('SOLO_5');
+        useGameStore.getState().backToStageSelect();
     }
 }
