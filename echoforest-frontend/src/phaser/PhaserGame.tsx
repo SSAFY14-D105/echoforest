@@ -110,6 +110,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     if (scene) {
                         if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
                         if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
+                        if ('setRoomId' in scene) (scene as any).setRoomId(roomId || null);
                     }
                 }, 100);
             }
@@ -141,6 +142,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     if (scene) {
                         if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
                         if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
+                        if ('setRoomId' in scene) (scene as any).setRoomId(roomId || null);
                     }
                 }, 100);
             }
