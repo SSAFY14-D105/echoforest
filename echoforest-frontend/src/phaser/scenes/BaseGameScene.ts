@@ -1890,8 +1890,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     protected onStageComplete(): void {
         console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
 
-        if (this.roomId && gameWebSocket.isConnected()) {
-            gameWebSocket.sendStageClear(this.roomId);
+        // [FIX] roomId가 설정되지 않았을 경우 Store에서 가져옴
+        const roomId = this.roomId || useGameStore.getState().roomId;
+
+        if (roomId && gameWebSocket.isConnected()) {
+            gameWebSocket.sendStageClear(roomId);
 
             // UI 피드백: "다른 멤버를 기다리는 중..."
             this.showFloatingText(
