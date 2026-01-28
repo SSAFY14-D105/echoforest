@@ -1690,6 +1690,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private handleLocalPlayerInput(): void {
         if (this.isDead) return;
 
+        // [NEW] 일시정지 상태에서는 입력 무시
+        const pausedBy = useGameStore.getState().pausedBy;
+        if (pausedBy) return;
+
         const myPlayer = this.players.get(this.myPlayerId);
         if (!myPlayer || !this.cursors || myPlayer.isStunned) return;
 
