@@ -28,6 +28,7 @@ public class PlayerUpdateDto {
     private double height;
     private int hp;
     private boolean isDead;
+    private boolean isHidden; // [NEW] 숨김 상태 (골인 등)
     private boolean isAfk;
 
     // Active Curses
