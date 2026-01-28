@@ -1066,6 +1066,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             // [FIX] 저주 및 사망 상태 동기화 추가
                             const curses = (storePlayer as any).curses || [];
                             const isDead = (storePlayer as any).isDead || false;
+                            const isHidden = (storePlayer as any).isHidden || false; // [NEW]
 
                             // storePlayer.anim이 없으면 params.anim 사용
                             const anim = (storePlayer as any).anim || serverAnim;
@@ -1087,7 +1088,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                                 storePlayer.vy ?? 0,
                                 anim,
                                 isDead,
-                                curses
+                                curses,
+                                isHidden
                             );
 
                             existingPlayer.applyRemoteDirection();
