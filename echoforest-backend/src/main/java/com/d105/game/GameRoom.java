@@ -442,6 +442,63 @@ public class GameRoom implements Runnable {
         this.currentMapId = id;
     }
 
+    // --- Multi-Sage Transition Logic ---
+
+    public void handleStageClear(String username) {
+        String sid = sessionManager.findSessionIdByUsername(username);
+        if (sid == null)
+            return;
+
+        PlayerState player = sessionManager.getPlayer(sid);
+        if (player == null)
+            return;
+
+        // 1. 해당 플레이어 완료 처리
+        if (!player.isFinished()) {
+            player.setFinished(true);
+            log.info("Player {} finished stage {}", username, currentMapId);
+            // 필요 시 "XX님이 도착했습니다" 시스템 메시지 브로드캐스트 가능
+        }
+
+        // 2. 모든 플레이어가 완료했는지 확인
+        boolean allFinished = sessionManager.getPlayers().values().stream()
+                .filter(p -> !p.isDisconnected()) // 접속 중인 플레이어만 대상
+                .allMatch(PlayerState::isFinished);
+
+        if (allFinished && !sessionManager.getPlayers().isEmpty()) {
+            log.info("All players finished stage {}. Transitioning to next stage.", currentMapId);
+            transitionToNextStage();
+        }
+    }
+
+    private void transitionToNextStage() {
+        // 1. 다음 스테이지 ID 계산
+        this.currentMapId++;
+
+        // 2. 모든 플레이어 상태 리셋 (위치, 완료 상태 등)
+        sessionManager.getPlayers().values().forEach(p -> {
+            p.setFinished(false);
+            p.setDead(false);
+            p.setHp(100);
+            p.clearCurses();
+            // 위치는 클라이언트가 새 맵 로드 시 스폰 포인트로 이동하므로 초기화하지 않음 (혹은 안전하게 0,0으로?)
+            // p.setX(0); p.setY(0);
+        });
+
+        // 3. 기믹/저주 상태 리셋
+        curseManager.resetCurseStack();
+        // [FIX] Removed frontend reference (BaseGameScene)
+        // 백엔드에서는 저주 스택만 초기화하면 됨.
+
+        // 4. 전환 메시지 브로드캐스트 (클라이언트가 씬을 바꾸도록)
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("STAGE_TRANSITION");
+        msg.setRoomId(roomId);
+        // "MULTI_" 접두사 붙여서 전송 (프론트 규격)
+        msg.setContent("MULTI_" + currentMapId);
+        broadcast(msg, null);
+    }
+
     private record InputEvent(String sessionId, String inputType) {
     }
 }
