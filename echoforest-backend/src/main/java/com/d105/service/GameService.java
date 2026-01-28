@@ -418,6 +418,22 @@ public class GameService {
         }
     }
 
+    /**
+     * 스테이지 클리어 취소 처리 (골 탈출)
+     */
+    public void handleStageExit(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            room.handleStageExit(username);
+        }
+    }
+
     // =========================================================
     // STT 저주 시스템 핸들러
     // =========================================================
