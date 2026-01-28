@@ -130,3 +130,18 @@ export async function checkLoginId(username: string): Promise<CheckIdResponse> {
 
     return res.json();
 }
+
+/**
+ * 닉네임 중복 확인 API
+ */
+export async function checkNickname(nickname: string): Promise<CheckIdResponse> {
+    const res = await httpClient(`/user/check-nickname?nickname=${encodeURIComponent(nickname)}`, {
+        method: 'GET',
+    });
+
+    if (!res.ok) {
+        throw new Error(getErrorMessage(res.status));
+    }
+
+    return res.json();
+}

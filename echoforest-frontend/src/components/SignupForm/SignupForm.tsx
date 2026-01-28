@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { signup, checkLoginId } from '../../apis/authApi';
+import { signup, checkLoginId, checkNickname } from '../../apis/authApi';
 import styles from './SignupForm.module.css';
 
 interface SignupFormProps {
@@ -16,16 +16,14 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [idCheckStatus, setIdCheckStatus] = useState<'unchecked' | 'checking' | 'available' | 'duplicate'>('unchecked');
+    const [nicknameCheckStatus, setNicknameCheckStatus] = useState<'unchecked' | 'checking' | 'available' | 'duplicate'>('unchecked');
 
     // 아이디 중복 확인 (debounce)
     useEffect(() => {
-        // 아이디가 비어있거나 4자 미만이면 확인 안함
         if (!id || id.length < 4) {
             setIdCheckStatus('unchecked');
             return;
         }
-
-        // 영문/숫자 검증
         if (!/^[a-zA-Z0-9]+$/.test(id)) {
             setIdCheckStatus('unchecked');
             return;
@@ -39,10 +37,30 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
             } catch {
                 setIdCheckStatus('unchecked');
             }
-        }, 500); // 500ms debounce
+        }, 500);
 
         return () => clearTimeout(timer);
     }, [id]);
+
+    // 닉네임 중복 확인 (debounce)
+    useEffect(() => {
+        if (!nickname || nickname.length < 2) {
+            setNicknameCheckStatus('unchecked');
+            return;
+        }
+
+        setNicknameCheckStatus('checking');
+        const timer = setTimeout(async () => {
+            try {
+                const res = await checkNickname(nickname);
+                setNicknameCheckStatus(res.isDuplicate ? 'duplicate' : 'available');
+            } catch {
+                setNicknameCheckStatus('unchecked');
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [nickname]);
 
     // 입력값 검증
     const validate = (): boolean => {
@@ -50,13 +68,31 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
             setError('아이디를 입력해주세요.');
             return false;
         }
-        // 회원가입 시 loginId 형식 검증
         if (!/^[a-zA-Z0-9]+$/.test(id)) {
             setError('아이디는 영문과 숫자만 사용 가능합니다.');
             return false;
         }
+        // (ID validation continued) ...
         if (id.length < 4 || id.length > 20) {
             setError('아이디는 4~20자 사이여야 합니다.');
+            return false;
+        }
+        if (idCheckStatus !== 'available') {
+            setError('아이디 중복 확인이 필요합니다.');
+            return false;
+        }
+
+        // Nickname validation moved second
+        if (!nickname.trim()) {
+            setError('닉네임을 입력해주세요.');
+            return false;
+        }
+        if (nickname.length < 2) {
+            setError('닉네임은 최소 2자 이상이어야 합니다.');
+            return false;
+        }
+        if (nicknameCheckStatus !== 'available') {
+            setError('닉네임 중복 확인이 필요합니다.');
             return false;
         }
 
@@ -72,29 +108,15 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
             setError('비밀번호가 일치하지 않습니다.');
             return false;
         }
-
-        if (!nickname.trim()) {
-            setError('닉네임을 입력해주세요.');
-            return false;
-        }
-
         if (!email.trim()) {
             setError('이메일을 입력해주세요.');
             return false;
         }
-        // 이메일 형식 검증
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             setError('올바른 이메일 형식이 아닙니다.');
             return false;
         }
-
-        // 아이디 중복 확인
-        if (idCheckStatus !== 'available') {
-            setError('아이디 중복 확인이 필요합니다.');
-            return false;
-        }
-
         return true;
     };
 
@@ -113,7 +135,6 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
                 nickname,
                 email
             });
-            // 백엔드 명세서: { message: "회원가입 성공" }
             if (res.message) {
                 alert(res.message + ' 로그인해주세요.');
                 onSignupSuccess();
@@ -127,62 +148,92 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <h1 className={styles.title}>회원가입</h1>
-
-            <input
-                className={styles.input}
-                placeholder="아이디"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
-                disabled={loading}
-            />
-
-            {id.length >= 4 && (
-                <p className={`${styles.idCheck} ${idCheckStatus === 'checking' ? styles.checking :
+        <form className={styles.form} onSubmit={handleSubmit}>
+            {/* 아이디 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>아이디</label>
+                <input
+                    className={styles.input}
+                    value={id}
+                    onChange={(e) => setId(e.target.value)}
+                    disabled={loading}
+                    autoFocus
+                />
+            </div>
+            {/* 한글 입력 경고 */}
+            {id && /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(id) && (
+                <p className={styles.checkStatus} style={{ color: '#ff6b6b' }}>
+                    ⚠️ 영문과 숫자만 사용 가능합니다
+                </p>
+            )}
+            {/* 중복 확인 상태 (한글이 없을 때만 표시) */}
+            {id.length >= 4 && !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(id) && (
+                <p className={`${styles.checkStatus} ${idCheckStatus === 'checking' ? styles.checking :
                     idCheckStatus === 'available' ? styles.available :
                         idCheckStatus === 'duplicate' ? styles.duplicate : ''
                     }`}>
                     {idCheckStatus === 'checking' && '⏳ 확인 중...'}
-                    {idCheckStatus === 'available' && '✅ 사용 가능한 아이디입니다'}
-                    {idCheckStatus === 'duplicate' && '❌ 이미 사용 중인 아이디입니다'}
+                    {idCheckStatus === 'available' && '✅ 사용 가능'}
+                    {idCheckStatus === 'duplicate' && '❌ 이미 사용 중'}
                 </p>
             )}
 
-            <input
-                className={styles.input}
-                type="password"
-                placeholder="비밀번호"
-                value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                disabled={loading}
-            />
+            {/* 닉네임 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>닉네임</label>
+                <input
+                    className={styles.input}
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    disabled={loading}
+                />
+            </div>
+            {nickname.length >= 2 && (
+                <p className={`${styles.checkStatus} ${nicknameCheckStatus === 'checking' ? styles.checking :
+                    nicknameCheckStatus === 'available' ? styles.available :
+                        nicknameCheckStatus === 'duplicate' ? styles.duplicate : ''
+                    }`}>
+                    {nicknameCheckStatus === 'checking' && '⏳ 확인 중...'}
+                    {nicknameCheckStatus === 'available' && '✅ 사용 가능'}
+                    {nicknameCheckStatus === 'duplicate' && '❌ 이미 사용 중'}
+                </p>
+            )}
 
-            <input
-                className={styles.input}
-                type="password"
-                placeholder="비밀번호 확인"
-                value={pwConfirm}
-                onChange={(e) => setPwConfirm(e.target.value)}
-                disabled={loading}
-            />
+            {/* 비밀번호 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>비밀번호</label>
+                <input
+                    className={styles.input}
+                    type="password"
+                    value={pw}
+                    onChange={(e) => setPw(e.target.value)}
+                    disabled={loading}
+                />
+            </div>
 
-            <input
-                className={styles.input}
-                placeholder="닉네임"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                disabled={loading}
-            />
+            {/* 비밀번호 확인 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>비밀번호 확인</label>
+                <input
+                    className={styles.input}
+                    type="password"
+                    value={pwConfirm}
+                    onChange={(e) => setPwConfirm(e.target.value)}
+                    disabled={loading}
+                />
+            </div>
 
-            <input
-                className={styles.input}
-                type="email"
-                placeholder="이메일 (예: ssafy@ssafy.com)"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-            />
+            {/* 이메일 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>이메일</label>
+                <input
+                    className={styles.input}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                />
+            </div>
 
             {error && <p className={styles.error}>{error}</p>}
 
@@ -196,7 +247,7 @@ export default function SignupForm({ onSignupSuccess, onSwitchMode }: SignupForm
                 onClick={onSwitchMode}
                 disabled={loading}
             >
-                이미 계정이 있으신가요? 로그인
+                ← 뒤로가기
             </button>
         </form>
     );
