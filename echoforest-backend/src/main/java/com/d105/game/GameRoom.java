@@ -461,11 +461,30 @@ public class GameRoom implements Runnable {
         }
 
         // 2. 모든 플레이어가 완료했는지 확인
-        boolean allFinished = sessionManager.getPlayers().values().stream()
-                .filter(p -> !p.isDisconnected()) // 접속 중인 플레이어만 대상
-                .allMatch(PlayerState::isFinished);
+        log.info("[DEBUG] Checking Stage Completion...");
+        boolean allFinished = true;
+        int activePlayerCount = 0;
+        int finishedPlayerCount = 0;
 
-        if (allFinished && !sessionManager.getPlayers().isEmpty()) {
+        for (PlayerState p : sessionManager.getPlayers().values()) {
+            if (!p.isDisconnected()) {
+                activePlayerCount++;
+                if (p.isFinished()) {
+                    finishedPlayerCount++;
+                } else {
+                    allFinished = false;
+                }
+                log.info("[DEBUG] Player '{}': Finished={}, Disconnected={}, AFK={}",
+                        p.getUsername(), p.isFinished(), p.isDisconnected(), p.isAfk());
+            } else {
+                log.info("[DEBUG] Player '{}' is DISCONNECTED (Ignoring)", p.getUsername());
+            }
+        }
+
+        log.info("[DEBUG] Result: Active={}, Finished={}. All Finished? {}", activePlayerCount, finishedPlayerCount,
+                allFinished);
+
+        if (allFinished && activePlayerCount > 0) {
             log.info("All players finished stage {}. Transitioning to next stage.", currentMapId);
             transitionToNextStage();
         }
