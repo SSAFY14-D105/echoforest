@@ -265,7 +265,8 @@ export default class MapManager {
         if (!type) {
             if (gid === 111 || gid === 131) type = 'Lock';
             else if (gid === 113) type = 'Goal';
-            else if (gid === 96 || gid === 30 || obj.name === 'Spawn' || obj.name === 'SpawnPoint') type = 'Spawn';
+            // [FIX] Relaxed Spawn detection: Check name case-insensitive
+            else if (gid === 96 || gid === 30 || (obj.name && (obj.name.toLowerCase() === 'spawn' || obj.name.toLowerCase() === 'spawnpoint'))) type = 'Spawn';
             else if (this.getObjectProperty(obj, 'collides') === true) type = 'Solid';
             else if (this.getObjectProperty(obj, 'playerIndex') !== undefined || this.getObjectProperty(obj, 'isDefault') !== undefined) type = 'Spawn';
             else if (this.getObjectProperty(obj, 'targetX') !== undefined || this.getObjectProperty(obj, 'targetY') !== undefined) {
