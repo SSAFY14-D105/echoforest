@@ -80,13 +80,13 @@ export default function GamePage() {
   }, [isSoloMode]);
 
   // Player state 전송 (Phaser -> React -> Socket)
-  const handleSendState = (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => {
+  const handleSendState = (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) => {
     if (isHost && roomId) {
       // Host는 바로 전송
-      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses);
+      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
     } else if (roomId) {
       // Client도 바로 전송 (서버 중계)
-      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses);
+      gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
     }
   };
 
