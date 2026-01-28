@@ -16,30 +16,25 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 # ==========================================
 # 🧪 [실험실] 다양한 설정값을 여기에 추가하세요!
+# (Min Silence, Thresh Offset, Keep Silence)
 # ==========================================
 EXPERIMENTS = [
-    # 1번 실험: 아주 민감하게 (많이 잘림)
-    {"id": "exp1_sensitive", "min_silence": 200, "thresh": -20, "keep": 200},
-    
-    # 2번 실험: 적당히 (밸런스)
-    {"id": "exp2_balanced",  "min_silence": 400, "thresh": -16, "keep": 300},
-    
-    # 3번 실험: 둔감하게 (길게 이어짐)
-    {"id": "exp3_relaxed",   "min_silence": 500, "thresh": -14, "keep": 400},
+    {"min": 125, "thresh": -14, "keep": 200},  # 민감
+    {"min": 150, "thresh": -14, "keep": 200},  # 적당
+    {"min": 175, "thresh": -14, "keep": 200},  # 둔감
 ]
 # ==========================================
 
-def transcribe_with_google_web_api(audio_path, settings):
+def transcribe_with_google_web_api(audio_path, settings, exp_file_suffix):
     r = sr.Recognizer()
     full_text = []
 
     # 설정값 로드
-    MIN_SILENCE = settings["min_silence"]
+    MIN_SILENCE = settings["min"]
     THRESH_OFFSET = settings["thresh"]
     KEEP_SILENCE = settings["keep"]
-    EXP_ID = settings["id"]
 
-    print(f"   [{EXP_ID}] Splitting... (Min: {MIN_SILENCE}ms, Thresh: {THRESH_OFFSET}dB)", end="", flush=True)
+    print(f"   [{exp_file_suffix}] Splitting... (Min: {MIN_SILENCE}ms, Thresh: {THRESH_OFFSET}dB)", end="", flush=True)
     sound = AudioSegment.from_file(audio_path)
     
     chunks = split_on_silence(
@@ -53,7 +48,8 @@ def transcribe_with_google_web_api(audio_path, settings):
     for i, chunk in enumerate(chunks):
         if len(chunk) < 500: continue 
 
-        chunk_filename = os.path.join(TEMP_DIR, f"temp_{EXP_ID}_{i}.wav")
+        # 파일명 충돌 방지를 위해 suffix 포함
+        chunk_filename = os.path.join(TEMP_DIR, f"temp_{exp_file_suffix}_{i}.wav")
         chunk.export(chunk_filename, format="wav")
         
         try:
@@ -75,9 +71,8 @@ def transcribe_with_google_web_api(audio_path, settings):
         except PermissionError:
             pass
             
-    header = f"[Experiment: {EXP_ID}]\n"
-    header += f"Settings: Min Silence={MIN_SILENCE}ms, Thresh={THRESH_OFFSET}dB, Keep={KEEP_SILENCE}ms\n"
-    header += f"Stats: {len(chunks)} Chunks, {len(full_text)} Recognized Lines\n"
+    header = f"[Settings] Min: {MIN_SILENCE}ms, Thresh: {THRESH_OFFSET}dB, Keep: {KEEP_SILENCE}ms\n"
+    header += f"[Stats] Total Chunks: {len(chunks)}, Recognized Lines: {len(full_text)}\n"
     header += "-" * 50 + "\n"
     
     return header + "\n".join(full_text)
@@ -98,21 +93,24 @@ def run_all():
         print(f"\n🎧 File: {filename}")
         
         for exp in EXPERIMENTS:
-            exp_id = exp["id"]
-            save_path = os.path.join(OUTPUT_DIR, f"{file_base}_google_{exp_id}.txt")
+            # 파일명 생성 규칙: {원본}_{min}_{thresh(양수)}_{keep}.txt
+            thresh_pos = abs(exp["thresh"]) # -20 -> 20
+            exp_suffix = f"{exp['min']}_{thresh_pos}_{exp['keep']}"
+            
+            save_path = os.path.join(OUTPUT_DIR, f"{file_base}_{exp_suffix}.txt")
 
             if os.path.exists(save_path):
-                print(f"   Skip {exp_id} (Exists)")
+                print(f"   Skip {exp_suffix} (Exists)")
                 continue
 
             try:
-                result_text = transcribe_with_google_web_api(audio_path, exp)
+                result_text = transcribe_with_google_web_api(audio_path, exp, exp_suffix)
                 if result_text:
                     with open(save_path, "w", encoding="utf-8") as f:
                         f.write(result_text)
-                    print(f"      ✅ Saved: {file_base}_google_{exp_id}.txt")
+                    print(f"      ✅ Saved: {file_base}_{exp_suffix}.txt")
             except Exception as e:
-                print(f"      ❌ Error {exp_id}: {e}")
+                print(f"      ❌ Error {exp_suffix}: {e}")
             
     try:
         os.rmdir(TEMP_DIR)
