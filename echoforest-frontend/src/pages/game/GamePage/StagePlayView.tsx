@@ -21,7 +21,7 @@ interface StagePlayViewProps {
     isListening: boolean;
     boosterActive: boolean;
     setBoosterMode: (active: boolean) => void;
-    onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
+    onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     onCopyRoomId: () => void;
     onClearStage: (stageId: string) => void;
 }

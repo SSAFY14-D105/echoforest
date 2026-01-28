@@ -12,7 +12,7 @@ import Solo5Scene from './scenes/Solo5Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
-    onSendState?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
+    onSendState?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     isSoloMode?: boolean;
     roomId?: string; // [FIX] Added roomId
 }
