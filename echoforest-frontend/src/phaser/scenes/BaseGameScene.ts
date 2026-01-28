@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { Player } from '../entities/Player';
 import type { PlayerConfig } from '../entities/Player';
@@ -207,7 +206,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     // 즉시 상태 전송 (위치 변경 없이 속도만 0으로)
                     // [FIX] 저주 및 사망 상태 포함
                     const curses = player.currentCurses;
-                    this.sendStateCallback(currentPos.x, currentPos.y, 0, 0, 'idle_down', player.isDead, curses);
+                    this.sendStateCallback(currentPos.x, currentPos.y, 0, 0, 'idle_down', player.isDead, curses, player.isHidden);
                 }
             }
         } else {

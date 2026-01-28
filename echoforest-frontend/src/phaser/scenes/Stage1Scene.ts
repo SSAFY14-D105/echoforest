@@ -1,5 +1,4 @@
 import BaseGameScene from './BaseGameScene';
-import { useGameStore } from '../../store/useGameStore';
 import MapManager from '../utils/MapManager';
 
 /**

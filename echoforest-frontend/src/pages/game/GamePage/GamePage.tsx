@@ -6,7 +6,7 @@
  * - View 컴포넌트: SoloPlayView, StagePlayView, WaitingRoom
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../../../store/useGameStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
