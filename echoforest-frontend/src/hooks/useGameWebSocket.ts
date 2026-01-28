@@ -140,6 +140,14 @@ export function useGameWebSocket() {
                     }
                     break;
 
+                case 'STAGE_TRANSITION':
+                    if (msg.content) {
+                        // Server sends "MULTI_X" format
+                        selectStage(msg.content);
+                        gameLog.info(`⏩ 스테이지 전환: ${msg.content}`);
+                    }
+                    break;
+
                 case 'STAGE_SELECT':
                     if (!isHost && msg.stage !== undefined) {
                         selectStage(getMultiStageId(msg.stage));
