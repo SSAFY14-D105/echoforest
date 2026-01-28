@@ -1717,7 +1717,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 // 현재 저주 상태 가져오기
                 const curses = myPlayer.hasCurse() && myPlayer['currentCurseId'] ? [myPlayer['currentCurseId']] : [];
 
-                this.sendStateCallback(x, y, velocity.x, velocity.y, currentAnim, this.isDead || myPlayer['_isDead'], curses);
+                // [FIX] P2P Stage Sync: Append stage number to anim string
+                // e.g., "walk|s:2" so lagging clients can switch stage
+                let syncAnim = currentAnim;
+                const match = this.getSceneKey().match(/Stage(\d+)Scene/);
+                if (match) {
+                    syncAnim += `|s:${match[1]}`;
+                }
+
+                this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses);
                 this.lastStateSendTime = now;
             }
         }
