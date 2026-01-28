@@ -65,12 +65,9 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Stage1Scene] 🎉 Stage 1 Complete! Advancing to Stage 2...');
+        console.log('[Stage1Scene] 🎉 Stage 1 Complete! Requesting transition...');
 
-        // 스테이지 클리어 처리 (필요시 Store 업데이트)
-        useGameStore.getState().clearStage('MULTI_1');
-
-        // 다음 스테이지로 이동 (자연스러운 연결)
-        this.scene.start('Stage2Scene');
+        // 멀티플레이: 서버에 클리어 신호 전송 (부모 클래스 로직 사용)
+        super.onStageComplete();
     }
 }

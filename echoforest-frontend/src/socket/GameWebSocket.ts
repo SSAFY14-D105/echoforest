@@ -31,6 +31,9 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
+    | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
+    | 'STAGE_CLEAR'     // 스테이지 클리어 (Client -> Server)
+    | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     // STT 저주 시스템 (추가)
     | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
     | 'STACK_UPDATED'     // Server→All: 스택 변경 (stack, delta, reason)
@@ -459,11 +462,23 @@ class GameWebSocket {
      * @param roomId 방 ID
      */
     sendGameReset(roomId: string) {
-        this.send({
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
             type: 'GAME_RESET',
             roomId: roomId,
-            username: this.username
-        });
+            content: ''
+        };
+        this.send(message);
+    }
+
+    sendStageClear(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'STAGE_CLEAR',
+            roomId: roomId,
+            content: ''
+        };
+        this.send(message);
     }
 
     // PING 전송 (Keep-alive)

@@ -14,9 +14,10 @@ interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
     onSendState?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[]) => void;
     isSoloMode?: boolean;
+    roomId?: string; // [FIX] Added roomId
 }
 
-export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isSoloMode = false }: PhaserGameProps) {
+export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isSoloMode = false, roomId }: PhaserGameProps) {
     const gameRef = useRef<Phaser.Game | null>(null);
     const parentRef = useRef<HTMLDivElement>(null);
 
@@ -33,8 +34,11 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             if (scene && 'setIsSoloMode' in scene) {
                 (scene as any).setIsSoloMode(isSoloMode);
             }
+            if (scene && 'setRoomId' in scene) {
+                (scene as any).setRoomId(roomId || null);
+            }
         }
-    }, [startScene, onSendState, isSoloMode]);
+    }, [startScene, onSendState, isSoloMode, roomId]);
 
     useEffect(() => {
         // 부모 컴포넌트나 엘리먼트가 없으면 중단

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { Player } from '../entities/Player';
 import type { PlayerConfig } from '../entities/Player';
@@ -1010,6 +1011,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.sendStateCallback = callback;
     }
 
+    public roomId: string | null = null;
+    public setRoomId(roomId: string | null) {
+        this.roomId = roomId;
+    }
+
     public setIsSoloMode(isSolo: boolean): void {
         this.isSoloMode = isSolo;
     }
@@ -1876,7 +1882,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
-        // 기본 구현: 콘솔 로그만
+        console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
+
+        if (this.roomId && gameWebSocket.isConnected()) {
+            gameWebSocket.sendStageClear(this.roomId);
+
+            // UI 피드백: "다른 멤버를 기다리는 중..."
+            this.showFloatingText(
+                this.cameras.main.midPoint.x,
+                this.cameras.main.midPoint.y - 100,
+                "다른 팀원을 기다리는 중...",
+                0x00ffff
+            );
+        } else {
+            console.warn('[Stage] Cannot send clear: Room ID missing or WS disconnected');
+        }
     }
 
     /**
