@@ -1783,6 +1783,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         goal.exitGoal(playerLabel);
                         myPlayer.show();
 
+                        // [FIX] 숨김 해제 상태를 즉시 전송
+                        if (this.sendStateCallback && !this.isSoloMode) {
+                            const { x, y } = myPlayer.getPosition();
+                            const velocity = myPlayer.getVelocity();
+                            const curses = myPlayer.hasCurse() && myPlayer['currentCurseId'] ? [myPlayer['currentCurseId']] : [];
+                            let syncAnim = 'idle';
+                            const match = this.getSceneKey().match(/Stage(\d+)Scene/);
+                            if (match) syncAnim += `|s:${match[1]}`;
+                            console.log(`[Goal] Sending isHidden=false immediately for ${playerLabel}`);
+                            this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses, false);
+                        }
+
                         // [FIX] 골 탈출 시 서버에 알림 (완료 상태 취소)
                         const roomId = this.roomId || useGameStore.getState().roomId;
                         if (roomId && !this.isSoloMode) {
@@ -1808,6 +1820,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         if (goal.enterGoal(playerLabel)) {
                             myPlayer.hide();
                             enteredGoal = true;
+
+                            // [FIX] 숨김 상태를 즉시 전송 (주기적 업데이트 대기하지 않음)
+                            if (this.sendStateCallback && !this.isSoloMode) {
+                                const { x, y } = myPlayer.getPosition();
+                                const velocity = myPlayer.getVelocity();
+                                const curses = myPlayer.hasCurse() && myPlayer['currentCurseId'] ? [myPlayer['currentCurseId']] : [];
+                                let syncAnim = 'idle';
+                                const match = this.getSceneKey().match(/Stage(\d+)Scene/);
+                                if (match) syncAnim += `|s:${match[1]}`;
+                                console.log(`[Goal] Sending isHidden=true immediately for ${playerLabel}`);
+                                this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses, true);
+                            }
 
                             // [FIX] 개별 클라이언트가 도착하면 즉시 서버로 신호 전송 (서버에서 전원 도착 여부 판별)
                             console.log(`[${this.getSceneKey()}] 🎉 Player entered goal! Sending signal...`);
