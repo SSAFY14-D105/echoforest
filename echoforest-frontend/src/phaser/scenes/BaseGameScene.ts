@@ -1781,6 +1781,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     if (goal.isPlayerEntered(playerLabel)) {
                         goal.exitGoal(playerLabel);
                         myPlayer.show();
+
+                        // [FIX] 골 탈출 시 서버에 알림 (완료 상태 취소)
+                        const roomId = this.roomId || useGameStore.getState().roomId;
+                        if (roomId && !this.isSoloMode) {
+                            console.log(`[${this.getSceneKey()}] 🔙 Player exited goal! Sending exit signal...`);
+                            gameWebSocket.sendStageExit(roomId);
+                        }
                         break;
                     }
                 }
