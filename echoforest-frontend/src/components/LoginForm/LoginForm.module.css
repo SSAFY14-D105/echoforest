@@ -1,89 +1,109 @@
-.title {
-    font-family: var(--font-kr);
-    color: var(--frog-dark);
-    font-size: 3rem;
-    margin-bottom: 20px;
-    text-align: center;
+/* 폼 컨테이너 */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 400px;
 }
 
+/* 인풋 그룹 */
+.inputGroup {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* 라벨 */
+.label {
+    font-family: var(--font-main);
+    /* 갈무리 체 */
+    font-size: 24px;
+    color: #ffffff;
+    /* 흰색 */
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    min-width: 120px;
+    text-align: right;
+}
+
+/* 인풋 필드 */
 .input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 12px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    outline: none;
-    box-sizing: border-box;
+    flex: 1;
+    padding: 14px 18px;
+    border: none;
+    background: #fff;
+    font-size: 18px;
+    font-family: var(--font-main);
+    color: #333;
+    min-width: 260px;
+    border-radius: 12px;
+    /* 둥근 모서리 */
 }
 
 .input:focus {
-    border-color: var(--frog-green);
+    outline: 3px solid #7ab;
 }
 
-.btn {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    border: none;
+.input:disabled {
+    background: rgba(200, 200, 200, 0.8);
+    cursor: not-allowed;
+}
+
+/* 에러 메시지 */
+.error {
+    color: #ff6b6b;
+    font-size: 14px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    border: 2px solid #ff6b6b;
     border-radius: 8px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    background-color: var(--frog-green);
-    color: white;
-    transition: transform 0.1s;
 }
 
-.btn:active {
-    transform: translateY(2px);
+/* 로그인 버튼 */
+.btn {
+    padding: 16px 48px;
+    border: none;
+    background: #5a7a7a;
+    color: #ccc;
+    font-family: var(--font-title);
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: center;
+    margin-top: 16px;
+    border-radius: 16px;
+    /* 둥근 모서리 */
+}
+
+.btn:hover:not(:disabled) {
+    background: #6a8a8a;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+    background: #4a6a6a;
 }
 
 .btn:disabled {
-    background-color: #95a5a6;
+    background-color: rgba(100, 100, 100, 0.6);
     cursor: not-allowed;
-    transform: none;
+    color: #888;
 }
 
-.error {
-    color: #e74c3c;
-    font-size: 0.9rem;
-    margin: 10px 0;
-    text-align: center;
-}
-
+/* 뒤로가기 링크 */
 .linkBtn {
-    width: 100%;
     background: transparent;
     border: none;
-    color: var(--frog-dark);
+    color: #aaa;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 14px;
     text-decoration: underline;
-    padding: 12px;
-    margin-top: 8px;
+    padding: 8px;
+    align-self: center;
+    transition: color 0.2s;
 }
 
 .linkBtn:hover {
-    color: var(--frog-green);
-}
-
-/* 반응형 */
-@media (max-width: 480px) {
-    .title {
-        font-size: 2rem;
-        margin-bottom: 15px;
-    }
-
-    .input {
-        padding: 10px;
-        font-size: 16px;
-    }
-
-    .btn {
-        padding: 10px;
-        font-size: 1rem;
-    }
-
-    .linkBtn {
-        font-size: 0.85rem;
-    }
+    color: #ffd700;
 }

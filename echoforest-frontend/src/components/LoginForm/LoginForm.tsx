@@ -36,9 +36,7 @@ export default function LoginForm({ onLoginSuccess, onSwitchMode }: LoginFormPro
 
         try {
             const res = await login({ username: id, password: pw });
-            // 백엔드 명세서: { token: "...", nickname: "..." }
             if (res.token) {
-                // JWT 토큰과 닉네임을 localStorage에 저장
                 localStorage.setItem('token', res.token);
                 localStorage.setItem('loginId', id);
                 localStorage.setItem('nickname', res.nickname);
@@ -55,26 +53,29 @@ export default function LoginForm({ onLoginSuccess, onSwitchMode }: LoginFormPro
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <h1 className={styles.title}>뽀뽀뽀(가제)</h1>
+        <form className={styles.form} onSubmit={handleSubmit}>
+            {/* 라벨 + 인풋 그룹 */}
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>아이디</label>
+                <input
+                    className={styles.input}
+                    value={id}
+                    onChange={(e) => setId(e.target.value)}
+                    disabled={loading}
+                    autoFocus
+                />
+            </div>
 
-            <input
-                className={styles.input}
-                placeholder="아이디"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
-                disabled={loading}
-                autoFocus
-            />
-
-            <input
-                className={styles.input}
-                type="password"
-                placeholder="비밀번호"
-                value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                disabled={loading}
-            />
+            <div className={styles.inputGroup}>
+                <label className={styles.label}>비밀번호</label>
+                <input
+                    className={styles.input}
+                    type="password"
+                    value={pw}
+                    onChange={(e) => setPw(e.target.value)}
+                    disabled={loading}
+                />
+            </div>
 
             {error && <p className={styles.error}>{error}</p>}
 
@@ -88,7 +89,7 @@ export default function LoginForm({ onLoginSuccess, onSwitchMode }: LoginFormPro
                 onClick={onSwitchMode}
                 disabled={loading}
             >
-                계정이 없으신가요? 회원가입
+                ← 뒤로가기
             </button>
         </form>
     );
