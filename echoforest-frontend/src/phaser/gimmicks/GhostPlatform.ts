@@ -76,7 +76,12 @@ export class GhostPlatform {
         return this.body;
     }
 
+    private isOverlapping: boolean = false;
+
     public setOverlap(isOverlapping: boolean): void {
+        if (this.isOverlapping === isOverlapping) return;
+        this.isOverlapping = isOverlapping;
+
         const targetAlpha = isOverlapping ? 0.4 : this.alpha;
         const target = this.sprite || this.graphics;
 
