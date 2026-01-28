@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Scene } from 'phaser';
 import { useGameStore } from '../../store/useGameStore';
 import { Player } from '../entities/Player';
 import type { PlayerConfig } from '../entities/Player';
@@ -409,7 +410,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 플레이어 목록이나 닉네임이 변경된 경우만 동기화
             if (currentPlayersJson !== prevPlayersJson || currentNickname !== prevNickname) {
-                console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
+                //console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
                 prevPlayersJson = currentPlayersJson;
                 prevNickname = currentNickname;
                 this.syncPlayersFromStore();
@@ -1010,6 +1011,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.sendStateCallback = callback;
     }
 
+    public roomId: string | null = null;
+    public setRoomId(roomId: string | null) {
+        this.roomId = roomId;
+    }
+
     public setIsSoloMode(isSolo: boolean): void {
         this.isSoloMode = isSolo;
     }
@@ -1067,9 +1073,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             // [DEBUG] 원격 플레이어 데이터 확인
                             if (storePlayer.nickname !== this.myPlayerId) {
                                 // 60프레임마다 한 번만 로그 출력 (너무 많음 방지)
+                                /*
                                 if (this.game.loop.frame % 60 === 0) {
                                     console.log(`[Sync] Remote ${storePlayer.nickname}: Pos(${storePlayer.x?.toFixed(1)}, ${storePlayer.y?.toFixed(1)}), Vel(${storePlayer.vx?.toFixed(2)}, ${storePlayer.vy?.toFixed(2)}), Dead:${isDead}, Curses:${curses}`);
                                 }
+                                */
                             }
 
                             existingPlayer.setRemoteState(
@@ -1211,6 +1219,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         });
 
         // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
+        /*
         if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
             const p = this.players.get(this.myPlayerId);
             if (p) {
@@ -1218,6 +1227,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
             }
         }
+        */
 
 
         // 이동형 범퍼 업데이트
@@ -1733,9 +1743,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // 좌우 이동
         /* [DEBUG] 입력 상태 및 속도 로깅 */
+        /*
         if (this.game.loop.frame % 60 === 0) {
             console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
         }
+        */
 
         if (!myPlayer.isHidden) {
             if (leftKey.isDown) {
@@ -1870,7 +1882,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
-        // 기본 구현: 콘솔 로그만
+        console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
+
+        if (this.roomId && gameWebSocket.isConnected()) {
+            gameWebSocket.sendStageClear(this.roomId);
+
+            // UI 피드백: "다른 멤버를 기다리는 중..."
+            this.showFloatingText(
+                this.cameras.main.midPoint.x,
+                this.cameras.main.midPoint.y - 100,
+                "다른 팀원을 기다리는 중...",
+                0x00ffff
+            );
+        } else {
+            console.warn('[Stage] Cannot send clear: Room ID missing or WS disconnected');
+        }
     }
 
     /**
