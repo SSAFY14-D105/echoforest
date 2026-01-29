@@ -1,18 +1,19 @@
 /**
- * useSttProcessor - STT 텍스트 처리 훅
+ * useSttProcessor - STT 처리 훅 (Worker 연동)
  * 
- * - 게임 시작 시 음성 인식 재시작 지원
- * - 최종 결과(transcript) 처리
- * - 중간 결과(interimTranscript) 처리 (부스터 모드 긍정어 감지)
+ * 역할:
+ * - useSpeechRecognition → SttWorkerService → useSttStore 연결
+ * - useGameWebSocket이 GameWebSocket ↔ useGameStore 연결하는 패턴과 동일
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { useSttStore } from '../store/useSttStore';
 import { useGameStore } from '../store/useGameStore';
+import { sttWorkerService, type WorkerOutMessage } from '../socket/SttWorkerService';
 
 // 로깅
-const log = (msg: string, ...args: any[]) => console.log(`✅[STT] ${msg}`, ...args);
+const log = (msg: string, ...args: unknown[]) => console.log(`✅[STT] ${msg}`, ...args);
 
 export interface UseSttProcessorReturn {
     isListening: boolean;
@@ -27,7 +28,7 @@ export interface UseSttProcessorReturn {
         countdown: number;
     };
     setBoosterMode: (active: boolean) => void;
-    restartListening: () => void;  // 수동 재시작 함수 노출
+    restartListening: () => void;
 }
 
 export function useSttProcessor(): UseSttProcessorReturn {
@@ -36,14 +37,19 @@ export function useSttProcessor(): UseSttProcessorReturn {
         interimTranscript,
         isListening,
         startListening,
-        // stopListening - 필요 시 사용
     } = useSpeechRecognition();
 
     const {
-        setBoosterMode,
+        isBoosterMode,
         boosterActive,
         curseState,
-        processTranscript,
+        setBoosterMode,
+        setTranscript,
+        onPositiveDetected,
+        onQueueUpdate,
+        onCountdownUpdate,
+        onBatchReady,
+        reset,
     } = useSttStore();
 
     const { isGameStarted, currentStage } = useGameStore();
@@ -51,8 +57,54 @@ export function useSttProcessor(): UseSttProcessorReturn {
     const lastProcessedRef = useRef('');
     const prevGameStartedRef = useRef(false);
     const prevStageRef = useRef<string | null>(null);
+    const workerInitializedRef = useRef(false);
 
-    // 게임 시작/스테이지 변경 시 음성 인식 재시작
+    // Worker 결과 핸들러
+    const handleWorkerResult = useCallback((message: WorkerOutMessage) => {
+        switch (message.type) {
+            case 'POSITIVE_DETECTED':
+                onPositiveDetected(message.word, message.isCursed);
+                break;
+
+            case 'QUEUE_UPDATE':
+                onQueueUpdate(message.count, message.texts);
+                break;
+
+            case 'COUNTDOWN_UPDATE':
+                onCountdownUpdate(message.countdown);
+                break;
+
+            case 'BATCH_READY':
+                onBatchReady(message.texts);
+                break;
+
+            case 'TRANSCRIPT_UPDATE':
+                setTranscript(message.text);
+                break;
+        }
+    }, [onPositiveDetected, onQueueUpdate, onCountdownUpdate, onBatchReady, setTranscript]);
+
+    // Worker 초기화 및 결과 핸들러 등록
+    useEffect(() => {
+        if (workerInitializedRef.current) return;
+
+        log('🚀 Worker 초기화');
+        sttWorkerService.initialize();
+        const cleanup = sttWorkerService.onResult(handleWorkerResult);
+        workerInitializedRef.current = true;
+
+        return () => {
+            cleanup();
+            sttWorkerService.reset();
+        };
+    }, [handleWorkerResult]);
+
+    // 부스터 모드 변경 시 Worker에 알림
+    useEffect(() => {
+        sttWorkerService.setBoosterMode(isBoosterMode);
+    }, [isBoosterMode]);
+
+    // 게임 시작/스테이지 변경 시 음성 인식 재시작 및 Worker 리셋
     useEffect(() => {
         const gameJustStarted = isGameStarted && !prevGameStartedRef.current;
         const stageChanged = currentStage !== prevStageRef.current && currentStage !== null;
@@ -62,6 +114,10 @@ export function useSttProcessor(): UseSttProcessorReturn {
             log(`  └ isGameStarted: ${prevGameStartedRef.current} → ${isGameStarted}`);
             log(`  └ currentStage: ${prevStageRef.current} → ${currentStage}`);
 
+            // Worker 상태 초기화
+            sttWorkerService.reset();
+            reset();
+
             // 약간의 딜레이 후 재시작 (상태 안정화 대기)
             setTimeout(() => {
                 startListening();
@@ -70,28 +126,45 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
         prevGameStartedRef.current = isGameStarted;
         prevStageRef.current = currentStage;
-    }, [isGameStarted, currentStage, startListening]);
+    }, [isGameStarted, currentStage, startListening, reset]);
 
-    // 최종 결과 처리
+    // 최종 결과 처리 → Worker로 전송
     useEffect(() => {
         if (transcript && transcript !== lastProcessedRef.current) {
             lastProcessedRef.current = transcript;
-            processTranscript(transcript, true);
-        }
-    }, [transcript, processTranscript]);
 
-    // 중간 결과 처리 (부스터 모드에서 긍정어 감지용)
+            sttWorkerService.processTranscript(
+                transcript,
+                true, // isFinal
+                isBoosterMode,
+                curseState.cursedPlayer !== null
+            );
+        }
+    }, [transcript, isBoosterMode, curseState.cursedPlayer]);
+
+    // 중간 결과 처리 → Worker로 전송 (부스터 모드에서 긍정어 감지용)
     useEffect(() => {
         if (interimTranscript) {
-            processTranscript(interimTranscript, false);
+            sttWorkerService.processTranscript(
+                interimTranscript,
+                false, // isFinal
+                isBoosterMode,
+                curseState.cursedPlayer !== null
+            );
         }
-    }, [interimTranscript, processTranscript]);
+    }, [interimTranscript, isBoosterMode, curseState.cursedPlayer]);
 
     // 수동 재시작 함수
-    const restartListening = () => {
+    const restartListening = useCallback(() => {
         log('🔄 수동 재시작 요청');
         startListening();
-    };
+    }, [startListening]);
+
+    // setBoosterMode를 Worker와 Store 모두에 적용
+    const handleSetBoosterMode = useCallback((active: boolean) => {
+        setBoosterMode(active);
+        sttWorkerService.setBoosterMode(active);
+    }, [setBoosterMode]);
 
     return {
         isListening,
@@ -99,7 +172,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
         interimTranscript,
         boosterActive,
         curseState,
-        setBoosterMode,
+        setBoosterMode: handleSetBoosterMode,
         restartListening,
     };
 }
