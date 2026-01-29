@@ -698,15 +698,17 @@ public class GameService {
     /**
      * 중복 로그인 이벤트 처리
      * UserService에서 로그인 성공 시 발행
+     * 
+     * [CHANGE] Race Condition 문제로 인해 비활성화 (2025-01-29)
+     * - 로그인 API 응답 전후로 WebSocket 연결 시점이 겹치면,
+     * 새로 연결된 세션이 이 이벤트에 의해 KICK 당하는 문제가 발생할 수 있음.
+     * - GameWebSocketHandler.afterConnectionEstablished 에서의 체크만으로도 충분함.
      */
     @org.springframework.context.event.EventListener
     public void handleDuplicateLogin(com.d105.event.UserLoggedInEvent event) {
-        String username = event.getUsername();
-        String newToken = event.getNewToken();
-
-        // 전역 세션 관리자에서 해당 유저의 기존 세션 강제 종료
-        // (게임 중이든 로비에 있든 상관없이 처리됨)
-        log.info("UserLoggedInEvent received for {}. Checking for active sessions...", username);
-        sessionManager.kickSession(username, "DUPLICATE_LOGIN");
+        // String username = event.getUsername();
+        // log.info("UserLoggedInEvent received for {}. Skipping safe-kick check to
+        // avoid race conditions.", username);
+        // sessionManager.kickSession(username, "DUPLICATE_LOGIN");
     }
 }
