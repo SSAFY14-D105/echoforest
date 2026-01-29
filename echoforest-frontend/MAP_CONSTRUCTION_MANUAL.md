@@ -1,129 +1,110 @@
 # EchoForest Map Construction Manual
 
-이 문서는 EchoForest 게임의 맵을 Tiled 에디터로 제작하고 게임에 적용하는 방법을 설명합니다. `MapManager` 시스템을 통해 맵 로딩이 자동화되었으며, 특정 규칙을 따르면 코드를 수정하지 않고도 새로운 기믹과 지형을 추가할 수 있습니다.
+이 문서는 EchoForest 게임의 Tiled 맵 제작 가이드입니다. `MapManager.ts`를 통해 로딩되며, 코드 수정 없이도 새로운 맵을 추가하고 기믹을 배치할 수 있습니다.
 
-## 1. 맵 구조 (Map Structure)
+**주요 업데이트 사항 (2025.1)**
+- 오브젝트 **회전(Rotation)** 보정 로직 추가 (Tiled와 동일한 회전 적용 확인 완료)
+- **Respawn** 포인트 시각화 및 설정 방법 명확화
+- **Group Layer** 및 중첩 레이어 완전 지원
 
-새로운 시스템은 Tiled의 **Group Layer**와 **Custom Properties (Class)**를 적극 활용합니다.
+---
 
-### 1.1. 기본 설정
--   **Tile Size**: 16x16 px (게임 내에서는 4배 확대되어 64x64로 적용됨)
--   **Orientation**: Orthogonal
--   **Format**: JSON (`.tmj`)
+## 1. 기본 맵 설정 (Map Structure)
 
-### 1.2. 레이어 계층 구조 (Hierarchy)
-맵은 크게 **Tile Layers**와 **Object Layers**로 나뉩니다. 가독성을 위해 관련 있는 레이어들은 **Group Layer**로 묶는 것을 권장합니다.
+### 1.1. Tiled 프로젝트 설정
+- **Format**: JSON (`.tmj`)
+- **Orientation**: Orthogonal (직교)
+- **Tile Size**: 16 x 16 px (게임 적용 시 4배 확대되어 64px로 렌더링됨)
+- **Layer Format**: Base64 (zlib/gzip) 또는 CSV
 
-#### 예시 구조
+### 1.2. 레이어 계층 및 명명 규칙
+가독성을 위해 **Group Layer** 사용을 권장합니다.
+
 ```
 - World (Group)
-  - Collision (Tile Layer, class: Solid)
-  - Decorations (Tile Layer)
-  - Gimmicks (Group)
+  - Collision (Tile Layer) -> 이름이 'Tile' 또는 'tiles'여야 충돌 자동 적용
+  - Decorations (Tile Layer) -> 장식용 (충돌 없음)
+  - Gimmicks (GroupLayer) -> 오브젝트 레이어들 정리용
+    - Spawns (Object Layer)
     - Springs (Object Layer, class: Spring)
-    - Keys (Object Layer, class: Key)
-  - Platforms (Group)
-    - GhostPlatforms (Tile Layer, class: GhostPlatform)
 ```
 
-#### 4. Advanced Features & Troubleshooting
+> [!IMPORTANT]
+> **충돌(Collision) 레이어**: `MapManager`는 다음 조건 중 하나를 만족하는 레이어만 물리 충돌체로 변환합니다.
+> 1. 레이어 이름이 **`Tile`** 또는 **`tiles`**인 경우 (대소문자 구분 없음)
+> 2. 레이어 Custom Property에 **`collides: true`**가 설정된 경우
+> 3. 레이어 Class가 **`Solid`**인 경우
 
-### 4.1. Group Layer Support (New)
-- **Recursive Loading**: The game now supports unlimited nesting of Group Layers.
-  - You can organize your map with folders (Group Layers) for better readability in Tiled.
-  - All Tile Layers inside groups will be rendered automatically.
-  - All Object Layers inside groups will be parsed for gimmicks.
+---
 
-### 4.2. Class & Type Inference
-If you forget to set the `Class` or `Type` property on an Object Layer or Object, the game attempts to infer it from the **Name**:
-- Name contains "spring" -> `Spring`
-- Name contains "spike" -> `Spike`
-- Name contains "platform" -> `GhostPlatform`
+## 2. 오브젝트 배치 및 회전 (Rotation Rules)
 
-**Best Practice**: Always set the `Class` property explicitly to avoid ambiguity.
+Tiled 에디터와 파이저(Phaser) 엔진은 **회전 축(Pivot Point)** 처리 방식이 다릅니다. 현재 게임은 이 차이를 자동으로 보정하므로, **Tiled 에디터에서 보이는 그대로** 배치하면 됩니다.
 
-### 4.3. Legacy Support
-- **Collision**: If a Tile Layer is named **"tiles"**, it will automatically have collisions enabled, even without the `Solid` class or `collides` property. This maintains compatibility with older maps.
+### 2.1. 기준점(Pivot)의 차이 이해
+맵 제작 시 아래 기준점을 참고하면 미세 조정에 도움이 됩니다.
 
-### 4.4. Ghost Platforms
-- **Optimization**: Ghost Platform tiles are automatically merged horizontally to reduce physics body count.
-- **Rendering**: They are rendered as individual GameObjects or TileSprites based on the layer data.
-
-## 5. Summary of Workflow
-1. Create Map in Tiled (16x16 grid).
-2. Organize layers (Background, Walls, Gimmicks).
-3. Set `Class` properties for specific behaviors (`Solid`, `GhostPlatform`).
-4. Place Objects for interactive elements (Spawns, Goals, Springs).
-5. Export as JSON (`.tmj`).
-6. Load in Phaser Scene using `MapManager`.
-
-## 2. 타일 레이어 (Tile Layers)
-
-타일 레이어는 지형과 배경을 그리는 데 사용됩니다.
-
-### 2.1. 일반 충돌체 (Solid)
--   **방법 1 (속성)**: 타일셋(Tileset)에서 해당 타일에 `collides: true` 커스텀 속성을 추가합니다.
--   **방법 2 (레이어 클래스)**: 레이어 자체의 Custom Property에 `class: Solid` 또는 `type: Solid`를 설정합니다. 이 레이어의 모든 타일은 충돌체로 간주됩니다.
--   **자동 최적화**: 인접한 충돌 타일들은 게임 로딩 시 자동으로 하나의 큰 물리 바디로 병합됩니다 (Greedy Merging).
-
-### 2.2. 고스트 플랫폼 (GhostPlatform)
-플레이어가 아래에서 위로 통과할 수 있는 플랫폼입니다.
--   **설정 방법**: Tile Layer의 Custom Property에 `class: GhostPlatform`을 설정합니다.
--   **작동 원리**: 게임 로딩 시 해당 레이어의 타일들은 **시각적으로 숨겨지고**, 동일한 위치와 모양을 가진 `GhostPlatform` 기믹 객체로 자동 변환됩니다.
--   **장점**: 타일을 찍는 것처럼 쉽게 플랫폼을 배치할 수 있습니다.
-
-## 3. 오브젝트 레이어 (Object Layers)
-
-기믹(Gimmick), 스폰 포인트, 몬스터 등 상호작용 가능한 객체는 Object Layer에 배치합니다.
-
-### 3.1. 타입 지정 (Type Inference)
-객체의 타입을 결정하는 우선순위는 다음과 같습니다.
-
-1.  **객체 자체의 Type/Class**: Object를 선택하고 `Type` 또는 `Class` 필드에 기믹 이름을 입력 (예: `Spring`).
-2.  **부모 레이어의 Class**: Object Layer 자체의 Custom Property에 `class`를 설정 (예: 레이어 이름을 'Spikes'로 짓고 `class: Spike` 설정). 내부의 모든 객체는 해당 타입이 됩니다.
-3.  **GID/이름 추론**: 위 설정이 없으면 GID나 이름(`Spawn` 등)을 보고 자동으로 추론합니다.
-
-### 3.2. 지원되는 기믹 목록 및 속성
-
-각 기믹은 필요한 커스텀 속성(Custom Properties)을 가질 수 있습니다.
-
-| 기믹 타입 (Class) | 설명 | 필수/선택 속성 |
+| 오브젝트 타입 | Tiled 기준점 (Pivot) | 설명 |
 | :--- | :--- | :--- |
-| `Spawn` / `SpawnPoint` | 플레이어 시작 위치 | `playerIndex` (int): 플레이어 번호<br>`isDefault` (bool): 기본 스폰 여부 |
-| `Goal` | 도착 지점 (깃발) | `requiredPlayers` (int): 필요 인원<br>`targetGoalId` (string): 자물쇠와 연결 시 ID |
-| `Key` | 열쇠 | `doorId` (string): 연결될 자물쇠 그룹 ID |
-| `Lock` | 자물쇠 (문) | `doorId` (string): 열쇠와 매칭될 ID<br>`targetGoalId` (string): 해금 시 활성화될 골 ID |
-| `Spring` | 점프 스프링 | - |
-| `Spike` | 가시 (닿으면 사망) | - |
-| `Bumper` | 튕겨내는 범퍼 | - |
-| `MovingBumper` | 움직이는 범퍼 | `targetX`, `targetY` (int): 이동 목표 좌표<br>`speed` (float): 속도<br>`power` (float): 튕김 파워 |
-| `Elevator` | 엘리베이터 | `targetY` (int): 이동 목표 Y좌표<br>`requiredPlayers` (int): 작동 필요 인원 |
-| `MovableBlock` | 밀 수 있는 블록 | `requiredPlayers` (int): 미는데 필요한 인원<br>`targetBlockId` (string): 버튼으로 소환될 경우 ID |
-| `BlockButton` | 블록 소환 버튼 | `targetBlockId` (string): 소환할 블록 ID<br>`spawnX`, `spawnY` (int): 소환 위치 |
-| `TriggerButton` | 트리거 버튼 | `targetId` (string): 작동 시킬 대상 ID |
-| `Signboard` | 표지판 | `message` (string): 표시할 텍스트 |
+| **Tile Object** (이미지) | 좌측 하단 (Bottom-Left) | 타일셋에서 드래그하여 배치한 이미지형 오브젝트<br>회전 시 좌측 하단 모서리를 축으로 회전합니다. |
+| **Shape Object** (도형) | 좌측 상단 (Top-Left) | 사각형(Rectangle) 그리기 도구로 배치한 오브젝트<br>회전 시 좌측 상단 모서리를 축으로 회전합니다. |
 
-## 4. 제약 사항 및 팁
+### 2.2. 회전(Rotation) 적용 팁
+- **정확한 배치**: Tiled에서 90도/180도 회전 기능을 사용하여 배치하세요. 게임 내에서 자동으로 중심점을 다시 계산하여 정확한 위치에 렌더링합니다.
+- **오차 발생 시**: 만약 위치가 이상하다면, 해당 오브젝트가 'Tile'인지 'Shape'인지 확인하고 의도한 위치에 Pivot이 있는지 확인하세요.
 
-1.  **좌표계**: Tiled의 좌표(x, y)는 게임 내에서 `MapScale` (기본 4배) 만큼 확대되고, 화면 하단 정렬을 위해 `offsetY`가 보정됩니다. 따라서 Tiled에서 보이는 비율과 게임 내 비율은 같지만, 절대 좌표값은 다릅니다.
-2.  **객체 이름**: `id` 속성은 Tiled가 자동 생성하는 ID를 사용하므로, 특정 로직(Link 등)을 위해 고유한 식별자가 필요하다면 `name` 속성보다는 커스텀 속성(`doorId` 등)을 활용하는 것이 명확합니다.
-3.  **배경**: 배경 이미지는 `MapManager.initialize` 호출 시 키를 전달하면 자동으로 타일링됩니다.
+---
 
-## 5. 적용 방법 (코드)
+## 3. 주요 기믹 가이드 (Gimmicks)
 
-새로운 맵 파일(`new_map.tmj`)을 만들었다면:
+### 3.1. Respawn (시작점/부활점)
 
-1.  `public/assets/maps/`에 파일 저장.
-2.  Scene 파일(`NewStageScene.ts`)에서 로드:
-    ```typescript
-    preload() {
-        this.load.tilemapTiledJSON('new_map', 'assets/maps/new_map.tmj');
-        // ... 타일셋 로드
-    }
+이제 Respawn 포인트는 단순 데이터가 아니라 **게임 내에서 시각적으로 보이는 오브젝트**로 처리됩니다.
 
-    create() {
-        this.mapManager = new MapManager(this, 'new_map');
-        this.mapManager.initialize('tileset_name', 'tileset_key', 'bg_key');
-        super.create();
-    }
-    ```
+- **배치 방법**: 'Tile Object'로 배치 (타일셋 이미지를 오브젝트 레이어에 드래그)
+- **필수 속성**:
+    - `playerIndex` (int): 특정 플레이어 전용 (0: P1, 1: P2...)
+    - `isDefault` (bool, 체크박스): True면 기본 스폰 지점으로 사용
+- **주의 사항**:
+    - **크기**: Tiled에서 작게 보여도 게임 내에서는 4배 확대되어 정상 크기로 나옵니다.
+    - **이미지**: 타일셋에 있는 깃발 아이콘 등을 사용하면 직관적입니다.
+
+### 3.2. GhostPlatform (아래에서 위로 통과되는 발판)
+
+- **배치 방법**: **Tile Layer**에 타일을 찍고, 해당 레이어의 속성(Properties)에서 Class를 `GhostPlatform`으로 설정.
+- **작동 원리**: 로딩 시 타일 이미지는 사라지고, 동일한 위치에 물리 효과가 있는 플랫폼 기믹이 생성됩니다.
+- **최적화**: 가로로 이어진 타일들은 자동으로 하나의 긴 플랫폼으로 병합됩니다.
+
+### 3.3. Goal & Lock (도착점 및 잠금장치)
+
+- **Goal**:
+    - **`requiredPlayers`** (int): 문을 열기 위해 필요한 플레이어 수 (Solo맵은 반드시 1로 설정).
+    - **`targetGoalId`** (string): 연결된 자물쇠가 있다면 해당 자물쇠의 `targetGoalId`와 일치시켜야 함. (자물쇠가 열리면 이 Goal이 활성화됨)
+- **Lock**:
+    - **`doorId`** (string): 열쇠(Key)와 매칭되는 ID.
+    - **`targetGoalId`** (string): 해금 시 활성화시킬 Goal의 ID.
+
+---
+
+## 4. 타입 지정 (Type Inference Priority)
+
+게임이 오브젝트가 어떤 기믹인지 판단하는 우선순위는 다음과 같습니다.
+
+1. **Explicit Class/Type**: 오브젝트 설정에서 `Class` 또는 `Type` 필드 입력 (가장 권장)
+2. **Layer Class**: 부모 레이어의 `Class` 속성 상속 (예: 'Springs' 레이어의 class를 `Spring`으로 설정)
+3. **Name Inference**: 오브젝트 이름에 `Spring`, `Spike` 등이 포함되면 자동 추론
+
+**권장 사항**: 가능한 오브젝트의 `Class` 속성에 정확한 기믹 이름(예: `Respawn`, `Spring`, `Goal`)을 입력하세요.
+
+---
+
+## 5. 자주 묻는 질문 (Troubleshooting)
+
+**Q. 맵을 수정했는데 게임에 반영이 안 됩니다.**
+A. `public/assets/maps/` 경로에 `.tmj` 파일이 정확히 저장되었는지, 브라우저 캐시가 남아있는지 확인하세요.
+
+**Q. 플레이어가 바닥을 뚫고 떨어집니다.**
+A. 바닥 레이어의 이름이 `Tile` 또는 `tiles`인지 확인하세요. 아니라면 `collides: true` 속성을 추가해야 합니다.
+
+**Q. 오브젝트 이미지가 너무 작게 나옵니다.**
+A. `MapManager`가 자동으로 4배 확대를 적용하지만, 버그가 의심되면 개발팀에 제보해주세요. (Respawn 오브젝트 스케일 버그는 2025.1 버전에서 수정됨)
