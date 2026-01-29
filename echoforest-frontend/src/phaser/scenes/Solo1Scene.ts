@@ -43,7 +43,7 @@ export default class Solo1Scene extends BaseGameScene {
         const floorY = this.gameHeight - 40 - PHYSICS.PLAYER_SIZE / 2;
 
         // 리스폰 위치 설정
-        this.spawnPoints.push(new Respawn(100, floorY, 'solo1-default-spawn', undefined, true));
+        this.spawnPoints.push(new Respawn(this, 100, floorY, 'solo1-default-spawn', undefined, true));
 
         // Bumper (x: 300 위치) - 테스트용 테두리에 남겨둠
         const bumper1 = new Bumper(this, 300, floorY - 100, 60, 10);

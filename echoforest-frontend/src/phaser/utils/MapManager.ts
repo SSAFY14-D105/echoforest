@@ -1,10 +1,6 @@
 import Phaser from 'phaser';
 import BaseGameScene from '../scenes/BaseGameScene';
-import {
-    Key, Lock, Spike, Spring, Goal, BlockButton, Elevator, Bumper,
-    Signboard, MovableBlock, MovingBumper, PoisonMushroom, TogglePlatform,
-    TriggerButton, GhostPlatform, Respawn
-} from '../gimmicks';
+import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
 
 /**
  * MapManager
@@ -97,8 +93,10 @@ export default class MapManager {
 
                 // 3. 충돌체 생성
                 // - 레이어에 'Solid' 클래스나 'collides' 속성이 있는 경우
-                // - 또는 레이어 이름이 'tiles'인 경우 (Legacy 호환: 기존 맵들은 속성 없이 이름에 의존)
-                if (layerClass === 'Solid' || this.getLayerProperty(layerData, 'collides') === true || layerData.name === 'tiles') {
+                // - 또는 레이어 이름이 'tiles' 또는 'Tile'인 경우 (Legacy 호환: 기존 맵들은 속성 없이 이름에 의존)
+                // [FIX] 대소문자 무관하게 'tile', 'tiles' 포함되면 충돌체 생성 (LobbyMap 호환)
+                const lowerName = layerData.name.toLowerCase();
+                if (layerClass === 'Solid' || this.getLayerProperty(layerData, 'collides') === true || lowerName === 'tiles' || lowerName === 'tile' || lowerName.includes('tile')) {
                     this.createMergedCollisions(layer);
                 }
             } else {
@@ -231,17 +229,44 @@ export default class MapManager {
         const scaledOffsetX = offsetX * this.mapScale;
         const scaledOffsetY = offsetY * this.mapScale;
 
-        let centerX = (obj.x || 0) * this.mapScale + width / 2 + scaledOffsetX;
+        // Tiled Pivot (Rotation Center) Calculation
+        // Tiled (x, y) coordinates essentially represent the Pivot point
+        const pivotX = (obj.x || 0) * this.mapScale + scaledOffsetX;
+        const pivotY = (obj.y || 0) * this.mapScale + scaledOffsetY + this.offsetY;
 
-        // Tiled 좌표계 차이 대응:
-        // - Tile Object (Images/Tiles with GID): 좌표 기준이 Bottom-Left -> CenterY = y - height/2
-        // - Shape Object (Rectangles without GID): 좌표 기준이 Top-Left -> CenterY = y + height/2
-        let centerY: number;
+        // Determine Unrotated Center Offset relative to Pivot
+        let localOffsetX = 0;
+        let localOffsetY = 0;
+
         if (gidRaw > 0) {
-            centerY = (obj.y || 0) * this.mapScale - height / 2 + this.offsetY + scaledOffsetY;
+            // Tile Object (GID > 0): Pivot is Bottom-Left
+            // Unrotated Center is (w/2, -h/2) relative to Pivot
+            localOffsetX = width / 2;
+            localOffsetY = -height / 2;
         } else {
-            centerY = (obj.y || 0) * this.mapScale + height / 2 + this.offsetY + scaledOffsetY;
+            // Shape Object (Rectangle/Ellipse): Pivot is Top-Left
+            // Unrotated Center is (w/2, h/2) relative to Pivot
+            localOffsetX = width / 2;
+            localOffsetY = height / 2;
         }
+
+        // Apply Rotation to the Center Offset
+        // Tiled & Phaser Rotation is Clockwise Positive (Degree)
+        const rotationDeg = obj.rotation || 0;
+        const rotationRad = Phaser.Math.DegToRad(rotationDeg);
+
+        // Rotation Matrix for Clockwise rotation in screen coordinates (Y down)
+        // x' = x * cos(θ) - y * sin(θ)
+        // y' = x * sin(θ) + y * cos(θ)
+        const cos = Math.cos(rotationRad);
+        const sin = Math.sin(rotationRad);
+
+        const rotatedOffsetX = localOffsetX * cos - localOffsetY * sin;
+        const rotatedOffsetY = localOffsetX * sin + localOffsetY * cos;
+
+        // Final Center Position
+        const centerX = pivotX + rotatedOffsetX;
+        const centerY = pivotY + rotatedOffsetY;
 
         const gid = gidRaw & ~(0x80000000 | 0x40000000 | 0x20000000 | 0x10000000); // GID flipping
 
@@ -281,9 +306,13 @@ export default class MapManager {
             case 'SpawnPoint': {
                 const playerIndex = this.getObjectProperty(obj, 'playerIndex');
                 const isDefault = this.getObjectProperty(obj, 'isDefault');
-                this.scene.spawnPoints.push(new Respawn(
-                    centerX, centerY, `respawn-${obj.id}`, playerIndex !== undefined ? Number(playerIndex) : undefined, isDefault === true || isDefault === 'true'
-                ));
+                const respawn = new Respawn(
+                    this.scene,
+                    centerX, centerY, `respawn-${obj.id}`, playerIndex !== undefined ? Number(playerIndex) : undefined, isDefault === true || isDefault === 'true',
+                    texture, frame
+                );
+                respawn.setScale(this.mapScale);
+                this.scene.spawnPoints.push(respawn);
                 console.log(`[MapManager] Spawn registered: (${centerX}, ${centerY})`);
                 break;
             }
@@ -402,6 +431,28 @@ export default class MapManager {
                 this.scene.matter.add.rectangle(centerX, centerY, width, height, { isStatic: true, label: 'ground' });
                 break;
             }
+            case 'Respawn':
+            case 'Spawn': {
+                const props = this.getAllObjectProperties(obj);
+                const isDefault = props.isDefault === true;
+                const playerIndex = props.playerIndex !== undefined ? props.playerIndex : undefined;
+
+                // Respawn 객체를 시각적으로 생성 (Sprite 상속)
+                const respawn = new Respawn(
+                    this.scene,
+                    centerX,
+                    centerY,
+                    obj.id!.toString(),
+                    playerIndex,
+                    isDefault,
+                    texture,
+                    frame
+                );
+                respawn.setScale(this.mapScale);
+                this.scene.spawnPoints.push(respawn);
+                console.log(`[MapManager] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
+                break;
+            }
         }
     }
 
@@ -471,6 +522,18 @@ export default class MapManager {
     }
 
     /**
+     * 타일이 충돌 가능한지 확인하는 헬퍼 메서드
+     */
+    private isTileCollidable(tile: Phaser.Tilemaps.Tile | null): boolean {
+        if (!tile) return false;
+        // 1. 'collides' 커스텀 속성 확인
+        if (tile.properties.collides) return true;
+        // 2. Class 또는 Type이 'Solid'인지 확인
+        const tileClass = tile.properties.class || tile.properties.type;
+        return tileClass === 'Solid';
+    }
+
+    /**
      * Greedy Merging 알고리즘을 사용하여 인접한 충돌 타일들을 하나의 물리 바디로 병합
      */
     public createMergedCollisions(layer: Phaser.Tilemaps.TilemapLayer): void {
@@ -481,17 +544,15 @@ export default class MapManager {
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const tile = layer.getTileAt(x, y);
-                // Class가 없거나 'Solid'인 경우에만 병합 대상
-                const tileClass = tile?.properties.class || (tile?.properties.type);
-                const isCollidable = tile?.properties.collides || tileClass === 'Solid';
 
-                if (isCollidable && !processed[y][x]) {
+                // [FIX] 헬퍼 메서드로 일관된 충돌 체크
+                if (this.isTileCollidable(tile) && !processed[y][x]) {
                     // 1. 가로로 얼마나 이어지는지 확인
                     let w = 1;
                     while (x + w < width) {
                         const nextTile = layer.getTileAt(x + w, y);
-                        const nextIsCollidable = nextTile?.properties.collides;
-                        if (nextIsCollidable && !processed[y][nextTile.x]) {
+                        // [FIX] 가로 인접 타일도 동일한 조건으로 체크
+                        if (this.isTileCollidable(nextTile) && !processed[y][x + w]) {
                             w++;
                         } else {
                             break;
@@ -504,8 +565,8 @@ export default class MapManager {
                         let rowMatch = true;
                         for (let k = 0; k < w; k++) {
                             const belowTile = layer.getTileAt(x + k, y + h);
-                            const belowIsCollidable = belowTile?.properties.collides;
-                            if (!belowIsCollidable || processed[belowTile.y][belowTile.x]) {
+                            // [FIX] 세로 인접 타일도 동일한 조건으로 체크
+                            if (!this.isTileCollidable(belowTile) || processed[y + h][x + k]) {
                                 rowMatch = false;
                                 break;
                             }

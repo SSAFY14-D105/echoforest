@@ -4,7 +4,7 @@ import MapManager from '../utils/MapManager';
 
 /**
  * Solo5Scene
- * 'forest_test_map.tmj' 맵을 사용하여 MapManager 시스템을 테스트하는 스테이지.
+ * 'stage_03_solo.tmj' 맵을 사용하여 MapManager 시스템을 테스트하는 스테이지.
  */
 export default class Solo5Scene extends BaseGameScene {
     private mapManager?: MapManager;
@@ -32,7 +32,7 @@ export default class Solo5Scene extends BaseGameScene {
     preload() {
         super.preload();
         // 1. 맵 파일 로드 (Tiled JSON)
-        this.load.tilemapTiledJSON('forest_test_map', 'assets/maps/forest_test_map.tmj');
+        this.load.tilemapTiledJSON('stage_03_solo_map', 'assets/maps/stage_03_solo.tmj');
 
         // 2. 타일셋 로드
         // Tiled의 tileset name ('tiles_tileset')과 매칭
@@ -49,10 +49,10 @@ export default class Solo5Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo5Scene] Initializing forest_test_map');
+        console.log('[Solo5Scene] Initializing stage_03_solo.tmj');
 
         // 4. MapManager 초기화
-        this.mapManager = new MapManager(this, 'forest_test_map');
+        this.mapManager = new MapManager(this, 'stage_03_solo_map');
         this.offsetY = this.mapManager.getOffsetY();
 
         // 5. 맵 생성 (Tileset Name, Phaser Cache Key, Background Key)
@@ -64,16 +64,6 @@ export default class Solo5Scene extends BaseGameScene {
     protected createGimmicks(): void {
         // 6. 기믹 생성 위임
         this.mapManager?.createObjects();
-    }
-
-    protected getGoalConfig(): { texture?: string; frame?: string | number; width?: number; height?: number } {
-        // forest_test_map.tmj에서 Goal의 GID는 113. (firstgid=1 이므로 frame=112)
-        return {
-            texture: 'tiles_tileset',
-            frame: 112,
-            width: 64,
-            height: 64
-        };
     }
 
     protected onStageComplete(): void {
