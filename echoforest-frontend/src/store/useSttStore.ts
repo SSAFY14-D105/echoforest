@@ -142,8 +142,13 @@ export const useSttStore = create<SttState>((set, get) => ({
 
             // 서버로 저주 해제 요청
             const { roomId } = useGameStoreCompat();
-            if (roomId && gameWebSocket.isConnected()) {
+            const isConnected = gameWebSocket.isConnected();
+            log.info(`저주 해제 요청 조건 체크`, { roomId, isConnected });
+
+            if (roomId && isConnected) {
                 sendCurseRelease(roomId, word);
+            } else {
+                log.warn('저주 해제 요청 실패', { roomId: roomId || 'EMPTY', isConnected });
             }
         } else {
             set({
@@ -238,6 +243,11 @@ export const useSttStore = create<SttState>((set, get) => ({
             },
         });
 
+        // Phaser 씬에 저주 적용 이벤트 전달
+        window.dispatchEvent(new CustomEvent('curse-triggered', {
+            detail: { playerId: cursedPlayerId, mapId }
+        }));
+
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
         }, 5000);
@@ -259,6 +269,11 @@ export const useSttStore = create<SttState>((set, get) => ({
                 message: `${releasedPlayerId}님이 "${word}"로 저주를 해제했습니다!`,
             },
         });
+
+        // Phaser 씬에 저주 해제 이벤트 전달
+        window.dispatchEvent(new CustomEvent('curse-released', {
+            detail: { playerId: releasedPlayerId, word }
+        }));
 
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
