@@ -36,9 +36,13 @@ interface GameState {
     // 일시정지 상태 (멀티플레이용)
     pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
 
+    // 엔딩 미션 상태
+    isEndingMission: boolean; // 엔딩 미션 중인지 여부
+
     // 액션(함수)들
     setNickname: (name: string) => void;
     setGamePaused: (username: string | null) => void; // 일시정지/재개 설정 (null=재개)
+    setEndingMission: (active: boolean) => void; // 엔딩 미션 상태 설정
     joinGame: (roomId: string, isHost: boolean, initialStage?: number) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
@@ -74,8 +78,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     clearedStages: [],
     onMoveCallback: null,
     pausedBy: null,
+    isEndingMission: false,
 
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
+    setEndingMission: (active) => set({ isEndingMission: active }),
 
     setNickname: (name) => {
         localStorage.setItem('nickname', name); // [FIX] 닉네임 영구 저장

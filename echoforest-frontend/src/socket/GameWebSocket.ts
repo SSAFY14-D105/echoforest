@@ -51,7 +51,10 @@ export type MessageType =
     | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
     | 'RESUME_GAME'   // Client->Server: 재개 요청
     | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
-    | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
+    | 'GAME_RESUMED'  // Server->All: 게임 재개 알림 (content: username)
+    // 엔딩 미션 (서버 동기화)
+    | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
+    | 'ENDING_MISSION_END';   // Server->All: 엔딩 미션 종료
 
 // ... (Interface declarations remain same) ...
 
@@ -498,6 +501,34 @@ class GameWebSocket {
         const message: GameMessage = {
             type: 'STAGE_EXIT',
             roomId: roomId,
+            content: ''
+        };
+        this.send(message);
+    }
+
+    /**
+     * 엔딩 미션 시작 요청 (호스트가 모든 플레이어 골 도달 감지 시)
+     */
+    sendEndingMissionStart(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_START',
+            roomId: roomId,
+            username: this.username,
+            content: ''
+        };
+        this.send(message);
+    }
+
+    /**
+     * 엔딩 미션 종료 요청 (캡처 완료 후)
+     */
+    sendEndingMissionEnd(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_END',
+            roomId: roomId,
+            username: this.username,
             content: ''
         };
         this.send(message);

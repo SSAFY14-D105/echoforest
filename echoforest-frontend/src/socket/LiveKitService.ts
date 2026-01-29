@@ -313,6 +313,68 @@ export class LiveKitService {
             participant.videoTrack.attach(videoElement);
         }
     }
+
+    // 비디오 해상도 변경 (엔딩 미션용)
+    async setVideoResolution(preset: 'h540' | 'h720'): Promise<void> {
+        if (!this.room || !this.room.localParticipant) {
+            console.warn('[LiveKitService] Cannot change resolution: not connected');
+            return;
+        }
+
+        const resolution = preset === 'h720'
+            ? VideoPresets.h720.resolution
+            : VideoPresets.h540.resolution;
+
+        try {
+            // 현재 카메라 트랙 찾기
+            const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+
+            if (cameraPublication?.track) {
+                // 트랙의 미디어 스트림 제약 조건 업데이트
+                const mediaStreamTrack = cameraPublication.track.mediaStreamTrack;
+                if (mediaStreamTrack) {
+                    await mediaStreamTrack.applyConstraints({
+                        width: { ideal: resolution.width },
+                        height: { ideal: resolution.height }
+                    });
+                    console.log(`[LiveKitService] Video resolution changed to ${preset}`);
+                }
+            }
+        } catch (error) {
+            console.error('[LiveKitService] Failed to change video resolution:', error);
+        }
+    }
+
+    // 카메라 강제 켜기 (엔딩 미션용)
+    async forceCameraOn(): Promise<boolean> {
+        if (!this.room || !this.room.localParticipant) {
+            console.warn('[LiveKitService] Cannot force camera on: not connected');
+            return false;
+        }
+
+        try {
+            // 카메라가 꺼져있으면 강제로 켜기
+            if (!this.room.localParticipant.isCameraEnabled) {
+                await this.room.localParticipant.setCameraEnabled(true);
+                console.log('[LiveKitService] Camera forced on for ending mission');
+            }
+            return true;
+        } catch (error) {
+            console.error('[LiveKitService] Failed to force camera on:', error);
+            return false;
+        }
+    }
+
+    // 카메라 상태 복원 (엔딩 미션 종료 시)
+    async restoreCameraState(): Promise<void> {
+        if (!this.room || !this.room.localParticipant) return;
+
+        // 원래 사용자 설정대로 복원
+        if (!this._cameraEnabledPreference) {
+            await this.room.localParticipant.setCameraEnabled(false);
+            console.log('[LiveKitService] Camera restored to user preference (off)');
+        }
+    }
 }
 
 // 싱글턴 인스턴스
