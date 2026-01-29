@@ -64,9 +64,15 @@ public class GameRoom implements Runnable {
 
     // --- Player Management (Delegated to SessionManager) ---
 
-    public void addPlayer(WebSocketSession session, String username) {
+    public void addPlayer(WebSocketSession session, String rawUsername) {
+        String username = rawUsername.trim();
         // 재접속 여부 확인
+        log.info("Attempting to add player '{}' to room '{}'", username, roomId);
+        log.info("Current players in room: {}",
+                sessionManager.getPlayers().values().stream().map(PlayerState::getUsername).toList());
+
         String existingSessionId = sessionManager.findSessionIdByUsername(username);
+        log.info("Found existing session for '{}': {}", username, existingSessionId);
 
         if (existingSessionId != null) {
             // [재접속]
@@ -420,6 +426,36 @@ public class GameRoom implements Runnable {
     public void broadcastRoomClosed() {
         broadcastSystemMessage("ROOM_CLOSED", null, "Host left");
         this.isRunning = false;
+    }
+
+    /**
+     * 특정 사용자 강제 퇴장 (중복 로그인 등)
+     */
+    public void kickUser(String sessionId, String reason) {
+        PlayerState p = sessionManager.getPlayer(sessionId);
+        if (p == null)
+            return;
+
+        WebSocketSession session = sessionManager.getSession(sessionId);
+        if (session != null && session.isOpen()) {
+            try {
+                com.d105.dto.GameMessageDto msg = new com.d105.dto.GameMessageDto();
+                msg.setType("DUPLICATE_LOGIN");
+                msg.setContent("다른 기기에서 로그인하여 접속이 종료됩니다.");
+
+                synchronized (session) {
+                    session.sendMessage(
+                            new org.springframework.web.socket.TextMessage(objectMapper.writeValueAsString(msg)));
+                    // 메시지 전송 후 즉시 종료보다는 약간의 텀을 두거나, 클라이언트가 끊게 유도
+                    // 하지만 보안상 서버가 끊는 게 확실함. 메시지 전송은 동기적이므로 보내고 바로 닫아도 됨.
+                    session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION.withReason(reason));
+                }
+            } catch (Exception e) {
+                log.error("Failed to kick user {}", p.getUsername(), e);
+            }
+        }
+        // 세션/플레이어 제거
+        removePlayer(session);
     }
 
     // Additional methods...
