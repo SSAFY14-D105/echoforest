@@ -95,7 +95,10 @@ public class RoomSessionManager {
 
     public String findSessionIdByUsername(String username) {
         for (Map.Entry<String, PlayerState> entry : players.entrySet()) {
-            if (entry.getValue().getUsername().equals(username)) {
+            String pName = entry.getValue().getUsername();
+            // log.info("Comparing input '{}' with existing '{}' (Match: {})", username,
+            // pName, pName.equals(username));
+            if (pName.equals(username)) {
                 return entry.getKey();
             }
         }

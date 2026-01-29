@@ -37,7 +37,7 @@ public class GameService {
      * 방 생성 (CREATE)
      */
     public void handleCreate(WebSocketSession session, GameMessageDto message) throws IOException {
-        String username = message.getUsername();
+        String username = message.getUsername().trim();
 
         // 1. Redis에 방 생성 (방 코드 자동 생성)
         String roomId = redisRoomService.createRoom(username);
@@ -62,7 +62,7 @@ public class GameService {
      */
     public void handleJoin(WebSocketSession session, GameMessageDto message) throws IOException {
         String roomId = message.getRoomId();
-        String username = message.getUsername();
+        String username = message.getUsername().trim();
 
         // 1. Redis에서 방 존재 여부 체크 (게임 중 상태도 허용)
         if (!redisRoomService.roomExists(roomId)) {
@@ -137,7 +137,11 @@ public class GameService {
      */
     public void handleMove(WebSocketSession session, GameMessageDto message) {
         try {
-            String roomId = message.getRoomId();
+            String roomId = (String) session.getAttributes().get("roomId");
+            if (roomId == null)
+                return;
+            // String username = (String) session.getAttributes().get("username");
+
             GameRoom room = gameRepository.getRoom(roomId);
 
             if (room == null)
@@ -188,8 +192,11 @@ public class GameService {
      * 저주 해제 요청 처리 (클라이언트가 긍정어 감지 후 요청)
      */
     public void handleLiftCurseRequest(WebSocketSession session, GameMessageDto message) {
-        String roomId = message.getRoomId();
-        String username = message.getUsername();
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
             room.attemptCurseLift(username);
@@ -210,8 +217,11 @@ public class GameService {
      * Pause Game
      */
     public void handlePause(WebSocketSession session, GameMessageDto message) {
-        String roomId = message.getRoomId();
-        String username = message.getUsername();
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
             room.pause(username);
@@ -222,8 +232,11 @@ public class GameService {
      * Resume Game
      */
     public void handleResume(WebSocketSession session, GameMessageDto message) {
-        String roomId = message.getRoomId();
-        String username = message.getUsername();
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
             room.resume(username);
@@ -582,7 +595,8 @@ public class GameService {
             resetMsg.setContent("reset");
             room.broadcast(resetMsg, null);
 
-            log.info("🔄 Room {}: Game Reset triggered by {}", roomId, message.getUsername());
+            log.info("🔄 Room {}: Game Reset triggered by {}", roomId,
+                    (String) session.getAttributes().get("username"));
         }
     }
 
@@ -619,6 +633,39 @@ public class GameService {
         if (room != null) {
             // 보낸 사람(Interactor)을 제외하고 브로드캐스트
             room.broadcast(message, session.getId());
+            room.broadcast(message, session.getId());
+        }
+    }
+
+    /**
+     * 중복 로그인 이벤트 처리
+     * UserService에서 로그인 성공 시 발행
+     */
+    @org.springframework.context.event.EventListener
+    public void handleDuplicateLogin(com.d105.event.UserLoggedInEvent event) {
+        String username = event.getUsername();
+        String newToken = event.getNewToken();
+
+        // 사용자가 현재 참여 중인 방 조회
+        String roomId = redisRoomService.getUserRoom(username);
+        if (roomId == null) {
+            return; // 게임 중이 아님
+        }
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 해당 방에서 사용자의 구 세션 찾기
+            String oldSessionId = room.findSessionIdByUsername(username);
+
+            if (oldSessionId != null) {
+                // 세션은 가져오되, sessionManager에서 찾아서 메시지 전송
+                // GameRoom.getSessionBySessionId 같은 메서드가 없으므로,
+                // RoomSessionManager에 접근하거나 로직 내에서 해결해야 함.
+                // 여기서는 GameRoom에 kickUser 메서드를 추가하여 처리하는 것이 깔끔함.
+                log.info("🚨 Duplicate login detected for user {}. Kicking old session from room {}.", username,
+                        roomId);
+                room.kickUser(oldSessionId, "DUPLICATE_LOGIN");
+            }
         }
     }
 }
