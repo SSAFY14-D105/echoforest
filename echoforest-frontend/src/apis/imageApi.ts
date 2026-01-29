@@ -50,18 +50,34 @@ export async function uploadEndingCapture(
         formData.append('participantUserIds', id.toString());
     });
 
+    console.log('[imageApi] Uploading image:', {
+        url: `${API_BASE_URL}/images`,
+        userId,
+        stageNumber,
+        roomCode,
+        imageType,
+        hasToken: !!token,
+        fileSize: file.size,
+        fileType: file.type
+    });
+
     const response = await fetch(`${API_BASE_URL}/images`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
     });
 
+    console.log('[imageApi] Response status:', response.status, response.statusText);
+
     if (!response.ok) {
         const errorText = await response.text();
+        console.error('[imageApi] Upload failed:', response.status, errorText);
         throw new Error(`이미지 업로드 실패: ${response.status} - ${errorText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('[imageApi] Upload success:', result);
+    return result;
 }
 
 /**

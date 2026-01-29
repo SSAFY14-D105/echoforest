@@ -38,15 +38,18 @@ export class LiveKitService {
     private connectionOpId = 0; // Async race condition 방지용 ID
     private _cameraEnabledPreference = true; // 사용자 카메라 ON/OFF 상태 저장
 
-    private onParticipantUpdate: ParticipantUpdateCallback | null = null;
+    private participantCallbacks: Set<ParticipantUpdateCallback> = new Set();
     private onConnectedCallback: ConnectionCallback | null = null;
     private onDisconnectedCallback: ConnectionCallback | null = null;
     private onErrorCallback: ErrorCallback | null = null;
 
-    // 콜백 설정 메서드들
-    onParticipantsChange(callback: ParticipantUpdateCallback) {
-        this.onParticipantUpdate = callback;
-        return this;
+    // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
+    onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
+        this.participantCallbacks.add(callback);
+        // 언마운트 시 콜백 제거를 위한 unsubscribe 함수 반환
+        return () => {
+            this.participantCallbacks.delete(callback);
+        };
     }
 
     onConnected(callback: ConnectionCallback) {
@@ -64,9 +67,25 @@ export class LiveKitService {
         return this;
     }
 
-    // 로컬 비디오 엘리먼트 설정
+    // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
     setLocalVideoElement(element: HTMLVideoElement | null) {
+        // 이전 엘리먼트에서 detach
+        if (this.localVideoElement && this.room?.localParticipant) {
+            const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+            if (cameraPublication?.track) {
+                cameraPublication.track.detach(this.localVideoElement);
+            }
+        }
+
         this.localVideoElement = element;
+
+        // 새 엘리먼트에 현재 트랙 attach
+        if (element && this.room?.localParticipant) {
+            const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+            if (cameraPublication?.track) {
+                cameraPublication.track.attach(element);
+            }
+        }
     }
 
     // 참가자 정보 수집
@@ -102,9 +121,10 @@ export class LiveKitService {
         return participantInfos;
     }
 
-    // 참가자 업데이트 통지
+    // 참가자 업데이트 통지 (모든 구독자에게 알림)
     private notifyParticipantUpdate() {
-        this.onParticipantUpdate?.(this.getParticipants());
+        const participants = this.getParticipants();
+        this.participantCallbacks.forEach(callback => callback(participants));
     }
 
     // LiveKit Room 연결 (토큰 직접 입력 - 테스트용)
@@ -373,6 +393,42 @@ export class LiveKitService {
         if (!this._cameraEnabledPreference) {
             await this.room.localParticipant.setCameraEnabled(false);
             console.log('[LiveKitService] Camera restored to user preference (off)');
+        }
+    }
+
+    /**
+     * 로컬 비디오 트랙을 HTML video 엘리먼트에 연결
+     * @param videoElement 연결할 video 엘리먼트
+     * @returns 성공 여부
+     */
+    attachLocalVideo(videoElement: HTMLVideoElement): boolean {
+        if (!this.room || !this.room.localParticipant) {
+            console.warn('[LiveKitService] Cannot attach local video: not connected');
+            return false;
+        }
+
+        const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+        if (cameraPublication?.track) {
+            cameraPublication.track.attach(videoElement);
+            console.log('[LiveKitService] Local video attached');
+            return true;
+        }
+
+        console.warn('[LiveKitService] No local camera track found');
+        return false;
+    }
+
+    /**
+     * 로컬 비디오 트랙을 HTML video 엘리먼트에서 분리
+     * @param videoElement 분리할 video 엘리먼트
+     */
+    detachLocalVideo(videoElement: HTMLVideoElement): void {
+        if (!this.room || !this.room.localParticipant) return;
+
+        const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+        if (cameraPublication?.track) {
+            cameraPublication.track.detach(videoElement);
+            console.log('[LiveKitService] Local video detached');
         }
     }
 }

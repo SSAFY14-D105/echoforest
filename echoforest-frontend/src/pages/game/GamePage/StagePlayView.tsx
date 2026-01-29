@@ -2,7 +2,7 @@
  * StagePlayView - 멀티플레이 스테이지 플레이 화면
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
@@ -49,15 +49,15 @@ export default function StagePlayView({
     const stageNum = currentStage.replace('MULTI_', '');
 
     // 엔딩 미션 상태
-    const { isEndingMission, setEndingMission, nickname, players, isHost } = useGameStore();
+    const { isEndingMission, setEndingMission, nickname, isHost } = useGameStore();
     const [participantInfos, setParticipantInfos] = useState<ParticipantInfo[]>([]);
-    const localVideoRef = useRef<HTMLVideoElement>(null);
 
     // LiveKit 참가자 정보 구독
     useEffect(() => {
-        liveKitService.onParticipantsChange((infos) => {
+        const unsubscribe = liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
         });
+        return unsubscribe;
     }, []);
 
     // 서버로부터 엔딩 미션 시작/종료 이벤트 수신
@@ -84,26 +84,42 @@ export default function StagePlayView({
 
     // 엔딩 미션 시 이미지 캡처 완료 핸들러
     const handleCaptureComplete = async (captures: Blob[]) => {
+        console.log('[StagePlayView] handleCaptureComplete called with', captures.length, 'captures');
+
+        if (captures.length === 0) {
+            console.warn('[StagePlayView] No captures to upload!');
+            return;
+        }
+
         try {
             const stageNumber = parseInt(stageNum, 10);
-            const participantUserIds = players
-                .filter(p => p.nickname !== nickname)
-                .map(p => parseInt(p.id, 10))
-                .filter(id => !isNaN(id));
 
             // 실제 userId는 localStorage에서 가져옴
-            const userId = parseInt(localStorage.getItem('loginId') || '0', 10);
+            const loginId = localStorage.getItem('loginId');
+            const userId = loginId ? parseInt(loginId, 10) : 0;
 
-            if (userId > 0) {
-                await uploadAllEndingCaptures(
-                    captures,
-                    userId,
-                    stageNumber,
-                    participantUserIds,
-                    roomId
-                );
-                console.log('[StagePlayView] Ending captures uploaded successfully');
+            console.log('[StagePlayView] Upload params:', { loginId, userId, stageNumber, roomId });
+
+            if (!userId || isNaN(userId) || userId <= 0) {
+                console.warn('[StagePlayView] loginId not found in localStorage, skipping upload');
+                console.log('[StagePlayView] Available localStorage keys:', Object.keys(localStorage));
+                return;
             }
+
+            // 참가자 ID: 현재 구조에서는 nickname을 ID로 사용하므로 빈 배열로 전송
+            // TODO: 백엔드와 협의하여 실제 userId를 동기화
+            const participantUserIds: number[] = [];
+
+            console.log('[StagePlayView] Calling uploadAllEndingCaptures...');
+            const results = await uploadAllEndingCaptures(
+                captures,
+                userId,
+                stageNumber,
+                participantUserIds,
+                roomId
+            );
+            console.log('[StagePlayView] Upload results:', results);
+            console.log('[StagePlayView] Ending captures uploaded successfully');
         } catch (error) {
             console.error('[StagePlayView] Failed to upload captures:', error);
         }
@@ -166,7 +182,6 @@ export default function StagePlayView({
             {isEndingMission && (
                 <EndingMissionOverlay
                     participantInfos={participantInfos}
-                    localVideoRef={localVideoRef}
                     nickname={nickname}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
