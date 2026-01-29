@@ -34,7 +34,9 @@ public class GameBroadcaster {
                             try {
                                 s.sendMessage(textMsg);
                             } catch (IOException e) {
-                                log.warn("Failed to send message to session {}", s.getId(), e);
+                                log.warn("Failed to send message to session {}: {}", s.getId(), e.getMessage());
+                            } catch (IllegalStateException e) {
+                                log.debug("Session {} already closed, skipping message", s.getId());
                             }
                         }
                     }
@@ -52,7 +54,9 @@ public class GameBroadcaster {
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
                 }
             } catch (IOException e) {
-                log.error("Failed to send message to session {}", session.getId(), e);
+                log.error("Failed to send message to session {}: {}", session.getId(), e.getMessage());
+            } catch (IllegalStateException e) {
+                log.debug("Session {} already closed, skipping message", session.getId());
             }
         }
     }

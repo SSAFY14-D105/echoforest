@@ -63,10 +63,11 @@ public class UserService {
         // 4. 세션 저장 (Redis) - 기존 세션 자동 무효화
         sessionService.saveSession(user.getId(), token);
 
-        // 5. 토큰과 닉네임을 Map에 담아서 반환
+        // 5. 토큰과 닉네임, userId를 Map에 담아서 반환
         return Map.of(
                 "token", token,
-                "nickname", user.getNickname());
+                "nickname", user.getNickname(),
+                "userId", String.valueOf(user.getId()));
     }
 
     // 아이디 중복 확인
