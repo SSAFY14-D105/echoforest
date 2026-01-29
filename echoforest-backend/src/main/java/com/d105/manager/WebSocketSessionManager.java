@@ -94,6 +94,14 @@ public class WebSocketSessionManager {
 
                 synchronized (session) {
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(msg)));
+                    
+                    // [FIX] 메시지 전송 보장을 위해 잠시 대기
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+
                     session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION.withReason(reason));
                 }
             } catch (IOException e) {
