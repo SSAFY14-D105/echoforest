@@ -369,7 +369,15 @@ export default class MapManager {
                 const reqPlayers = this.getObjectProperty(obj, 'requiredPlayers') || 1;
                 const targetGoalId = this.getObjectProperty(obj, 'targetGoalId');
                 const goal = new Goal(this.scene, centerX, centerY, obj.id!.toString(), reqPlayers, width, height, texture, frame, rotation, targetGoalId);
-                goal.setVisible(false);
+
+                // [FIX] targetGoalId가 있는 경우(Lock에 의해 해금되는 경우)에만 숨김 처리
+                // 그렇지 않은 경우(단독 Goal)에는 기본적으로 보이게 설정
+                if (targetGoalId) {
+                    goal.setVisible(false);
+                } else {
+                    goal.setVisible(true);
+                }
+
                 this.scene.goals.push(goal);
                 break;
             }
