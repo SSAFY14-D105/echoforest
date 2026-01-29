@@ -69,7 +69,7 @@ export default function StagePlayView({
             <CameraArea />
             <FloatingButton
                 onPress={() => setBoosterMode(true)}
-                onRelease={() => setTimeout(() => setBoosterMode(false), 500)}
+                onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}
                 isActive={boosterActive}
             />
         </div>
