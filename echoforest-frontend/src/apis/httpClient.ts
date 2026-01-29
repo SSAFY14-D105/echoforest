@@ -32,6 +32,16 @@ export async function httpClient(endpoint: string, options: RequestInit = {}): P
 
         // 2. 인터셉터: 인증 에러 감지 (401 Unauthorized, 419 Authentication Timeout)
         if (response.status === 401 || response.status === 419) {
+            // 중복 로그인 감지 (서버에서 SESSION_EXPIRED 반환)
+            try {
+                const errorData = await response.clone().json();
+                if (errorData.error === 'SESSION_EXPIRED') {
+                    alert('다른 기기에서 로그인되어 로그아웃됩니다.');
+                }
+            } catch {
+                // JSON 파싱 실패 시 무시
+            }
+
             console.warn(`[httpClient] Auth Error ${response.status}: Logging out...`);
 
             // Zustand Store를 통해 로그아웃 액션 호출 (localStorage 정리 포함)
