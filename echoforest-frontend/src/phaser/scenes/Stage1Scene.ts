@@ -3,7 +3,7 @@ import MapManager from '../utils/MapManager';
 
 /**
  * Stage1Scene - 스테이지 1
- * tutorial_map.tmj를 사용하며 Solo3Scene의 구현 방식을 따릅니다.
+ * stage_01.tmj를 사용하며 MapManager를 통해 맵을 로드하고 기믹을 초기화합니다.
  */
 export default class Stage1Scene extends BaseGameScene {
     private mapManager?: MapManager;
