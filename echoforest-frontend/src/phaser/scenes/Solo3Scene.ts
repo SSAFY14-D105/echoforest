@@ -54,11 +54,12 @@ export default class Solo3Scene extends BaseGameScene {
         this.mapManager = new MapManager(this, 'tutorial_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 타일셋 연결
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        // 기믹 생성 (BaseGameScene의 create()에서 자동으로 호출됨)
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                console.log('[Solo3Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
