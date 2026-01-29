@@ -257,11 +257,14 @@ export default class Solo2Scene extends BaseGameScene {
                         const playerIndex = this.getTiledProperty(obj, 'playerIndex');
                         const isDefault = this.getTiledProperty(obj, 'isDefault');
                         this.spawnPoints.push(new Respawn(
+                            this,
                             centerX,
                             centerY,
                             `solo2-spawn-${obj.id}`,
                             playerIndex !== undefined ? Number(playerIndex) : undefined,
-                            isDefault === true || isDefault === 'true'
+                            isDefault === true || isDefault === 'true',
+                            texture,
+                            frame
                         ));
                         console.log(`[Solo2Scene] Spawn point registered: (${centerX}, ${centerY}) for index: ${playerIndex}`);
                         break;
