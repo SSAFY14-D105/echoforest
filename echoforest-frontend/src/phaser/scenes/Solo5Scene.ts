@@ -55,10 +55,12 @@ export default class Solo5Scene extends BaseGameScene {
         this.mapManager = new MapManager(this, 'stage_03_solo_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 5. 맵 생성 (Tileset Name, Phaser Cache Key, Background Key)
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                console.log('[Solo5Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
