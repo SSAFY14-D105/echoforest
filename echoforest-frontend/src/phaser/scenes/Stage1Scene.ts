@@ -52,11 +52,12 @@ export default class Stage1Scene extends BaseGameScene {
         this.mapManager = new MapManager(this, 'stage_01_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 초기화
-        // Default tileset: tiles_tileset
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                console.log('[Stage1Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {

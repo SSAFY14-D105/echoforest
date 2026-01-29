@@ -60,7 +60,29 @@ export default class MapManager {
      * @param tilesetKey Phaser 캐시 키
      * @param backgroundKey 배경 이미지 키 (옵션)
      */
-    public initialize(tilesetName: string, tilesetKey: string, backgroundKey?: string): void {
+
+
+    /**
+     * 비동기 초기화 메서드 - 무거운 충돌체 생성을 여러 프레임에 나눠 처리하여 버벅임 방지
+     */
+    public async initializeAsync(tilesetName: string, tilesetKey: string, backgroundKey?: string): Promise<void> {
+        const { ts, collisionLayers } = this.setupMapLayers(tilesetName, tilesetKey, backgroundKey);
+        if (!ts) return;
+
+        // 비동기 방식: 충돌체 생성을 청크 단위로 처리
+        for (const layer of collisionLayers) {
+            await this.createMergedCollisionsAsync(layer);
+        }
+
+        console.log(`[MapManager] Async initialization complete for map: ${this.mapKey}`);
+    }
+
+    /**
+     * 맵 레이어 설정 공통 로직
+     * - 월드 경계 설정, 타일셋 추가, 레이어 생성, 배경 설정
+     * @returns 타일셋과 충돌 처리가 필요한 레이어 목록
+     */
+    private setupMapLayers(tilesetName: string, tilesetKey: string, backgroundKey?: string): { ts: Phaser.Tilemaps.Tileset | null; collisionLayers: Phaser.Tilemaps.TilemapLayer[] } {
         // 월드 경계 설정
         this.scene.matter.world.setBounds(0, 0, this.getWorldWidth(), this.getWorldHeight());
 
@@ -68,36 +90,32 @@ export default class MapManager {
         const ts = this.map.addTilesetImage(tilesetName, tilesetKey);
         if (!ts) {
             console.error(`[MapManager] Failed to add tileset: ${tilesetName}`);
-            return;
+            return { ts: null, collisionLayers: [] };
         }
 
         // Render Skip 대상 레이어 식별 (Group Layer 상속 포함)
         const skippedLayerNames = this.getSkippedLayerNames();
 
+        // 충돌체 생성이 필요한 레이어 목록 수집
+        const collisionLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+
         // 모든 타일 레이어 순회 및 생성
         this.map.layers.forEach(layerData => {
             const layerClass = this.getLayerProperty(layerData, 'class') || (layerData as any).class;
 
-            // 1. 렌더링 스킵 조건 (로직 전용 레이어)
-            // GhostPlatform은 createObjects에서 별도로 기믹으로 생성되므로 타일맵으론 그리지 않음
-            // (Group Layer 상속 속성까지 고려하여 체크)
+            // 렌더링 스킵 조건 (로직 전용 레이어)
             if (layerClass === 'GhostPlatform' || skippedLayerNames.has(layerData.name)) return;
 
-            // 2. 레이어 생성
+            // 레이어 생성
             const layer = this.map.createLayer(layerData.name, ts, 0, this.offsetY);
             if (layer) {
                 layer.setScale(this.mapScale);
-
-                // 깊이 설정: 배경과 오브젝트 사이 적절한 depth 필요
                 layer.setDepth(-10 + this.map.layers.indexOf(layerData) * 0.1);
 
-                // 3. 충돌체 생성
-                // - 레이어에 'Solid' 클래스나 'collides' 속성이 있는 경우
-                // - 또는 레이어 이름이 'tiles' 또는 'Tile'인 경우 (Legacy 호환: 기존 맵들은 속성 없이 이름에 의존)
-                // [FIX] 대소문자 무관하게 'tile', 'tiles' 포함되면 충돌체 생성 (LobbyMap 호환)
+                // 충돌체 생성 조건 체크
                 const lowerName = layerData.name.toLowerCase();
                 if (layerClass === 'Solid' || this.getLayerProperty(layerData, 'collides') === true || lowerName === 'tiles' || lowerName === 'tile' || lowerName.includes('tile')) {
-                    this.createMergedCollisions(layer);
+                    collisionLayers.push(layer);
                 }
             } else {
                 console.warn(`[MapManager] Failed to create layer: ${layerData.name}`);
@@ -108,6 +126,8 @@ export default class MapManager {
         if (backgroundKey) {
             this.scene.setupTiledBackground(backgroundKey, 0.2);
         }
+
+        return { ts, collisionLayers };
     }
 
     /**
@@ -532,63 +552,89 @@ export default class MapManager {
         return tileClass === 'Solid';
     }
 
+
+
     /**
-     * Greedy Merging 알고리즘을 사용하여 인접한 충돌 타일들을 하나의 물리 바디로 병합
+     * 비동기 충돌체 생성 - 프레임 드롭 방지를 위해 청크 단위로 나눠 처리
      */
-    public createMergedCollisions(layer: Phaser.Tilemaps.TilemapLayer): void {
-        const { width, height } = this.map;
-        const mergedRects: { x: number; y: number; w: number; h: number }[] = [];
-        const processed = Array.from({ length: height }, () => Array(width).fill(false));
+    private createMergedCollisionsAsync(layer: Phaser.Tilemaps.TilemapLayer): Promise<void> {
+        return new Promise((resolve) => {
+            const { width, height } = this.map;
+            const mergedRects: { x: number; y: number; w: number; h: number }[] = [];
+            const processed = Array.from({ length: height }, () => Array(width).fill(false));
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const tile = layer.getTileAt(x, y);
+            const ROWS_PER_CHUNK = 5; // 한 번에 처리할 행 수
+            let currentRow = 0;
 
-                // [FIX] 헬퍼 메서드로 일관된 충돌 체크
-                if (this.isTileCollidable(tile) && !processed[y][x]) {
-                    // 1. 가로로 얼마나 이어지는지 확인
-                    let w = 1;
-                    while (x + w < width) {
-                        const nextTile = layer.getTileAt(x + w, y);
-                        // [FIX] 가로 인접 타일도 동일한 조건으로 체크
-                        if (this.isTileCollidable(nextTile) && !processed[y][x + w]) {
-                            w++;
-                        } else {
-                            break;
-                        }
-                    }
+            const processChunk = () => {
+                const endRow = Math.min(currentRow + ROWS_PER_CHUNK, height);
 
-                    // 2. 이 가로 길이(w) 그대로 세로로 얼마나 이어지는지 확인
-                    let h = 1;
-                    while (y + h < height) {
-                        let rowMatch = true;
-                        for (let k = 0; k < w; k++) {
-                            const belowTile = layer.getTileAt(x + k, y + h);
-                            // [FIX] 세로 인접 타일도 동일한 조건으로 체크
-                            if (!this.isTileCollidable(belowTile) || processed[y + h][x + k]) {
-                                rowMatch = false;
-                                break;
+                for (let y = currentRow; y < endRow; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const tile = layer.getTileAt(x, y);
+
+                        if (this.isTileCollidable(tile) && !processed[y][x]) {
+                            // 가로로 얼마나 이어지는지 확인
+                            let w = 1;
+                            while (x + w < width) {
+                                const nextTile = layer.getTileAt(x + w, y);
+                                if (this.isTileCollidable(nextTile) && !processed[y][x + w]) {
+                                    w++;
+                                } else {
+                                    break;
+                                }
                             }
-                        }
-                        if (rowMatch) {
-                            h++;
-                        } else {
-                            break;
-                        }
-                    }
 
-                    // 3. 병합된 영역 마킹 및 기록
-                    for (let row = y; row < y + h; row++) {
-                        for (let col = x; col < x + w; col++) {
-                            processed[row][col] = true;
+                            // 세로로 얼마나 이어지는지 확인
+                            let h = 1;
+                            while (y + h < height) {
+                                let rowMatch = true;
+                                for (let k = 0; k < w; k++) {
+                                    const belowTile = layer.getTileAt(x + k, y + h);
+                                    if (!this.isTileCollidable(belowTile) || processed[y + h][x + k]) {
+                                        rowMatch = false;
+                                        break;
+                                    }
+                                }
+                                if (rowMatch) {
+                                    h++;
+                                } else {
+                                    break;
+                                }
+                            }
+
+                            // 병합된 영역 마킹 및 기록
+                            for (let row = y; row < y + h; row++) {
+                                for (let col = x; col < x + w; col++) {
+                                    processed[row][col] = true;
+                                }
+                            }
+                            mergedRects.push({ x, y, w, h });
                         }
                     }
-                    mergedRects.push({ x, y, w, h });
                 }
-            }
-        }
 
-        // 4. 병합된 사각형들에 대해 물리 바디 생성
+                currentRow = endRow;
+
+                if (currentRow < height) {
+                    // 다음 청크를 다음 프레임에 처리
+                    requestAnimationFrame(processChunk);
+                } else {
+                    // 모든 행 처리 완료 - 물리 바디 생성
+                    this.createCollisionBodiesFromRects(mergedRects);
+                    resolve();
+                }
+            };
+
+            // 첫 청크 시작
+            processChunk();
+        });
+    }
+
+    /**
+     * 병합된 사각형 목록에서 물리 바디들을 생성
+     */
+    private createCollisionBodiesFromRects(mergedRects: { x: number; y: number; w: number; h: number }[]): void {
         const tileWidth = this.map.tileWidth * this.mapScale;
         const tileHeight = this.map.tileHeight * this.mapScale;
 
@@ -596,7 +642,7 @@ export default class MapManager {
             const pixelWidth = rect.w * tileWidth;
             const pixelHeight = rect.h * tileHeight;
             const centerX = (rect.x * tileWidth) + (pixelWidth / 2);
-            const centerY = (rect.y * tileHeight) + (pixelHeight / 2) + this.offsetY + 1; // +1 to fix floating issue
+            const centerY = (rect.y * tileHeight) + (pixelHeight / 2) + this.offsetY + 1;
 
             this.scene.matter.add.rectangle(centerX, centerY, pixelWidth, pixelHeight - 2, {
                 isStatic: true,
