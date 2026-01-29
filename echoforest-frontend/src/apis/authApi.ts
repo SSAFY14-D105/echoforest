@@ -60,6 +60,7 @@ export interface AuthResponse {
 export interface LoginResponse {
     token: string;
     nickname: string;  // 백엔드에서 반환하는 닉네임
+    userId: string;    // 백엔드 PK (String으로 반환됨)
 }
 
 export interface SignupResponse {
@@ -144,4 +145,25 @@ export async function checkNickname(nickname: string): Promise<CheckIdResponse> 
     }
 
     return res.json();
+}
+
+/**
+ * 닉네임 변경 API
+ */
+export async function updateNickname(userId: number, newNickname: string): Promise<void> {
+    const res = await httpClient('/user/nickname', {
+        method: 'PUT',
+        body: JSON.stringify({ userId, newNickname }),
+    });
+
+    if (!res.ok) {
+        try {
+            const errorData = await res.json();
+            if (errorData.message) {
+                throw new Error(errorData.message);
+            }
+        } catch { }
+
+        throw new Error(getErrorMessage(res.status));
+    }
 }

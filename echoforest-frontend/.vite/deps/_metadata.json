@@ -1,37 +1,52 @@
 {
-  "hash": "2cfa1f9d",
-  "configHash": "dcd0d48b",
+  "hash": "b621eb7d",
+  "configHash": "78b2de9e",
   "lockfileHash": "2dd0dc91",
-  "browserHash": "b53ee491",
+  "browserHash": "df98cfb9",
   "optimized": {
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "827d4608",
+      "fileHash": "97c8f146",
       "needsInterop": true
     },
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "790e9f4b",
+      "fileHash": "c21f748c",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "977fbb5d",
+      "fileHash": "66faf4e0",
       "needsInterop": true
     },
-    "@livekit/components-react": {
-      "src": "../../node_modules/@livekit/components-react/dist/index.mjs",
-      "file": "@livekit_components-react.js",
-      "fileHash": "20a90c21",
+    "zustand": {
+      "src": "../../node_modules/zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "4ef6507f",
+      "needsInterop": false
+    },
+    "phaser": {
+      "src": "../../node_modules/phaser/dist/phaser.js",
+      "file": "phaser.js",
+      "fileHash": "1ace1dbe",
+      "needsInterop": true
+    },
+    "livekit-client": {
+      "src": "../../node_modules/livekit-client/dist/livekit-client.esm.mjs",
+      "file": "livekit-client.js",
+      "fileHash": "d441707d",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-R4VOGKSS": {
-      "file": "chunk-R4VOGKSS.js"
+    "chunk-HWMK2RSU": {
+      "file": "chunk-HWMK2RSU.js"
+    },
+    "chunk-5WRI5ZAA": {
+      "file": "chunk-5WRI5ZAA.js"
     }
   }
 }

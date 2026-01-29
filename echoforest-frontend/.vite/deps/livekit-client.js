@@ -1,20 +1,13 @@
-import {
-  __toESM,
-  require_react
-} from "./chunk-R4VOGKSS.js";
-
-// node_modules/@livekit/components-react/dist/hooks-0IvkS6LV.mjs
-var s = __toESM(require_react(), 1);
-var import_react = __toESM(require_react(), 1);
+import "./chunk-5WRI5ZAA.js";
 
 // node_modules/livekit-client/dist/livekit-client.esm.mjs
 function _mergeNamespaces(n, m) {
-  m.forEach(function(e4) {
-    e4 && typeof e4 !== "string" && !Array.isArray(e4) && Object.keys(e4).forEach(function(k2) {
-      if (k2 !== "default" && !(k2 in n)) {
-        var d = Object.getOwnPropertyDescriptor(e4, k2);
-        Object.defineProperty(n, k2, d.get ? d : { enumerable: true, get: function() {
-          return e4[k2];
+  m.forEach(function(e2) {
+    e2 && typeof e2 !== "string" && !Array.isArray(e2) && Object.keys(e2).forEach(function(k) {
+      if (k !== "default" && !(k in n)) {
+        var d = Object.getOwnPropertyDescriptor(e2, k);
+        Object.defineProperty(n, k, d.get ? d : { enumerable: true, get: function() {
+          return e2[k];
         } });
       }
     });
@@ -22,13 +15,13 @@ function _mergeNamespaces(n, m) {
   return Object.freeze(n);
 }
 var e = Object.defineProperty;
-var h = (i2, s2, t) => s2 in i2 ? e(i2, s2, {
+var h = (i, s, t) => s in i ? e(i, s, {
   enumerable: true,
   configurable: true,
   writable: true,
   value: t
-}) : i2[s2] = t;
-var o = (i2, s2, t) => h(i2, typeof s2 != "symbol" ? s2 + "" : s2, t);
+}) : i[s] = t;
+var o = (i, s, t) => h(i, typeof s != "symbol" ? s + "" : s, t);
 var _ = class {
   constructor() {
     o(this, "_locking");
@@ -40,10 +33,10 @@ var _ = class {
   }
   lock() {
     this._locks += 1;
-    let s2;
-    const t = new Promise((l) => s2 = () => {
+    let s;
+    const t = new Promise((l) => s = () => {
       this._locks -= 1, l();
-    }), c = this._locking.then(() => s2);
+    }), c = this._locking.then(() => s);
     return this._locking = this._locking.then(() => t), c;
   }
 };
@@ -101,8 +94,8 @@ function makeEnumType(typeName, values, _opt) {
     findName(name) {
       return names[name];
     },
-    findNumber(no2) {
-      return numbers[no2];
+    findNumber(no) {
+      return numbers[no];
     }
   };
 }
@@ -167,8 +160,8 @@ var Message = class {
     let json;
     try {
       json = JSON.parse(jsonString);
-    } catch (e4) {
-      throw new Error("cannot decode ".concat(this.getType().typeName, " from JSON: ").concat(e4 instanceof Error ? e4.message : String(e4)));
+    } catch (e2) {
+      throw new Error("cannot decode ".concat(this.getType().typeName, " from JSON: ").concat(e2 instanceof Error ? e2.message : String(e2)));
     }
     return this.fromJson(json, options);
   }
@@ -282,24 +275,24 @@ function varint64read() {
   }
   throw new Error("invalid varint");
 }
-function varint64write(lo2, hi2, bytes) {
-  for (let i2 = 0; i2 < 28; i2 = i2 + 7) {
-    const shift = lo2 >>> i2;
-    const hasNext = !(shift >>> 7 == 0 && hi2 == 0);
+function varint64write(lo, hi, bytes) {
+  for (let i = 0; i < 28; i = i + 7) {
+    const shift = lo >>> i;
+    const hasNext = !(shift >>> 7 == 0 && hi == 0);
     const byte = (hasNext ? shift | 128 : shift) & 255;
     bytes.push(byte);
     if (!hasNext) {
       return;
     }
   }
-  const splitBits = lo2 >>> 28 & 15 | (hi2 & 7) << 4;
-  const hasMoreBits = !(hi2 >> 3 == 0);
+  const splitBits = lo >>> 28 & 15 | (hi & 7) << 4;
+  const hasMoreBits = !(hi >> 3 == 0);
   bytes.push((hasMoreBits ? splitBits | 128 : splitBits) & 255);
   if (!hasMoreBits) {
     return;
   }
-  for (let i2 = 3; i2 < 31; i2 = i2 + 7) {
-    const shift = hi2 >>> i2;
+  for (let i = 3; i < 31; i = i + 7) {
+    const shift = hi >>> i;
     const hasNext = !(shift >>> 7 == 0);
     const byte = (hasNext ? shift | 128 : shift) & 255;
     bytes.push(byte);
@@ -307,7 +300,7 @@ function varint64write(lo2, hi2, bytes) {
       return;
     }
   }
-  bytes.push(hi2 >>> 31 & 1);
+  bytes.push(hi >>> 31 & 1);
 }
 var TWO_PWR_32_DBL = 4294967296;
 function int64FromString(dec) {
@@ -333,8 +326,8 @@ function int64FromString(dec) {
   add1e6digit(-6);
   return minus ? negate(lowBits, highBits) : newBits(lowBits, highBits);
 }
-function int64ToString(lo2, hi2) {
-  let bits = newBits(lo2, hi2);
+function int64ToString(lo, hi) {
+  let bits = newBits(lo, hi);
   const negative = bits.hi & 2147483648;
   if (negative) {
     bits = negate(bits.lo, bits.hi);
@@ -342,17 +335,17 @@ function int64ToString(lo2, hi2) {
   const result = uInt64ToString(bits.lo, bits.hi);
   return negative ? "-" + result : result;
 }
-function uInt64ToString(lo2, hi2) {
+function uInt64ToString(lo, hi) {
   ({
-    lo: lo2,
-    hi: hi2
-  } = toUnsigned(lo2, hi2));
-  if (hi2 <= 2097151) {
-    return String(TWO_PWR_32_DBL * hi2 + lo2);
+    lo,
+    hi
+  } = toUnsigned(lo, hi));
+  if (hi <= 2097151) {
+    return String(TWO_PWR_32_DBL * hi + lo);
   }
-  const low = lo2 & 16777215;
-  const mid = (lo2 >>> 24 | hi2 << 8) & 16777215;
-  const high = hi2 >> 16 & 65535;
+  const low = lo & 16777215;
+  const mid = (lo >>> 24 | hi << 8) & 16777215;
+  const high = hi >> 16 & 65535;
   let digitA = low + mid * 6777216 + high * 6710656;
   let digitB = mid + high * 8147497;
   let digitC = high * 2;
@@ -367,16 +360,16 @@ function uInt64ToString(lo2, hi2) {
   }
   return digitC.toString() + decimalFrom1e7WithLeadingZeros(digitB) + decimalFrom1e7WithLeadingZeros(digitA);
 }
-function toUnsigned(lo2, hi2) {
+function toUnsigned(lo, hi) {
   return {
-    lo: lo2 >>> 0,
-    hi: hi2 >>> 0
+    lo: lo >>> 0,
+    hi: hi >>> 0
   };
 }
-function newBits(lo2, hi2) {
+function newBits(lo, hi) {
   return {
-    lo: lo2 | 0,
-    hi: hi2 | 0
+    lo: lo | 0,
+    hi: hi | 0
   };
 }
 function negate(lowBits, highBits) {
@@ -400,7 +393,7 @@ function varint32write(value, bytes) {
     }
     bytes.push(value);
   } else {
-    for (let i2 = 0; i2 < 9; i2++) {
+    for (let i = 0; i < 9; i++) {
       bytes.push(value & 127 | 128);
       value = value >> 7;
     }
@@ -448,18 +441,18 @@ function makeInt64Support() {
       zero: BigInt(0),
       supported: true,
       parse(value) {
-        const bi2 = typeof value == "bigint" ? value : BigInt(value);
-        if (bi2 > MAX || bi2 < MIN) {
+        const bi = typeof value == "bigint" ? value : BigInt(value);
+        if (bi > MAX || bi < MIN) {
           throw new Error("int64 invalid: ".concat(value));
         }
-        return bi2;
+        return bi;
       },
       uParse(value) {
-        const bi2 = typeof value == "bigint" ? value : BigInt(value);
-        if (bi2 > UMAX || bi2 < UMIN) {
+        const bi = typeof value == "bigint" ? value : BigInt(value);
+        if (bi > UMAX || bi < UMIN) {
           throw new Error("uint64 invalid: ".concat(value));
         }
-        return bi2;
+        return bi;
       },
       enc(value) {
         dv.setBigInt64(0, this.parse(value), true);
@@ -475,14 +468,14 @@ function makeInt64Support() {
           hi: dv.getInt32(4, true)
         };
       },
-      dec(lo2, hi2) {
-        dv.setInt32(0, lo2, true);
-        dv.setInt32(4, hi2, true);
+      dec(lo, hi) {
+        dv.setInt32(0, lo, true);
+        dv.setInt32(4, hi, true);
         return dv.getBigInt64(0, true);
       },
-      uDec(lo2, hi2) {
-        dv.setInt32(0, lo2, true);
-        dv.setInt32(4, hi2, true);
+      uDec(lo, hi) {
+        dv.setInt32(0, lo, true);
+        dv.setInt32(4, hi, true);
         return dv.getBigUint64(0, true);
       }
     };
@@ -520,11 +513,11 @@ function makeInt64Support() {
       assertUInt64String(value);
       return int64FromString(value);
     },
-    dec(lo2, hi2) {
-      return int64ToString(lo2, hi2);
+    dec(lo, hi) {
+      return int64ToString(lo, hi);
     },
-    uDec(lo2, hi2) {
-      return uInt64ToString(lo2, hi2);
+    uDec(lo, hi) {
+      return uInt64ToString(lo, hi);
     }
   };
 }
@@ -563,8 +556,8 @@ function scalarEquals(type, a, b) {
     if (a.length !== b.length) {
       return false;
     }
-    for (let i2 = 0; i2 < a.length; i2++) {
-      if (a[i2] !== b[i2]) {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
         return false;
       }
     }
@@ -635,12 +628,12 @@ var BinaryWriter = class {
   finish() {
     this.chunks.push(new Uint8Array(this.buf));
     let len = 0;
-    for (let i2 = 0; i2 < this.chunks.length; i2++) len += this.chunks[i2].length;
+    for (let i = 0; i < this.chunks.length; i++) len += this.chunks[i].length;
     let bytes = new Uint8Array(len);
     let offset = 0;
-    for (let i2 = 0; i2 < this.chunks.length; i2++) {
-      bytes.set(this.chunks[i2], offset);
-      offset += this.chunks[i2].length;
+    for (let i = 0; i < this.chunks.length; i++) {
+      bytes.set(this.chunks[i], offset);
+      offset += this.chunks[i].length;
     }
     this.chunks = [];
     return bytes;
@@ -810,8 +803,8 @@ var BinaryWriter = class {
    * Write a `sint64` value, a signed, zig-zag-encoded 64-bit varint.
    */
   sint64(value) {
-    let tc = protoInt64.enc(value), sign = tc.hi >> 31, lo2 = tc.lo << 1 ^ sign, hi2 = (tc.hi << 1 | tc.lo >>> 31) ^ sign;
-    varint64write(lo2, hi2, this.buf);
+    let tc = protoInt64.enc(value), sign = tc.hi >> 31, lo = tc.lo << 1 ^ sign, hi = (tc.hi << 1 | tc.lo >>> 31) ^ sign;
+    varint64write(lo, hi, this.buf);
     return this;
   }
   /**
@@ -869,14 +862,14 @@ var BinaryReader = class {
         break;
       case WireType.StartGroup:
         for (; ; ) {
-          const [fn3, wt3] = this.tag();
-          if (wt3 === WireType.EndGroup) {
-            if (fieldNo !== void 0 && fn3 !== fieldNo) {
+          const [fn, wt] = this.tag();
+          if (wt === WireType.EndGroup) {
+            if (fieldNo !== void 0 && fn !== fieldNo) {
               throw new Error("invalid end group tag");
             }
             break;
           }
-          this.skip(wt3, fn3);
+          this.skip(wt, fn);
         }
         break;
       default:
@@ -920,18 +913,18 @@ var BinaryReader = class {
    * Read a `sint64` field, a signed, zig-zag-encoded 64-bit varint.
    */
   sint64() {
-    let [lo2, hi2] = this.varint64();
-    let s2 = -(lo2 & 1);
-    lo2 = (lo2 >>> 1 | (hi2 & 1) << 31) ^ s2;
-    hi2 = hi2 >>> 1 ^ s2;
-    return protoInt64.dec(lo2, hi2);
+    let [lo, hi] = this.varint64();
+    let s = -(lo & 1);
+    lo = (lo >>> 1 | (hi & 1) << 31) ^ s;
+    hi = hi >>> 1 ^ s;
+    return protoInt64.dec(lo, hi);
   }
   /**
    * Read a `bool` field, a variant.
    */
   bool() {
-    let [lo2, hi2] = this.varint64();
-    return lo2 !== 0 || hi2 !== 0;
+    let [lo, hi] = this.varint64();
+    return lo !== 0 || hi !== 0;
   }
   /**
    * Read a `fixed32` field, an unsigned, fixed-length 32-bit integer.
@@ -986,18 +979,18 @@ var BinaryReader = class {
   }
 };
 function makeExtension(runtime, typeName, extendee, field) {
-  let fi2;
+  let fi;
   return {
     typeName,
     extendee,
     get field() {
-      if (!fi2) {
-        const i2 = typeof field == "function" ? field() : field;
-        i2.name = typeName.split(".").pop();
-        i2.jsonName = "[".concat(typeName, "]");
-        fi2 = runtime.util.newFieldList([i2]).list()[0];
+      if (!fi) {
+        const i = typeof field == "function" ? field() : field;
+        i.name = typeName.split(".").pop();
+        i.jsonName = "[".concat(typeName, "]");
+        fi = runtime.util.newFieldList([i]).list()[0];
       }
-      return fi2;
+      return fi;
     },
     runtime
   };
@@ -1022,17 +1015,17 @@ function initExtensionField(ext) {
     case "scalar":
       return scalarZeroValue(field.T, field.L);
     case "message":
-      const T2 = field.T, value = new T2();
-      return T2.fieldWrapper ? T2.fieldWrapper.unwrapField(value) : value;
+      const T = field.T, value = new T();
+      return T.fieldWrapper ? T.fieldWrapper.unwrapField(value) : value;
     case "map":
       throw "map fields are not allowed to be extensions";
   }
 }
 function filterUnknownFields(unknownFields, field) {
   if (!field.repeated && (field.kind == "enum" || field.kind == "scalar")) {
-    for (let i2 = unknownFields.length - 1; i2 >= 0; --i2) {
-      if (unknownFields[i2].no == field.no) {
-        return [unknownFields[i2]];
+    for (let i = unknownFields.length - 1; i >= 0; --i) {
+      if (unknownFields[i].no == field.no) {
+        return [unknownFields[i]];
       }
     }
     return [];
@@ -1041,7 +1034,7 @@ function filterUnknownFields(unknownFields, field) {
 }
 var encTable = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split("");
 var decTable = [];
-for (let i2 = 0; i2 < encTable.length; i2++) decTable[encTable[i2].charCodeAt(0)] = i2;
+for (let i = 0; i < encTable.length; i++) decTable[encTable[i].charCodeAt(0)] = i;
 decTable["-".charCodeAt(0)] = encTable.indexOf("+");
 decTable["_".charCodeAt(0)] = encTable.indexOf("/");
 var protoBase64 = {
@@ -1057,14 +1050,14 @@ var protoBase64 = {
    *   no padding
    */
   dec(base64Str) {
-    let es2 = base64Str.length * 3 / 4;
-    if (base64Str[base64Str.length - 2] == "=") es2 -= 2;
-    else if (base64Str[base64Str.length - 1] == "=") es2 -= 1;
-    let bytes = new Uint8Array(es2), bytePos = 0, groupPos = 0, b, p = 0;
-    for (let i2 = 0; i2 < base64Str.length; i2++) {
-      b = decTable[base64Str.charCodeAt(i2)];
+    let es = base64Str.length * 3 / 4;
+    if (base64Str[base64Str.length - 2] == "=") es -= 2;
+    else if (base64Str[base64Str.length - 1] == "=") es -= 1;
+    let bytes = new Uint8Array(es), bytePos = 0, groupPos = 0, b, p = 0;
+    for (let i = 0; i < base64Str.length; i++) {
+      b = decTable[base64Str.charCodeAt(i)];
       if (b === void 0) {
-        switch (base64Str[i2]) {
+        switch (base64Str[i]) {
           // @ts-ignore TS7029: Fallthrough case in switch
           case "=":
             groupPos = 0;
@@ -1109,8 +1102,8 @@ var protoBase64 = {
    */
   enc(bytes) {
     let base64 = "", groupPos = 0, b, p = 0;
-    for (let i2 = 0; i2 < bytes.length; i2++) {
-      b = bytes[i2];
+    for (let i = 0; i < bytes.length; i++) {
+      b = bytes[i];
       switch (groupPos) {
         case 0:
           base64 += encTable[b >> 2];
@@ -1168,9 +1161,9 @@ function setExtension(message, extension, value, options) {
   extension.runtime.bin.writeField(f, value, writer2, writeOpt);
   const reader = readOpt.readerFactory(writer2.finish());
   while (reader.pos < reader.len) {
-    const [no2, wireType] = reader.tag();
-    const data = reader.skip(wireType, no2);
-    message.getType().runtime.bin.onUnknownField(message, no2, wireType, data);
+    const [no, wireType] = reader.tag();
+    const data = reader.skip(wireType, no);
+    message.getType().runtime.bin.onUnknownField(message, no, wireType, data);
   }
 }
 function hasExtension(message, extension) {
@@ -1356,9 +1349,9 @@ function makeJsonFormat() {
             }
           }
         }
-      } catch (e4) {
+      } catch (e2) {
         const m = field ? "cannot encode field ".concat(type.typeName, ".").concat(field.name, " to JSON") : "cannot encode message ".concat(type.typeName, " to JSON");
-        const r2 = e4 instanceof Error ? e4.message : String(e4);
+        const r2 = e2 instanceof Error ? e2.message : String(e2);
         throw new Error(m + (r2.length > 0 ? ": ".concat(r2) : ""));
       }
       return json;
@@ -1419,10 +1412,10 @@ function readField$1(target, jsonValue, field, options, parentType) {
         case "scalar":
           try {
             targetArray.push(readScalar$1(field.T, jsonItem, field.L, true));
-          } catch (e4) {
+          } catch (e2) {
             let m = "cannot decode field ".concat(parentType.typeName, ".").concat(field.name, " from JSON: ").concat(debugJsonValue(jsonItem));
-            if (e4 instanceof Error && e4.message.length > 0) {
-              m += ": ".concat(e4.message);
+            if (e2 instanceof Error && e2.message.length > 0) {
+              m += ": ".concat(e2.message);
             }
             throw new Error(m);
           }
@@ -1444,10 +1437,10 @@ function readField$1(target, jsonValue, field, options, parentType) {
       let key;
       try {
         key = readMapKey(field.K, jsonMapKey);
-      } catch (e4) {
+      } catch (e2) {
         let m = "cannot decode map key for field ".concat(parentType.typeName, ".").concat(field.name, " from JSON: ").concat(debugJsonValue(jsonValue));
-        if (e4 instanceof Error && e4.message.length > 0) {
-          m += ": ".concat(e4.message);
+        if (e2 instanceof Error && e2.message.length > 0) {
+          m += ": ".concat(e2.message);
         }
         throw new Error(m);
       }
@@ -1464,10 +1457,10 @@ function readField$1(target, jsonValue, field, options, parentType) {
         case "scalar":
           try {
             targetMap[key] = readScalar$1(field.V.T, jsonMapValue, LongType.BIGINT, true);
-          } catch (e4) {
+          } catch (e2) {
             let m = "cannot decode map value for field ".concat(parentType.typeName, ".").concat(field.name, " from JSON: ").concat(debugJsonValue(jsonValue));
-            if (e4 instanceof Error && e4.message.length > 0) {
-              m += ": ".concat(e4.message);
+            if (e2 instanceof Error && e2.message.length > 0) {
+              m += ": ".concat(e2.message);
             }
             throw new Error(m);
           }
@@ -1521,10 +1514,10 @@ function readField$1(target, jsonValue, field, options, parentType) {
               target[localName] = scalarValue;
               break;
           }
-        } catch (e4) {
+        } catch (e2) {
           let m = "cannot decode field ".concat(parentType.typeName, ".").concat(field.name, " from JSON: ").concat(debugJsonValue(jsonValue));
-          if (e4 instanceof Error && e4.message.length > 0) {
-            m += ": ".concat(e4.message);
+          if (e2 instanceof Error && e2.message.length > 0) {
+            m += ": ".concat(e2.message);
           }
           throw new Error(m);
         }
@@ -1616,7 +1609,7 @@ function readScalar$1(type, json, longType, nullAsZeroValue) {
       }
       try {
         encodeURIComponent(json);
-      } catch (e4) {
+      } catch (e2) {
         throw new Error("invalid UTF8");
       }
       return json;
@@ -1699,18 +1692,18 @@ function writeField$1(field, value, options) {
     const jsonArr = [];
     switch (field.kind) {
       case "scalar":
-        for (let i2 = 0; i2 < value.length; i2++) {
-          jsonArr.push(writeScalar$1(field.T, value[i2]));
+        for (let i = 0; i < value.length; i++) {
+          jsonArr.push(writeScalar$1(field.T, value[i]));
         }
         break;
       case "enum":
-        for (let i2 = 0; i2 < value.length; i2++) {
-          jsonArr.push(writeEnum(field.T, value[i2], options.enumAsInteger));
+        for (let i = 0; i < value.length; i++) {
+          jsonArr.push(writeEnum(field.T, value[i], options.enumAsInteger));
         }
         break;
       case "message":
-        for (let i2 = 0; i2 < value.length; i2++) {
-          jsonArr.push(value[i2].toJson(options));
+        for (let i = 0; i < value.length; i++) {
+          jsonArr.push(value[i].toJson(options));
         }
         break;
     }
@@ -1815,13 +1808,13 @@ function makeBinaryFormat() {
         }
       }
     },
-    onUnknownField(message, no2, wireType, data) {
+    onUnknownField(message, no, wireType, data) {
       const m = message;
       if (!Array.isArray(m[unknownFieldsSymbol])) {
         m[unknownFieldsSymbol] = [];
       }
       m[unknownFieldsSymbol].push({
-        no: no2,
+        no,
         wireType,
         data
       });
@@ -1901,8 +1894,8 @@ function readField(target, reader, field, wireType, options) {
         let arr = target[localName];
         const isPacked = wireType == WireType.LengthDelimited && scalarType != ScalarType.STRING && scalarType != ScalarType.BYTES;
         if (isPacked) {
-          let e4 = reader.uint32() + reader.pos;
-          while (reader.pos < e4) {
+          let e2 = reader.uint32() + reader.pos;
+          while (reader.pos < e2) {
             arr.push(read(reader, scalarType));
           }
         } else {
@@ -2115,8 +2108,8 @@ function writePacked(writer2, type, fieldNo, value) {
   }
   writer2.tag(fieldNo, WireType.LengthDelimited).fork();
   let [, method] = scalarTypeInfo(type);
-  for (let i2 = 0; i2 < value.length; i2++) {
-    writer2[method](value[i2]);
+  for (let i = 0; i < value.length; i++) {
+    writer2[method](value[i]);
   }
   writer2.join();
 }
@@ -2150,18 +2143,18 @@ function makeUtilCommon() {
       }
       const type = target.getType();
       for (const member of type.fields.byMember()) {
-        const localName = member.localName, t = target, s2 = source;
-        if (s2[localName] == null) {
+        const localName = member.localName, t = target, s = source;
+        if (s[localName] == null) {
           continue;
         }
         switch (member.kind) {
           case "oneof":
-            const sk = s2[localName].case;
+            const sk = s[localName].case;
             if (sk === void 0) {
               continue;
             }
             const sourceField = member.findField(sk);
-            let val = s2[localName].value;
+            let val = s[localName].value;
             if (sourceField && sourceField.kind == "message" && !isMessage(val, sourceField.T)) {
               val = new sourceField.T(val);
             } else if (sourceField && sourceField.kind === "scalar" && sourceField.T === ScalarType.BYTES) {
@@ -2174,7 +2167,7 @@ function makeUtilCommon() {
             break;
           case "scalar":
           case "enum":
-            let copy = s2[localName];
+            let copy = s[localName];
             if (member.T === ScalarType.BYTES) {
               copy = member.repeated ? copy.map(toU8Arr) : toU8Arr(copy);
             }
@@ -2185,42 +2178,42 @@ function makeUtilCommon() {
               case "scalar":
               case "enum":
                 if (member.V.T === ScalarType.BYTES) {
-                  for (const [k2, v] of Object.entries(s2[localName])) {
-                    t[localName][k2] = toU8Arr(v);
+                  for (const [k, v] of Object.entries(s[localName])) {
+                    t[localName][k] = toU8Arr(v);
                   }
                 } else {
-                  Object.assign(t[localName], s2[localName]);
+                  Object.assign(t[localName], s[localName]);
                 }
                 break;
               case "message":
                 const messageType = member.V.T;
-                for (const k2 of Object.keys(s2[localName])) {
-                  let val2 = s2[localName][k2];
+                for (const k of Object.keys(s[localName])) {
+                  let val2 = s[localName][k];
                   if (!messageType.fieldWrapper) {
                     val2 = new messageType(val2);
                   }
-                  t[localName][k2] = val2;
+                  t[localName][k] = val2;
                 }
                 break;
             }
             break;
           case "message":
-            const mt2 = member.T;
+            const mt = member.T;
             if (member.repeated) {
-              t[localName] = s2[localName].map((val2) => isMessage(val2, mt2) ? val2 : new mt2(val2));
+              t[localName] = s[localName].map((val2) => isMessage(val2, mt) ? val2 : new mt(val2));
             } else {
-              const val2 = s2[localName];
-              if (mt2.fieldWrapper) {
+              const val2 = s[localName];
+              if (mt.fieldWrapper) {
                 if (
                   // We can't use BytesValue.typeName as that will create a circular import
-                  mt2.typeName === "google.protobuf.BytesValue"
+                  mt.typeName === "google.protobuf.BytesValue"
                 ) {
                   t[localName] = toU8Arr(val2);
                 } else {
                   t[localName] = val2;
                 }
               } else {
-                t[localName] = isMessage(val2, mt2) ? val2 : new mt2(val2);
+                t[localName] = isMessage(val2, mt) ? val2 : new mt(val2);
               }
             }
             break;
@@ -2236,25 +2229,25 @@ function makeUtilCommon() {
         return false;
       }
       return type.fields.byMember().every((m) => {
-        const va2 = a[m.localName];
+        const va = a[m.localName];
         const vb = b[m.localName];
         if (m.repeated) {
-          if (va2.length !== vb.length) {
+          if (va.length !== vb.length) {
             return false;
           }
           switch (m.kind) {
             case "message":
-              return va2.every((a2, i2) => m.T.equals(a2, vb[i2]));
+              return va.every((a2, i) => m.T.equals(a2, vb[i]));
             case "scalar":
-              return va2.every((a2, i2) => scalarEquals(m.T, a2, vb[i2]));
+              return va.every((a2, i) => scalarEquals(m.T, a2, vb[i]));
             case "enum":
-              return va2.every((a2, i2) => scalarEquals(ScalarType.INT32, a2, vb[i2]));
+              return va.every((a2, i) => scalarEquals(ScalarType.INT32, a2, vb[i]));
           }
           throw new Error("repeated cannot contain ".concat(m.kind));
         }
         switch (m.kind) {
           case "message":
-            let a2 = va2;
+            let a2 = va;
             let b2 = vb;
             if (m.T.fieldWrapper) {
               if (a2 !== void 0 && !isMessage(a2)) {
@@ -2266,37 +2259,37 @@ function makeUtilCommon() {
             }
             return m.T.equals(a2, b2);
           case "enum":
-            return scalarEquals(ScalarType.INT32, va2, vb);
+            return scalarEquals(ScalarType.INT32, va, vb);
           case "scalar":
-            return scalarEquals(m.T, va2, vb);
+            return scalarEquals(m.T, va, vb);
           case "oneof":
-            if (va2.case !== vb.case) {
+            if (va.case !== vb.case) {
               return false;
             }
-            const s2 = m.findField(va2.case);
-            if (s2 === void 0) {
+            const s = m.findField(va.case);
+            if (s === void 0) {
               return true;
             }
-            switch (s2.kind) {
+            switch (s.kind) {
               case "message":
-                return s2.T.equals(va2.value, vb.value);
+                return s.T.equals(va.value, vb.value);
               case "enum":
-                return scalarEquals(ScalarType.INT32, va2.value, vb.value);
+                return scalarEquals(ScalarType.INT32, va.value, vb.value);
               case "scalar":
-                return scalarEquals(s2.T, va2.value, vb.value);
+                return scalarEquals(s.T, va.value, vb.value);
             }
-            throw new Error("oneof cannot contain ".concat(s2.kind));
+            throw new Error("oneof cannot contain ".concat(s.kind));
           case "map":
-            const keys = Object.keys(va2).concat(Object.keys(vb));
+            const keys = Object.keys(va).concat(Object.keys(vb));
             switch (m.V.kind) {
               case "message":
                 const messageType = m.V.T;
-                return keys.every((k2) => messageType.equals(va2[k2], vb[k2]));
+                return keys.every((k) => messageType.equals(va[k], vb[k]));
               case "enum":
-                return keys.every((k2) => scalarEquals(ScalarType.INT32, va2[k2], vb[k2]));
+                return keys.every((k) => scalarEquals(ScalarType.INT32, va[k], vb[k]));
               case "scalar":
                 const scalarType = m.V.T;
-                return keys.every((k2) => scalarEquals(scalarType, va2[k2], vb[k2]));
+                return keys.every((k) => scalarEquals(scalarType, va[k], vb[k]));
             }
             break;
         }
@@ -2442,8 +2435,8 @@ var fieldJsonName = protoCamelCase;
 function protoCamelCase(snakeCase) {
   let capNext = false;
   const b = [];
-  for (let i2 = 0; i2 < snakeCase.length; i2++) {
-    let c = snakeCase.charAt(i2);
+  for (let i = 0; i < snakeCase.length; i++) {
+    let c = snakeCase.charAt(i);
     switch (c) {
       case "_":
         capNext = true;
@@ -2525,15 +2518,15 @@ var InternalOneofInfo = class {
   findField(localName) {
     if (!this._lookup) {
       this._lookup = /* @__PURE__ */ Object.create(null);
-      for (let i2 = 0; i2 < this.fields.length; i2++) {
-        this._lookup[this.fields[i2].localName] = this.fields[i2];
+      for (let i = 0; i < this.fields.length; i++) {
+        this._lookup[this.fields[i].localName] = this.fields[i];
       }
     }
     return this._lookup[localName];
   }
 };
 function normalizeFieldInfos(fieldInfos, packedByDefault) {
-  var _a, _b, _c, _d, _e2, _f;
+  var _a, _b, _c, _d, _e, _f;
   const r2 = [];
   let o2;
   for (const field of typeof fieldInfos == "function" ? fieldInfos() : fieldInfos) {
@@ -2545,7 +2538,7 @@ function normalizeFieldInfos(fieldInfos, packedByDefault) {
       f.L = (_c = field.L) !== null && _c !== void 0 ? _c : LongType.BIGINT;
     }
     f.delimited = (_d = field.delimited) !== null && _d !== void 0 ? _d : false;
-    f.req = (_e2 = field.req) !== null && _e2 !== void 0 ? _e2 : false;
+    f.req = (_e = field.req) !== null && _e !== void 0 ? _e : false;
     f.opt = (_f = field.opt) !== null && _f !== void 0 ? _f : false;
     if (field.packed === void 0) {
       {
@@ -2614,14 +2607,14 @@ var Timestamp = class _Timestamp extends Message {
     if (!matches) {
       throw new Error("cannot decode google.protobuf.Timestamp from JSON: invalid RFC 3339 string");
     }
-    const ms2 = Date.parse(matches[1] + "-" + matches[2] + "-" + matches[3] + "T" + matches[4] + ":" + matches[5] + ":" + matches[6] + (matches[8] ? matches[8] : "Z"));
-    if (Number.isNaN(ms2)) {
+    const ms = Date.parse(matches[1] + "-" + matches[2] + "-" + matches[3] + "T" + matches[4] + ":" + matches[5] + ":" + matches[6] + (matches[8] ? matches[8] : "Z"));
+    if (Number.isNaN(ms)) {
       throw new Error("cannot decode google.protobuf.Timestamp from JSON: invalid RFC 3339 string");
     }
-    if (ms2 < Date.parse("0001-01-01T00:00:00Z") || ms2 > Date.parse("9999-12-31T23:59:59Z")) {
+    if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
       throw new Error("cannot decode message google.protobuf.Timestamp from JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive");
     }
-    this.seconds = protoInt64.parse(ms2 / 1e3);
+    this.seconds = protoInt64.parse(ms / 1e3);
     this.nanos = 0;
     if (matches[7]) {
       this.nanos = parseInt("1" + matches[7] + "0".repeat(9 - matches[7].length)) - 1e9;
@@ -2629,25 +2622,25 @@ var Timestamp = class _Timestamp extends Message {
     return this;
   }
   toJson(options) {
-    const ms2 = Number(this.seconds) * 1e3;
-    if (ms2 < Date.parse("0001-01-01T00:00:00Z") || ms2 > Date.parse("9999-12-31T23:59:59Z")) {
+    const ms = Number(this.seconds) * 1e3;
+    if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
       throw new Error("cannot encode google.protobuf.Timestamp to JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive");
     }
     if (this.nanos < 0) {
       throw new Error("cannot encode google.protobuf.Timestamp to JSON: nanos must not be negative");
     }
-    let z3 = "Z";
+    let z = "Z";
     if (this.nanos > 0) {
       const nanosStr = (this.nanos + 1e9).toString().substring(1);
       if (nanosStr.substring(3) === "000000") {
-        z3 = "." + nanosStr.substring(0, 3) + "Z";
+        z = "." + nanosStr.substring(0, 3) + "Z";
       } else if (nanosStr.substring(6) === "000") {
-        z3 = "." + nanosStr.substring(0, 6) + "Z";
+        z = "." + nanosStr.substring(0, 6) + "Z";
       } else {
-        z3 = "." + nanosStr + "Z";
+        z = "." + nanosStr + "Z";
       }
     }
-    return new Date(ms2).toISOString().replace(".000Z", z3);
+    return new Date(ms).toISOString().replace(".000Z", z);
   }
   toDate() {
     return new Date(Number(this.seconds) * 1e3 + Math.ceil(this.nanos / 1e6));
@@ -2656,10 +2649,10 @@ var Timestamp = class _Timestamp extends Message {
     return _Timestamp.fromDate(/* @__PURE__ */ new Date());
   }
   static fromDate(date) {
-    const ms2 = date.getTime();
+    const ms = date.getTime();
     return new _Timestamp({
-      seconds: protoInt64.parse(Math.floor(ms2 / 1e3)),
-      nanos: ms2 % 1e3 * 1e6
+      seconds: protoInt64.parse(Math.floor(ms / 1e3)),
+      nanos: ms % 1e3 * 1e6
     });
   }
   static fromBinary(bytes, options) {
@@ -6618,8 +6611,8 @@ var TokenSourceResponse = proto3.makeMessageType("livekit.TokenSourceResponse", 
   T: 9
   /* ScalarType.STRING */
 }]);
-function getDefaultExportFromCjs(x2) {
-  return x2 && x2.__esModule && Object.prototype.hasOwnProperty.call(x2, "default") ? x2["default"] : x2;
+function getDefaultExportFromCjs(x) {
+  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
 }
 var loglevel$1 = { exports: {} };
 var loglevel = loglevel$1.exports;
@@ -6649,7 +6642,7 @@ function requireLoglevel() {
         } else {
           try {
             return Function.prototype.bind.call(method, obj);
-          } catch (e4) {
+          } catch (e2) {
             return function() {
               return Function.prototype.apply.apply(method, [obj, arguments]);
             };
@@ -6684,9 +6677,9 @@ function requireLoglevel() {
       }
       function replaceLoggingMethods() {
         var level = this.getLevel();
-        for (var i2 = 0; i2 < logMethods.length; i2++) {
-          var methodName = logMethods[i2];
-          this[methodName] = i2 < level ? noop : this.methodFactory(methodName, level, this.name);
+        for (var i = 0; i < logMethods.length; i++) {
+          var methodName = logMethods[i];
+          this[methodName] = i < level ? noop : this.methodFactory(methodName, level, this.name);
         }
         this.log = this.debug;
         if (typeof console === undefinedType && level < this.levels.SILENT) {
@@ -6705,7 +6698,7 @@ function requireLoglevel() {
         return realMethod(methodName) || enableLoggingWhenConsoleArrives.apply(this, arguments);
       }
       function Logger(name, factory) {
-        var self2 = this;
+        var self = this;
         var inheritedLevel;
         var defaultLevel;
         var userLevel;
@@ -6746,7 +6739,7 @@ function requireLoglevel() {
             } catch (ignore) {
             }
           }
-          if (self2.levels[storedLevel] === void 0) {
+          if (self.levels[storedLevel] === void 0) {
             storedLevel = void 0;
           }
           return storedLevel;
@@ -6764,17 +6757,17 @@ function requireLoglevel() {
         }
         function normalizeLevel(input) {
           var level = input;
-          if (typeof level === "string" && self2.levels[level.toUpperCase()] !== void 0) {
-            level = self2.levels[level.toUpperCase()];
+          if (typeof level === "string" && self.levels[level.toUpperCase()] !== void 0) {
+            level = self.levels[level.toUpperCase()];
           }
-          if (typeof level === "number" && level >= 0 && level <= self2.levels.SILENT) {
+          if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
             return level;
           } else {
             throw new TypeError("log.setLevel() called with invalid level: " + input);
           }
         }
-        self2.name = name;
-        self2.levels = {
+        self.name = name;
+        self.levels = {
           "TRACE": 0,
           "DEBUG": 1,
           "INFO": 2,
@@ -6782,8 +6775,8 @@ function requireLoglevel() {
           "ERROR": 4,
           "SILENT": 5
         };
-        self2.methodFactory = factory || defaultMethodFactory;
-        self2.getLevel = function() {
+        self.methodFactory = factory || defaultMethodFactory;
+        self.getLevel = function() {
           if (userLevel != null) {
             return userLevel;
           } else if (defaultLevel != null) {
@@ -6792,36 +6785,36 @@ function requireLoglevel() {
             return inheritedLevel;
           }
         };
-        self2.setLevel = function(level, persist) {
+        self.setLevel = function(level, persist) {
           userLevel = normalizeLevel(level);
           if (persist !== false) {
             persistLevelIfPossible(userLevel);
           }
-          return replaceLoggingMethods.call(self2);
+          return replaceLoggingMethods.call(self);
         };
-        self2.setDefaultLevel = function(level) {
+        self.setDefaultLevel = function(level) {
           defaultLevel = normalizeLevel(level);
           if (!getPersistedLevel()) {
-            self2.setLevel(level, false);
+            self.setLevel(level, false);
           }
         };
-        self2.resetLevel = function() {
+        self.resetLevel = function() {
           userLevel = null;
           clearPersistedLevel();
-          replaceLoggingMethods.call(self2);
+          replaceLoggingMethods.call(self);
         };
-        self2.enableAll = function(persist) {
-          self2.setLevel(self2.levels.TRACE, persist);
+        self.enableAll = function(persist) {
+          self.setLevel(self.levels.TRACE, persist);
         };
-        self2.disableAll = function(persist) {
-          self2.setLevel(self2.levels.SILENT, persist);
+        self.disableAll = function(persist) {
+          self.setLevel(self.levels.SILENT, persist);
         };
-        self2.rebuild = function() {
-          if (defaultLogger !== self2) {
+        self.rebuild = function() {
+          if (defaultLogger !== self) {
             inheritedLevel = normalizeLevel(defaultLogger.getLevel());
           }
-          replaceLoggingMethods.call(self2);
-          if (defaultLogger === self2) {
+          replaceLoggingMethods.call(self);
+          if (defaultLogger === self) {
             for (var childName in _loggersByName) {
               _loggersByName[childName].rebuild();
             }
@@ -6832,7 +6825,7 @@ function requireLoglevel() {
         if (initialLevel != null) {
           userLevel = normalizeLevel(initialLevel);
         }
-        replaceLoggingMethods.call(self2);
+        replaceLoggingMethods.call(self);
       }
       defaultLogger = new Logger();
       defaultLogger.getLogger = function getLogger2(name) {
@@ -6935,36 +6928,36 @@ var DefaultReconnectPolicy = class {
     return retryDelay + Math.random() * 1e3;
   }
 };
-function __rest(s2, e4) {
+function __rest(s, e2) {
   var t = {};
-  for (var p in s2) if (Object.prototype.hasOwnProperty.call(s2, p) && e4.indexOf(p) < 0)
-    t[p] = s2[p];
-  if (s2 != null && typeof Object.getOwnPropertySymbols === "function")
-    for (var i2 = 0, p = Object.getOwnPropertySymbols(s2); i2 < p.length; i2++) {
-      if (e4.indexOf(p[i2]) < 0 && Object.prototype.propertyIsEnumerable.call(s2, p[i2]))
-        t[p[i2]] = s2[p[i2]];
+  for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e2.indexOf(p) < 0)
+    t[p] = s[p];
+  if (s != null && typeof Object.getOwnPropertySymbols === "function")
+    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+      if (e2.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+        t[p[i]] = s[p[i]];
     }
   return t;
 }
-function __awaiter(thisArg, _arguments, P2, generator) {
+function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value) {
-    return value instanceof P2 ? value : new P2(function(resolve) {
+    return value instanceof P ? value : new P(function(resolve) {
       resolve(value);
     });
   }
-  return new (P2 || (P2 = Promise))(function(resolve, reject) {
+  return new (P || (P = Promise))(function(resolve, reject) {
     function fulfilled(value) {
       try {
         step(generator.next(value));
-      } catch (e4) {
-        reject(e4);
+      } catch (e2) {
+        reject(e2);
       }
     }
     function rejected(value) {
       try {
         step(generator["throw"](value));
-      } catch (e4) {
-        reject(e4);
+      } catch (e2) {
+        reject(e2);
       }
     }
     function step(result) {
@@ -6974,24 +6967,24 @@ function __awaiter(thisArg, _arguments, P2, generator) {
   });
 }
 function __values(o2) {
-  var s2 = typeof Symbol === "function" && Symbol.iterator, m = s2 && o2[s2], i2 = 0;
+  var s = typeof Symbol === "function" && Symbol.iterator, m = s && o2[s], i = 0;
   if (m) return m.call(o2);
   if (o2 && typeof o2.length === "number") return {
     next: function() {
-      if (o2 && i2 >= o2.length) o2 = void 0;
-      return { value: o2 && o2[i2++], done: !o2 };
+      if (o2 && i >= o2.length) o2 = void 0;
+      return { value: o2 && o2[i++], done: !o2 };
     }
   };
-  throw new TypeError(s2 ? "Object is not iterable." : "Symbol.iterator is not defined.");
+  throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 }
 function __asyncValues(o2) {
   if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var m = o2[Symbol.asyncIterator], i2;
-  return m ? m.call(o2) : (o2 = typeof __values === "function" ? __values(o2) : o2[Symbol.iterator](), i2 = {}, verb("next"), verb("throw"), verb("return"), i2[Symbol.asyncIterator] = function() {
+  var m = o2[Symbol.asyncIterator], i;
+  return m ? m.call(o2) : (o2 = typeof __values === "function" ? __values(o2) : o2[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function() {
     return this;
-  }, i2);
+  }, i);
   function verb(n) {
-    i2[n] = o2[n] && function(v) {
+    i[n] = o2[n] && function(v) {
       return new Promise(function(resolve, reject) {
         v = o2[n](v), settle(resolve, reject, v.done, v.value);
       });
@@ -7080,19 +7073,19 @@ function requireEvents() {
   };
   EventEmitter.prototype.emit = function emit(type) {
     var args = [];
-    for (var i2 = 1; i2 < arguments.length; i2++) args.push(arguments[i2]);
+    for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
     var doError = type === "error";
     var events2 = this._events;
     if (events2 !== void 0) doError = doError && events2.error === void 0;
     else if (!doError) return false;
     if (doError) {
-      var er3;
-      if (args.length > 0) er3 = args[0];
-      if (er3 instanceof Error) {
-        throw er3;
+      var er;
+      if (args.length > 0) er = args[0];
+      if (er instanceof Error) {
+        throw er;
       }
-      var err = new Error("Unhandled error." + (er3 ? " (" + er3.message + ")" : ""));
-      err.context = er3;
+      var err = new Error("Unhandled error." + (er ? " (" + er.message + ")" : ""));
+      err.context = er;
       throw err;
     }
     var handler = events2[type];
@@ -7102,7 +7095,7 @@ function requireEvents() {
     } else {
       var len = handler.length;
       var listeners = arrayClone(handler, len);
-      for (var i2 = 0; i2 < len; ++i2) ReflectApply(listeners[i2], this, args);
+      for (var i = 0; i < len; ++i) ReflectApply(listeners[i], this, args);
     }
     return true;
   };
@@ -7185,7 +7178,7 @@ function requireEvents() {
     return this;
   };
   EventEmitter.prototype.removeListener = function removeListener(type, listener) {
-    var list, events2, position, i2, originalListener;
+    var list, events2, position, i, originalListener;
     checkListener(listener);
     events2 = this._events;
     if (events2 === void 0) return this;
@@ -7199,10 +7192,10 @@ function requireEvents() {
       }
     } else if (typeof list !== "function") {
       position = -1;
-      for (i2 = list.length - 1; i2 >= 0; i2--) {
-        if (list[i2] === listener || list[i2].listener === listener) {
-          originalListener = list[i2].listener;
-          position = i2;
+      for (i = list.length - 1; i >= 0; i--) {
+        if (list[i] === listener || list[i].listener === listener) {
+          originalListener = list[i].listener;
+          position = i;
           break;
         }
       }
@@ -7218,7 +7211,7 @@ function requireEvents() {
   };
   EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
   EventEmitter.prototype.removeAllListeners = function removeAllListeners(type) {
-    var listeners, events2, i2;
+    var listeners, events2, i;
     events2 = this._events;
     if (events2 === void 0) return this;
     if (events2.removeListener === void 0) {
@@ -7234,8 +7227,8 @@ function requireEvents() {
     if (arguments.length === 0) {
       var keys = Object.keys(events2);
       var key;
-      for (i2 = 0; i2 < keys.length; ++i2) {
-        key = keys[i2];
+      for (i = 0; i < keys.length; ++i) {
+        key = keys[i];
         if (key === "removeListener") continue;
         this.removeAllListeners(key);
       }
@@ -7248,8 +7241,8 @@ function requireEvents() {
     if (typeof listeners === "function") {
       this.removeListener(type, listeners);
     } else if (listeners !== void 0) {
-      for (i2 = listeners.length - 1; i2 >= 0; i2--) {
-        this.removeListener(type, listeners[i2]);
+      for (i = listeners.length - 1; i >= 0; i--) {
+        this.removeListener(type, listeners[i]);
       }
     }
     return this;
@@ -7293,7 +7286,7 @@ function requireEvents() {
   };
   function arrayClone(arr, n) {
     var copy = new Array(n);
-    for (var i2 = 0; i2 < n; ++i2) copy[i2] = arr[i2];
+    for (var i = 0; i < n; ++i) copy[i] = arr[i];
     return copy;
   }
   function spliceOne(list, index) {
@@ -7302,8 +7295,8 @@ function requireEvents() {
   }
   function unwrapListeners(arr) {
     var ret = new Array(arr.length);
-    for (var i2 = 0; i2 < ret.length; ++i2) {
-      ret[i2] = arr[i2].listener || arr[i2];
+    for (var i = 0; i < ret.length; ++i) {
+      ret[i] = arr[i].listener || arr[i];
     }
     return ret;
   }
@@ -7371,8 +7364,8 @@ function wrapPeerConnectionEvent(window2, eventNameToWrap, wrapper) {
     if (nativeEventName !== eventNameToWrap) {
       return nativeAddEventListener.apply(this, arguments);
     }
-    const wrappedCallback = (e4) => {
-      const modifiedEvent = wrapper(e4);
+    const wrappedCallback = (e2) => {
+      const modifiedEvent = wrapper(e2);
       if (modifiedEvent) {
         if (cb.handleEvent) {
           cb.handleEvent(modifiedEvent);
@@ -7662,9 +7655,9 @@ function shimGetUserMedia$2(window2, browserDetails2) {
     logging("chrome: " + JSON.stringify(constraints));
     return func(constraints);
   };
-  const shimError_ = function(e4) {
+  const shimError_ = function(e2) {
     if (browserDetails2.version >= 64) {
-      return e4;
+      return e2;
     }
     return {
       name: {
@@ -7679,9 +7672,9 @@ function shimGetUserMedia$2(window2, browserDetails2) {
         TabCaptureError: "AbortError",
         ScreenCaptureError: "AbortError",
         DeviceCaptureError: "AbortError"
-      }[e4.name] || e4.name,
-      message: e4.message,
-      constraint: e4.constraint || e4.constraintName,
+      }[e2.name] || e2.name,
+      message: e2.message,
+      constraint: e2.constraint || e2.constraintName,
       toString() {
         return this.name + (this.message && ": ") + this.message;
       }
@@ -7689,9 +7682,9 @@ function shimGetUserMedia$2(window2, browserDetails2) {
   };
   const getUserMedia_ = function(constraints, onSuccess, onError) {
     shimConstraints_(constraints, (c) => {
-      navigator2.webkitGetUserMedia(c, onSuccess, (e4) => {
+      navigator2.webkitGetUserMedia(c, onSuccess, (e2) => {
         if (onError) {
-          onError(shimError_(e4));
+          onError(shimError_(e2));
         }
       });
     });
@@ -7699,8 +7692,8 @@ function shimGetUserMedia$2(window2, browserDetails2) {
   navigator2.getUserMedia = getUserMedia_.bind(navigator2);
   if (navigator2.mediaDevices.getUserMedia) {
     const origGetUserMedia = navigator2.mediaDevices.getUserMedia.bind(navigator2.mediaDevices);
-    navigator2.mediaDevices.getUserMedia = function(cs2) {
-      return shimConstraints_(cs2, (c) => origGetUserMedia(c).then((stream) => {
+    navigator2.mediaDevices.getUserMedia = function(cs) {
+      return shimConstraints_(cs, (c) => origGetUserMedia(c).then((stream) => {
         if (c.audio && !stream.getAudioTracks().length || c.video && !stream.getVideoTracks().length) {
           stream.getTracks().forEach((track) => {
             track.stop();
@@ -7708,7 +7701,7 @@ function shimGetUserMedia$2(window2, browserDetails2) {
           throw new DOMException("", "NotFoundError");
         }
         return stream;
-      }, (e4) => Promise.reject(shimError_(e4))));
+      }, (e2) => Promise.reject(shimError_(e2))));
     };
   }
 }
@@ -7733,26 +7726,26 @@ function shimOnTrack$1(window2) {
     const origSetRemoteDescription = window2.RTCPeerConnection.prototype.setRemoteDescription;
     window2.RTCPeerConnection.prototype.setRemoteDescription = function setRemoteDescription() {
       if (!this._ontrackpoly) {
-        this._ontrackpoly = (e4) => {
-          e4.stream.addEventListener("addtrack", (te3) => {
+        this._ontrackpoly = (e2) => {
+          e2.stream.addEventListener("addtrack", (te) => {
             let receiver;
             if (window2.RTCPeerConnection.prototype.getReceivers) {
-              receiver = this.getReceivers().find((r2) => r2.track && r2.track.id === te3.track.id);
+              receiver = this.getReceivers().find((r2) => r2.track && r2.track.id === te.track.id);
             } else {
               receiver = {
-                track: te3.track
+                track: te.track
               };
             }
             const event = new Event("track");
-            event.track = te3.track;
+            event.track = te.track;
             event.receiver = receiver;
             event.transceiver = {
               receiver
             };
-            event.streams = [e4.stream];
+            event.streams = [e2.stream];
             this.dispatchEvent(event);
           });
-          e4.stream.getTracks().forEach((track) => {
+          e2.stream.getTracks().forEach((track) => {
             let receiver;
             if (window2.RTCPeerConnection.prototype.getReceivers) {
               receiver = this.getReceivers().find((r2) => r2.track && r2.track.id === track.id);
@@ -7767,7 +7760,7 @@ function shimOnTrack$1(window2) {
             event.transceiver = {
               receiver
             };
-            event.streams = [e4.stream];
+            event.streams = [e2.stream];
             this.dispatchEvent(event);
           });
         };
@@ -7776,15 +7769,15 @@ function shimOnTrack$1(window2) {
       return origSetRemoteDescription.apply(this, arguments);
     };
   } else {
-    wrapPeerConnectionEvent(window2, "track", (e4) => {
-      if (!e4.transceiver) {
-        Object.defineProperty(e4, "transceiver", {
+    wrapPeerConnectionEvent(window2, "track", (e2) => {
+      if (!e2.transceiver) {
+        Object.defineProperty(e2, "transceiver", {
           value: {
-            receiver: e4.receiver
+            receiver: e2.receiver
           }
         });
       }
-      return e4;
+      return e2;
     });
   }
 }
@@ -7842,7 +7835,7 @@ function shimGetSendersWithDtmf(window2) {
       this._senders = this._senders || [];
       origRemoveStream.apply(this, [stream]);
       stream.getTracks().forEach((track) => {
-        const sender = this._senders.find((s2) => s2.track === track);
+        const sender = this._senders.find((s) => s.track === track);
         if (sender) {
           this._senders.splice(this._senders.indexOf(sender), 1);
         }
@@ -7910,9 +7903,9 @@ function shimSenderReceiverGetStats(window2) {
         return receivers;
       };
     }
-    wrapPeerConnectionEvent(window2, "track", (e4) => {
-      e4.receiver._pc = e4.srcElement;
-      return e4;
+    wrapPeerConnectionEvent(window2, "track", (e2) => {
+      e2.receiver._pc = e2.srcElement;
+      return e2;
     });
     window2.RTCRtpReceiver.prototype.getStats = function getStats() {
       const receiver = this;
@@ -7929,12 +7922,12 @@ function shimSenderReceiverGetStats(window2) {
       let sender;
       let receiver;
       let err;
-      this.getSenders().forEach((s2) => {
-        if (s2.track === track) {
+      this.getSenders().forEach((s) => {
+        if (s.track === track) {
           if (sender) {
             err = true;
           } else {
-            sender = s2;
+            sender = s;
           }
         }
       });
@@ -7983,7 +7976,7 @@ function shimAddTrackRemoveTrackWithNative(window2) {
   window2.RTCPeerConnection.prototype.addStream = function addStream(stream) {
     this._shimmedLocalStreams = this._shimmedLocalStreams || {};
     stream.getTracks().forEach((track) => {
-      const alreadyExists = this.getSenders().find((s2) => s2.track === track);
+      const alreadyExists = this.getSenders().find((s) => s.track === track);
       if (alreadyExists) {
         throw new DOMException("Track already exists.", "InvalidAccessError");
       }
@@ -8034,7 +8027,7 @@ function shimAddTrackRemoveTrack(window2, browserDetails2) {
     this._streams = this._streams || {};
     this._reverseStreams = this._reverseStreams || {};
     stream.getTracks().forEach((track) => {
-      const alreadyExists = this.getSenders().find((s2) => s2.track === track);
+      const alreadyExists = this.getSenders().find((s) => s.track === track);
       if (alreadyExists) {
         throw new DOMException("Track already exists.", "InvalidAccessError");
       }
@@ -8063,7 +8056,7 @@ function shimAddTrackRemoveTrack(window2, browserDetails2) {
     if (streams.length !== 1 || !streams[0].getTracks().find((t) => t === track)) {
       throw new DOMException("The adapter.js addTrack polyfill only supports a single  stream which is associated with the specified track.", "NotSupportedError");
     }
-    const alreadyExists = this.getSenders().find((s2) => s2.track === track);
+    const alreadyExists = this.getSenders().find((s) => s.track === track);
     if (alreadyExists) {
       throw new DOMException("Track already exists.", "InvalidAccessError");
     }
@@ -8081,7 +8074,7 @@ function shimAddTrackRemoveTrack(window2, browserDetails2) {
       this._reverseStreams[newStream.id] = stream;
       this.addStream(newStream);
     }
-    return this.getSenders().find((s2) => s2.track === track);
+    return this.getSenders().find((s) => s.track === track);
   };
   function replaceInternalStreamId(pc, description) {
     let sdp2 = description.sdp;
@@ -8196,14 +8189,14 @@ function shimPeerConnection$1(window2, browserDetails2) {
   }
 }
 function fixNegotiationNeeded(window2, browserDetails2) {
-  wrapPeerConnectionEvent(window2, "negotiationneeded", (e4) => {
-    const pc = e4.target;
+  wrapPeerConnectionEvent(window2, "negotiationneeded", (e2) => {
+    const pc = e2.target;
     if (browserDetails2.version < 72 || pc.getConfiguration && pc.getConfiguration().sdpSemantics === "plan-b") {
       if (pc.signalingState !== "stable") {
         return;
       }
     }
-    return e4;
+    return e2;
   });
 }
 var chromeShim = Object.freeze({ __proto__: null, fixNegotiationNeeded, shimAddTrackRemoveTrack, shimAddTrackRemoveTrackWithNative, shimGetSendersWithDtmf, shimGetUserMedia: shimGetUserMedia$2, shimMediaStream, shimOnTrack: shimOnTrack$1, shimPeerConnection: shimPeerConnection$1, shimSenderReceiverGetStats });
@@ -8322,12 +8315,12 @@ function shimPeerConnection(window2, browserDetails2) {
           stats.forEach((stat) => {
             stat.type = modernStatsTypes[stat.type] || stat.type;
           });
-        } catch (e4) {
-          if (e4.name !== "TypeError") {
-            throw e4;
+        } catch (e2) {
+          if (e2.name !== "TypeError") {
+            throw e2;
           }
-          stats.forEach((stat, i2) => {
-            stats.set(i2, Object.assign({}, stat, {
+          stats.forEach((stat, i) => {
+            stats.set(i, Object.assign({}, stat, {
               type: modernStatsTypes[stat.type] || stat.type
             }));
           });
@@ -8379,9 +8372,9 @@ function shimReceiverGetStats(window2) {
       return receivers;
     };
   }
-  wrapPeerConnectionEvent(window2, "track", (e4) => {
-    e4.receiver._pc = e4.srcElement;
-    return e4;
+  wrapPeerConnectionEvent(window2, "track", (e2) => {
+    e2.receiver._pc = e2.srcElement;
+    return e2;
   });
   window2.RTCRtpReceiver.prototype.getStats = function getStats() {
     return this._pc.getStats(this.track);
@@ -8587,8 +8580,8 @@ function shimRemoteStreamsAPI(window2) {
           this.removeEventListener("track", this._onaddstreampoly);
         }
         this.addEventListener("addstream", this._onaddstream = f);
-        this.addEventListener("track", this._onaddstreampoly = (e4) => {
-          e4.streams.forEach((stream) => {
+        this.addEventListener("track", this._onaddstreampoly = (e2) => {
+          e2.streams.forEach((stream) => {
             if (!this._remoteStreams) {
               this._remoteStreams = [];
             }
@@ -8607,8 +8600,8 @@ function shimRemoteStreamsAPI(window2) {
     window2.RTCPeerConnection.prototype.setRemoteDescription = function setRemoteDescription() {
       const pc = this;
       if (!this._onaddstreampoly) {
-        this.addEventListener("track", this._onaddstreampoly = function(e4) {
-          e4.streams.forEach((stream) => {
+        this.addEventListener("track", this._onaddstreampoly = function(e2) {
+          e2.streams.forEach((stream) => {
             if (!pc._remoteStreams) {
               pc._remoteStreams = [];
             }
@@ -8713,8 +8706,8 @@ function shimRTCIceServerUrls(window2) {
   window2.RTCPeerConnection = function RTCPeerConnection2(pcConfig, pcConstraints) {
     if (pcConfig && pcConfig.iceServers) {
       const newIceServers = [];
-      for (let i2 = 0; i2 < pcConfig.iceServers.length; i2++) {
-        let server = pcConfig.iceServers[i2];
+      for (let i = 0; i < pcConfig.iceServers.length; i++) {
+        let server = pcConfig.iceServers[i];
         if (server.urls === void 0 && server.url) {
           deprecated("RTCIceServer.url", "RTCIceServer.urls");
           server = JSON.parse(JSON.stringify(server));
@@ -8722,7 +8715,7 @@ function shimRTCIceServerUrls(window2) {
           delete server.url;
           newIceServers.push(server);
         } else {
-          newIceServers.push(pcConfig.iceServers[i2]);
+          newIceServers.push(pcConfig.iceServers[i]);
         }
       }
       pcConfig.iceServers = newIceServers;
@@ -8862,24 +8855,24 @@ function requireSdp() {
         // skip parts[6] == 'typ'
         type: parts[7]
       };
-      for (let i2 = 8; i2 < parts.length; i2 += 2) {
-        switch (parts[i2]) {
+      for (let i = 8; i < parts.length; i += 2) {
+        switch (parts[i]) {
           case "raddr":
-            candidate.relatedAddress = parts[i2 + 1];
+            candidate.relatedAddress = parts[i + 1];
             break;
           case "rport":
-            candidate.relatedPort = parseInt(parts[i2 + 1], 10);
+            candidate.relatedPort = parseInt(parts[i + 1], 10);
             break;
           case "tcptype":
-            candidate.tcpType = parts[i2 + 1];
+            candidate.tcpType = parts[i + 1];
             break;
           case "ufrag":
-            candidate.ufrag = parts[i2 + 1];
-            candidate.usernameFragment = parts[i2 + 1];
+            candidate.ufrag = parts[i + 1];
+            candidate.usernameFragment = parts[i + 1];
             break;
           default:
-            if (candidate[parts[i2]] === void 0) {
-              candidate[parts[i2]] = parts[i2 + 1];
+            if (candidate[parts[i]] === void 0) {
+              candidate[parts[i]] = parts[i + 1];
             }
             break;
         }
@@ -8937,12 +8930,12 @@ function requireSdp() {
       return parsed;
     };
     SDPUtils2.writeRtpMap = function(codec) {
-      let pt3 = codec.payloadType;
+      let pt = codec.payloadType;
       if (codec.preferredPayloadType !== void 0) {
-        pt3 = codec.preferredPayloadType;
+        pt = codec.preferredPayloadType;
       }
       const channels = codec.channels || codec.numChannels || 1;
-      return "a=rtpmap:" + pt3 + " " + codec.name + "/" + codec.clockRate + (channels !== 1 ? "/" + channels : "") + "\r\n";
+      return "a=rtpmap:" + pt + " " + codec.name + "/" + codec.clockRate + (channels !== 1 ? "/" + channels : "") + "\r\n";
     };
     SDPUtils2.parseExtmap = function(line) {
       const parts = line.substring(9).split(" ");
@@ -8960,17 +8953,17 @@ function requireSdp() {
       const parsed = {};
       let kv;
       const parts = line.substring(line.indexOf(" ") + 1).split(";");
-      for (let j3 = 0; j3 < parts.length; j3++) {
-        kv = parts[j3].trim().split("=");
+      for (let j = 0; j < parts.length; j++) {
+        kv = parts[j].trim().split("=");
         parsed[kv[0].trim()] = kv[1];
       }
       return parsed;
     };
     SDPUtils2.writeFmtp = function(codec) {
       let line = "";
-      let pt3 = codec.payloadType;
+      let pt = codec.payloadType;
       if (codec.preferredPayloadType !== void 0) {
-        pt3 = codec.preferredPayloadType;
+        pt = codec.preferredPayloadType;
       }
       if (codec.parameters && Object.keys(codec.parameters).length) {
         const params = [];
@@ -8981,7 +8974,7 @@ function requireSdp() {
             params.push(param);
           }
         });
-        line += "a=fmtp:" + pt3 + " " + params.join(";") + "\r\n";
+        line += "a=fmtp:" + pt + " " + params.join(";") + "\r\n";
       }
       return line;
     };
@@ -8994,13 +8987,13 @@ function requireSdp() {
     };
     SDPUtils2.writeRtcpFb = function(codec) {
       let lines = "";
-      let pt3 = codec.payloadType;
+      let pt = codec.payloadType;
       if (codec.preferredPayloadType !== void 0) {
-        pt3 = codec.preferredPayloadType;
+        pt = codec.preferredPayloadType;
       }
       if (codec.rtcpFeedback && codec.rtcpFeedback.length) {
         codec.rtcpFeedback.forEach((fb) => {
-          lines += "a=rtcp-fb:" + pt3 + " " + fb.type + (fb.parameter && fb.parameter.length ? " " + fb.parameter : "") + "\r\n";
+          lines += "a=rtcp-fb:" + pt + " " + fb.type + (fb.parameter && fb.parameter.length ? " " + fb.parameter : "") + "\r\n";
         });
       }
       return lines;
@@ -9115,14 +9108,14 @@ function requireSdp() {
       const lines = SDPUtils2.splitLines(mediaSection);
       const mline = lines[0].split(" ");
       description.profile = mline[2];
-      for (let i2 = 3; i2 < mline.length; i2++) {
-        const pt3 = mline[i2];
-        const rtpmapline = SDPUtils2.matchPrefix(mediaSection, "a=rtpmap:" + pt3 + " ")[0];
+      for (let i = 3; i < mline.length; i++) {
+        const pt = mline[i];
+        const rtpmapline = SDPUtils2.matchPrefix(mediaSection, "a=rtpmap:" + pt + " ")[0];
         if (rtpmapline) {
           const codec = SDPUtils2.parseRtpMap(rtpmapline);
-          const fmtps = SDPUtils2.matchPrefix(mediaSection, "a=fmtp:" + pt3 + " ");
+          const fmtps = SDPUtils2.matchPrefix(mediaSection, "a=fmtp:" + pt + " ");
           codec.parameters = fmtps.length ? SDPUtils2.parseFmtp(fmtps[0]) : {};
-          codec.rtcpFeedback = SDPUtils2.matchPrefix(mediaSection, "a=rtcp-fb:" + pt3 + " ").map(SDPUtils2.parseRtcpFb);
+          codec.rtcpFeedback = SDPUtils2.matchPrefix(mediaSection, "a=rtcp-fb:" + pt + " ").map(SDPUtils2.parseRtcpFb);
           description.codecs.push(codec);
           switch (codec.name.toUpperCase()) {
             case "RED":
@@ -9341,13 +9334,13 @@ function requireSdp() {
     };
     SDPUtils2.getDirection = function(mediaSection, sessionpart) {
       const lines = SDPUtils2.splitLines(mediaSection);
-      for (let i2 = 0; i2 < lines.length; i2++) {
-        switch (lines[i2]) {
+      for (let i = 0; i < lines.length; i++) {
+        switch (lines[i]) {
           case "a=sendrecv":
           case "a=sendonly":
           case "a=recvonly":
           case "a=inactive":
-            return lines[i2].substring(2);
+            return lines[i].substring(2);
         }
       }
       if (sessionpart) {
@@ -9390,8 +9383,8 @@ function requireSdp() {
         return false;
       }
       const lines = SDPUtils2.splitLines(blob);
-      for (let i2 = 0; i2 < lines.length; i2++) {
-        if (lines[i2].length < 2 || lines[i2].charAt(1) !== "=") {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].length < 2 || lines[i].charAt(1) !== "=") {
           return false;
         }
       }
@@ -9439,32 +9432,32 @@ function shimRTCIceCandidate(window2) {
     return new NativeRTCIceCandidate(args);
   };
   window2.RTCIceCandidate.prototype = NativeRTCIceCandidate.prototype;
-  wrapPeerConnectionEvent(window2, "icecandidate", (e4) => {
-    if (e4.candidate) {
-      Object.defineProperty(e4, "candidate", {
-        value: new window2.RTCIceCandidate(e4.candidate),
+  wrapPeerConnectionEvent(window2, "icecandidate", (e2) => {
+    if (e2.candidate) {
+      Object.defineProperty(e2, "candidate", {
+        value: new window2.RTCIceCandidate(e2.candidate),
         writable: "false"
       });
     }
-    return e4;
+    return e2;
   });
 }
 function shimRTCIceCandidateRelayProtocol(window2) {
   if (!window2.RTCIceCandidate || window2.RTCIceCandidate && "relayProtocol" in window2.RTCIceCandidate.prototype) {
     return;
   }
-  wrapPeerConnectionEvent(window2, "icecandidate", (e4) => {
-    if (e4.candidate) {
-      const parsedCandidate = SDPUtils.parseCandidate(e4.candidate.candidate);
+  wrapPeerConnectionEvent(window2, "icecandidate", (e2) => {
+    if (e2.candidate) {
+      const parsedCandidate = SDPUtils.parseCandidate(e2.candidate.candidate);
       if (parsedCandidate.type === "relay") {
-        e4.candidate.relayProtocol = {
+        e2.candidate.relayProtocol = {
           0: "tls",
           1: "tcp",
           2: "udp"
         }[parsedCandidate.priority >> 24];
       }
     }
-    return e4;
+    return e2;
   });
 }
 function shimMaxMessageSize(window2, browserDetails2) {
@@ -9588,9 +9581,9 @@ function shimSendThrowTypeError(window2) {
     wrapDcSend(dataChannel, this);
     return dataChannel;
   };
-  wrapPeerConnectionEvent(window2, "datachannel", (e4) => {
-    wrapDcSend(e4.channel, e4.target);
-    return e4;
+  wrapPeerConnectionEvent(window2, "datachannel", (e2) => {
+    wrapDcSend(e2.channel, e2.target);
+    return e2;
   });
 }
 function shimConnectionState(window2) {
@@ -9628,14 +9621,14 @@ function shimConnectionState(window2) {
     const origMethod = proto[method];
     proto[method] = function() {
       if (!this._connectionstatechangepoly) {
-        this._connectionstatechangepoly = (e4) => {
-          const pc = e4.target;
+        this._connectionstatechangepoly = (e2) => {
+          const pc = e2.target;
           if (pc._lastConnectionState !== pc.connectionState) {
             pc._lastConnectionState = pc.connectionState;
-            const newEvent = new Event("connectionstatechange", e4);
+            const newEvent = new Event("connectionstatechange", e2);
             pc.dispatchEvent(newEvent);
           }
-          return e4;
+          return e2;
         };
         this.addEventListener("iceconnectionstatechange", this._connectionstatechangepoly);
       }
@@ -9860,39 +9853,39 @@ function getBrowser(userAgent) {
   if (typeof userAgent === "undefined" && typeof navigator === "undefined") {
     return;
   }
-  const ua3 = (userAgent !== null && userAgent !== void 0 ? userAgent : navigator.userAgent).toLowerCase();
+  const ua = (userAgent !== null && userAgent !== void 0 ? userAgent : navigator.userAgent).toLowerCase();
   if (browserDetails === void 0 || force) {
     const browser = browsersList.find((_ref) => {
       let {
         test
       } = _ref;
-      return test.test(ua3);
+      return test.test(ua);
     });
-    browserDetails = browser === null || browser === void 0 ? void 0 : browser.describe(ua3);
+    browserDetails = browser === null || browser === void 0 ? void 0 : browser.describe(ua);
   }
   return browserDetails;
 }
 var browsersList = [
   {
     test: /firefox|iceweasel|fxios/i,
-    describe(ua3) {
+    describe(ua) {
       const browser = {
         name: "Firefox",
-        version: getMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, ua3),
-        os: ua3.toLowerCase().includes("fxios") ? "iOS" : void 0,
-        osVersion: getOSVersion(ua3)
+        version: getMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, ua),
+        os: ua.toLowerCase().includes("fxios") ? "iOS" : void 0,
+        osVersion: getOSVersion(ua)
       };
       return browser;
     }
   },
   {
     test: /chrom|crios|crmo/i,
-    describe(ua3) {
+    describe(ua) {
       const browser = {
         name: "Chrome",
-        version: getMatch(/(?:chrome|chromium|crios|crmo)\/(\d+(\.?_?\d+)+)/i, ua3),
-        os: ua3.toLowerCase().includes("crios") ? "iOS" : void 0,
-        osVersion: getOSVersion(ua3)
+        version: getMatch(/(?:chrome|chromium|crios|crmo)\/(\d+(\.?_?\d+)+)/i, ua),
+        os: ua.toLowerCase().includes("crios") ? "iOS" : void 0,
+        osVersion: getOSVersion(ua)
       };
       return browser;
     }
@@ -9900,24 +9893,24 @@ var browsersList = [
   /* Safari */
   {
     test: /safari|applewebkit/i,
-    describe(ua3) {
+    describe(ua) {
       const browser = {
         name: "Safari",
-        version: getMatch(commonVersionIdentifier, ua3),
-        os: ua3.includes("mobile/") ? "iOS" : "macOS",
-        osVersion: getOSVersion(ua3)
+        version: getMatch(commonVersionIdentifier, ua),
+        os: ua.includes("mobile/") ? "iOS" : "macOS",
+        osVersion: getOSVersion(ua)
       };
       return browser;
     }
   }
 ];
-function getMatch(exp, ua3) {
+function getMatch(exp, ua) {
   let id = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : 1;
-  const match = ua3.match(exp);
+  const match = ua.match(exp);
   return match && match.length >= id && match[id] || "";
 }
-function getOSVersion(ua3) {
-  return ua3.includes("mac os") ? getMatch(/\(.+?(\d+_\d+(:?_\d+)?)/, ua3, 1).replace(/_/g, ".") : void 0;
+function getOSVersion(ua) {
+  return ua.includes("mac os") ? getMatch(/\(.+?(\d+_\d+(:?_\d+)?)/, ua, 1).replace(/_/g, ".") : void 0;
 }
 var version$1 = "2.17.0";
 var version = version$1;
@@ -9927,6 +9920,13 @@ var LivekitError = class extends Error {
     super(message || "an error has occured");
     this.name = "LiveKitError";
     this.code = code;
+  }
+};
+var SimulatedError = class extends LivekitError {
+  constructor() {
+    let message = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "Simulated failure";
+    super(-1, message);
+    this.name = "simulated";
   }
 };
 var ConnectionErrorReason;
@@ -10002,6 +10002,12 @@ var NegotiationError = class extends LivekitError {
   constructor(message) {
     super(13, message !== null && message !== void 0 ? message : "unable to negotiate");
     this.name = "NegotiationError";
+  }
+};
+var PublishDataError = class extends LivekitError {
+  constructor(message) {
+    super(14, message !== null && message !== void 0 ? message : "unable to publish data");
+    this.name = "PublishDataError";
   }
 };
 var PublishTrackError = class extends LivekitError {
@@ -10275,6 +10281,7 @@ var VideoPreset = class {
     };
   }
 };
+var audioCodecs = ["opus", "red"];
 var backupVideoCodecs = ["vp8", "h264"];
 var videoCodecs = ["vp8", "h264", "vp9", "av1", "h265"];
 function isBackupVideoCodec(codec) {
@@ -10469,8 +10476,8 @@ function getNewAudioContext() {
           if (audioContext.state === "suspended") {
             yield audioContext.resume();
           }
-        } catch (e4) {
-          console.warn("Error trying to auto-resume audio context", e4);
+        } catch (e2) {
+          console.warn("Error trying to auto-resume audio context", e2);
         } finally {
           (_a2 = window.document.body) === null || _a2 === void 0 ? void 0 : _a2.removeEventListener("click", handleResume);
         }
@@ -10723,9 +10730,9 @@ var Track = class _Track extends eventsExports.EventEmitter {
     }
     if (!element) {
       if (elementType === "audio") {
-        recycledElements.forEach((e4) => {
-          if (e4.parentElement === null && !element) {
-            element = e4;
+        recycledElements.forEach((e2) => {
+          if (e2.parentElement === null && !element) {
+            element = e2;
           }
         });
         if (element) {
@@ -10741,18 +10748,18 @@ var Track = class _Track extends eventsExports.EventEmitter {
     }
     attachToElement(this.mediaStreamTrack, element);
     const allMediaStreamTracks = element.srcObject.getTracks();
-    const hasAudio = allMediaStreamTracks.some((tr3) => tr3.kind === "audio");
+    const hasAudio = allMediaStreamTracks.some((tr) => tr.kind === "audio");
     element.play().then(() => {
       this.emit(hasAudio ? TrackEvent.AudioPlaybackStarted : TrackEvent.VideoPlaybackStarted);
-    }).catch((e4) => {
-      if (e4.name === "NotAllowedError") {
-        this.emit(hasAudio ? TrackEvent.AudioPlaybackFailed : TrackEvent.VideoPlaybackFailed, e4);
-      } else if (e4.name === "AbortError") {
+    }).catch((e2) => {
+      if (e2.name === "NotAllowedError") {
+        this.emit(hasAudio ? TrackEvent.AudioPlaybackFailed : TrackEvent.VideoPlaybackFailed, e2);
+      } else if (e2.name === "AbortError") {
         livekitLogger.debug("".concat(hasAudio ? "audio" : "video", " playback aborted, likely due to new play request"));
       } else {
-        livekitLogger.warn("could not playback ".concat(hasAudio ? "audio" : "video"), e4);
+        livekitLogger.warn("could not playback ".concat(hasAudio ? "audio" : "video"), e2);
       }
-      if (hasAudio && element && allMediaStreamTracks.some((tr3) => tr3.kind === "video") && e4.name === "NotAllowedError") {
+      if (hasAudio && element && allMediaStreamTracks.some((tr) => tr.kind === "video") && e2.name === "NotAllowedError") {
         element.muted = true;
         element.play().catch(() => {
         });
@@ -10820,8 +10827,8 @@ var Track = class _Track extends eventsExports.EventEmitter {
     if (element instanceof HTMLAudioElement) {
       let shouldCache = true;
       element.pause();
-      recycledElements.forEach((e4) => {
-        if (!e4.parentElement) {
+      recycledElements.forEach((e2) => {
+        if (!e2.parentElement) {
           shouldCache = false;
         }
       });
@@ -10867,8 +10874,8 @@ function attachToElement(track, element) {
     existingTracks = mediaStream.getVideoTracks();
   }
   if (!existingTracks.includes(track)) {
-    existingTracks.forEach((et3) => {
-      mediaStream.removeTrack(et3);
+    existingTracks.forEach((et) => {
+      mediaStream.removeTrack(et);
     });
     mediaStream.addTrack(track);
   }
@@ -10922,8 +10929,8 @@ function detachTrack(track, element) {
     StreamState2["Paused"] = "paused";
     StreamState2["Unknown"] = "unknown";
   })(StreamState$1 = Track2.StreamState || (Track2.StreamState = {}));
-  function kindToProto(k2) {
-    switch (k2) {
+  function kindToProto(k) {
+    switch (k) {
       case Kind.Audio:
         return TrackType.AUDIO;
       case Kind.Video:
@@ -10944,8 +10951,8 @@ function detachTrack(track, element) {
     }
   }
   Track2.kindFromProto = kindFromProto;
-  function sourceToProto(s2) {
-    switch (s2) {
+  function sourceToProto(s) {
+    switch (s) {
       case Source.Camera:
         return TrackSource.CAMERA;
       case Source.Microphone:
@@ -10959,8 +10966,8 @@ function detachTrack(track, element) {
     }
   }
   Track2.sourceToProto = sourceToProto;
-  function sourceFromProto(s2) {
-    switch (s2) {
+  function sourceFromProto(s) {
+    switch (s) {
       case TrackSource.CAMERA:
         return Source.Camera;
       case TrackSource.MICROPHONE:
@@ -10974,8 +10981,8 @@ function detachTrack(track, element) {
     }
   }
   Track2.sourceFromProto = sourceFromProto;
-  function streamStateFromProto(s2) {
-    switch (s2) {
+  function streamStateFromProto(s) {
+    switch (s) {
       case StreamState.ACTIVE:
         return StreamState$1.Active;
       case StreamState.PAUSED:
@@ -11003,6 +11010,12 @@ function supportsTransceiver() {
 }
 function supportsAddTrack() {
   return "addTrack" in RTCPeerConnection.prototype;
+}
+function supportsAdaptiveStream() {
+  return typeof ResizeObserver !== void 0 && typeof IntersectionObserver !== void 0;
+}
+function supportsDynacast() {
+  return supportsTransceiver();
 }
 function supportsAV1() {
   if (!("getCapabilities" in RTCRtpSender)) {
@@ -11062,6 +11075,9 @@ function supportsSetSinkId(elm) {
     elm = document.createElement("audio");
   }
   return "setSinkId" in elm;
+}
+function supportsAudioOutputSelection() {
+  return supportsSetSinkId();
 }
 function isBrowserSupported() {
   if (typeof RTCPeerConnection === "undefined") {
@@ -11164,13 +11180,13 @@ function getDevicePixelRatio() {
 function compareVersions(v1, v2) {
   const parts1 = v1.split(".");
   const parts2 = v2.split(".");
-  const k2 = Math.min(parts1.length, parts2.length);
-  for (let i2 = 0; i2 < k2; ++i2) {
-    const p1 = parseInt(parts1[i2], 10);
-    const p2 = parseInt(parts2[i2], 10);
+  const k = Math.min(parts1.length, parts2.length);
+  for (let i = 0; i < k; ++i) {
+    const p1 = parseInt(parts1[i], 10);
+    const p2 = parseInt(parts2[i], 10);
     if (p1 > p2) return 1;
     if (p1 < p2) return -1;
-    if (i2 === k2 - 1 && p1 === p2) return 0;
+    if (i === k - 1 && p1 === p2) return 0;
   }
   if (v1 === "" && v2 !== "") {
     return -1;
@@ -11215,6 +11231,13 @@ function getClientInfo() {
     info.os = (_a = getReactNativeOs()) !== null && _a !== void 0 ? _a : "";
   }
   return info;
+}
+var emptyVideoStreamTrack;
+function getEmptyVideoStreamTrack() {
+  if (!emptyVideoStreamTrack) {
+    emptyVideoStreamTrack = createDummyVideoStreamTrack();
+  }
+  return emptyVideoStreamTrack.clone();
 }
 function createDummyVideoStreamTrack() {
   let width = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : 16;
@@ -11322,6 +11345,9 @@ function createAudioAnalyser(track, options) {
     cleanup
   };
 }
+function isAudioCodec(maybeCodec) {
+  return audioCodecs.includes(maybeCodec);
+}
 function isVideoCodec(maybeCodec) {
   return videoCodecs.includes(maybeCodec);
 }
@@ -11402,10 +11428,10 @@ function extractChatMessage(msg) {
     message
   };
 }
-function getDisconnectReasonFromConnectionError(e4) {
-  switch (e4.reason) {
+function getDisconnectReasonFromConnectionError(e2) {
+  switch (e2.reason) {
     case ConnectionErrorReason.LeaveRequest:
-      return e4.context;
+      return e2.context;
     case ConnectionErrorReason.Cancelled:
       return DisconnectReason.CLIENT_INITIATED;
     case ConnectionErrorReason.NotAllowed:
@@ -11449,20 +11475,23 @@ function isRemoteVideoTrack(track) {
 function isLocalParticipant(p) {
   return p.isLocal;
 }
-function splitUtf8(s2, n) {
+function isRemoteParticipant(p) {
+  return !p.isLocal;
+}
+function splitUtf8(s, n) {
   const result = [];
-  let encoded = new TextEncoder().encode(s2);
+  let encoded = new TextEncoder().encode(s);
   while (encoded.length > n) {
-    let k2 = n;
-    while (k2 > 0) {
-      const byte = encoded[k2];
+    let k = n;
+    while (k > 0) {
+      const byte = encoded[k];
       if (byte !== void 0 && (byte & 192) !== 128) {
         break;
       }
-      k2--;
+      k--;
     }
-    result.push(encoded.slice(0, k2));
-    encoded = encoded.slice(k2);
+    result.push(encoded.slice(0, k));
+    encoded = encoded.slice(k);
   }
   if (encoded.length > 0) {
     result.push(encoded);
@@ -11532,6 +11561,7 @@ function getAbortReasonAsString(signal) {
       return "toString" in reason ? reason.toString() : defaultMessage;
   }
 }
+var ENCRYPTION_ALGORITHM = "AES-GCM";
 var DECRYPTION_FAILURE_TOLERANCE = 10;
 var E2EE_FLAG = "lk_e2ee";
 var SALT = "LKFrameEncryptionKey";
@@ -11571,9 +11601,123 @@ function isInsertableStreamSupported() {
   return typeof window.RTCRtpSender !== "undefined" && // @ts-ignore
   typeof window.RTCRtpSender.prototype.createEncodedStreams !== "undefined";
 }
+function isVideoFrame(frame) {
+  return "type" in frame;
+}
+function importKey(keyBytes_1) {
+  return __awaiter(this, arguments, void 0, function(keyBytes) {
+    let algorithm = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {
+      name: ENCRYPTION_ALGORITHM
+    };
+    let usage = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : "encrypt";
+    return (function* () {
+      return crypto.subtle.importKey("raw", keyBytes, algorithm, false, usage === "derive" ? ["deriveBits", "deriveKey"] : ["encrypt", "decrypt"]);
+    })();
+  });
+}
+function createKeyMaterialFromString(password) {
+  return __awaiter(this, void 0, void 0, function* () {
+    let enc = new TextEncoder();
+    const keyMaterial = yield crypto.subtle.importKey("raw", enc.encode(password), {
+      name: "PBKDF2"
+    }, false, ["deriveBits", "deriveKey"]);
+    return keyMaterial;
+  });
+}
+function createKeyMaterialFromBuffer(cryptoBuffer) {
+  return __awaiter(this, void 0, void 0, function* () {
+    const keyMaterial = yield crypto.subtle.importKey("raw", cryptoBuffer, "HKDF", false, ["deriveBits", "deriveKey"]);
+    return keyMaterial;
+  });
+}
+function getAlgoOptions(algorithmName, salt) {
+  const textEncoder = new TextEncoder();
+  const encodedSalt = textEncoder.encode(salt);
+  switch (algorithmName) {
+    case "HKDF":
+      return {
+        name: "HKDF",
+        salt: encodedSalt,
+        hash: "SHA-256",
+        info: new ArrayBuffer(128)
+      };
+    case "PBKDF2": {
+      return {
+        name: "PBKDF2",
+        salt: encodedSalt,
+        hash: "SHA-256",
+        iterations: 1e5
+      };
+    }
+    default:
+      throw new Error("algorithm ".concat(algorithmName, " is currently unsupported"));
+  }
+}
+function deriveKeys(material, salt) {
+  return __awaiter(this, void 0, void 0, function* () {
+    const algorithmOptions = getAlgoOptions(material.algorithm.name, salt);
+    const encryptionKey = yield crypto.subtle.deriveKey(algorithmOptions, material, {
+      name: ENCRYPTION_ALGORITHM,
+      length: 128
+    }, false, ["encrypt", "decrypt"]);
+    return {
+      material,
+      encryptionKey
+    };
+  });
+}
+function createE2EEKey() {
+  return window.crypto.getRandomValues(new Uint8Array(32));
+}
+function ratchet(material, salt) {
+  return __awaiter(this, void 0, void 0, function* () {
+    const algorithmOptions = getAlgoOptions(material.algorithm.name, salt);
+    return crypto.subtle.deriveBits(algorithmOptions, material, 256);
+  });
+}
+function needsRbspUnescaping(frameData) {
+  for (var i = 0; i < frameData.length - 3; i++) {
+    if (frameData[i] == 0 && frameData[i + 1] == 0 && frameData[i + 2] == 3) return true;
+  }
+  return false;
+}
+function parseRbsp(stream) {
+  const dataOut = [];
+  var length = stream.length;
+  for (var i = 0; i < stream.length; ) {
+    if (length - i >= 3 && !stream[i] && !stream[i + 1] && stream[i + 2] == 3) {
+      dataOut.push(stream[i++]);
+      dataOut.push(stream[i++]);
+      i++;
+    } else {
+      dataOut.push(stream[i++]);
+    }
+  }
+  return new Uint8Array(dataOut);
+}
+var kZerosInStartSequence = 2;
+var kEmulationByte = 3;
+function writeRbsp(data_in) {
+  const dataOut = [];
+  var numConsecutiveZeros = 0;
+  for (var i = 0; i < data_in.length; ++i) {
+    var byte = data_in[i];
+    if (byte <= kEmulationByte && numConsecutiveZeros >= kZerosInStartSequence) {
+      dataOut.push(kEmulationByte);
+      numConsecutiveZeros = 0;
+    }
+    dataOut.push(byte);
+    if (byte == 0) {
+      ++numConsecutiveZeros;
+    } else {
+      numConsecutiveZeros = 0;
+    }
+  }
+  return new Uint8Array(dataOut);
+}
 function asEncryptablePacket(packet) {
-  var _a, _b, _c, _d, _e2;
-  if (((_a = packet.value) === null || _a === void 0 ? void 0 : _a.case) !== "sipDtmf" && ((_b = packet.value) === null || _b === void 0 ? void 0 : _b.case) !== "metrics" && ((_c = packet.value) === null || _c === void 0 ? void 0 : _c.case) !== "speaker" && ((_d = packet.value) === null || _d === void 0 ? void 0 : _d.case) !== "transcription" && ((_e2 = packet.value) === null || _e2 === void 0 ? void 0 : _e2.case) !== "encryptedPacket") {
+  var _a, _b, _c, _d, _e;
+  if (((_a = packet.value) === null || _a === void 0 ? void 0 : _a.case) !== "sipDtmf" && ((_b = packet.value) === null || _b === void 0 ? void 0 : _b.case) !== "metrics" && ((_c = packet.value) === null || _c === void 0 ? void 0 : _c.case) !== "speaker" && ((_d = packet.value) === null || _d === void 0 ? void 0 : _d.case) !== "transcription" && ((_e = packet.value) === null || _e === void 0 ? void 0 : _e.case) !== "encryptedPacket") {
     return new EncryptedPacketPayload({
       value: packet.value
     });
@@ -11623,12 +11767,47 @@ var BaseKeyProvider = class extends eventsExports.EventEmitter {
     this.emit(KeyProviderEvent.RatchetRequest, participantIdentity, keyIndex);
   }
 };
+var ExternalE2EEKeyProvider = class extends BaseKeyProvider {
+  constructor() {
+    let options = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+    const opts = Object.assign(Object.assign({}, options), {
+      sharedKey: true,
+      // for a shared key provider failing to decrypt for a specific participant
+      // should not mark the key as invalid, so we accept wrong keys forever
+      // and won't try to auto-ratchet
+      ratchetWindowSize: 0,
+      failureTolerance: -1
+    });
+    super(opts);
+  }
+  /**
+   * Accepts a passphrase that's used to create the crypto keys.
+   * When passing in a string, PBKDF2 is used.
+   * When passing in an Array buffer of cryptographically random numbers, HKDF is being used. (recommended)
+   * @param key
+   */
+  setKey(key) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const derivedKey = typeof key === "string" ? yield createKeyMaterialFromString(key) : yield createKeyMaterialFromBuffer(key);
+      this.onSetEncryptionKey(derivedKey);
+    });
+  }
+};
 var CryptorErrorReason;
 (function(CryptorErrorReason2) {
   CryptorErrorReason2[CryptorErrorReason2["InvalidKey"] = 0] = "InvalidKey";
   CryptorErrorReason2[CryptorErrorReason2["MissingKey"] = 1] = "MissingKey";
   CryptorErrorReason2[CryptorErrorReason2["InternalError"] = 2] = "InternalError";
 })(CryptorErrorReason || (CryptorErrorReason = {}));
+var CryptorError = class extends LivekitError {
+  constructor(message) {
+    let reason = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : CryptorErrorReason.InternalError;
+    let participantIdentity = arguments.length > 2 ? arguments[2] : void 0;
+    super(40, message);
+    this.reason = reason;
+    this.participantIdentity = participantIdentity;
+  }
+};
 var E2EEManager = class extends eventsExports.EventEmitter {
   constructor(options, dcEncryptionEnabled) {
     super();
@@ -12128,7 +12307,7 @@ var DeviceManager = class _DeviceManager {
             } else {
               yield Promise.all(_DeviceManager.userMediaPromiseMap.values());
             }
-          } catch (e4) {
+          } catch (e2) {
             livekitLogger.warn("error waiting for media permissons");
           }
         }
@@ -12242,56 +12421,56 @@ var WebSocketStream = class {
       throw new DOMException("This operation was aborted", "AbortError");
     }
     this.url = url;
-    const ws2 = new WebSocket(url, (_b = options.protocols) !== null && _b !== void 0 ? _b : []);
-    ws2.binaryType = "arraybuffer";
-    this.ws = ws2;
+    const ws = new WebSocket(url, (_b = options.protocols) !== null && _b !== void 0 ? _b : []);
+    ws.binaryType = "arraybuffer";
+    this.ws = ws;
     const closeWithInfo = function() {
       let {
         closeCode: code,
         reason
       } = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-      return ws2.close(code, reason);
+      return ws.close(code, reason);
     };
     this.opened = new TypedPromise((resolve, reject) => {
       const rejectHandler = () => {
         reject(ConnectionError.websocket("Encountered websocket error during connection establishment"));
       };
-      ws2.onopen = () => {
+      ws.onopen = () => {
         resolve({
           readable: new ReadableStream({
             start(controller) {
-              ws2.onmessage = (_ref) => {
+              ws.onmessage = (_ref) => {
                 let {
                   data
                 } = _ref;
                 return controller.enqueue(data);
               };
-              ws2.onerror = (e4) => controller.error(e4);
+              ws.onerror = (e2) => controller.error(e2);
             },
             cancel: closeWithInfo
           }),
           writable: new WritableStream({
             write(chunk) {
-              ws2.send(chunk);
+              ws.send(chunk);
             },
             abort() {
-              ws2.close();
+              ws.close();
             },
             close: closeWithInfo
           }),
-          protocol: ws2.protocol,
-          extensions: ws2.extensions
+          protocol: ws.protocol,
+          extensions: ws.extensions
         });
-        ws2.removeEventListener("error", rejectHandler);
+        ws.removeEventListener("error", rejectHandler);
       };
-      ws2.addEventListener("error", rejectHandler);
+      ws.addEventListener("error", rejectHandler);
     });
     this.closed = new TypedPromise((resolve, reject) => {
       const rejectHandler = () => __awaiter(this, void 0, void 0, function* () {
         const closePromise = new TypedPromise((res) => {
-          if (ws2.readyState === WebSocket.CLOSED) return;
+          if (ws.readyState === WebSocket.CLOSED) return;
           else {
-            ws2.addEventListener("close", (closeEv) => {
+            ws.addEventListener("close", (closeEv) => {
               res(closeEv);
             }, {
               once: true
@@ -12305,7 +12484,7 @@ var WebSocketStream = class {
           resolve(reason);
         }
       });
-      ws2.onclose = (_ref2) => {
+      ws.onclose = (_ref2) => {
         let {
           code,
           reason
@@ -12314,12 +12493,12 @@ var WebSocketStream = class {
           closeCode: code,
           reason
         });
-        ws2.removeEventListener("error", rejectHandler);
+        ws.removeEventListener("error", rejectHandler);
       };
-      ws2.addEventListener("error", rejectHandler);
+      ws.addEventListener("error", rejectHandler);
     });
     if (options.signal) {
-      options.signal.onabort = () => ws2.close();
+      options.signal.onabort = () => ws.close();
     }
     this.close = closeWithInfo;
   }
@@ -12444,8 +12623,8 @@ var SignalClient = class {
               const target = eventOrError instanceof Event ? eventOrError.currentTarget : eventOrError;
               const reason = getAbortReasonAsString(target, "Abort handler called");
               if (this.streamWriter && !this.isDisconnected) {
-                this.sendLeave().then(() => this.close(reason)).catch((e4) => {
-                  this.log.error(e4);
+                this.sendLeave().then(() => this.close(reason)).catch((e2) => {
+                  this.log.error(e2);
                   this.close();
                 });
               } else {
@@ -12542,8 +12721,8 @@ var SignalClient = class {
               const firstMessageToProcess = validation.shouldProcessFirstMessage ? firstSignalResponse : void 0;
               handleSignalConnected(connection, firstMessageToProcess);
               resolve(validation.response);
-            } catch (e4) {
-              reject(e4);
+            } catch (e2) {
+              reject(e2);
             } finally {
               cleanupAbortHandlers();
             }
@@ -12601,9 +12780,9 @@ var SignalClient = class {
             _this3.streamWriter = void 0;
             yield Promise.race([closePromise, sleep(MAX_WS_CLOSE_TIME)]);
           }
-        } catch (e4) {
+        } catch (e2) {
           _this3.log.debug("websocket error while closing", Object.assign(Object.assign({}, _this3.logContext), {
-            error: e4
+            error: e2
           }));
         } finally {
           if (updateState) {
@@ -12788,9 +12967,9 @@ var SignalClient = class {
           } else {
             yield _this5.streamWriter.write(req.toBinary());
           }
-        } catch (e4) {
+        } catch (e2) {
           _this5.log.error("error sending signal message", Object.assign(Object.assign({}, _this5.logContext), {
-            error: e4
+            error: e2
           }));
         }
       })();
@@ -12993,7 +13172,7 @@ var SignalClient = class {
    * @internal
    */
   validateFirstMessage(firstSignalResponse, isReconnect) {
-    var _a, _b, _c, _d, _e2;
+    var _a, _b, _c, _d, _e;
     if (((_a = firstSignalResponse.message) === null || _a === void 0 ? void 0 : _a.case) === "join") {
       return {
         isValid: true,
@@ -13021,7 +13200,7 @@ var SignalClient = class {
     } else if (!isReconnect) {
       return {
         isValid: false,
-        error: ConnectionError.internal("did not receive join response, got ".concat((_e2 = firstSignalResponse.message) === null || _e2 === void 0 ? void 0 : _e2.case, " instead"))
+        error: ConnectionError.internal("did not receive join response, got ".concat((_e = firstSignalResponse.message) === null || _e === void 0 ? void 0 : _e.case, " instead"))
       };
     }
     return {
@@ -13058,8 +13237,8 @@ var SignalClient = class {
             statusText: resp.statusText
           });
         }
-      } catch (e4) {
-        return e4 instanceof ConnectionError ? e4 : ConnectionError.serverUnreachable(e4 instanceof Error ? e4.message : "server was not reachable");
+      } catch (e2) {
+        return e2 instanceof ConnectionError ? e2 : ConnectionError.serverUnreachable(e2 instanceof Error ? e2.message : "server was not reachable");
       }
     });
   }
@@ -13772,9 +13951,9 @@ function requireParser() {
       if (rawName && !names) {
         location[rawName] = toIntIfInt(match[1]);
       } else {
-        for (var i2 = 0; i2 < names.length; i2 += 1) {
-          if (match[i2 + 1] != null) {
-            location[names[i2]] = toIntIfInt(match[i2 + 1]);
+        for (var i = 0; i < names.length; i += 1) {
+          if (match[i + 1] != null) {
+            location[names[i]] = toIntIfInt(match[i + 1]);
           }
         }
       }
@@ -13809,8 +13988,8 @@ function requireParser() {
           });
           location = media[media.length - 1];
         }
-        for (var j3 = 0; j3 < (grammar2[type] || []).length; j3 += 1) {
-          var obj = grammar2[type][j3];
+        for (var j = 0; j < (grammar2[type] || []).length; j += 1) {
+          var obj = grammar2[type][j];
           if (obj.reg.test(content)) {
             return parseReg(obj, location, content);
           }
@@ -13820,11 +13999,11 @@ function requireParser() {
       return session;
     };
     var paramReducer = function(acc, expr) {
-      var s2 = expr.split(/=(.+)/, 2);
-      if (s2.length === 2) {
-        acc[s2[0]] = toIntIfInt(s2[1]);
-      } else if (s2.length === 1 && expr.length > 1) {
-        acc[s2[0]] = void 0;
+      var s = expr.split(/=(.+)/, 2);
+      if (s.length === 2) {
+        acc[s[0]] = toIntIfInt(s[1]);
+      } else if (s.length === 1 && expr.length > 1) {
+        acc[s[0]] = void 0;
       }
       return acc;
     };
@@ -13838,11 +14017,11 @@ function requireParser() {
     exports$1.parseRemoteCandidates = function(str) {
       var candidates = [];
       var parts = str.split(" ").map(toIntIfInt);
-      for (var i2 = 0; i2 < parts.length; i2 += 3) {
+      for (var i = 0; i < parts.length; i += 3) {
         candidates.push({
-          component: parts[i2],
-          ip: parts[i2 + 1],
-          port: parts[i2 + 2]
+          component: parts[i],
+          ip: parts[i + 1],
+          port: parts[i + 2]
         });
       }
       return candidates;
@@ -13880,16 +14059,16 @@ function requireWriter() {
   var grammar2 = requireGrammar();
   var formatRegExp = /%[sdv%]/g;
   var format = function(formatStr) {
-    var i2 = 1;
+    var i = 1;
     var args = arguments;
     var len = args.length;
-    return formatStr.replace(formatRegExp, function(x2) {
-      if (i2 >= len) {
-        return x2;
+    return formatStr.replace(formatRegExp, function(x) {
+      if (i >= len) {
+        return x;
       }
-      var arg = args[i2];
-      i2 += 1;
-      switch (x2) {
+      var arg = args[i];
+      i += 1;
+      switch (x) {
         case "%%":
           return "%";
         case "%s":
@@ -13905,12 +14084,12 @@ function requireWriter() {
     var str = obj.format instanceof Function ? obj.format(obj.push ? location : location[obj.name]) : obj.format;
     var args = [type + "=" + str];
     if (obj.names) {
-      for (var i2 = 0; i2 < obj.names.length; i2 += 1) {
-        var n = obj.names[i2];
+      for (var i = 0; i < obj.names.length; i += 1) {
+        var n = obj.names[i];
         if (obj.name) {
           args.push(location[obj.name][n]);
         } else {
-          args.push(location[obj.names[i2]]);
+          args.push(location[obj.names[i]]);
         }
       }
     } else {
@@ -13984,41 +14163,41 @@ function requireLib() {
   return lib;
 }
 var libExports = requireLib();
-function r(r2, e4, n) {
-  var i2, t, o2;
-  void 0 === e4 && (e4 = 50), void 0 === n && (n = {});
-  var a = null != (i2 = n.isImmediate) && i2, u = null != (t = n.callback) && t, c = n.maxWait, v = Date.now(), l = [];
+function r(r2, e2, n) {
+  var i, t, o2;
+  void 0 === e2 && (e2 = 50), void 0 === n && (n = {});
+  var a = null != (i = n.isImmediate) && i, u = null != (t = n.callback) && t, c = n.maxWait, v = Date.now(), l = [];
   function f() {
     if (void 0 !== c) {
       var r3 = Date.now() - v;
-      if (r3 + e4 >= c) return c - r3;
+      if (r3 + e2 >= c) return c - r3;
     }
-    return e4;
+    return e2;
   }
   var d = function() {
-    var e5 = [].slice.call(arguments), n2 = this;
-    return new Promise(function(i3, t2) {
+    var e3 = [].slice.call(arguments), n2 = this;
+    return new Promise(function(i2, t2) {
       var c2 = a && void 0 === o2;
       if (void 0 !== o2 && clearTimeout(o2), o2 = setTimeout(function() {
         if (o2 = void 0, v = Date.now(), !a) {
-          var i4 = r2.apply(n2, e5);
-          u && u(i4), l.forEach(function(r3) {
-            return (0, r3.resolve)(i4);
+          var i3 = r2.apply(n2, e3);
+          u && u(i3), l.forEach(function(r3) {
+            return (0, r3.resolve)(i3);
           }), l = [];
         }
       }, f()), c2) {
-        var d2 = r2.apply(n2, e5);
-        return u && u(d2), i3(d2);
+        var d2 = r2.apply(n2, e3);
+        return u && u(d2), i2(d2);
       }
       l.push({
-        resolve: i3,
+        resolve: i2,
         reject: t2
       });
     });
   };
   return d.cancel = function(r3) {
-    void 0 !== o2 && clearTimeout(o2), l.forEach(function(e5) {
-      return (0, e5.reject)(r3);
+    void 0 !== o2 && clearTimeout(o2), l.forEach(function(e3) {
+      return (0, e3.reject)(r3);
     }), l = [];
   }, d;
 }
@@ -14053,11 +14232,11 @@ var PCTransport = class extends eventsExports.EventEmitter {
       this.emit(PCEvents.NegotiationStarted);
       try {
         yield this.createAndSendOffer();
-      } catch (e4) {
+      } catch (e2) {
         if (onError) {
-          onError(e4);
+          onError(e2);
         } else {
-          throw e4;
+          throw e2;
         }
       }
     }), debounceInterval);
@@ -14432,9 +14611,9 @@ var PCTransport = class extends eventsExports.EventEmitter {
             yield this.pc.setLocalDescription(sd);
           }
           return;
-        } catch (e4) {
+        } catch (e2) {
           this.log.warn("not able to set ".concat(sd.type, ", falling back to unmodified sdp"), Object.assign(Object.assign({}, this.logContext), {
-            error: e4,
+            error: e2,
             sdp: munged
           }));
           sd.sdp = originalSdp;
@@ -14446,12 +14625,12 @@ var PCTransport = class extends eventsExports.EventEmitter {
         } else {
           yield this.pc.setLocalDescription(sd);
         }
-      } catch (e4) {
+      } catch (e2) {
         let msg = "unknown error";
-        if (e4 instanceof Error) {
-          msg = e4.message;
-        } else if (typeof e4 === "string") {
-          msg = e4;
+        if (e2 instanceof Error) {
+          msg = e2.message;
+        } else if (typeof e2 === "string") {
+          msg = e2;
         }
         const fields = {
           error: msg,
@@ -14651,18 +14830,18 @@ var PCTransportManager = class {
     this.updateState = () => {
       var _a2, _b;
       const previousState = this.state;
-      const connectionStates = this.requiredTransports.map((tr3) => tr3.getConnectionState());
-      if (connectionStates.every((st2) => st2 === "connected")) {
+      const connectionStates = this.requiredTransports.map((tr) => tr.getConnectionState());
+      if (connectionStates.every((st) => st === "connected")) {
         this.state = PCTransportState.CONNECTED;
-      } else if (connectionStates.some((st2) => st2 === "failed")) {
+      } else if (connectionStates.some((st) => st === "failed")) {
         this.state = PCTransportState.FAILED;
-      } else if (connectionStates.some((st2) => st2 === "connecting")) {
+      } else if (connectionStates.some((st) => st === "connecting")) {
         this.state = PCTransportState.CONNECTING;
-      } else if (connectionStates.every((st2) => st2 === "closed")) {
+      } else if (connectionStates.every((st) => st === "closed")) {
         this.state = PCTransportState.CLOSED;
-      } else if (connectionStates.some((st2) => st2 === "closed")) {
+      } else if (connectionStates.some((st) => st === "closed")) {
         this.state = PCTransportState.CLOSING;
-      } else if (connectionStates.every((st2) => st2 === "new")) {
+      } else if (connectionStates.every((st) => st === "new")) {
         this.state = PCTransportState.NEW;
       }
       if (previousState !== this.state) {
@@ -14741,9 +14920,9 @@ var PCTransportManager = class {
             if (publisher.canRemoveTrack()) {
               publisher.removeTrack(sender);
             }
-          } catch (e4) {
+          } catch (e2) {
             this.log.warn("could not removeTrack", Object.assign(Object.assign({}, this.logContext), {
-              error: e4
+              error: e2
             }));
           }
         }
@@ -14838,12 +15017,12 @@ var PCTransportManager = class {
             resolve();
           });
         });
-        yield this.publisher.negotiate((e4) => {
+        yield this.publisher.negotiate((e2) => {
           clearTimeout(negotiationTimeout);
-          if (e4 instanceof Error) {
-            reject(e4);
+          if (e2 instanceof Error) {
+            reject(e2);
           } else {
-            reject(new Error(String(e4)));
+            reject(new Error(String(e2)));
           }
         });
       }));
@@ -14954,13 +15133,13 @@ var RegionUrlProvider = class _RegionUrlProvider {
             throw ConnectionError.internal("Could not fetch region settings: ".concat(regionSettingsResponse.statusText));
           }
         }
-      } catch (e4) {
-        if (e4 instanceof ConnectionError) {
-          throw e4;
+      } catch (e2) {
+        if (e2 instanceof ConnectionError) {
+          throw e2;
         } else if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
           throw ConnectionError.cancelled("Region fetching was aborted");
         } else {
-          throw ConnectionError.serverUnreachable("Could not fetch region settings, ".concat(e4 instanceof Error ? "".concat(e4.name, ": ").concat(e4.message) : e4));
+          throw ConnectionError.serverUnreachable("Could not fetch region settings, ".concat(e2 instanceof Error ? "".concat(e2.name, ": ").concat(e2.message) : e2));
         }
       } finally {
         unlock();
@@ -15879,9 +16058,9 @@ var LocalAudioTrack = class extends LocalTrack {
       let stats;
       try {
         stats = yield this.getSenderStats();
-      } catch (e4) {
+      } catch (e2) {
         this.log.error("could not get audio sender stats", Object.assign(Object.assign({}, this.logContext), {
-          error: e4
+          error: e2
         }));
         return;
       }
@@ -16123,12 +16302,12 @@ function computeVideoEncodings(isScreenShare, width, height, options) {
     isReactNative() || (browser === null || browser === void 0 ? void 0 : browser.name) === "Chrome" && compareVersions(browser === null || browser === void 0 ? void 0 : browser.version, "113") < 0) {
       const bitratesRatio = sm.suffix == "h" ? 2 : 3;
       const requireScale = isSafariSvcApi(browser);
-      for (let i2 = 0; i2 < sm.spatial; i2 += 1) {
+      for (let i = 0; i < sm.spatial; i += 1) {
         encodings.push({
-          rid: videoRids[2 - i2],
-          maxBitrate: videoEncoding.maxBitrate / Math.pow(bitratesRatio, i2),
+          rid: videoRids[2 - i],
+          maxBitrate: videoEncoding.maxBitrate / Math.pow(bitratesRatio, i),
           maxFramerate: original.encoding.maxFramerate,
-          scaleResolutionDownBy: requireScale ? Math.pow(2, i2) : void 0
+          scaleResolutionDownBy: requireScale ? Math.pow(2, i) : void 0
         });
       }
       encodings[0].scalabilityMode = scalabilityMode;
@@ -16202,8 +16381,8 @@ function determineAppropriateEncoding(isScreenShare, width, height, codec) {
     encoding
   } = presets[0];
   const size = Math.max(width, height);
-  for (let i2 = 0; i2 < presets.length; i2 += 1) {
-    const preset = presets[i2];
+  for (let i = 0; i < presets.length; i += 1) {
+    const preset = presets[i];
     encoding = preset.encoding;
     if (preset.width >= size) {
       break;
@@ -16377,14 +16556,14 @@ var LocalVideoTrack = class extends LocalTrack {
       let stats;
       try {
         stats = yield this.getSenderStats();
-      } catch (e4) {
+      } catch (e2) {
         this.log.error("could not get video sender stats", Object.assign(Object.assign({}, this.logContext), {
-          error: e4
+          error: e2
         }));
         return;
       }
-      const statsMap = new Map(stats.map((s2) => [s2.rid, s2]));
-      const isCpuConstrained = stats.some((s2) => s2.qualityLimitationReason === "cpu");
+      const statsMap = new Map(stats.map((s) => [s.rid, s]));
+      const isCpuConstrained = stats.some((s) => s.qualityLimitationReason === "cpu");
       if (isCpuConstrained !== this.isCpuConstrained) {
         this.isCpuConstrained = isCpuConstrained;
         if (this.isCpuConstrained) {
@@ -16393,10 +16572,10 @@ var LocalVideoTrack = class extends LocalTrack {
       }
       if (this.prevStats) {
         let totalBitrate = 0;
-        statsMap.forEach((s2, key) => {
+        statsMap.forEach((s, key) => {
           var _a;
           const prev = (_a = this.prevStats) === null || _a === void 0 ? void 0 : _a.get(key);
-          totalBitrate += computeBitrate(s2, prev);
+          totalBitrate += computeBitrate(s, prev);
         });
         this._currentBitrate = totalBitrate;
       }
@@ -16446,9 +16625,9 @@ var LocalVideoTrack = class extends LocalTrack {
       var _d;
       yield _super.pauseUpstream.call(this);
       try {
-        for (var _e2 = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e2 = true) {
+        for (var _e = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e = true) {
           _c = _g.value;
-          _e2 = false;
+          _e = false;
           const sc = _c;
           yield (_d = sc.sender) === null || _d === void 0 ? void 0 : _d.replaceTrack(null);
         }
@@ -16458,7 +16637,7 @@ var LocalVideoTrack = class extends LocalTrack {
         };
       } finally {
         try {
-          if (!_e2 && !_a && (_b = _f.return)) yield _b.call(_f);
+          if (!_e && !_a && (_b = _f.return)) yield _b.call(_f);
         } finally {
           if (e_1) throw e_1.error;
         }
@@ -16476,9 +16655,9 @@ var LocalVideoTrack = class extends LocalTrack {
       var _d;
       yield _super.resumeUpstream.call(this);
       try {
-        for (var _e2 = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e2 = true) {
+        for (var _e = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e = true) {
           _c = _g.value;
-          _e2 = false;
+          _e = false;
           const sc = _c;
           yield (_d = sc.sender) === null || _d === void 0 ? void 0 : _d.replaceTrack(sc.mediaStreamTrack);
         }
@@ -16488,7 +16667,7 @@ var LocalVideoTrack = class extends LocalTrack {
         };
       } finally {
         try {
-          if (!_e2 && !_a && (_b = _f.return)) yield _b.call(_f);
+          if (!_e && !_a && (_b = _f.return)) yield _b.call(_f);
         } finally {
           if (e_2) throw e_2.error;
         }
@@ -16560,7 +16739,7 @@ var LocalVideoTrack = class extends LocalTrack {
       stats.forEach((v) => {
         var _a2;
         if (v.type === "outbound-rtp") {
-          const vs2 = {
+          const vs = {
             type: "video",
             streamId: v.id,
             frameHeight: v.frameHeight,
@@ -16582,11 +16761,11 @@ var LocalVideoTrack = class extends LocalTrack {
           };
           const r2 = stats.get(v.remoteId);
           if (r2) {
-            vs2.jitter = r2.jitter;
-            vs2.packetsLost = r2.packetsLost;
-            vs2.roundTripTime = r2.roundTripTime;
+            vs.jitter = r2.jitter;
+            vs.packetsLost = r2.packetsLost;
+            vs.roundTripTime = r2.roundTripTime;
           }
-          items.push(vs2);
+          items.push(vs);
         }
       });
       items.sort((a, b) => {
@@ -16598,10 +16777,10 @@ var LocalVideoTrack = class extends LocalTrack {
   }
   setPublishingQuality(maxQuality) {
     const qualities = [];
-    for (let q3 = VideoQuality.LOW; q3 <= VideoQuality.HIGH; q3 += 1) {
+    for (let q = VideoQuality.LOW; q <= VideoQuality.HIGH; q += 1) {
       qualities.push(new SubscribedQuality({
-        quality: q3,
-        enabled: q3 <= maxQuality
+        quality: q,
+        enabled: q <= maxQuality
       }));
     }
     this.log.debug("setting publishing quality. max quality ".concat(maxQuality), this.logContext);
@@ -16623,9 +16802,9 @@ var LocalVideoTrack = class extends LocalTrack {
       yield this.restart(constraints);
       this.isCpuConstrained = false;
       try {
-        for (var _e2 = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e2 = true) {
+        for (var _e = true, _f = __asyncValues(this.simulcastCodecs.values()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e = true) {
           _c = _g.value;
-          _e2 = false;
+          _e = false;
           const sc = _c;
           if (sc.sender && ((_d = sc.sender.transport) === null || _d === void 0 ? void 0 : _d.state) !== "closed") {
             sc.mediaStreamTrack = this.mediaStreamTrack.clone();
@@ -16638,7 +16817,7 @@ var LocalVideoTrack = class extends LocalTrack {
         };
       } finally {
         try {
-          if (!_e2 && !_a && (_b = _f.return)) yield _b.call(_f);
+          if (!_e && !_a && (_b = _f.return)) yield _b.call(_f);
         } finally {
           if (e_3) throw e_3.error;
         }
@@ -16656,7 +16835,7 @@ var LocalVideoTrack = class extends LocalTrack {
       let showProcessedStreamLocally = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
       return (function* () {
         var _a, e_4, _b, _c;
-        var _d, _e2;
+        var _d, _e;
         yield _super.setProcessor.call(_this, processor, showProcessedStreamLocally);
         if ((_d = _this.processor) === null || _d === void 0 ? void 0 : _d.processedTrack) {
           try {
@@ -16664,7 +16843,7 @@ var LocalVideoTrack = class extends LocalTrack {
               _c = _h.value;
               _f = false;
               const sc = _c;
-              yield (_e2 = sc.sender) === null || _e2 === void 0 ? void 0 : _e2.replaceTrack(_this.processor.processedTrack);
+              yield (_e = sc.sender) === null || _e === void 0 ? void 0 : _e.replaceTrack(_this.processor.processedTrack);
             }
           } catch (e_4_1) {
             e_4 = {
@@ -16690,9 +16869,9 @@ var LocalVideoTrack = class extends LocalTrack {
           const params = this.sender.getParameters();
           params.degradationPreference = preference;
           this.sender.setParameters(params);
-        } catch (e4) {
+        } catch (e2) {
           this.log.warn("failed to set degradationPreference", Object.assign({
-            error: e4
+            error: e2
           }, this.logContext));
         }
       }
@@ -16756,8 +16935,8 @@ var LocalVideoTrack = class extends LocalTrack {
               simulcastCodecInfo
             }));
             if (!simulcastCodecInfo || !simulcastCodecInfo.sender) {
-              for (const q3 of codec.qualities) {
-                if (q3.enabled) {
+              for (const q of codec.qualities) {
+                if (q.enabled) {
                   newCodecs.push(codec.codec);
                   break;
                 }
@@ -16816,14 +16995,14 @@ var LocalVideoTrack = class extends LocalTrack {
       try {
         this.optimizeForPerformance = true;
         const params = this.sender.getParameters();
-        params.encodings = params.encodings.map((e4, idx) => {
+        params.encodings = params.encodings.map((e2, idx) => {
           var _a;
-          return Object.assign(Object.assign({}, e4), {
+          return Object.assign(Object.assign({}, e2), {
             active: idx === 0,
             scaleResolutionDownBy: Math.max(1, Math.ceil(((_a = this.mediaStreamTrack.getSettings().height) !== null && _a !== void 0 ? _a : 360) / 360)),
             scalabilityMode: idx === 0 && isSVCCodec(this.codec) ? "L1T3" : void 0,
             maxFramerate: idx === 0 ? 15 : 0,
-            maxBitrate: idx === 0 ? e4.maxBitrate : 0
+            maxBitrate: idx === 0 ? e2.maxBitrate : 0
           });
         });
         this.log.debug("setting performance optimised encodings", Object.assign(Object.assign({}, this.logContext), {
@@ -16831,9 +17010,9 @@ var LocalVideoTrack = class extends LocalTrack {
         }));
         this.encodings = params.encodings;
         yield this.sender.setParameters(params);
-      } catch (e4) {
+      } catch (e2) {
         this.log.error("failed to set performance optimised encodings", Object.assign(Object.assign({}, this.logContext), {
-          error: e4
+          error: e2
         }));
         this.optimizeForPerformance = false;
       } finally {
@@ -16884,9 +17063,9 @@ function setPublishingLayersForSender(sender, senderEncodings, qualities, sender
       if (closableSpatial && encodings[0].scalabilityMode) ;
       else {
         if (isSVC) {
-          const hasEnabledEncoding = qualities.some((q3) => q3.enabled);
+          const hasEnabledEncoding = qualities.some((q) => q.enabled);
           if (hasEnabledEncoding) {
-            qualities.forEach((q3) => q3.enabled = true);
+            qualities.forEach((q) => q.enabled = true);
           }
         }
         encodings.forEach((encoding, idx) => {
@@ -16896,7 +17075,7 @@ function setPublishingLayersForSender(sender, senderEncodings, qualities, sender
             rid = "q";
           }
           const quality = videoQualityForRid(rid);
-          const subscribedQuality = qualities.find((q3) => q3.quality === quality);
+          const subscribedQuality = qualities.find((q) => q.quality === quality);
           if (!subscribedQuality) {
             return;
           }
@@ -16958,12 +17137,12 @@ function videoLayersFromEncodings(width, height, encodings, svc) {
     const layers = [];
     const resRatio = sm.suffix == "h" ? 1.5 : 2;
     const bitratesRatio = sm.suffix == "h" ? 2 : 3;
-    for (let i2 = 0; i2 < sm.spatial; i2 += 1) {
+    for (let i = 0; i < sm.spatial; i += 1) {
       layers.push(new VideoLayer({
-        quality: Math.min(VideoQuality.HIGH, sm.spatial - 1) - i2,
-        width: Math.ceil(width / Math.pow(resRatio, i2)),
-        height: Math.ceil(height / Math.pow(resRatio, i2)),
-        bitrate: encodings[0].maxBitrate ? Math.ceil(encodings[0].maxBitrate / Math.pow(bitratesRatio, i2)) : 0,
+        quality: Math.min(VideoQuality.HIGH, sm.spatial - 1) - i,
+        width: Math.ceil(width / Math.pow(resRatio, i)),
+        height: Math.ceil(height / Math.pow(resRatio, i)),
+        bitrate: encodings[0].maxBitrate ? Math.ceil(encodings[0].maxBitrate / Math.pow(bitratesRatio, i)) : 0,
         ssrc: 0
       }));
     }
@@ -17052,7 +17231,7 @@ var RTCEngine = class extends eventsExports.EventEmitter {
       })();
     });
     this.handleDataMessage = (message) => __awaiter(this, void 0, void 0, function* () {
-      var _a2, _b, _c, _d, _e2;
+      var _a2, _b, _c, _d, _e;
       const unlock = yield this.dataProcessLock.lock();
       try {
         let buffer;
@@ -17093,7 +17272,7 @@ var RTCEngine = class extends eventsExports.EventEmitter {
           }
           this.emit(EngineEvent.DataPacketReceived, newDp, dp.value.value.encryptionType);
         } else {
-          if (((_e2 = dp.value) === null || _e2 === void 0 ? void 0 : _e2.case) === "user") {
+          if (((_e = dp.value) === null || _e === void 0 ? void 0 : _e.case) === "user") {
             applyUserDataCompat(dp, dp.value.value);
           }
           this.emit(EngineEvent.DataPacketReceived, dp, Encryption_Type.NONE);
@@ -17224,7 +17403,7 @@ var RTCEngine = class extends eventsExports.EventEmitter {
           // if there's no internet connection the fetch rejects immediately, so we only use a short timeout here
           sleep(4e3).then(() => Promise.reject())
         ]);
-      } catch (e4) {
+      } catch (e2) {
         if (window.navigator.onLine === false) {
           this.log.info("detected network interruption");
           this.isWaitingForNetworkReconnect = true;
@@ -17253,11 +17432,11 @@ var RTCEngine = class extends eventsExports.EventEmitter {
   }
   /** @internal */
   get logContext() {
-    var _a, _b, _c, _d, _e2, _f;
+    var _a, _b, _c, _d, _e, _f;
     return {
       room: (_b = (_a = this.latestJoinResponse) === null || _a === void 0 ? void 0 : _a.room) === null || _b === void 0 ? void 0 : _b.name,
       roomID: (_d = (_c = this.latestJoinResponse) === null || _c === void 0 ? void 0 : _c.room) === null || _d === void 0 ? void 0 : _d.sid,
-      participant: (_f = (_e2 = this.latestJoinResponse) === null || _e2 === void 0 ? void 0 : _e2.participant) === null || _f === void 0 ? void 0 : _f.identity,
+      participant: (_f = (_e = this.latestJoinResponse) === null || _e === void 0 ? void 0 : _e.participant) === null || _f === void 0 ? void 0 : _f.identity,
       pID: this.participantSid
     };
   }
@@ -17289,19 +17468,19 @@ var RTCEngine = class extends eventsExports.EventEmitter {
           _this2.clientConfiguration = joinResponse.clientConfiguration;
           _this2.emit(EngineEvent.SignalConnected, joinResponse);
           return joinResponse;
-        } catch (e4) {
-          if (e4 instanceof ConnectionError) {
-            if (e4.reason === ConnectionErrorReason.ServerUnreachable) {
+        } catch (e2) {
+          if (e2 instanceof ConnectionError) {
+            if (e2.reason === ConnectionErrorReason.ServerUnreachable) {
               _this2.log.warn("Couldn't connect to server, attempt ".concat(_this2.joinAttempts, " of ").concat(_this2.maxJoinAttempts), _this2.logContext);
               if (_this2.joinAttempts < _this2.maxJoinAttempts) {
                 return _this2.join(url, token, opts, abortSignal, useV0Path);
               }
-            } else if (e4.reason === ConnectionErrorReason.ServiceNotFound) {
-              _this2.log.warn("Initial connection failed: ".concat(e4.message, " – Retrying"));
+            } else if (e2.reason === ConnectionErrorReason.ServiceNotFound) {
+              _this2.log.warn("Initial connection failed: ".concat(e2.message, " – Retrying"));
               return _this2.join(url, token, opts, abortSignal, true);
             }
           }
-          throw e4;
+          throw e2;
         }
       })();
     });
@@ -17412,9 +17591,9 @@ var RTCEngine = class extends eventsExports.EventEmitter {
     try {
       this.pcManager.removeTrack(sender);
       return true;
-    } catch (e4) {
+    } catch (e2) {
       this.log.warn("failed to remove track", Object.assign(Object.assign({}, this.logContext), {
-        error: e4
+        error: e2
       }));
     }
     return false;
@@ -17567,10 +17746,10 @@ var RTCEngine = class extends eventsExports.EventEmitter {
       const transceiverInit = {
         direction: "recvonly"
       };
-      for (let i2 = 0; i2 < requirement.numAudios; i2++) {
+      for (let i = 0; i < requirement.numAudios; i++) {
         (_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.addPublisherTransceiverOfKind("audio", transceiverInit);
       }
-      for (let i2 = 0; i2 < requirement.numVideos; i2++) {
+      for (let i = 0; i < requirement.numVideos; i++) {
         (_b = this.pcManager) === null || _b === void 0 ? void 0 : _b.addPublisherTransceiverOfKind("video", transceiverInit);
       }
       this.negotiate();
@@ -17770,15 +17949,15 @@ var RTCEngine = class extends eventsExports.EventEmitter {
         }
         this.clearPendingReconnect();
         this.fullReconnectOnNext = false;
-      } catch (e4) {
+      } catch (e2) {
         this.reconnectAttempts += 1;
         let recoverable = true;
-        if (e4 instanceof UnexpectedConnectionState) {
+        if (e2 instanceof UnexpectedConnectionState) {
           this.log.debug("received unrecoverable error", Object.assign(Object.assign({}, this.logContext), {
-            error: e4
+            error: e2
           }));
           recoverable = false;
-        } else if (!(e4 instanceof SignalReconnectError)) {
+        } else if (!(e2 instanceof SignalReconnectError)) {
           this.fullReconnectOnNext = true;
         }
         if (recoverable) {
@@ -17796,9 +17975,9 @@ var RTCEngine = class extends eventsExports.EventEmitter {
   getNextRetryDelay(context) {
     try {
       return this.reconnectPolicy.nextRetryDelayInMs(context);
-    } catch (e4) {
+    } catch (e2) {
       this.log.warn("encountered error in reconnect policy", Object.assign(Object.assign({}, this.logContext), {
-        error: e4
+        error: e2
       }));
     }
     return null;
@@ -17824,8 +18003,8 @@ var RTCEngine = class extends eventsExports.EventEmitter {
             throw new SignalReconnectError();
           }
           joinResponse = yield this.join(regionUrl !== null && regionUrl !== void 0 ? regionUrl : this.url, this.token, this.signalOpts, void 0, !this.options.singlePeerConnection);
-        } catch (e4) {
-          if (e4 instanceof ConnectionError && e4.reason === ConnectionErrorReason.NotAllowed) {
+        } catch (e2) {
+          if (e2 instanceof ConnectionError && e2.reason === ConnectionErrorReason.NotAllowed) {
             throw new UnexpectedConnectionState("could not reconnect, token might be expired");
           }
           throw new SignalReconnectError();
@@ -17933,9 +18112,9 @@ var RTCEngine = class extends eventsExports.EventEmitter {
         }
         yield this.pcManager.ensurePCTransportConnection(void 0, this.peerConnectionTimeout);
         this.pcState = PCState.Connected;
-      } catch (e4) {
+      } catch (e2) {
         this.pcState = PCState.Disconnected;
-        throw ConnectionError.internal("could not establish PC connection, ".concat(e4.message));
+        throw ConnectionError.internal("could not establish PC connection, ".concat(e2.message));
       }
     });
   }
@@ -18157,15 +18336,15 @@ var RTCEngine = class extends eventsExports.EventEmitter {
         try {
           yield this.pcManager.negotiate(abortController);
           resolve();
-        } catch (e4) {
-          if (e4 instanceof NegotiationError) {
+        } catch (e2) {
+          if (e2 instanceof NegotiationError) {
             this.fullReconnectOnNext = true;
           }
           this.handleDisconnect("negotiation", ReconnectReason.RR_UNKNOWN);
-          if (e4 instanceof Error) {
-            reject(e4);
+          if (e2 instanceof Error) {
+            reject(e2);
           } else {
-            reject(new Error(String(e4)));
+            reject(new Error(String(e2)));
           }
         } finally {
           this.off(EngineEvent.Closing, handleClosed);
@@ -18984,7 +19163,7 @@ var OutgoingDataStreamManager = class {
   }
   streamBytes(options) {
     return __awaiter(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d, _e2, _f;
+      var _a, _b, _c, _d, _e, _f;
       const streamId = (_a = options === null || options === void 0 ? void 0 : options.streamId) !== null && _a !== void 0 ? _a : crypto.randomUUID();
       const destinationIdentities = options === null || options === void 0 ? void 0 : options.destinationIdentities;
       const info = {
@@ -18995,7 +19174,7 @@ var OutgoingDataStreamManager = class {
         attributes: options === null || options === void 0 ? void 0 : options.attributes,
         size: options === null || options === void 0 ? void 0 : options.totalSize,
         name: (_d = options === null || options === void 0 ? void 0 : options.name) !== null && _d !== void 0 ? _d : "unknown",
-        encryptionType: ((_e2 = this.engine.e2eeManager) === null || _e2 === void 0 ? void 0 : _e2.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
+        encryptionType: ((_e = this.engine.e2eeManager) === null || _e === void 0 ? void 0 : _e.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
       };
       const header = new DataStream_Header({
         totalLength: numberToBigInt((_f = info.size) !== null && _f !== void 0 ? _f : 0),
@@ -19272,8 +19451,8 @@ var RemoteAudioTrack = class extends RemoteTrack {
       super.attach(element);
     }
     if (this.sinkId && supportsSetSinkId(element)) {
-      element.setSinkId(this.sinkId).catch((e4) => {
-        this.log.error("Failed to set sink id on remote audio track", e4, this.logContext);
+      element.setSinkId(this.sinkId).catch((e2) => {
+        this.log.error("Failed to set sink id on remote audio track", e2, this.logContext);
       });
     }
     if (this.audioContext && needsNewWebAudioConnection) {
@@ -19346,8 +19525,8 @@ var RemoteAudioTrack = class extends RemoteTrack {
         if (context.state !== "running") {
           this.emit(TrackEvent.AudioPlaybackFailed, new Error("Audio Context couldn't be started automatically"));
         }
-      }).catch((e4) => {
-        this.emit(TrackEvent.AudioPlaybackFailed, e4);
+      }).catch((e2) => {
+        this.emit(TrackEvent.AudioPlaybackFailed, e2);
       });
     }
   }
@@ -19492,8 +19671,8 @@ var RemoteVideoTrack = class extends RemoteTrack {
       return super.detach(element);
     }
     detachedElements = super.detach();
-    for (const e4 of detachedElements) {
-      this.stopObservingElement(e4);
+    for (const e2 of detachedElements) {
+      this.stopObservingElement(e2);
     }
     return detachedElements;
   }
@@ -19676,13 +19855,13 @@ var HTMLElementInfo = class {
     (_c = (_b = window.documentPictureInPicture) === null || _b === void 0 ? void 0 : _b.window) === null || _c === void 0 ? void 0 : _c.addEventListener("pagehide", this.onLeavePiP);
   }
   stopObserving() {
-    var _a, _b, _c, _d, _e2;
+    var _a, _b, _c, _d, _e;
     (_a = getIntersectionObserver()) === null || _a === void 0 ? void 0 : _a.unobserve(this.element);
     (_b = getResizeObserver()) === null || _b === void 0 ? void 0 : _b.unobserve(this.element);
     this.element.removeEventListener("enterpictureinpicture", this.onEnterPiP);
     this.element.removeEventListener("leavepictureinpicture", this.onLeavePiP);
     (_c = window.documentPictureInPicture) === null || _c === void 0 ? void 0 : _c.removeEventListener("enter", this.onEnterPiP);
-    (_e2 = (_d = window.documentPictureInPicture) === null || _d === void 0 ? void 0 : _d.window) === null || _e2 === void 0 ? void 0 : _e2.removeEventListener("pagehide", this.onLeavePiP);
+    (_e = (_d = window.documentPictureInPicture) === null || _d === void 0 ? void 0 : _d.window) === null || _e === void 0 ? void 0 : _e.removeEventListener("pagehide", this.onLeavePiP);
   }
 };
 function isElementInPiP(el) {
@@ -19811,8 +19990,8 @@ var LocalTrackPublication = class extends TrackPublication {
     var _a;
     return (_a = this.track) === null || _a === void 0 ? void 0 : _a.isUpstreamPaused;
   }
-  constructor(kind, ti2, track, loggerOptions) {
-    super(kind, ti2.sid, ti2.name, loggerOptions);
+  constructor(kind, ti, track, loggerOptions) {
+    super(kind, ti.sid, ti.name, loggerOptions);
     this.track = void 0;
     this.handleTrackEnded = () => {
       this.emit(TrackEvent.Ended);
@@ -19822,7 +20001,7 @@ var LocalTrackPublication = class extends TrackPublication {
         this.emit(TrackEvent.CpuConstrained, this.track);
       }
     };
-    this.updateInfo(ti2);
+    this.updateInfo(ti);
     this.setTrack(track);
   }
   setTrack(track) {
@@ -20020,9 +20199,9 @@ function createLocalTracks(options, loggerOptions) {
         }
         return track;
       })));
-    } catch (e4) {
+    } catch (e2) {
       if (!attemptExactMatch) {
-        throw e4;
+        throw e2;
       }
       return createLocalTracks(Object.assign(Object.assign({}, options), {
         audio: retryAudioOptions,
@@ -20049,6 +20228,34 @@ function createLocalAudioTrack(options) {
     return tracks[0];
   });
 }
+function createLocalScreenTracks(options) {
+  return __awaiter(this, void 0, void 0, function* () {
+    if (options === void 0) {
+      options = {};
+    }
+    if (options.resolution === void 0 && !isSafari17Based()) {
+      options.resolution = ScreenSharePresets.h1080fps30.resolution;
+    }
+    if (navigator.mediaDevices.getDisplayMedia === void 0) {
+      throw new DeviceUnsupportedError("getDisplayMedia not supported");
+    }
+    const constraints = screenCaptureToDisplayMediaStreamOptions(options);
+    const stream = yield navigator.mediaDevices.getDisplayMedia(constraints);
+    const tracks = stream.getVideoTracks();
+    if (tracks.length === 0) {
+      throw new TrackInvalidError("no video track found");
+    }
+    const screenVideo = new LocalVideoTrack(tracks[0], void 0, false);
+    screenVideo.source = Track.Source.ScreenShare;
+    const localTracks = [screenVideo];
+    if (stream.getAudioTracks().length > 0) {
+      const screenAudio = new LocalAudioTrack(stream.getAudioTracks()[0], void 0, false);
+      screenAudio.source = Track.Source.ScreenShareAudio;
+      localTracks.push(screenAudio);
+    }
+    return localTracks;
+  });
+}
 var ConnectionQuality;
 (function(ConnectionQuality2) {
   ConnectionQuality2["Excellent"] = "excellent";
@@ -20057,8 +20264,8 @@ var ConnectionQuality;
   ConnectionQuality2["Lost"] = "lost";
   ConnectionQuality2["Unknown"] = "unknown";
 })(ConnectionQuality || (ConnectionQuality = {}));
-function qualityFromProto(q3) {
-  switch (q3) {
+function qualityFromProto(q) {
+  switch (q) {
     case ConnectionQuality$1.EXCELLENT:
       return ConnectionQuality.Excellent;
     case ConnectionQuality$1.GOOD:
@@ -20077,7 +20284,7 @@ var Participant = class extends eventsExports.EventEmitter {
     return Object.assign({}, (_b = (_a = this.loggerOptions) === null || _a === void 0 ? void 0 : _a.loggerContextCb) === null || _b === void 0 ? void 0 : _b.call(_a));
   }
   get isEncrypted() {
-    return this.trackPublications.size > 0 && Array.from(this.trackPublications.values()).every((tr3) => tr3.isEncrypted);
+    return this.trackPublications.size > 0 && Array.from(this.trackPublications.values()).every((tr) => tr.isEncrypted);
   }
   get isAgent() {
     var _a;
@@ -20236,9 +20443,9 @@ var Participant = class extends eventsExports.EventEmitter {
   }
   /** @internal */
   setPermissions(permissions) {
-    var _a, _b, _c, _d, _e2, _f;
+    var _a, _b, _c, _d, _e, _f;
     const prevPermissions = this.permissions;
-    const changed = permissions.canPublish !== ((_a = this.permissions) === null || _a === void 0 ? void 0 : _a.canPublish) || permissions.canSubscribe !== ((_b = this.permissions) === null || _b === void 0 ? void 0 : _b.canSubscribe) || permissions.canPublishData !== ((_c = this.permissions) === null || _c === void 0 ? void 0 : _c.canPublishData) || permissions.hidden !== ((_d = this.permissions) === null || _d === void 0 ? void 0 : _d.hidden) || permissions.recorder !== ((_e2 = this.permissions) === null || _e2 === void 0 ? void 0 : _e2.recorder) || permissions.canPublishSources.length !== this.permissions.canPublishSources.length || permissions.canPublishSources.some((value, index) => {
+    const changed = permissions.canPublish !== ((_a = this.permissions) === null || _a === void 0 ? void 0 : _a.canPublish) || permissions.canSubscribe !== ((_b = this.permissions) === null || _b === void 0 ? void 0 : _b.canSubscribe) || permissions.canPublishData !== ((_c = this.permissions) === null || _c === void 0 ? void 0 : _c.canPublishData) || permissions.hidden !== ((_d = this.permissions) === null || _d === void 0 ? void 0 : _d.hidden) || permissions.recorder !== ((_e = this.permissions) === null || _e === void 0 ? void 0 : _e.recorder) || permissions.canPublishSources.length !== this.permissions.canPublishSources.length || permissions.canPublishSources.some((value, index) => {
       var _a2;
       return value !== ((_a2 = this.permissions) === null || _a2 === void 0 ? void 0 : _a2.canPublishSources[index]);
     }) || permissions.canSubscribeMetrics !== ((_f = this.permissions) === null || _f === void 0 ? void 0 : _f.canSubscribeMetrics);
@@ -20260,9 +20467,9 @@ var Participant = class extends eventsExports.EventEmitter {
     this.emit(ParticipantEvent.IsSpeakingChanged, speaking);
   }
   /** @internal */
-  setConnectionQuality(q3) {
+  setConnectionQuality(q) {
     const prevQuality = this._connectionQuality;
-    this._connectionQuality = qualityFromProto(q3);
+    this._connectionQuality = qualityFromProto(q);
     if (prevQuality !== this._connectionQuality) {
       this.emit(ParticipantEvent.ConnectionQualityChanged, this._connectionQuality);
     }
@@ -20345,9 +20552,9 @@ var LocalParticipant = class extends Participant {
       this.updateTrackSubscriptionPermissions();
     };
     this.handleClosing = () => {
-      var _a, _b, _c, _d, _e2, _f;
+      var _a, _b, _c, _d, _e, _f;
       if (this.reconnectFuture) {
-        this.reconnectFuture.promise.catch((e4) => this.log.warn(e4.message, this.logContext));
+        this.reconnectFuture.promise.catch((e2) => this.log.warn(e2.message, this.logContext));
         (_b = (_a = this.reconnectFuture) === null || _a === void 0 ? void 0 : _a.reject) === null || _b === void 0 ? void 0 : _b.call(_a, new Error("Got disconnected during reconnection attempt"));
         this.reconnectFuture = void 0;
       }
@@ -20355,7 +20562,7 @@ var LocalParticipant = class extends Participant {
         (_d = (_c = this.signalConnectedFuture).reject) === null || _d === void 0 ? void 0 : _d.call(_c, new Error("Got disconnected without signal connected"));
         this.signalConnectedFuture = void 0;
       }
-      (_f = (_e2 = this.activeAgentFuture) === null || _e2 === void 0 ? void 0 : _e2.reject) === null || _f === void 0 ? void 0 : _f.call(_e2, new Error("Got disconnected without active agent present"));
+      (_f = (_e = this.activeAgentFuture) === null || _e === void 0 ? void 0 : _e.reject) === null || _f === void 0 ? void 0 : _f.call(_e, new Error("Got disconnected without active agent present"));
       this.activeAgentFuture = void 0;
       this.firstActiveAgent = void 0;
     };
@@ -20460,9 +20667,9 @@ var LocalParticipant = class extends Participant {
       }
       const newCodecs = yield pub.videoTrack.setPublishingCodecs(update.subscribedCodecs);
       try {
-        for (var _e2 = true, newCodecs_1 = __asyncValues(newCodecs), newCodecs_1_1; newCodecs_1_1 = yield newCodecs_1.next(), _a = newCodecs_1_1.done, !_a; _e2 = true) {
+        for (var _e = true, newCodecs_1 = __asyncValues(newCodecs), newCodecs_1_1; newCodecs_1_1 = yield newCodecs_1.next(), _a = newCodecs_1_1.done, !_a; _e = true) {
           _c = newCodecs_1_1.value;
-          _e2 = false;
+          _e = false;
           const codec = _c;
           if (isBackupCodec(codec)) {
             this.log.debug("publish ".concat(codec, " for ").concat(pub.videoTrack.sid), Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(pub)));
@@ -20475,7 +20682,7 @@ var LocalParticipant = class extends Participant {
         };
       } finally {
         try {
-          if (!_e2 && !_a && (_b = newCodecs_1.return)) yield _b.call(newCodecs_1);
+          if (!_e && !_a && (_b = newCodecs_1.return)) yield _b.call(newCodecs_1);
         } finally {
           if (e_1) throw e_1.error;
         }
@@ -20518,7 +20725,7 @@ var LocalParticipant = class extends Participant {
                 };
                 throw new Error("GetUserMedia Permission denied");
               }
-            } catch (e4) {
+            } catch (e2) {
             }
           }
           if (!track.isMuted) {
@@ -20531,7 +20738,7 @@ var LocalParticipant = class extends Participant {
               yield track.restartTrack();
             }
           }
-        } catch (e4) {
+        } catch (e2) {
           this.log.warn("could not restart track, muting instead", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
           yield track.mute();
         }
@@ -20669,11 +20876,11 @@ var LocalParticipant = class extends Participant {
               yield sleep(50);
             }
             reject(new SignalRequestError("Request to update local metadata timed out", "TimeoutError"));
-          } catch (e4) {
-            if (e4 instanceof Error) {
-              reject(e4);
+          } catch (e2) {
+            if (e2 instanceof Error) {
+              reject(e2);
             } else {
-              reject(new Error(String(e4)));
+              reject(new Error(String(e2)));
             }
           }
         }));
@@ -20757,15 +20964,15 @@ var LocalParticipant = class extends Participant {
               default:
                 throw new TrackInvalidError(source);
             }
-          } catch (e4) {
-            localTracks === null || localTracks === void 0 ? void 0 : localTracks.forEach((tr3) => {
-              tr3.stop();
+          } catch (e2) {
+            localTracks === null || localTracks === void 0 ? void 0 : localTracks.forEach((tr) => {
+              tr.stop();
             });
-            if (e4 instanceof Error) {
-              this.emit(ParticipantEvent.MediaDevicesError, e4, sourceToKind(source));
+            if (e2 instanceof Error) {
+              this.emit(ParticipantEvent.MediaDevicesError, e2, sourceToKind(source));
             }
             this.pendingPublishing.delete(source);
-            throw e4;
+            throw e2;
           }
           for (const localTrack of localTracks) {
             const opts = Object.assign(Object.assign({}, this.roomOptions.publishDefaults), options);
@@ -20782,11 +20989,11 @@ var LocalParticipant = class extends Participant {
             }
             const publishedTracks = yield Promise.all(publishPromises);
             [track] = publishedTracks;
-          } catch (e4) {
-            localTracks === null || localTracks === void 0 ? void 0 : localTracks.forEach((tr3) => {
-              tr3.stop();
+          } catch (e2) {
+            localTracks === null || localTracks === void 0 ? void 0 : localTracks.forEach((tr) => {
+              tr.stop();
             });
-            throw e4;
+            throw e2;
           } finally {
             this.pendingPublishing.delete(source);
           }
@@ -21048,20 +21255,20 @@ var LocalParticipant = class extends Participant {
               try {
                 const publication = yield this.publish(track, opts, isStereo);
                 resolve(publication);
-              } catch (e4) {
-                reject(e4);
+              } catch (e2) {
+                reject(e2);
               }
             }
-          } catch (e4) {
-            reject(e4);
+          } catch (e2) {
+            reject(e2);
           }
         }));
         _this2.pendingPublishPromises.set(track, publishPromise);
         try {
           const publication = yield publishPromise;
           return publication;
-        } catch (e4) {
-          throw e4;
+        } catch (e2) {
+          throw e2;
         } finally {
           _this2.pendingPublishPromises.delete(track);
         }
@@ -21091,7 +21298,7 @@ var LocalParticipant = class extends Participant {
   }
   publish(track, opts, isStereo) {
     return __awaiter(this, void 0, void 0, function* () {
-      var _a, _b, _c, _d, _e2, _f, _g, _h, _j, _k;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
       if (!this.hasPermissionsToPublish(track)) {
         throw new PublishTrackError("failed to publish track, insufficient permissions", 403);
       }
@@ -21170,7 +21377,7 @@ var LocalParticipant = class extends Participant {
         };
         try {
           dims = yield track.waitForDimensions();
-        } catch (e4) {
+        } catch (e2) {
           const defaultRes = (_d = (_c = this.roomOptions.videoCaptureDefaults) === null || _c === void 0 ? void 0 : _c.resolution) !== null && _d !== void 0 ? _d : VideoPresets.h720.resolution;
           dims = {
             width: defaultRes.width,
@@ -21191,7 +21398,7 @@ var LocalParticipant = class extends Participant {
                 this.log.info("forcing contentHint to motion for screenshare with SVC codecs", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
               }
             }
-            opts.scalabilityMode = (_e2 = opts.scalabilityMode) !== null && _e2 !== void 0 ? _e2 : "L3T3_KEY";
+            opts.scalabilityMode = (_e = opts.scalabilityMode) !== null && _e !== void 0 ? _e : "L3T3_KEY";
           }
           req.simulcastCodecs = [new SimulcastCodec({
             codec: videoCodec,
@@ -21262,12 +21469,12 @@ var LocalParticipant = class extends Participant {
         }
         yield this.engine.negotiate();
       });
-      let ti2;
+      let ti;
       const addTrackPromise = new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
         var _a2;
         try {
-          ti2 = yield this.engine.addTrack(req);
-          resolve(ti2);
+          ti = yield this.engine.addTrack(req);
+          resolve(ti);
         } catch (err) {
           if (track.sender && ((_a2 = this.engine.pcManager) === null || _a2 === void 0 ? void 0 : _a2.publisher)) {
             this.engine.pcManager.publisher.removeTrack(track.sender);
@@ -21282,11 +21489,11 @@ var LocalParticipant = class extends Participant {
       }));
       if (this.enabledPublishVideoCodecs.length > 0) {
         const rets = yield Promise.all([addTrackPromise, negotiate()]);
-        ti2 = rets[0];
+        ti = rets[0];
       } else {
-        ti2 = yield addTrackPromise;
+        ti = yield addTrackPromise;
         let primaryCodecMime;
-        ti2.codecs.forEach((codec) => {
+        ti.codecs.forEach((codec) => {
           if (primaryCodecMime === void 0) {
             primaryCodecMime = codec.mimeType;
           }
@@ -21303,16 +21510,16 @@ var LocalParticipant = class extends Participant {
         }
         yield negotiate();
       }
-      const publication = new LocalTrackPublication(track.kind, ti2, track, {
+      const publication = new LocalTrackPublication(track.kind, ti, track, {
         loggerName: this.roomOptions.loggerName,
         loggerContextCb: () => this.logContext
       });
       publication.on(TrackEvent.CpuConstrained, (constrainedTrack) => this.onTrackCpuConstrained(constrainedTrack, publication));
       publication.options = opts;
-      track.sid = ti2.sid;
+      track.sid = ti.sid;
       this.log.debug("publishing ".concat(track.kind, " with encodings"), Object.assign(Object.assign({}, this.logContext), {
         encodings,
-        trackInfo: ti2
+        trackInfo: ti
       }));
       if (isLocalVideoTrack(track)) {
         track.startMonitor(this.engine.client);
@@ -21321,11 +21528,11 @@ var LocalParticipant = class extends Participant {
       }
       this.addTrackPublication(publication);
       this.emit(ParticipantEvent.LocalTrackPublished, publication);
-      if (isLocalAudioTrack(track) && ti2.audioFeatures.includes(AudioTrackFeature.TF_PRECONNECT_BUFFER)) {
+      if (isLocalAudioTrack(track) && ti.audioFeatures.includes(AudioTrackFeature.TF_PRECONNECT_BUFFER)) {
         const stream = track.getPreConnectBuffer();
         const mimeType = track.getPreConnectBufferMimeType();
         this.on(ParticipantEvent.LocalTrackSubscribed, (pub) => {
-          if (pub.trackSid === ti2.sid) {
+          if (pub.trackSid === ti.sid) {
             if (!track.hasPreConnectBuffer) {
               this.log.warn("subscribe event came to late, buffer already closed", this.logContext);
               return;
@@ -21337,7 +21544,7 @@ var LocalParticipant = class extends Participant {
         if (stream) {
           const bufferStreamPromise = new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
             var _a2, e_2, _b2, _c2;
-            var _d2, _e3;
+            var _d2, _e2;
             try {
               this.log.debug("waiting for agent", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
               const agentActiveTimeout = setTimeout(() => {
@@ -21354,7 +21561,7 @@ var LocalParticipant = class extends Participant {
                 attributes: {
                   trackId: publication.trackSid,
                   sampleRate: String((_d2 = settings.sampleRate) !== null && _d2 !== void 0 ? _d2 : "48000"),
-                  channels: String((_e3 = settings.channelCount) !== null && _e3 !== void 0 ? _e3 : "1")
+                  channels: String((_e2 = settings.channelCount) !== null && _e2 !== void 0 ? _e2 : "1")
                 }
               });
               try {
@@ -21377,15 +21584,15 @@ var LocalParticipant = class extends Participant {
               }
               yield writer2.close();
               resolve();
-            } catch (e4) {
-              reject(e4);
+            } catch (e2) {
+              reject(e2);
             }
           }));
           bufferStreamPromise.then(() => {
             this.log.debug("preconnect buffer sent successfully", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
-          }).catch((e4) => {
+          }).catch((e2) => {
             this.log.error("error sending preconnect buffer", Object.assign(Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)), {
-              error: e4
+              error: e2
             }));
           });
         }
@@ -21450,10 +21657,10 @@ var LocalParticipant = class extends Participant {
         yield this.engine.negotiate();
       });
       const rets = yield Promise.all([this.engine.addTrack(req), negotiate()]);
-      const ti2 = rets[0];
+      const ti = rets[0];
       this.log.debug("published ".concat(videoCodec, " for track ").concat(track.sid), Object.assign(Object.assign({}, this.logContext), {
         encodings,
-        trackInfo: ti2
+        trackInfo: ti
       }));
     });
   }
@@ -21514,9 +21721,9 @@ var LocalParticipant = class extends Participant {
             }
             track.simulcastCodecs.clear();
           }
-        } catch (e4) {
+        } catch (e2) {
           this.log.warn("failed to unpublish track", Object.assign(Object.assign(Object.assign({}, this.logContext), pubLogContext), {
-            error: e4
+            error: e2
           }));
         }
       }
@@ -21899,16 +22106,16 @@ var LocalParticipant = class extends Participant {
     if (!super.updateInfo(info)) {
       return false;
     }
-    info.tracks.forEach((ti2) => {
+    info.tracks.forEach((ti) => {
       var _a, _b;
-      const pub = this.trackPublications.get(ti2.sid);
+      const pub = this.trackPublications.get(ti.sid);
       if (pub) {
         const mutedOnServer = pub.isMuted || ((_b = (_a = pub.track) === null || _a === void 0 ? void 0 : _a.isUpstreamPaused) !== null && _b !== void 0 ? _b : false);
-        if (mutedOnServer !== ti2.muted) {
+        if (mutedOnServer !== ti.muted) {
           this.log.debug("updating server mute state after reconcile", Object.assign(Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(pub)), {
             mutedOnServer
           }));
-          this.engine.client.sendMuteTrack(ti2.sid, mutedOnServer);
+          this.engine.client.sendMuteTrack(ti.sid, mutedOnServer);
         }
       }
     });
@@ -21974,8 +22181,8 @@ var LocalParticipant = class extends Participant {
   }
 };
 var RemoteTrackPublication = class extends TrackPublication {
-  constructor(kind, ti2, autoSubscribe, loggerOptions) {
-    super(kind, ti2.sid, ti2.name, loggerOptions);
+  constructor(kind, ti, autoSubscribe, loggerOptions) {
+    super(kind, ti.sid, ti.name, loggerOptions);
     this.track = void 0;
     this.allowed = true;
     this.requestedDisabled = void 0;
@@ -21995,7 +22202,7 @@ var RemoteTrackPublication = class extends TrackPublication {
       this.emitTrackUpdate();
     };
     this.subscribed = autoSubscribe;
-    this.updateInfo(ti2);
+    this.updateInfo(ti);
   }
   /**
    * Subscribe or unsubscribe to this remote track
@@ -22239,8 +22446,8 @@ var RemoteTrackPublication = class extends TrackPublication {
 };
 var RemoteParticipant = class _RemoteParticipant extends Participant {
   /** @internal */
-  static fromParticipantInfo(signalClient, pi2, loggerOptions) {
-    return new _RemoteParticipant(signalClient, pi2.sid, pi2.identity, pi2.name, pi2.metadata, pi2.attributes, loggerOptions, pi2.kind);
+  static fromParticipantInfo(signalClient, pi, loggerOptions) {
+    return new _RemoteParticipant(signalClient, pi.sid, pi.identity, pi.name, pi.metadata, pi.attributes, loggerOptions, pi.kind);
   }
   get logContext() {
     return Object.assign(Object.assign({}, super.logContext), {
@@ -22267,8 +22474,8 @@ var RemoteParticipant = class _RemoteParticipant extends Participant {
       this.signalClient.sendUpdateTrackSettings(settings);
     });
     publication.on(TrackEvent.UpdateSubscription, (sub) => {
-      sub.participantTracks.forEach((pt3) => {
-        pt3.participantSid = this.sid;
+      sub.participantTracks.forEach((pt) => {
+        pt.participantSid = this.sid;
       });
       this.signalClient.sendUpdateSubscription(sub);
     });
@@ -22390,20 +22597,20 @@ var RemoteParticipant = class _RemoteParticipant extends Participant {
     }
     const validTracks = /* @__PURE__ */ new Map();
     const newTracks = /* @__PURE__ */ new Map();
-    info.tracks.forEach((ti2) => {
+    info.tracks.forEach((ti) => {
       var _a, _b;
-      let publication = this.getTrackPublicationBySid(ti2.sid);
+      let publication = this.getTrackPublicationBySid(ti.sid);
       if (!publication) {
-        const kind = Track.kindFromProto(ti2.type);
+        const kind = Track.kindFromProto(ti.type);
         if (!kind) {
           return;
         }
-        publication = new RemoteTrackPublication(kind, ti2, (_a = this.signalClient.connectOptions) === null || _a === void 0 ? void 0 : _a.autoSubscribe, {
+        publication = new RemoteTrackPublication(kind, ti, (_a = this.signalClient.connectOptions) === null || _a === void 0 ? void 0 : _a.autoSubscribe, {
           loggerContextCb: () => this.logContext,
           loggerName: (_b = this.loggerOptions) === null || _b === void 0 ? void 0 : _b.loggerName
         });
-        publication.updateInfo(ti2);
-        newTracks.set(ti2.sid, publication);
+        publication.updateInfo(ti);
+        newTracks.set(ti.sid, publication);
         const existingTrackOfSource = Array.from(this.trackPublications.values()).find((publishedTrack) => publishedTrack.source === (publication === null || publication === void 0 ? void 0 : publication.source));
         if (existingTrackOfSource && publication.source !== Track.Source.Unknown) {
           this.log.debug("received a second track publication for ".concat(this.identity, " with the same source: ").concat(publication.source), Object.assign(Object.assign({}, this.logContext), {
@@ -22413,9 +22620,9 @@ var RemoteParticipant = class _RemoteParticipant extends Participant {
         }
         this.addTrackPublication(publication);
       } else {
-        publication.updateInfo(ti2);
+        publication.updateInfo(ti);
       }
-      validTracks.set(ti2.sid, publication);
+      validTracks.set(ti.sid, publication);
     });
     this.trackPublications.forEach((publication) => {
       if (!validTracks.has(publication.trackSid)) {
@@ -22546,9 +22753,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
         this.regionUrlProvider.fetchRegionSettings().then((settings) => {
           var _a3;
           (_a3 = this.regionUrlProvider) === null || _a3 === void 0 ? void 0 : _a3.setServerReportedRegions(settings);
-        }).catch((e4) => {
+        }).catch((e2) => {
           this.log.warn("could not fetch region settings", Object.assign(Object.assign({}, this.logContext), {
-            error: e4
+            error: e2
           }));
         });
       }
@@ -22650,20 +22857,20 @@ var Room = class _Room extends eventsExports.EventEmitter {
       return joinResponse;
     });
     this.applyJoinResponse = (joinResponse) => {
-      const pi2 = joinResponse.participant;
-      this.localParticipant.sid = pi2.sid;
-      this.localParticipant.identity = pi2.identity;
+      const pi = joinResponse.participant;
+      this.localParticipant.sid = pi.sid;
+      this.localParticipant.identity = pi.identity;
       this.localParticipant.setEnabledPublishCodecs(joinResponse.enabledPublishCodecs);
       if (this.e2eeManager) {
         try {
           this.e2eeManager.setSifTrailer(joinResponse.sifTrailer);
-        } catch (e4) {
-          this.log.error(e4 instanceof Error ? e4.message : "Could not set SifTrailer", Object.assign(Object.assign({}, this.logContext), {
-            error: e4
+        } catch (e2) {
+          this.log.error(e2 instanceof Error ? e2.message : "Could not set SifTrailer", Object.assign(Object.assign({}, this.logContext), {
+            error: e2
           }));
         }
       }
-      this.handleParticipantUpdates([pi2, ...joinResponse.otherParticipants]);
+      this.handleParticipantUpdates([pi, ...joinResponse.otherParticipants]);
       if (joinResponse.room) {
         this.handleRoomUpdate(joinResponse.room);
       }
@@ -22715,10 +22922,10 @@ var Room = class _Room extends eventsExports.EventEmitter {
       }
       try {
         yield this.engine.waitForPCInitialConnection(this.connOptions.peerConnectionTimeout, abortController);
-      } catch (e4) {
+      } catch (e2) {
         yield this.engine.close();
         this.recreateEngine();
-        throw e4;
+        throw e2;
       }
       if (isWeb() && this.options.disconnectOnPageLeave) {
         window.addEventListener("pagehide", this.onPageLeave);
@@ -22812,16 +23019,16 @@ var Room = class _Room extends eventsExports.EventEmitter {
       this.remoteParticipants.forEach((p) => {
         p.audioTrackPublications.forEach((t) => {
           if (t.track) {
-            t.track.attachedElements.forEach((e4) => {
-              elements.push(e4);
+            t.track.attachedElements.forEach((e2) => {
+              elements.push(e2);
             });
           }
         });
       });
       try {
-        yield Promise.all([this.acquireAudioContext(), ...elements.map((e4) => {
-          e4.muted = false;
-          return e4.play();
+        yield Promise.all([this.acquireAudioContext(), ...elements.map((e2) => {
+          e2.muted = false;
+          return e2.play();
         })]);
         this.handleAudioPlaybackStarted();
       } catch (err) {
@@ -22832,9 +23039,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
     this.startVideo = () => __awaiter(this, void 0, void 0, function* () {
       const elements = [];
       for (const p of this.remoteParticipants.values()) {
-        p.videoTrackPublications.forEach((tr3) => {
+        p.videoTrackPublications.forEach((tr) => {
           var _a2;
-          (_a2 = tr3.track) === null || _a2 === void 0 ? void 0 : _a2.attachedElements.forEach((el) => {
+          (_a2 = tr.track) === null || _a2 === void 0 ? void 0 : _a2.attachedElements.forEach((el) => {
             if (!elements.includes(el)) {
               elements.push(el);
             }
@@ -22843,8 +23050,8 @@ var Room = class _Room extends eventsExports.EventEmitter {
       }
       yield Promise.all(elements.map((el) => el.play())).then(() => {
         this.handleVideoPlaybackStarted();
-      }).catch((e4) => {
-        if (e4.name === "NotAllowedError") {
+      }).catch((e2) => {
+        if (e2.name === "NotAllowedError") {
           this.handleVideoPlaybackFailed();
         } else {
           this.log.warn("Resuming video playback failed, make sure you call `startVideo` directly in a user gesture handler", this.logContext);
@@ -23059,9 +23266,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
       this.audioEnabled = true;
       this.emit(RoomEvent.AudioPlaybackStatusChanged, true);
     };
-    this.handleAudioPlaybackFailed = (e4) => {
+    this.handleAudioPlaybackFailed = (e2) => {
       this.log.warn("could not playback audio", Object.assign(Object.assign({}, this.logContext), {
-        error: e4
+        error: e2
       }));
       if (!this.canPlaybackAudio) {
         return;
@@ -23130,10 +23337,10 @@ var Room = class _Room extends eventsExports.EventEmitter {
       (_a2 = processor === null || processor === void 0 ? void 0 : processor.onPublish) === null || _a2 === void 0 ? void 0 : _a2.call(processor, this);
     };
     this.onLocalTrackPublished = (pub) => __awaiter(this, void 0, void 0, function* () {
-      var _a2, _b2, _c2, _d2, _e2, _f;
+      var _a2, _b2, _c2, _d2, _e, _f;
       (_a2 = pub.track) === null || _a2 === void 0 ? void 0 : _a2.on(TrackEvent.TrackProcessorUpdate, this.onTrackProcessorUpdate);
       (_b2 = pub.track) === null || _b2 === void 0 ? void 0 : _b2.on(TrackEvent.Restarted, this.onLocalTrackRestarted);
-      (_e2 = (_d2 = (_c2 = pub.track) === null || _c2 === void 0 ? void 0 : _c2.getProcessor()) === null || _d2 === void 0 ? void 0 : _d2.onPublish) === null || _e2 === void 0 ? void 0 : _e2.call(_d2, this);
+      (_e = (_d2 = (_c2 = pub.track) === null || _c2 === void 0 ? void 0 : _c2.getProcessor()) === null || _d2 === void 0 ? void 0 : _d2.onPublish) === null || _e === void 0 ? void 0 : _e.call(_d2, this);
       this.emit(RoomEvent.LocalTrackPublished, pub, this.localParticipant);
       if (isLocalAudioTrack(pub.track)) {
         const trackIsSilent = yield pub.track.checkForSilence();
@@ -23166,8 +23373,8 @@ var Room = class _Room extends eventsExports.EventEmitter {
     this.onLocalConnectionQualityChanged = (quality) => {
       this.emit(RoomEvent.ConnectionQualityChanged, quality, this.localParticipant);
     };
-    this.onMediaDevicesError = (e4, kind) => {
-      this.emit(RoomEvent.MediaDevicesError, e4, kind);
+    this.onMediaDevicesError = (e2, kind) => {
+      this.emit(RoomEvent.MediaDevicesError, e2, kind);
     };
     this.onLocalParticipantPermissionsChanged = (prevPermissions) => {
       this.emit(RoomEvent.ParticipantPermissionsChanged, prevPermissions, this.localParticipant);
@@ -23200,7 +23407,7 @@ var Room = class _Room extends eventsExports.EventEmitter {
       this.localParticipant.activeDeviceMap.set("audioinput", unwrapConstraint(this.options.audioCaptureDefaults.deviceId));
     }
     if ((_b = this.options.audioOutput) === null || _b === void 0 ? void 0 : _b.deviceId) {
-      this.switchActiveDevice("audiooutput", unwrapConstraint(this.options.audioOutput.deviceId)).catch((e4) => this.log.warn("Could not set audio output: ".concat(e4.message), this.logContext));
+      this.switchActiveDevice("audiooutput", unwrapConstraint(this.options.audioOutput.deviceId)).catch((e2) => this.log.warn("Could not set audio output: ".concat(e2.message), this.logContext));
     }
     if (isWeb()) {
       const abortController = new AbortController();
@@ -23481,9 +23688,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
             method: "HEAD"
           });
         }
-      } catch (e4) {
+      } catch (e2) {
         this.log.warn("could not prepare connection", Object.assign(Object.assign({}, this.logContext), {
-          error: e4
+          error: e2
         }));
       }
     });
@@ -23649,7 +23856,7 @@ var Room = class _Room extends eventsExports.EventEmitter {
       var _this3 = this;
       let exact = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : true;
       return (function* () {
-        var _a, _b, _c, _d, _e2, _f;
+        var _a, _b, _c, _d, _e, _f;
         var _g;
         let success = true;
         let shouldTriggerImmediateDeviceChange = false;
@@ -23666,9 +23873,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
               var _a2;
               return (_a2 = t.audioTrack) === null || _a2 === void 0 ? void 0 : _a2.setDeviceId(deviceConstraint);
             }))).every((val) => val === true);
-          } catch (e4) {
+          } catch (e2) {
             _this3.options.audioCaptureDefaults.deviceId = prevDeviceId;
-            throw e4;
+            throw e2;
           }
           const isMuted = tracks.some((t) => {
             var _a2, _b2;
@@ -23685,9 +23892,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
               var _a2;
               return (_a2 = t.videoTrack) === null || _a2 === void 0 ? void 0 : _a2.setDeviceId(deviceConstraint);
             }))).every((val) => val === true);
-          } catch (e4) {
+          } catch (e2) {
             _this3.options.videoCaptureDefaults.deviceId = prevDeviceId;
-            throw e4;
+            throw e2;
           }
           const isMuted = tracks.some((t) => {
             var _a2, _b2;
@@ -23703,7 +23910,7 @@ var Room = class _Room extends eventsExports.EventEmitter {
             deviceId = (_c = yield DeviceManager.getInstance().normalizeDeviceId("audiooutput", deviceId)) !== null && _c !== void 0 ? _c : "";
           }
           (_d = (_g = _this3.options).audioOutput) !== null && _d !== void 0 ? _d : _g.audioOutput = {};
-          const prevDeviceId = (_e2 = _this3.getActiveDevice(kind)) !== null && _e2 !== void 0 ? _e2 : _this3.options.audioOutput.deviceId;
+          const prevDeviceId = (_e = _this3.getActiveDevice(kind)) !== null && _e !== void 0 ? _e : _this3.options.audioOutput.deviceId;
           _this3.options.audioOutput.deviceId = deviceId;
           try {
             if (_this3.options.webAudioMix) {
@@ -23712,9 +23919,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
             yield Promise.all(Array.from(_this3.remoteParticipants.values()).map((p) => p.setAudioOutput({
               deviceId
             })));
-          } catch (e4) {
+          } catch (e2) {
             _this3.options.audioOutput.deviceId = prevDeviceId;
-            throw e4;
+            throw e2;
           }
         }
         if (shouldTriggerImmediateDeviceChange) {
@@ -23976,9 +24183,9 @@ var Room = class _Room extends eventsExports.EventEmitter {
       if (this.audioContext && this.audioContext.state === "suspended") {
         try {
           yield Promise.race([this.audioContext.resume(), sleep(200)]);
-        } catch (e4) {
+        } catch (e2) {
           this.log.warn("Could not resume audio context", Object.assign(Object.assign({}, this.logContext), {
-            error: e4
+            error: e2
           }));
         }
       }
@@ -24007,7 +24214,7 @@ var Room = class _Room extends eventsExports.EventEmitter {
       participant.setAudioContext(this.audioContext);
     }
     if ((_a = this.options.audioOutput) === null || _a === void 0 ? void 0 : _a.deviceId) {
-      participant.setAudioOutput(this.options.audioOutput).catch((e4) => this.log.warn("Could not set audio output: ".concat(e4.message), this.logContext));
+      participant.setAudioOutput(this.options.audioOutput).catch((e2) => this.log.warn("Could not set audio output: ".concat(e2.message), this.logContext));
     }
     return participant;
   }
@@ -24233,17 +24440,17 @@ var Room = class _Room extends eventsExports.EventEmitter {
         this.localParticipant.addTrackPublication(audioPub);
         this.localParticipant.emit(ParticipantEvent.LocalTrackPublished, audioPub);
       }
-      for (let i2 = 0; i2 < participantOptions.count - 1; i2 += 1) {
+      for (let i = 0; i < participantOptions.count - 1; i += 1) {
         let info = new ParticipantInfo({
           sid: Math.floor(Math.random() * 1e4).toString(),
-          identity: "simulated-".concat(i2),
+          identity: "simulated-".concat(i),
           state: ParticipantInfo_State.ACTIVE,
           tracks: [],
           joinedAt: protoInt64.parse(Date.now())
         });
         const p = this.getOrCreateParticipant(info.identity, info);
         if (participantOptions.video) {
-          const dummyVideo = createDummyVideoStreamTrack(160 * ((_d = participantOptions.aspectRatios[i2 % participantOptions.aspectRatios.length]) !== null && _d !== void 0 ? _d : 1), 160, false, true);
+          const dummyVideo = createDummyVideoStreamTrack(160 * ((_d = participantOptions.aspectRatios[i % participantOptions.aspectRatios.length]) !== null && _d !== void 0 ? _d : 1), 160, false, true);
           const videoTrack = new TrackInfo({
             source: TrackSource.CAMERA,
             sid: Math.floor(Math.random() * 1e4).toString(),
@@ -24471,7 +24678,7 @@ var CloudRegionCheck = class extends Checker {
       }
       const regionStats = [];
       const seenUrls = /* @__PURE__ */ new Set();
-      for (let i2 = 0; i2 < 3; i2++) {
+      for (let i = 0; i < 3; i++) {
         const regionUrl = yield regionProvider.getNextBestRegionUrl();
         if (!regionUrl) {
           break;
@@ -24516,7 +24723,7 @@ var CloudRegionCheck = class extends Checker {
       const numChunks = totalSize / chunkSize;
       const chunkData = "A".repeat(chunkSize);
       const startTime = Date.now();
-      for (let i2 = 0; i2 < numChunks; i2++) {
+      for (let i = 0; i < numChunks; i++) {
         yield writer2.write(chunkData);
       }
       yield writer2.close();
@@ -24727,8 +24934,8 @@ var PublishVideoCheck = class extends Checker {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
             let isAllBlack = true;
-            for (let i2 = 0; i2 < data.length; i2 += 4) {
-              if (data[i2] !== 0 || data[i2 + 1] !== 0 || data[i2 + 2] !== 0) {
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i] !== 0 || data[i + 1] !== 0 || data[i + 2] !== 0) {
                 isAllBlack = false;
                 break;
               }
@@ -24933,9 +25140,9 @@ var WebSocketCheck = class extends Checker {
           e2eeEnabled: false,
           websocketTimeout: 15e3
         }, void 0, true);
-      } catch (e4) {
+      } catch (e2) {
         if (isCloud(new URL(this.url))) {
-          this.appendMessage("Initial connection failed with error ".concat(e4.message, ". Retrying with region fallback"));
+          this.appendMessage("Initial connection failed with error ".concat(e2.message, ". Retrying with region fallback"));
           const regionProvider = new RegionUrlProvider(this.url, this.token);
           const regionUrl = yield regionProvider.getNextBestRegionUrl();
           if (regionUrl) {
@@ -25050,29 +25257,31 @@ var ConnectionCheck = class extends eventsExports.EventEmitter {
     });
   }
 };
+var TokenSourceFixed = class {
+};
 var TokenSourceConfigurable = class {
 };
-function _defineProperty(e4, r2, t) {
-  return (r2 = _toPropertyKey(r2)) in e4 ? Object.defineProperty(e4, r2, {
+function _defineProperty(e2, r2, t) {
+  return (r2 = _toPropertyKey(r2)) in e2 ? Object.defineProperty(e2, r2, {
     value: t,
     enumerable: true,
     configurable: true,
     writable: true
-  }) : e4[r2] = t, e4;
+  }) : e2[r2] = t, e2;
 }
 function _toPrimitive(t, r2) {
   if ("object" != typeof t || !t) return t;
-  var e4 = t[Symbol.toPrimitive];
-  if (void 0 !== e4) {
-    var i2 = e4.call(t, r2);
-    if ("object" != typeof i2) return i2;
+  var e2 = t[Symbol.toPrimitive];
+  if (void 0 !== e2) {
+    var i = e2.call(t, r2);
+    if ("object" != typeof i) return i;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
   return ("string" === r2 ? String : Number)(t);
 }
 function _toPropertyKey(t) {
-  var i2 = _toPrimitive(t, "string");
-  return "symbol" == typeof i2 ? i2 : i2 + "";
+  var i = _toPrimitive(t, "string");
+  return "symbol" == typeof i ? i : i + "";
 }
 new TextEncoder();
 var decoder = new TextDecoder();
@@ -25082,8 +25291,8 @@ function decodeBase64(encoded) {
   }
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
-  for (let i2 = 0; i2 < binary.length; i2++) {
-    bytes[i2] = binary.charCodeAt(i2);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
 }
@@ -25291,6 +25500,18 @@ function decodeJwt(jwt) {
 }
 var ONE_SECOND_IN_MILLISECONDS = 1e3;
 var ONE_MINUTE_IN_MILLISECONDS = 60 * ONE_SECOND_IN_MILLISECONDS;
+function isResponseTokenValid(response) {
+  const jwtPayload = decodeTokenPayload(response.participantToken);
+  if (!(jwtPayload === null || jwtPayload === void 0 ? void 0 : jwtPayload.nbf) || !(jwtPayload === null || jwtPayload === void 0 ? void 0 : jwtPayload.exp)) {
+    return true;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const nbfInMilliseconds = jwtPayload.nbf * ONE_SECOND_IN_MILLISECONDS;
+  const nbfDate = new Date(nbfInMilliseconds);
+  const expInMilliseconds = jwtPayload.exp * ONE_SECOND_IN_MILLISECONDS;
+  const expDate = new Date(expInMilliseconds - ONE_MINUTE_IN_MILLISECONDS);
+  return nbfDate <= now && expDate > now;
+}
 function decodeTokenPayload(token) {
   const payload = decodeJwt(token);
   const {
@@ -25301,6 +25522,248 @@ function decodeTokenPayload(token) {
   });
   return mappedPayload;
 }
+function areTokenSourceFetchOptionsEqual(a, b) {
+  const allKeysSet = /* @__PURE__ */ new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of allKeysSet) {
+    switch (key) {
+      case "roomName":
+      case "participantName":
+      case "participantIdentity":
+      case "participantMetadata":
+      case "participantAttributes":
+      case "agentName":
+      case "agentMetadata":
+        if (a[key] !== b[key]) {
+          return false;
+        }
+        break;
+      default:
+        const exhaustiveCheckedKey = key;
+        throw new Error("Options key ".concat(exhaustiveCheckedKey, " not being checked for equality!"));
+    }
+  }
+  return true;
+}
+var TokenSourceCached = class extends TokenSourceConfigurable {
+  constructor() {
+    super(...arguments);
+    this.cachedFetchOptions = null;
+    this.cachedResponse = null;
+    this.fetchMutex = new _();
+  }
+  isSameAsCachedFetchOptions(options) {
+    if (!this.cachedFetchOptions) {
+      return false;
+    }
+    for (const key of Object.keys(this.cachedFetchOptions)) {
+      switch (key) {
+        case "roomName":
+        case "participantName":
+        case "participantIdentity":
+        case "participantMetadata":
+        case "participantAttributes":
+        case "agentName":
+        case "agentMetadata":
+          if (this.cachedFetchOptions[key] !== options[key]) {
+            return false;
+          }
+          break;
+        default:
+          const exhaustiveCheckedKey = key;
+          throw new Error("Options key ".concat(exhaustiveCheckedKey, " not being checked for equality!"));
+      }
+    }
+    return true;
+  }
+  shouldReturnCachedValueFromFetch(fetchOptions) {
+    if (!this.cachedResponse) {
+      return false;
+    }
+    if (!isResponseTokenValid(this.cachedResponse)) {
+      return false;
+    }
+    if (this.isSameAsCachedFetchOptions(fetchOptions)) {
+      return false;
+    }
+    return true;
+  }
+  getCachedResponseJwtPayload() {
+    if (!this.cachedResponse) {
+      return null;
+    }
+    return decodeTokenPayload(this.cachedResponse.participantToken);
+  }
+  fetch(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const unlock = yield this.fetchMutex.lock();
+      try {
+        if (this.shouldReturnCachedValueFromFetch(options)) {
+          return this.cachedResponse.toJson();
+        }
+        this.cachedFetchOptions = options;
+        const tokenResponse = yield this.update(options);
+        this.cachedResponse = tokenResponse;
+        return tokenResponse.toJson();
+      } finally {
+        unlock();
+      }
+    });
+  }
+};
+var TokenSourceLiteral = class extends TokenSourceFixed {
+  constructor(literalOrFn) {
+    super();
+    this.literalOrFn = literalOrFn;
+  }
+  fetch() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (typeof this.literalOrFn === "function") {
+        return this.literalOrFn();
+      } else {
+        return this.literalOrFn;
+      }
+    });
+  }
+};
+var TokenSourceCustom = class extends TokenSourceCached {
+  constructor(customFn) {
+    super();
+    this.customFn = customFn;
+  }
+  update(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const resultMaybePromise = this.customFn(options);
+      let result;
+      if (resultMaybePromise instanceof Promise) {
+        result = yield resultMaybePromise;
+      } else {
+        result = resultMaybePromise;
+      }
+      return TokenSourceResponse.fromJson(result, {
+        // NOTE: it could be possible that the response body could contain more fields than just
+        // what's in TokenSourceResponse depending on the implementation
+        ignoreUnknownFields: true
+      });
+    });
+  }
+};
+var TokenSourceEndpoint = class extends TokenSourceCached {
+  constructor(url) {
+    let options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    super();
+    this.url = url;
+    this.endpointOptions = options;
+  }
+  createRequestFromOptions(options) {
+    var _a, _b, _c;
+    const request = new TokenSourceRequest();
+    for (const key of Object.keys(options)) {
+      switch (key) {
+        case "roomName":
+        case "participantName":
+        case "participantIdentity":
+        case "participantMetadata":
+          request[key] = options[key];
+          break;
+        case "participantAttributes":
+          request.participantAttributes = (_a = options.participantAttributes) !== null && _a !== void 0 ? _a : {};
+          break;
+        case "agentName":
+          request.roomConfig = (_b = request.roomConfig) !== null && _b !== void 0 ? _b : new RoomConfiguration();
+          if (request.roomConfig.agents.length === 0) {
+            request.roomConfig.agents.push(new RoomAgentDispatch());
+          }
+          request.roomConfig.agents[0].agentName = options.agentName;
+          break;
+        case "agentMetadata":
+          request.roomConfig = (_c = request.roomConfig) !== null && _c !== void 0 ? _c : new RoomConfiguration();
+          if (request.roomConfig.agents.length === 0) {
+            request.roomConfig.agents.push(new RoomAgentDispatch());
+          }
+          request.roomConfig.agents[0].metadata = options.agentMetadata;
+          break;
+        default:
+          const exhaustiveCheckedKey = key;
+          throw new Error("Options key ".concat(exhaustiveCheckedKey, " not being included in forming request!"));
+      }
+    }
+    return request;
+  }
+  update(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+      var _a;
+      const request = this.createRequestFromOptions(options);
+      const response = yield fetch(this.url, Object.assign(Object.assign({}, this.endpointOptions), {
+        method: (_a = this.endpointOptions.method) !== null && _a !== void 0 ? _a : "POST",
+        headers: Object.assign({
+          "Content-Type": "application/json"
+        }, this.endpointOptions.headers),
+        body: request.toJsonString({
+          useProtoFieldName: true
+        })
+      }));
+      if (!response.ok) {
+        throw new Error("Error generating token from endpoint ".concat(this.url, ": received ").concat(response.status, " / ").concat(yield response.text()));
+      }
+      const body = yield response.json();
+      return TokenSourceResponse.fromJson(body, {
+        // NOTE: it could be possible that the response body could contain more fields than just
+        // what's in TokenSourceResponse depending on the implementation (ie, SandboxTokenServer)
+        ignoreUnknownFields: true
+      });
+    });
+  }
+};
+var TokenSourceSandboxTokenServer = class extends TokenSourceEndpoint {
+  constructor(sandboxId, options) {
+    const {
+      baseUrl = "https://cloud-api.livekit.io"
+    } = options, rest = __rest(options, ["baseUrl"]);
+    super("".concat(baseUrl, "/api/v2/sandbox/connection-details"), Object.assign(Object.assign({}, rest), {
+      headers: {
+        "X-Sandbox-ID": sandboxId
+      }
+    }));
+  }
+};
+var TokenSource = {
+  /** TokenSource.literal contains a single, literal set of {@link TokenSourceResponseObject}
+   * credentials, either provided directly or returned from a provided function. */
+  literal(literalOrFn) {
+    return new TokenSourceLiteral(literalOrFn);
+  },
+  /**
+   * TokenSource.custom allows a user to define a manual function which generates new
+   * {@link TokenSourceResponseObject} values on demand.
+   *
+   * Use this to get credentials from custom backends / etc.
+   */
+  custom(customFn) {
+    return new TokenSourceCustom(customFn);
+  },
+  /**
+   * TokenSource.endpoint creates a token source that fetches credentials from a given URL using
+   * the standard endpoint format:
+   * @see https://cloud.livekit.io/projects/p_/sandbox/templates/token-server
+   */
+  endpoint(url) {
+    let options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    return new TokenSourceEndpoint(url, options);
+  },
+  /**
+   * TokenSource.sandboxTokenServer queries a sandbox token server for credentials,
+   * which supports quick prototyping / getting started types of use cases.
+   *
+   * This token provider is INSECURE and should NOT be used in production.
+   *
+   * For more info:
+   * @see https://cloud.livekit.io/projects/p_/sandbox/templates/token-server
+   */
+  sandboxTokenServer(sandboxId) {
+    let options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    return new TokenSourceSandboxTokenServer(sandboxId, options);
+  }
+};
 function facingModeFromLocalTrack(localTrack) {
   let options = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
   var _a;
@@ -25360,7788 +25823,129 @@ function isFacingModeValue(item) {
   const allowedValues = ["user", "environment", "left", "right"];
   return item === void 0 || allowedValues.includes(item);
 }
-
-// node_modules/@livekit/components-react/dist/contexts-CsO1QZ3r.mjs
-var I = __toESM(require_react(), 1);
-var De = Math.min;
-var ue = Math.max;
-var $e = Math.round;
-var _e = Math.floor;
-var J = (e4) => ({
-  x: e4,
-  y: e4
-});
-var Jn = {
-  left: "right",
-  right: "left",
-  bottom: "top",
-  top: "bottom"
-};
-var Xn = {
-  start: "end",
-  end: "start"
-};
-function Et(e4, t, n) {
-  return ue(e4, De(t, n));
-}
-function He(e4, t) {
-  return typeof e4 == "function" ? e4(t) : e4;
-}
-function le(e4) {
-  return e4.split("-")[0];
-}
-function ze(e4) {
-  return e4.split("-")[1];
-}
-function Qt(e4) {
-  return e4 === "x" ? "y" : "x";
-}
-function Jt(e4) {
-  return e4 === "y" ? "height" : "width";
-}
-var Zn = /* @__PURE__ */ new Set(["top", "bottom"]);
-function ie(e4) {
-  return Zn.has(le(e4)) ? "y" : "x";
-}
-function Xt(e4) {
-  return Qt(ie(e4));
-}
-function er(e4, t, n) {
-  n === void 0 && (n = false);
-  const r2 = ze(e4), i2 = Xt(e4), o2 = Jt(i2);
-  let s2 = i2 === "x" ? r2 === (n ? "end" : "start") ? "right" : "left" : r2 === "start" ? "bottom" : "top";
-  return t.reference[o2] > t.floating[o2] && (s2 = Ne(s2)), [s2, Ne(s2)];
-}
-function tr(e4) {
-  const t = Ne(e4);
-  return [st(e4), t, st(t)];
-}
-function st(e4) {
-  return e4.replace(/start|end/g, (t) => Xn[t]);
-}
-var Ct = ["left", "right"];
-var Pt = ["right", "left"];
-var nr = ["top", "bottom"];
-var rr = ["bottom", "top"];
-function ir(e4, t, n) {
-  switch (e4) {
-    case "top":
-    case "bottom":
-      return n ? t ? Pt : Ct : t ? Ct : Pt;
-    case "left":
-    case "right":
-      return t ? nr : rr;
-    default:
-      return [];
-  }
-}
-function or(e4, t, n, r2) {
-  const i2 = ze(e4);
-  let o2 = ir(le(e4), n === "start", r2);
-  return i2 && (o2 = o2.map((s2) => s2 + "-" + i2), t && (o2 = o2.concat(o2.map(st)))), o2;
-}
-function Ne(e4) {
-  return e4.replace(/left|right|bottom|top/g, (t) => Jn[t]);
-}
-function sr(e4) {
-  return {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    ...e4
-  };
-}
-function ar(e4) {
-  return typeof e4 != "number" ? sr(e4) : {
-    top: e4,
-    right: e4,
-    bottom: e4,
-    left: e4
-  };
-}
-function Fe(e4) {
-  const {
-    x: t,
-    y: n,
-    width: r2,
-    height: i2
-  } = e4;
-  return {
-    width: r2,
-    height: i2,
-    top: n,
-    left: t,
-    right: t + r2,
-    bottom: n + i2,
-    x: t,
-    y: n
-  };
-}
-function Ot(e4, t, n) {
-  let {
-    reference: r2,
-    floating: i2
-  } = e4;
-  const o2 = ie(t), s2 = Xt(t), a = Jt(s2), c = le(t), u = o2 === "y", l = r2.x + r2.width / 2 - i2.width / 2, f = r2.y + r2.height / 2 - i2.height / 2, v = r2[a] / 2 - i2[a] / 2;
-  let d;
-  switch (c) {
-    case "top":
-      d = {
-        x: l,
-        y: r2.y - i2.height
-      };
-      break;
-    case "bottom":
-      d = {
-        x: l,
-        y: r2.y + r2.height
-      };
-      break;
-    case "right":
-      d = {
-        x: r2.x + r2.width,
-        y: f
-      };
-      break;
-    case "left":
-      d = {
-        x: r2.x - i2.width,
-        y: f
-      };
-      break;
-    default:
-      d = {
-        x: r2.x,
-        y: r2.y
-      };
-  }
-  switch (ze(t)) {
-    case "start":
-      d[s2] -= v * (n && u ? -1 : 1);
-      break;
-    case "end":
-      d[s2] += v * (n && u ? -1 : 1);
-      break;
-  }
-  return d;
-}
-var cr = async (e4, t, n) => {
-  const {
-    placement: r2 = "bottom",
-    strategy: i2 = "absolute",
-    middleware: o2 = [],
-    platform: s2
-  } = n, a = o2.filter(Boolean), c = await (s2.isRTL == null ? void 0 : s2.isRTL(t));
-  let u = await s2.getElementRects({
-    reference: e4,
-    floating: t,
-    strategy: i2
-  }), {
-    x: l,
-    y: f
-  } = Ot(u, r2, c), v = r2, d = {}, m = 0;
-  for (let p = 0; p < a.length; p++) {
-    const {
-      name: g,
-      fn: h2
-    } = a[p], {
-      x: x2,
-      y: E,
-      data: O3,
-      reset: b
-    } = await h2({
-      x: l,
-      y: f,
-      initialPlacement: r2,
-      placement: v,
-      strategy: i2,
-      middlewareData: d,
-      rects: u,
-      platform: s2,
-      elements: {
-        reference: e4,
-        floating: t
-      }
-    });
-    l = x2 ?? l, f = E ?? f, d = {
-      ...d,
-      [g]: {
-        ...d[g],
-        ...O3
-      }
-    }, b && m <= 50 && (m++, typeof b == "object" && (b.placement && (v = b.placement), b.rects && (u = b.rects === true ? await s2.getElementRects({
-      reference: e4,
-      floating: t,
-      strategy: i2
-    }) : b.rects), {
-      x: l,
-      y: f
-    } = Ot(u, v, c)), p = -1);
-  }
-  return {
-    x: l,
-    y: f,
-    placement: v,
-    strategy: i2,
-    middlewareData: d
-  };
-};
-async function Zt(e4, t) {
-  var n;
-  t === void 0 && (t = {});
-  const {
-    x: r2,
-    y: i2,
-    platform: o2,
-    rects: s2,
-    elements: a,
-    strategy: c
-  } = e4, {
-    boundary: u = "clippingAncestors",
-    rootBoundary: l = "viewport",
-    elementContext: f = "floating",
-    altBoundary: v = false,
-    padding: d = 0
-  } = He(t, e4), m = ar(d), g = a[v ? f === "floating" ? "reference" : "floating" : f], h2 = Fe(await o2.getClippingRect({
-    element: (n = await (o2.isElement == null ? void 0 : o2.isElement(g))) == null || n ? g : g.contextElement || await (o2.getDocumentElement == null ? void 0 : o2.getDocumentElement(a.floating)),
-    boundary: u,
-    rootBoundary: l,
-    strategy: c
-  })), x2 = f === "floating" ? {
-    x: r2,
-    y: i2,
-    width: s2.floating.width,
-    height: s2.floating.height
-  } : s2.reference, E = await (o2.getOffsetParent == null ? void 0 : o2.getOffsetParent(a.floating)), O3 = await (o2.isElement == null ? void 0 : o2.isElement(E)) ? await (o2.getScale == null ? void 0 : o2.getScale(E)) || {
-    x: 1,
-    y: 1
-  } : {
-    x: 1,
-    y: 1
-  }, b = Fe(o2.convertOffsetParentRelativeRectToViewportRelativeRect ? await o2.convertOffsetParentRelativeRectToViewportRelativeRect({
-    elements: a,
-    rect: x2,
-    offsetParent: E,
-    strategy: c
-  }) : x2);
-  return {
-    top: (h2.top - b.top + m.top) / O3.y,
-    bottom: (b.bottom - h2.bottom + m.bottom) / O3.y,
-    left: (h2.left - b.left + m.left) / O3.x,
-    right: (b.right - h2.right + m.right) / O3.x
-  };
-}
-var ur = function(e4) {
-  return e4 === void 0 && (e4 = {}), {
-    name: "flip",
-    options: e4,
-    async fn(t) {
-      var n, r2;
-      const {
-        placement: i2,
-        middlewareData: o2,
-        rects: s2,
-        initialPlacement: a,
-        platform: c,
-        elements: u
-      } = t, {
-        mainAxis: l = true,
-        crossAxis: f = true,
-        fallbackPlacements: v,
-        fallbackStrategy: d = "bestFit",
-        fallbackAxisSideDirection: m = "none",
-        flipAlignment: p = true,
-        ...g
-      } = He(e4, t);
-      if ((n = o2.arrow) != null && n.alignmentOffset)
-        return {};
-      const h2 = le(i2), x2 = ie(a), E = le(a) === a, O3 = await (c.isRTL == null ? void 0 : c.isRTL(u.floating)), b = v || (E || !p ? [Ne(a)] : tr(a)), S = m !== "none";
-      !v && S && b.push(...or(a, p, m, O3));
-      const C = [a, ...b], $2 = await Zt(t, g), M2 = [];
-      let V2 = ((r2 = o2.flip) == null ? void 0 : r2.overflows) || [];
-      if (l && M2.push($2[h2]), f) {
-        const Q2 = er(i2, s2, O3);
-        M2.push($2[Q2[0]], $2[Q2[1]]);
-      }
-      if (V2 = [...V2, {
-        placement: i2,
-        overflows: M2
-      }], !M2.every((Q2) => Q2 <= 0)) {
-        var T2, _2;
-        const Q2 = (((T2 = o2.flip) == null ? void 0 : T2.index) || 0) + 1, Se2 = C[Q2];
-        if (Se2 && (!(f === "alignment" ? x2 !== ie(Se2) : false) || // We leave the current main axis only if every placement on that axis
-        // overflows the main axis.
-        V2.every((Y2) => ie(Y2.placement) === x2 ? Y2.overflows[0] > 0 : true)))
-          return {
-            data: {
-              index: Q2,
-              overflows: V2
-            },
-            reset: {
-              placement: Se2
-            }
-          };
-        let Te = (_2 = V2.filter((ae) => ae.overflows[0] <= 0).sort((ae, Y2) => ae.overflows[1] - Y2.overflows[1])[0]) == null ? void 0 : _2.placement;
-        if (!Te)
-          switch (d) {
-            case "bestFit": {
-              var ee2;
-              const ae = (ee2 = V2.filter((Y2) => {
-                if (S) {
-                  const re2 = ie(Y2.placement);
-                  return re2 === x2 || // Create a bias to the `y` side axis due to horizontal
-                  // reading directions favoring greater width.
-                  re2 === "y";
-                }
-                return true;
-              }).map((Y2) => [Y2.placement, Y2.overflows.filter((re2) => re2 > 0).reduce((re2, Yn2) => re2 + Yn2, 0)]).sort((Y2, re2) => Y2[1] - re2[1])[0]) == null ? void 0 : ee2[0];
-              ae && (Te = ae);
-              break;
-            }
-            case "initialPlacement":
-              Te = a;
-              break;
-          }
-        if (i2 !== Te)
-          return {
-            reset: {
-              placement: Te
-            }
-          };
-      }
-      return {};
-    }
-  };
-};
-var lr = /* @__PURE__ */ new Set(["left", "top"]);
-async function fr(e4, t) {
-  const {
-    placement: n,
-    platform: r2,
-    elements: i2
-  } = e4, o2 = await (r2.isRTL == null ? void 0 : r2.isRTL(i2.floating)), s2 = le(n), a = ze(n), c = ie(n) === "y", u = lr.has(s2) ? -1 : 1, l = o2 && c ? -1 : 1, f = He(t, e4);
-  let {
-    mainAxis: v,
-    crossAxis: d,
-    alignmentAxis: m
-  } = typeof f == "number" ? {
-    mainAxis: f,
-    crossAxis: 0,
-    alignmentAxis: null
-  } : {
-    mainAxis: f.mainAxis || 0,
-    crossAxis: f.crossAxis || 0,
-    alignmentAxis: f.alignmentAxis
-  };
-  return a && typeof m == "number" && (d = a === "end" ? m * -1 : m), c ? {
-    x: d * l,
-    y: v * u
-  } : {
-    x: v * u,
-    y: d * l
-  };
-}
-var dr = function(e4) {
-  return e4 === void 0 && (e4 = 0), {
-    name: "offset",
-    options: e4,
-    async fn(t) {
-      var n, r2;
-      const {
-        x: i2,
-        y: o2,
-        placement: s2,
-        middlewareData: a
-      } = t, c = await fr(t, e4);
-      return s2 === ((n = a.offset) == null ? void 0 : n.placement) && (r2 = a.arrow) != null && r2.alignmentOffset ? {} : {
-        x: i2 + c.x,
-        y: o2 + c.y,
-        data: {
-          ...c,
-          placement: s2
-        }
-      };
-    }
-  };
-};
-var pr = function(e4) {
-  return e4 === void 0 && (e4 = {}), {
-    name: "shift",
-    options: e4,
-    async fn(t) {
-      const {
-        x: n,
-        y: r2,
-        placement: i2
-      } = t, {
-        mainAxis: o2 = true,
-        crossAxis: s2 = false,
-        limiter: a = {
-          fn: (g) => {
-            let {
-              x: h2,
-              y: x2
-            } = g;
-            return {
-              x: h2,
-              y: x2
-            };
-          }
-        },
-        ...c
-      } = He(e4, t), u = {
-        x: n,
-        y: r2
-      }, l = await Zt(t, c), f = ie(le(i2)), v = Qt(f);
-      let d = u[v], m = u[f];
-      if (o2) {
-        const g = v === "y" ? "top" : "left", h2 = v === "y" ? "bottom" : "right", x2 = d + l[g], E = d - l[h2];
-        d = Et(x2, d, E);
-      }
-      if (s2) {
-        const g = f === "y" ? "top" : "left", h2 = f === "y" ? "bottom" : "right", x2 = m + l[g], E = m - l[h2];
-        m = Et(x2, m, E);
-      }
-      const p = a.fn({
-        ...t,
-        [v]: d,
-        [f]: m
-      });
-      return {
-        ...p,
-        data: {
-          x: p.x - n,
-          y: p.y - r2,
-          enabled: {
-            [v]: o2,
-            [f]: s2
-          }
-        }
-      };
-    }
-  };
-};
-function Ye() {
-  return typeof window < "u";
-}
-function ye(e4) {
-  return en(e4) ? (e4.nodeName || "").toLowerCase() : "#document";
-}
-function j(e4) {
-  var t;
-  return (e4 == null || (t = e4.ownerDocument) == null ? void 0 : t.defaultView) || window;
-}
-function Z(e4) {
-  var t;
-  return (t = (en(e4) ? e4.ownerDocument : e4.document) || window.document) == null ? void 0 : t.documentElement;
-}
-function en(e4) {
-  return Ye() ? e4 instanceof Node || e4 instanceof j(e4).Node : false;
-}
-function K(e4) {
-  return Ye() ? e4 instanceof Element || e4 instanceof j(e4).Element : false;
-}
-function X(e4) {
-  return Ye() ? e4 instanceof HTMLElement || e4 instanceof j(e4).HTMLElement : false;
-}
-function At(e4) {
-  return !Ye() || typeof ShadowRoot > "u" ? false : e4 instanceof ShadowRoot || e4 instanceof j(e4).ShadowRoot;
-}
-var hr = /* @__PURE__ */ new Set(["inline", "contents"]);
-function Ae(e4) {
-  const {
-    overflow: t,
-    overflowX: n,
-    overflowY: r2,
-    display: i2
-  } = G(e4);
-  return /auto|scroll|overlay|hidden|clip/.test(t + r2 + n) && !hr.has(i2);
-}
-var vr = /* @__PURE__ */ new Set(["table", "td", "th"]);
-function mr(e4) {
-  return vr.has(ye(e4));
-}
-var gr = [":popover-open", ":modal"];
-function qe(e4) {
-  return gr.some((t) => {
-    try {
-      return e4.matches(t);
-    } catch {
-      return false;
-    }
-  });
-}
-var br = ["transform", "translate", "scale", "rotate", "perspective"];
-var yr = ["transform", "translate", "scale", "rotate", "perspective", "filter"];
-var wr = ["paint", "layout", "strict", "content"];
-function pt(e4) {
-  const t = ht(), n = K(e4) ? G(e4) : e4;
-  return br.some((r2) => n[r2] ? n[r2] !== "none" : false) || (n.containerType ? n.containerType !== "normal" : false) || !t && (n.backdropFilter ? n.backdropFilter !== "none" : false) || !t && (n.filter ? n.filter !== "none" : false) || yr.some((r2) => (n.willChange || "").includes(r2)) || wr.some((r2) => (n.contain || "").includes(r2));
-}
-function xr(e4) {
-  let t = se(e4);
-  for (; X(t) && !me(t); ) {
-    if (pt(t))
-      return t;
-    if (qe(t))
-      return null;
-    t = se(t);
-  }
-  return null;
-}
-function ht() {
-  return typeof CSS > "u" || !CSS.supports ? false : CSS.supports("-webkit-backdrop-filter", "none");
-}
-var Sr = /* @__PURE__ */ new Set(["html", "body", "#document"]);
-function me(e4) {
-  return Sr.has(ye(e4));
-}
-function G(e4) {
-  return j(e4).getComputedStyle(e4);
-}
-function Ke(e4) {
-  return K(e4) ? {
-    scrollLeft: e4.scrollLeft,
-    scrollTop: e4.scrollTop
-  } : {
-    scrollLeft: e4.scrollX,
-    scrollTop: e4.scrollY
-  };
-}
-function se(e4) {
-  if (ye(e4) === "html")
-    return e4;
-  const t = (
-    // Step into the shadow DOM of the parent of a slotted node.
-    e4.assignedSlot || // DOM Element detected.
-    e4.parentNode || // ShadowRoot detected.
-    At(e4) && e4.host || // Fallback.
-    Z(e4)
-  );
-  return At(t) ? t.host : t;
-}
-function tn(e4) {
-  const t = se(e4);
-  return me(t) ? e4.ownerDocument ? e4.ownerDocument.body : e4.body : X(t) && Ae(t) ? t : tn(t);
-}
-function Ce(e4, t, n) {
-  var r2;
-  t === void 0 && (t = []), n === void 0 && (n = true);
-  const i2 = tn(e4), o2 = i2 === ((r2 = e4.ownerDocument) == null ? void 0 : r2.body), s2 = j(i2);
-  if (o2) {
-    const a = at(s2);
-    return t.concat(s2, s2.visualViewport || [], Ae(i2) ? i2 : [], a && n ? Ce(a) : []);
-  }
-  return t.concat(i2, Ce(i2, [], n));
-}
-function at(e4) {
-  return e4.parent && Object.getPrototypeOf(e4.parent) ? e4.frameElement : null;
-}
-function nn(e4) {
-  const t = G(e4);
-  let n = parseFloat(t.width) || 0, r2 = parseFloat(t.height) || 0;
-  const i2 = X(e4), o2 = i2 ? e4.offsetWidth : n, s2 = i2 ? e4.offsetHeight : r2, a = $e(n) !== o2 || $e(r2) !== s2;
-  return a && (n = o2, r2 = s2), {
-    width: n,
-    height: r2,
-    $: a
-  };
-}
-function vt(e4) {
-  return K(e4) ? e4 : e4.contextElement;
-}
-function he(e4) {
-  const t = vt(e4);
-  if (!X(t))
-    return J(1);
-  const n = t.getBoundingClientRect(), {
-    width: r2,
-    height: i2,
-    $: o2
-  } = nn(t);
-  let s2 = (o2 ? $e(n.width) : n.width) / r2, a = (o2 ? $e(n.height) : n.height) / i2;
-  return (!s2 || !Number.isFinite(s2)) && (s2 = 1), (!a || !Number.isFinite(a)) && (a = 1), {
-    x: s2,
-    y: a
-  };
-}
-var Tr = J(0);
-function rn(e4) {
-  const t = j(e4);
-  return !ht() || !t.visualViewport ? Tr : {
-    x: t.visualViewport.offsetLeft,
-    y: t.visualViewport.offsetTop
-  };
-}
-function Er(e4, t, n) {
-  return t === void 0 && (t = false), !n || t && n !== j(e4) ? false : t;
-}
-function fe(e4, t, n, r2) {
-  t === void 0 && (t = false), n === void 0 && (n = false);
-  const i2 = e4.getBoundingClientRect(), o2 = vt(e4);
-  let s2 = J(1);
-  t && (r2 ? K(r2) && (s2 = he(r2)) : s2 = he(e4));
-  const a = Er(o2, n, r2) ? rn(o2) : J(0);
-  let c = (i2.left + a.x) / s2.x, u = (i2.top + a.y) / s2.y, l = i2.width / s2.x, f = i2.height / s2.y;
-  if (o2) {
-    const v = j(o2), d = r2 && K(r2) ? j(r2) : r2;
-    let m = v, p = at(m);
-    for (; p && r2 && d !== m; ) {
-      const g = he(p), h2 = p.getBoundingClientRect(), x2 = G(p), E = h2.left + (p.clientLeft + parseFloat(x2.paddingLeft)) * g.x, O3 = h2.top + (p.clientTop + parseFloat(x2.paddingTop)) * g.y;
-      c *= g.x, u *= g.y, l *= g.x, f *= g.y, c += E, u += O3, m = j(p), p = at(m);
-    }
-  }
-  return Fe({
-    width: l,
-    height: f,
-    x: c,
-    y: u
-  });
-}
-function Ge(e4, t) {
-  const n = Ke(e4).scrollLeft;
-  return t ? t.left + n : fe(Z(e4)).left + n;
-}
-function on(e4, t) {
-  const n = e4.getBoundingClientRect(), r2 = n.left + t.scrollLeft - Ge(e4, n), i2 = n.top + t.scrollTop;
-  return {
-    x: r2,
-    y: i2
-  };
-}
-function Cr(e4) {
-  let {
-    elements: t,
-    rect: n,
-    offsetParent: r2,
-    strategy: i2
-  } = e4;
-  const o2 = i2 === "fixed", s2 = Z(r2), a = t ? qe(t.floating) : false;
-  if (r2 === s2 || a && o2)
-    return n;
-  let c = {
-    scrollLeft: 0,
-    scrollTop: 0
-  }, u = J(1);
-  const l = J(0), f = X(r2);
-  if ((f || !f && !o2) && ((ye(r2) !== "body" || Ae(s2)) && (c = Ke(r2)), X(r2))) {
-    const d = fe(r2);
-    u = he(r2), l.x = d.x + r2.clientLeft, l.y = d.y + r2.clientTop;
-  }
-  const v = s2 && !f && !o2 ? on(s2, c) : J(0);
-  return {
-    width: n.width * u.x,
-    height: n.height * u.y,
-    x: n.x * u.x - c.scrollLeft * u.x + l.x + v.x,
-    y: n.y * u.y - c.scrollTop * u.y + l.y + v.y
-  };
-}
-function Pr(e4) {
-  return Array.from(e4.getClientRects());
-}
-function Or(e4) {
-  const t = Z(e4), n = Ke(e4), r2 = e4.ownerDocument.body, i2 = ue(t.scrollWidth, t.clientWidth, r2.scrollWidth, r2.clientWidth), o2 = ue(t.scrollHeight, t.clientHeight, r2.scrollHeight, r2.clientHeight);
-  let s2 = -n.scrollLeft + Ge(e4);
-  const a = -n.scrollTop;
-  return G(r2).direction === "rtl" && (s2 += ue(t.clientWidth, r2.clientWidth) - i2), {
-    width: i2,
-    height: o2,
-    x: s2,
-    y: a
-  };
-}
-var kt = 25;
-function Ar(e4, t) {
-  const n = j(e4), r2 = Z(e4), i2 = n.visualViewport;
-  let o2 = r2.clientWidth, s2 = r2.clientHeight, a = 0, c = 0;
-  if (i2) {
-    o2 = i2.width, s2 = i2.height;
-    const l = ht();
-    (!l || l && t === "fixed") && (a = i2.offsetLeft, c = i2.offsetTop);
-  }
-  const u = Ge(r2);
-  if (u <= 0) {
-    const l = r2.ownerDocument, f = l.body, v = getComputedStyle(f), d = l.compatMode === "CSS1Compat" && parseFloat(v.marginLeft) + parseFloat(v.marginRight) || 0, m = Math.abs(r2.clientWidth - f.clientWidth - d);
-    m <= kt && (o2 -= m);
-  } else u <= kt && (o2 += u);
-  return {
-    width: o2,
-    height: s2,
-    x: a,
-    y: c
-  };
-}
-var kr = /* @__PURE__ */ new Set(["absolute", "fixed"]);
-function _r(e4, t) {
-  const n = fe(e4, true, t === "fixed"), r2 = n.top + e4.clientTop, i2 = n.left + e4.clientLeft, o2 = X(e4) ? he(e4) : J(1), s2 = e4.clientWidth * o2.x, a = e4.clientHeight * o2.y, c = i2 * o2.x, u = r2 * o2.y;
-  return {
-    width: s2,
-    height: a,
-    x: c,
-    y: u
-  };
-}
-function _t(e4, t, n) {
-  let r2;
-  if (t === "viewport")
-    r2 = Ar(e4, n);
-  else if (t === "document")
-    r2 = Or(Z(e4));
-  else if (K(t))
-    r2 = _r(t, n);
-  else {
-    const i2 = rn(e4);
-    r2 = {
-      x: t.x - i2.x,
-      y: t.y - i2.y,
-      width: t.width,
-      height: t.height
-    };
-  }
-  return Fe(r2);
-}
-function sn(e4, t) {
-  const n = se(e4);
-  return n === t || !K(n) || me(n) ? false : G(n).position === "fixed" || sn(n, t);
-}
-function Lr(e4, t) {
-  const n = t.get(e4);
-  if (n)
-    return n;
-  let r2 = Ce(e4, [], false).filter((a) => K(a) && ye(a) !== "body"), i2 = null;
-  const o2 = G(e4).position === "fixed";
-  let s2 = o2 ? se(e4) : e4;
-  for (; K(s2) && !me(s2); ) {
-    const a = G(s2), c = pt(s2);
-    !c && a.position === "fixed" && (i2 = null), (o2 ? !c && !i2 : !c && a.position === "static" && !!i2 && kr.has(i2.position) || Ae(s2) && !c && sn(e4, s2)) ? r2 = r2.filter((l) => l !== s2) : i2 = a, s2 = se(s2);
-  }
-  return t.set(e4, r2), r2;
-}
-function Ir(e4) {
-  let {
-    element: t,
-    boundary: n,
-    rootBoundary: r2,
-    strategy: i2
-  } = e4;
-  const s2 = [...n === "clippingAncestors" ? qe(t) ? [] : Lr(t, this._c) : [].concat(n), r2], a = s2[0], c = s2.reduce((u, l) => {
-    const f = _t(t, l, i2);
-    return u.top = ue(f.top, u.top), u.right = De(f.right, u.right), u.bottom = De(f.bottom, u.bottom), u.left = ue(f.left, u.left), u;
-  }, _t(t, a, i2));
-  return {
-    width: c.right - c.left,
-    height: c.bottom - c.top,
-    x: c.left,
-    y: c.top
-  };
-}
-function Mr(e4) {
-  const {
-    width: t,
-    height: n
-  } = nn(e4);
-  return {
-    width: t,
-    height: n
-  };
-}
-function Rr(e4, t, n) {
-  const r2 = X(t), i2 = Z(t), o2 = n === "fixed", s2 = fe(e4, true, o2, t);
-  let a = {
-    scrollLeft: 0,
-    scrollTop: 0
-  };
-  const c = J(0);
-  function u() {
-    c.x = Ge(i2);
-  }
-  if (r2 || !r2 && !o2)
-    if ((ye(t) !== "body" || Ae(i2)) && (a = Ke(t)), r2) {
-      const d = fe(t, true, o2, t);
-      c.x = d.x + t.clientLeft, c.y = d.y + t.clientTop;
-    } else i2 && u();
-  o2 && !r2 && i2 && u();
-  const l = i2 && !r2 && !o2 ? on(i2, a) : J(0), f = s2.left + a.scrollLeft - c.x - l.x, v = s2.top + a.scrollTop - c.y - l.y;
-  return {
-    x: f,
-    y: v,
-    width: s2.width,
-    height: s2.height
-  };
-}
-function et(e4) {
-  return G(e4).position === "static";
-}
-function Lt(e4, t) {
-  if (!X(e4) || G(e4).position === "fixed")
-    return null;
-  if (t)
-    return t(e4);
-  let n = e4.offsetParent;
-  return Z(e4) === n && (n = n.ownerDocument.body), n;
-}
-function an(e4, t) {
-  const n = j(e4);
-  if (qe(e4))
-    return n;
-  if (!X(e4)) {
-    let i2 = se(e4);
-    for (; i2 && !me(i2); ) {
-      if (K(i2) && !et(i2))
-        return i2;
-      i2 = se(i2);
-    }
-    return n;
-  }
-  let r2 = Lt(e4, t);
-  for (; r2 && mr(r2) && et(r2); )
-    r2 = Lt(r2, t);
-  return r2 && me(r2) && et(r2) && !pt(r2) ? n : r2 || xr(e4) || n;
-}
-var Dr = async function(e4) {
-  const t = this.getOffsetParent || an, n = this.getDimensions, r2 = await n(e4.floating);
-  return {
-    reference: Rr(e4.reference, await t(e4.floating), e4.strategy),
-    floating: {
-      x: 0,
-      y: 0,
-      width: r2.width,
-      height: r2.height
-    }
-  };
-};
-function $r(e4) {
-  return G(e4).direction === "rtl";
-}
-var Nr = {
-  convertOffsetParentRelativeRectToViewportRelativeRect: Cr,
-  getDocumentElement: Z,
-  getClippingRect: Ir,
-  getOffsetParent: an,
-  getElementRects: Dr,
-  getClientRects: Pr,
-  getDimensions: Mr,
-  getScale: he,
-  isElement: K,
-  isRTL: $r
-};
-function cn(e4, t) {
-  return e4.x === t.x && e4.y === t.y && e4.width === t.width && e4.height === t.height;
-}
-function Fr(e4, t) {
-  let n = null, r2;
-  const i2 = Z(e4);
-  function o2() {
-    var a;
-    clearTimeout(r2), (a = n) == null || a.disconnect(), n = null;
-  }
-  function s2(a, c) {
-    a === void 0 && (a = false), c === void 0 && (c = 1), o2();
-    const u = e4.getBoundingClientRect(), {
-      left: l,
-      top: f,
-      width: v,
-      height: d
-    } = u;
-    if (a || t(), !v || !d)
-      return;
-    const m = _e(f), p = _e(i2.clientWidth - (l + v)), g = _e(i2.clientHeight - (f + d)), h2 = _e(l), E = {
-      rootMargin: -m + "px " + -p + "px " + -g + "px " + -h2 + "px",
-      threshold: ue(0, De(1, c)) || 1
-    };
-    let O3 = true;
-    function b(S) {
-      const C = S[0].intersectionRatio;
-      if (C !== c) {
-        if (!O3)
-          return s2();
-        C ? s2(false, C) : r2 = setTimeout(() => {
-          s2(false, 1e-7);
-        }, 1e3);
-      }
-      C === 1 && !cn(u, e4.getBoundingClientRect()) && s2(), O3 = false;
-    }
-    try {
-      n = new IntersectionObserver(b, {
-        ...E,
-        // Handle <iframe>s
-        root: i2.ownerDocument
-      });
-    } catch {
-      n = new IntersectionObserver(b, E);
-    }
-    n.observe(e4);
-  }
-  return s2(true), o2;
-}
-function Ur(e4, t, n, r2) {
-  r2 === void 0 && (r2 = {});
-  const {
-    ancestorScroll: i2 = true,
-    ancestorResize: o2 = true,
-    elementResize: s2 = typeof ResizeObserver == "function",
-    layoutShift: a = typeof IntersectionObserver == "function",
-    animationFrame: c = false
-  } = r2, u = vt(e4), l = i2 || o2 ? [...u ? Ce(u) : [], ...Ce(t)] : [];
-  l.forEach((h2) => {
-    i2 && h2.addEventListener("scroll", n, {
-      passive: true
-    }), o2 && h2.addEventListener("resize", n);
-  });
-  const f = u && a ? Fr(u, n) : null;
-  let v = -1, d = null;
-  s2 && (d = new ResizeObserver((h2) => {
-    let [x2] = h2;
-    x2 && x2.target === u && d && (d.unobserve(t), cancelAnimationFrame(v), v = requestAnimationFrame(() => {
-      var E;
-      (E = d) == null || E.observe(t);
-    })), n();
-  }), u && !c && d.observe(u), d.observe(t));
-  let m, p = c ? fe(e4) : null;
-  c && g();
-  function g() {
-    const h2 = fe(e4);
-    p && !cn(p, h2) && n(), p = h2, m = requestAnimationFrame(g);
-  }
-  return n(), () => {
-    var h2;
-    l.forEach((x2) => {
-      i2 && x2.removeEventListener("scroll", n), o2 && x2.removeEventListener("resize", n);
-    }), f == null || f(), (h2 = d) == null || h2.disconnect(), d = null, c && cancelAnimationFrame(m);
-  };
-}
-var Wr = dr;
-var jr = pr;
-var Br = ur;
-var Vr = (e4, t, n) => {
-  const r2 = /* @__PURE__ */ new Map(), i2 = {
-    platform: Nr,
-    ...n
-  }, o2 = {
-    ...i2.platform,
-    _c: r2
-  };
-  return cr(e4, t, {
-    ...i2,
-    platform: o2
-  });
-};
-var es = typeof globalThis < "u" ? globalThis : typeof window < "u" ? window : typeof global < "u" ? global : typeof self < "u" ? self : {};
-function Hr(e4) {
-  return e4 && e4.__esModule && Object.prototype.hasOwnProperty.call(e4, "default") ? e4.default : e4;
-}
-var Me = { exports: {} };
-var zr = Me.exports;
-var It;
-function Yr() {
-  return It || (It = 1, (function(e4) {
-    (function(t, n) {
-      e4.exports ? e4.exports = n() : t.log = n();
-    })(zr, function() {
-      var t = function() {
-      }, n = "undefined", r2 = typeof window !== n && typeof window.navigator !== n && /Trident\/|MSIE /.test(window.navigator.userAgent), i2 = [
-        "trace",
-        "debug",
-        "info",
-        "warn",
-        "error"
-      ], o2 = {}, s2 = null;
-      function a(p, g) {
-        var h2 = p[g];
-        if (typeof h2.bind == "function")
-          return h2.bind(p);
-        try {
-          return Function.prototype.bind.call(h2, p);
-        } catch {
-          return function() {
-            return Function.prototype.apply.apply(h2, [p, arguments]);
-          };
-        }
-      }
-      function c() {
-        console.log && (console.log.apply ? console.log.apply(console, arguments) : Function.prototype.apply.apply(console.log, [console, arguments])), console.trace && console.trace();
-      }
-      function u(p) {
-        return p === "debug" && (p = "log"), typeof console === n ? false : p === "trace" && r2 ? c : console[p] !== void 0 ? a(console, p) : console.log !== void 0 ? a(console, "log") : t;
-      }
-      function l() {
-        for (var p = this.getLevel(), g = 0; g < i2.length; g++) {
-          var h2 = i2[g];
-          this[h2] = g < p ? t : this.methodFactory(h2, p, this.name);
-        }
-        if (this.log = this.debug, typeof console === n && p < this.levels.SILENT)
-          return "No console available for logging";
-      }
-      function f(p) {
-        return function() {
-          typeof console !== n && (l.call(this), this[p].apply(this, arguments));
-        };
-      }
-      function v(p, g, h2) {
-        return u(p) || f.apply(this, arguments);
-      }
-      function d(p, g) {
-        var h2 = this, x2, E, O3, b = "loglevel";
-        typeof p == "string" ? b += ":" + p : typeof p == "symbol" && (b = void 0);
-        function S(T2) {
-          var _2 = (i2[T2] || "silent").toUpperCase();
-          if (!(typeof window === n || !b)) {
-            try {
-              window.localStorage[b] = _2;
-              return;
-            } catch {
-            }
-            try {
-              window.document.cookie = encodeURIComponent(b) + "=" + _2 + ";";
-            } catch {
-            }
-          }
-        }
-        function C() {
-          var T2;
-          if (!(typeof window === n || !b)) {
-            try {
-              T2 = window.localStorage[b];
-            } catch {
-            }
-            if (typeof T2 === n)
-              try {
-                var _2 = window.document.cookie, ee2 = encodeURIComponent(b), Q2 = _2.indexOf(ee2 + "=");
-                Q2 !== -1 && (T2 = /^([^;]+)/.exec(
-                  _2.slice(Q2 + ee2.length + 1)
-                )[1]);
-              } catch {
-              }
-            return h2.levels[T2] === void 0 && (T2 = void 0), T2;
-          }
-        }
-        function $2() {
-          if (!(typeof window === n || !b)) {
-            try {
-              window.localStorage.removeItem(b);
-            } catch {
-            }
-            try {
-              window.document.cookie = encodeURIComponent(b) + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
-            } catch {
-            }
-          }
-        }
-        function M2(T2) {
-          var _2 = T2;
-          if (typeof _2 == "string" && h2.levels[_2.toUpperCase()] !== void 0 && (_2 = h2.levels[_2.toUpperCase()]), typeof _2 == "number" && _2 >= 0 && _2 <= h2.levels.SILENT)
-            return _2;
-          throw new TypeError("log.setLevel() called with invalid level: " + T2);
-        }
-        h2.name = p, h2.levels = {
-          TRACE: 0,
-          DEBUG: 1,
-          INFO: 2,
-          WARN: 3,
-          ERROR: 4,
-          SILENT: 5
-        }, h2.methodFactory = g || v, h2.getLevel = function() {
-          return O3 ?? E ?? x2;
-        }, h2.setLevel = function(T2, _2) {
-          return O3 = M2(T2), _2 !== false && S(O3), l.call(h2);
-        }, h2.setDefaultLevel = function(T2) {
-          E = M2(T2), C() || h2.setLevel(T2, false);
-        }, h2.resetLevel = function() {
-          O3 = null, $2(), l.call(h2);
-        }, h2.enableAll = function(T2) {
-          h2.setLevel(h2.levels.TRACE, T2);
-        }, h2.disableAll = function(T2) {
-          h2.setLevel(h2.levels.SILENT, T2);
-        }, h2.rebuild = function() {
-          if (s2 !== h2 && (x2 = M2(s2.getLevel())), l.call(h2), s2 === h2)
-            for (var T2 in o2)
-              o2[T2].rebuild();
-        }, x2 = M2(
-          s2 ? s2.getLevel() : "WARN"
-        );
-        var V2 = C();
-        V2 != null && (O3 = M2(V2)), l.call(h2);
-      }
-      s2 = new d(), s2.getLogger = function(g) {
-        if (typeof g != "symbol" && typeof g != "string" || g === "")
-          throw new TypeError("You must supply a name when creating a logger.");
-        var h2 = o2[g];
-        return h2 || (h2 = o2[g] = new d(
-          g,
-          s2.methodFactory
-        )), h2;
-      };
-      var m = typeof window !== n ? window.log : void 0;
-      return s2.noConflict = function() {
-        return typeof window !== n && window.log === s2 && (window.log = m), s2;
-      }, s2.getLoggers = function() {
-        return o2;
-      }, s2.default = s2, s2;
-    });
-  })(Me)), Me.exports;
-}
-var qr = Yr();
-var Kr = Hr(qr);
-var ct = function(e4, t) {
-  return ct = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(n, r2) {
-    n.__proto__ = r2;
-  } || function(n, r2) {
-    for (var i2 in r2) Object.prototype.hasOwnProperty.call(r2, i2) && (n[i2] = r2[i2]);
-  }, ct(e4, t);
-};
-function ne(e4, t) {
-  if (typeof t != "function" && t !== null)
-    throw new TypeError("Class extends value " + String(t) + " is not a constructor or null");
-  ct(e4, t);
-  function n() {
-    this.constructor = e4;
-  }
-  e4.prototype = t === null ? Object.create(t) : (n.prototype = t.prototype, new n());
-}
-function Gr(e4, t, n, r2) {
-  function i2(o2) {
-    return o2 instanceof n ? o2 : new n(function(s2) {
-      s2(o2);
-    });
-  }
-  return new (n || (n = Promise))(function(o2, s2) {
-    function a(l) {
-      try {
-        u(r2.next(l));
-      } catch (f) {
-        s2(f);
-      }
-    }
-    function c(l) {
-      try {
-        u(r2.throw(l));
-      } catch (f) {
-        s2(f);
-      }
-    }
-    function u(l) {
-      l.done ? o2(l.value) : i2(l.value).then(a, c);
-    }
-    u((r2 = r2.apply(e4, t || [])).next());
-  });
-}
-function un(e4, t) {
-  var n = { label: 0, sent: function() {
-    if (o2[0] & 1) throw o2[1];
-    return o2[1];
-  }, trys: [], ops: [] }, r2, i2, o2, s2 = Object.create((typeof Iterator == "function" ? Iterator : Object).prototype);
-  return s2.next = a(0), s2.throw = a(1), s2.return = a(2), typeof Symbol == "function" && (s2[Symbol.iterator] = function() {
-    return this;
-  }), s2;
-  function a(u) {
-    return function(l) {
-      return c([u, l]);
-    };
-  }
-  function c(u) {
-    if (r2) throw new TypeError("Generator is already executing.");
-    for (; s2 && (s2 = 0, u[0] && (n = 0)), n; ) try {
-      if (r2 = 1, i2 && (o2 = u[0] & 2 ? i2.return : u[0] ? i2.throw || ((o2 = i2.return) && o2.call(i2), 0) : i2.next) && !(o2 = o2.call(i2, u[1])).done) return o2;
-      switch (i2 = 0, o2 && (u = [u[0] & 2, o2.value]), u[0]) {
-        case 0:
-        case 1:
-          o2 = u;
-          break;
-        case 4:
-          return n.label++, { value: u[1], done: false };
-        case 5:
-          n.label++, i2 = u[1], u = [0];
-          continue;
-        case 7:
-          u = n.ops.pop(), n.trys.pop();
-          continue;
-        default:
-          if (o2 = n.trys, !(o2 = o2.length > 0 && o2[o2.length - 1]) && (u[0] === 6 || u[0] === 2)) {
-            n = 0;
-            continue;
-          }
-          if (u[0] === 3 && (!o2 || u[1] > o2[0] && u[1] < o2[3])) {
-            n.label = u[1];
-            break;
-          }
-          if (u[0] === 6 && n.label < o2[1]) {
-            n.label = o2[1], o2 = u;
-            break;
-          }
-          if (o2 && n.label < o2[2]) {
-            n.label = o2[2], n.ops.push(u);
-            break;
-          }
-          o2[2] && n.ops.pop(), n.trys.pop();
-          continue;
-      }
-      u = t.call(e4, n);
-    } catch (l) {
-      u = [6, l], i2 = 0;
-    } finally {
-      r2 = o2 = 0;
-    }
-    if (u[0] & 5) throw u[1];
-    return { value: u[0] ? u[1] : void 0, done: true };
-  }
-}
-function ge(e4) {
-  var t = typeof Symbol == "function" && Symbol.iterator, n = t && e4[t], r2 = 0;
-  if (n) return n.call(e4);
-  if (e4 && typeof e4.length == "number") return {
-    next: function() {
-      return e4 && r2 >= e4.length && (e4 = void 0), { value: e4 && e4[r2++], done: !e4 };
-    }
-  };
-  throw new TypeError(t ? "Object is not iterable." : "Symbol.iterator is not defined.");
-}
-function de(e4, t) {
-  var n = typeof Symbol == "function" && e4[Symbol.iterator];
-  if (!n) return e4;
-  var r2 = n.call(e4), i2, o2 = [], s2;
-  try {
-    for (; (t === void 0 || t-- > 0) && !(i2 = r2.next()).done; ) o2.push(i2.value);
-  } catch (a) {
-    s2 = { error: a };
-  } finally {
-    try {
-      i2 && !i2.done && (n = r2.return) && n.call(r2);
-    } finally {
-      if (s2) throw s2.error;
-    }
-  }
-  return o2;
-}
-function be(e4, t, n) {
-  if (n || arguments.length === 2) for (var r2 = 0, i2 = t.length, o2; r2 < i2; r2++)
-    (o2 || !(r2 in t)) && (o2 || (o2 = Array.prototype.slice.call(t, 0, r2)), o2[r2] = t[r2]);
-  return e4.concat(o2 || Array.prototype.slice.call(t));
-}
-function ve(e4) {
-  return this instanceof ve ? (this.v = e4, this) : new ve(e4);
-}
-function Qr(e4, t, n) {
-  if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var r2 = n.apply(e4, t || []), i2, o2 = [];
-  return i2 = Object.create((typeof AsyncIterator == "function" ? AsyncIterator : Object).prototype), a("next"), a("throw"), a("return", s2), i2[Symbol.asyncIterator] = function() {
-    return this;
-  }, i2;
-  function s2(d) {
-    return function(m) {
-      return Promise.resolve(m).then(d, f);
-    };
-  }
-  function a(d, m) {
-    r2[d] && (i2[d] = function(p) {
-      return new Promise(function(g, h2) {
-        o2.push([d, p, g, h2]) > 1 || c(d, p);
-      });
-    }, m && (i2[d] = m(i2[d])));
-  }
-  function c(d, m) {
-    try {
-      u(r2[d](m));
-    } catch (p) {
-      v(o2[0][3], p);
-    }
-  }
-  function u(d) {
-    d.value instanceof ve ? Promise.resolve(d.value.v).then(l, f) : v(o2[0][2], d);
-  }
-  function l(d) {
-    c("next", d);
-  }
-  function f(d) {
-    c("throw", d);
-  }
-  function v(d, m) {
-    d(m), o2.shift(), o2.length && c(o2[0][0], o2[0][1]);
-  }
-}
-function Jr(e4) {
-  if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var t = e4[Symbol.asyncIterator], n;
-  return t ? t.call(e4) : (e4 = typeof ge == "function" ? ge(e4) : e4[Symbol.iterator](), n = {}, r2("next"), r2("throw"), r2("return"), n[Symbol.asyncIterator] = function() {
-    return this;
-  }, n);
-  function r2(o2) {
-    n[o2] = e4[o2] && function(s2) {
-      return new Promise(function(a, c) {
-        s2 = e4[o2](s2), i2(a, c, s2.done, s2.value);
-      });
-    };
-  }
-  function i2(o2, s2, a, c) {
-    Promise.resolve(c).then(function(u) {
-      o2({ value: u, done: a });
-    }, s2);
-  }
-}
-function P(e4) {
-  return typeof e4 == "function";
-}
-function mt(e4) {
-  var t = function(r2) {
-    Error.call(r2), r2.stack = new Error().stack;
-  }, n = e4(t);
-  return n.prototype = Object.create(Error.prototype), n.prototype.constructor = n, n;
-}
-var tt = mt(function(e4) {
-  return function(n) {
-    e4(this), this.message = n ? n.length + ` errors occurred during unsubscription:
-` + n.map(function(r2, i2) {
-      return i2 + 1 + ") " + r2.toString();
-    }).join(`
-  `) : "", this.name = "UnsubscriptionError", this.errors = n;
-  };
-});
-function Ue(e4, t) {
-  if (e4) {
-    var n = e4.indexOf(t);
-    0 <= n && e4.splice(n, 1);
-  }
-}
-var ke = (function() {
-  function e4(t) {
-    this.initialTeardown = t, this.closed = false, this._parentage = null, this._finalizers = null;
-  }
-  return e4.prototype.unsubscribe = function() {
-    var t, n, r2, i2, o2;
-    if (!this.closed) {
-      this.closed = true;
-      var s2 = this._parentage;
-      if (s2)
-        if (this._parentage = null, Array.isArray(s2))
-          try {
-            for (var a = ge(s2), c = a.next(); !c.done; c = a.next()) {
-              var u = c.value;
-              u.remove(this);
-            }
-          } catch (p) {
-            t = { error: p };
-          } finally {
-            try {
-              c && !c.done && (n = a.return) && n.call(a);
-            } finally {
-              if (t) throw t.error;
-            }
-          }
-        else
-          s2.remove(this);
-      var l = this.initialTeardown;
-      if (P(l))
-        try {
-          l();
-        } catch (p) {
-          o2 = p instanceof tt ? p.errors : [p];
-        }
-      var f = this._finalizers;
-      if (f) {
-        this._finalizers = null;
-        try {
-          for (var v = ge(f), d = v.next(); !d.done; d = v.next()) {
-            var m = d.value;
-            try {
-              Mt(m);
-            } catch (p) {
-              o2 = o2 ?? [], p instanceof tt ? o2 = be(be([], de(o2)), de(p.errors)) : o2.push(p);
-            }
-          }
-        } catch (p) {
-          r2 = { error: p };
-        } finally {
-          try {
-            d && !d.done && (i2 = v.return) && i2.call(v);
-          } finally {
-            if (r2) throw r2.error;
-          }
-        }
-      }
-      if (o2)
-        throw new tt(o2);
-    }
-  }, e4.prototype.add = function(t) {
-    var n;
-    if (t && t !== this)
-      if (this.closed)
-        Mt(t);
-      else {
-        if (t instanceof e4) {
-          if (t.closed || t._hasParent(this))
-            return;
-          t._addParent(this);
-        }
-        (this._finalizers = (n = this._finalizers) !== null && n !== void 0 ? n : []).push(t);
-      }
-  }, e4.prototype._hasParent = function(t) {
-    var n = this._parentage;
-    return n === t || Array.isArray(n) && n.includes(t);
-  }, e4.prototype._addParent = function(t) {
-    var n = this._parentage;
-    this._parentage = Array.isArray(n) ? (n.push(t), n) : n ? [n, t] : t;
-  }, e4.prototype._removeParent = function(t) {
-    var n = this._parentage;
-    n === t ? this._parentage = null : Array.isArray(n) && Ue(n, t);
-  }, e4.prototype.remove = function(t) {
-    var n = this._finalizers;
-    n && Ue(n, t), t instanceof e4 && t._removeParent(this);
-  }, e4.EMPTY = (function() {
-    var t = new e4();
-    return t.closed = true, t;
-  })(), e4;
-})();
-var ln = ke.EMPTY;
-function fn(e4) {
-  return e4 instanceof ke || e4 && "closed" in e4 && P(e4.remove) && P(e4.add) && P(e4.unsubscribe);
-}
-function Mt(e4) {
-  P(e4) ? e4() : e4.unsubscribe();
-}
-var Xr = {
-  Promise: void 0
-};
-var Zr = {
-  setTimeout: function(e4, t) {
-    for (var n = [], r2 = 2; r2 < arguments.length; r2++)
-      n[r2 - 2] = arguments[r2];
-    return setTimeout.apply(void 0, be([e4, t], de(n)));
-  },
-  clearTimeout: function(e4) {
-    return clearTimeout(e4);
-  },
-  delegate: void 0
-};
-function dn(e4) {
-  Zr.setTimeout(function() {
-    throw e4;
-  });
-}
-function We() {
-}
-function Re(e4) {
-  e4();
-}
-var gt = (function(e4) {
-  ne(t, e4);
-  function t(n) {
-    var r2 = e4.call(this) || this;
-    return r2.isStopped = false, n ? (r2.destination = n, fn(n) && n.add(r2)) : r2.destination = ni, r2;
-  }
-  return t.create = function(n, r2, i2) {
-    return new Pe(n, r2, i2);
-  }, t.prototype.next = function(n) {
-    this.isStopped || this._next(n);
-  }, t.prototype.error = function(n) {
-    this.isStopped || (this.isStopped = true, this._error(n));
-  }, t.prototype.complete = function() {
-    this.isStopped || (this.isStopped = true, this._complete());
-  }, t.prototype.unsubscribe = function() {
-    this.closed || (this.isStopped = true, e4.prototype.unsubscribe.call(this), this.destination = null);
-  }, t.prototype._next = function(n) {
-    this.destination.next(n);
-  }, t.prototype._error = function(n) {
-    try {
-      this.destination.error(n);
-    } finally {
-      this.unsubscribe();
-    }
-  }, t.prototype._complete = function() {
-    try {
-      this.destination.complete();
-    } finally {
-      this.unsubscribe();
-    }
-  }, t;
-})(ke);
-var ei = (function() {
-  function e4(t) {
-    this.partialObserver = t;
-  }
-  return e4.prototype.next = function(t) {
-    var n = this.partialObserver;
-    if (n.next)
-      try {
-        n.next(t);
-      } catch (r2) {
-        Le(r2);
-      }
-  }, e4.prototype.error = function(t) {
-    var n = this.partialObserver;
-    if (n.error)
-      try {
-        n.error(t);
-      } catch (r2) {
-        Le(r2);
-      }
-    else
-      Le(t);
-  }, e4.prototype.complete = function() {
-    var t = this.partialObserver;
-    if (t.complete)
-      try {
-        t.complete();
-      } catch (n) {
-        Le(n);
-      }
-  }, e4;
-})();
-var Pe = (function(e4) {
-  ne(t, e4);
-  function t(n, r2, i2) {
-    var o2 = e4.call(this) || this, s2;
-    return P(n) || !n ? s2 = {
-      next: n ?? void 0,
-      error: r2 ?? void 0,
-      complete: i2 ?? void 0
-    } : s2 = n, o2.destination = new ei(s2), o2;
-  }
-  return t;
-})(gt);
-function Le(e4) {
-  dn(e4);
-}
-function ti(e4) {
-  throw e4;
-}
-var ni = {
-  closed: true,
-  next: We,
-  error: ti,
-  complete: We
-};
-var bt = (function() {
-  return typeof Symbol == "function" && Symbol.observable || "@@observable";
-})();
-function Qe(e4) {
-  return e4;
-}
-function ri(e4) {
-  return e4.length === 0 ? Qe : e4.length === 1 ? e4[0] : function(n) {
-    return e4.reduce(function(r2, i2) {
-      return i2(r2);
-    }, n);
-  };
-}
-var k = (function() {
-  function e4(t) {
-    t && (this._subscribe = t);
-  }
-  return e4.prototype.lift = function(t) {
-    var n = new e4();
-    return n.source = this, n.operator = t, n;
-  }, e4.prototype.subscribe = function(t, n, r2) {
-    var i2 = this, o2 = oi(t) ? t : new Pe(t, n, r2);
-    return Re(function() {
-      var s2 = i2, a = s2.operator, c = s2.source;
-      o2.add(a ? a.call(o2, c) : c ? i2._subscribe(o2) : i2._trySubscribe(o2));
-    }), o2;
-  }, e4.prototype._trySubscribe = function(t) {
-    try {
-      return this._subscribe(t);
-    } catch (n) {
-      t.error(n);
-    }
-  }, e4.prototype.forEach = function(t, n) {
-    var r2 = this;
-    return n = Rt(n), new n(function(i2, o2) {
-      var s2 = new Pe({
-        next: function(a) {
-          try {
-            t(a);
-          } catch (c) {
-            o2(c), s2.unsubscribe();
-          }
-        },
-        error: o2,
-        complete: i2
-      });
-      r2.subscribe(s2);
-    });
-  }, e4.prototype._subscribe = function(t) {
-    var n;
-    return (n = this.source) === null || n === void 0 ? void 0 : n.subscribe(t);
-  }, e4.prototype[bt] = function() {
-    return this;
-  }, e4.prototype.pipe = function() {
-    for (var t = [], n = 0; n < arguments.length; n++)
-      t[n] = arguments[n];
-    return ri(t)(this);
-  }, e4.prototype.toPromise = function(t) {
-    var n = this;
-    return t = Rt(t), new t(function(r2, i2) {
-      var o2;
-      n.subscribe(function(s2) {
-        return o2 = s2;
-      }, function(s2) {
-        return i2(s2);
-      }, function() {
-        return r2(o2);
-      });
-    });
-  }, e4.create = function(t) {
-    return new e4(t);
-  }, e4;
-})();
-function Rt(e4) {
-  var t;
-  return (t = e4 ?? Xr.Promise) !== null && t !== void 0 ? t : Promise;
-}
-function ii(e4) {
-  return e4 && P(e4.next) && P(e4.error) && P(e4.complete);
-}
-function oi(e4) {
-  return e4 && e4 instanceof gt || ii(e4) && fn(e4);
-}
-function si(e4) {
-  return P(e4 == null ? void 0 : e4.lift);
-}
-function W(e4) {
-  return function(t) {
-    if (si(t))
-      return t.lift(function(n) {
-        try {
-          return e4(n, this);
-        } catch (r2) {
-          this.error(r2);
-        }
-      });
-    throw new TypeError("Unable to lift unknown Observable type");
-  };
-}
-function F(e4, t, n, r2, i2) {
-  return new ai(e4, t, n, r2, i2);
-}
-var ai = (function(e4) {
-  ne(t, e4);
-  function t(n, r2, i2, o2, s2, a) {
-    var c = e4.call(this, n) || this;
-    return c.onFinalize = s2, c.shouldUnsubscribe = a, c._next = r2 ? function(u) {
-      try {
-        r2(u);
-      } catch (l) {
-        n.error(l);
-      }
-    } : e4.prototype._next, c._error = o2 ? function(u) {
-      try {
-        o2(u);
-      } catch (l) {
-        n.error(l);
-      } finally {
-        this.unsubscribe();
-      }
-    } : e4.prototype._error, c._complete = i2 ? function() {
-      try {
-        i2();
-      } catch (u) {
-        n.error(u);
-      } finally {
-        this.unsubscribe();
-      }
-    } : e4.prototype._complete, c;
-  }
-  return t.prototype.unsubscribe = function() {
-    var n;
-    if (!this.shouldUnsubscribe || this.shouldUnsubscribe()) {
-      var r2 = this.closed;
-      e4.prototype.unsubscribe.call(this), !r2 && ((n = this.onFinalize) === null || n === void 0 || n.call(this));
-    }
-  }, t;
-})(gt);
-var ci = mt(function(e4) {
-  return function() {
-    e4(this), this.name = "ObjectUnsubscribedError", this.message = "object unsubscribed";
-  };
-});
-var te = (function(e4) {
-  ne(t, e4);
-  function t() {
-    var n = e4.call(this) || this;
-    return n.closed = false, n.currentObservers = null, n.observers = [], n.isStopped = false, n.hasError = false, n.thrownError = null, n;
-  }
-  return t.prototype.lift = function(n) {
-    var r2 = new Dt(this, this);
-    return r2.operator = n, r2;
-  }, t.prototype._throwIfClosed = function() {
-    if (this.closed)
-      throw new ci();
-  }, t.prototype.next = function(n) {
-    var r2 = this;
-    Re(function() {
-      var i2, o2;
-      if (r2._throwIfClosed(), !r2.isStopped) {
-        r2.currentObservers || (r2.currentObservers = Array.from(r2.observers));
-        try {
-          for (var s2 = ge(r2.currentObservers), a = s2.next(); !a.done; a = s2.next()) {
-            var c = a.value;
-            c.next(n);
-          }
-        } catch (u) {
-          i2 = { error: u };
-        } finally {
-          try {
-            a && !a.done && (o2 = s2.return) && o2.call(s2);
-          } finally {
-            if (i2) throw i2.error;
-          }
-        }
-      }
-    });
-  }, t.prototype.error = function(n) {
-    var r2 = this;
-    Re(function() {
-      if (r2._throwIfClosed(), !r2.isStopped) {
-        r2.hasError = r2.isStopped = true, r2.thrownError = n;
-        for (var i2 = r2.observers; i2.length; )
-          i2.shift().error(n);
-      }
-    });
-  }, t.prototype.complete = function() {
-    var n = this;
-    Re(function() {
-      if (n._throwIfClosed(), !n.isStopped) {
-        n.isStopped = true;
-        for (var r2 = n.observers; r2.length; )
-          r2.shift().complete();
-      }
-    });
-  }, t.prototype.unsubscribe = function() {
-    this.isStopped = this.closed = true, this.observers = this.currentObservers = null;
-  }, Object.defineProperty(t.prototype, "observed", {
-    get: function() {
-      var n;
-      return ((n = this.observers) === null || n === void 0 ? void 0 : n.length) > 0;
-    },
-    enumerable: false,
-    configurable: true
-  }), t.prototype._trySubscribe = function(n) {
-    return this._throwIfClosed(), e4.prototype._trySubscribe.call(this, n);
-  }, t.prototype._subscribe = function(n) {
-    return this._throwIfClosed(), this._checkFinalizedStatuses(n), this._innerSubscribe(n);
-  }, t.prototype._innerSubscribe = function(n) {
-    var r2 = this, i2 = this, o2 = i2.hasError, s2 = i2.isStopped, a = i2.observers;
-    return o2 || s2 ? ln : (this.currentObservers = null, a.push(n), new ke(function() {
-      r2.currentObservers = null, Ue(a, n);
-    }));
-  }, t.prototype._checkFinalizedStatuses = function(n) {
-    var r2 = this, i2 = r2.hasError, o2 = r2.thrownError, s2 = r2.isStopped;
-    i2 ? n.error(o2) : s2 && n.complete();
-  }, t.prototype.asObservable = function() {
-    var n = new k();
-    return n.source = this, n;
-  }, t.create = function(n, r2) {
-    return new Dt(n, r2);
-  }, t;
-})(k);
-var Dt = (function(e4) {
-  ne(t, e4);
-  function t(n, r2) {
-    var i2 = e4.call(this) || this;
-    return i2.destination = n, i2.source = r2, i2;
-  }
-  return t.prototype.next = function(n) {
-    var r2, i2;
-    (i2 = (r2 = this.destination) === null || r2 === void 0 ? void 0 : r2.next) === null || i2 === void 0 || i2.call(r2, n);
-  }, t.prototype.error = function(n) {
-    var r2, i2;
-    (i2 = (r2 = this.destination) === null || r2 === void 0 ? void 0 : r2.error) === null || i2 === void 0 || i2.call(r2, n);
-  }, t.prototype.complete = function() {
-    var n, r2;
-    (r2 = (n = this.destination) === null || n === void 0 ? void 0 : n.complete) === null || r2 === void 0 || r2.call(n);
-  }, t.prototype._subscribe = function(n) {
-    var r2, i2;
-    return (i2 = (r2 = this.source) === null || r2 === void 0 ? void 0 : r2.subscribe(n)) !== null && i2 !== void 0 ? i2 : ln;
-  }, t;
-})(te);
-var pn = (function(e4) {
-  ne(t, e4);
-  function t(n) {
-    var r2 = e4.call(this) || this;
-    return r2._value = n, r2;
-  }
-  return Object.defineProperty(t.prototype, "value", {
-    get: function() {
-      return this.getValue();
-    },
-    enumerable: false,
-    configurable: true
-  }), t.prototype._subscribe = function(n) {
-    var r2 = e4.prototype._subscribe.call(this, n);
-    return !r2.closed && n.next(this._value), r2;
-  }, t.prototype.getValue = function() {
-    var n = this, r2 = n.hasError, i2 = n.thrownError, o2 = n._value;
-    if (r2)
-      throw i2;
-    return this._throwIfClosed(), o2;
-  }, t.prototype.next = function(n) {
-    e4.prototype.next.call(this, this._value = n);
-  }, t;
-})(te);
-var ui = {
-  now: function() {
-    return Date.now();
-  }
-};
-var li = (function(e4) {
-  ne(t, e4);
-  function t(n, r2) {
-    return e4.call(this) || this;
-  }
-  return t.prototype.schedule = function(n, r2) {
-    return this;
-  }, t;
-})(ke);
-var $t = {
-  setInterval: function(e4, t) {
-    for (var n = [], r2 = 2; r2 < arguments.length; r2++)
-      n[r2 - 2] = arguments[r2];
-    return setInterval.apply(void 0, be([e4, t], de(n)));
-  },
-  clearInterval: function(e4) {
-    return clearInterval(e4);
-  },
-  delegate: void 0
-};
-var fi = (function(e4) {
-  ne(t, e4);
-  function t(n, r2) {
-    var i2 = e4.call(this, n, r2) || this;
-    return i2.scheduler = n, i2.work = r2, i2.pending = false, i2;
-  }
-  return t.prototype.schedule = function(n, r2) {
-    var i2;
-    if (r2 === void 0 && (r2 = 0), this.closed)
-      return this;
-    this.state = n;
-    var o2 = this.id, s2 = this.scheduler;
-    return o2 != null && (this.id = this.recycleAsyncId(s2, o2, r2)), this.pending = true, this.delay = r2, this.id = (i2 = this.id) !== null && i2 !== void 0 ? i2 : this.requestAsyncId(s2, this.id, r2), this;
-  }, t.prototype.requestAsyncId = function(n, r2, i2) {
-    return i2 === void 0 && (i2 = 0), $t.setInterval(n.flush.bind(n, this), i2);
-  }, t.prototype.recycleAsyncId = function(n, r2, i2) {
-    if (i2 === void 0 && (i2 = 0), i2 != null && this.delay === i2 && this.pending === false)
-      return r2;
-    r2 != null && $t.clearInterval(r2);
-  }, t.prototype.execute = function(n, r2) {
-    if (this.closed)
-      return new Error("executing a cancelled action");
-    this.pending = false;
-    var i2 = this._execute(n, r2);
-    if (i2)
-      return i2;
-    this.pending === false && this.id != null && (this.id = this.recycleAsyncId(this.scheduler, this.id, null));
-  }, t.prototype._execute = function(n, r2) {
-    var i2 = false, o2;
-    try {
-      this.work(n);
-    } catch (s2) {
-      i2 = true, o2 = s2 || new Error("Scheduled action threw falsy error");
-    }
-    if (i2)
-      return this.unsubscribe(), o2;
-  }, t.prototype.unsubscribe = function() {
-    if (!this.closed) {
-      var n = this, r2 = n.id, i2 = n.scheduler, o2 = i2.actions;
-      this.work = this.state = this.scheduler = null, this.pending = false, Ue(o2, this), r2 != null && (this.id = this.recycleAsyncId(i2, r2, null)), this.delay = null, e4.prototype.unsubscribe.call(this);
-    }
-  }, t;
-})(li);
-var Nt = (function() {
-  function e4(t, n) {
-    n === void 0 && (n = e4.now), this.schedulerActionCtor = t, this.now = n;
-  }
-  return e4.prototype.schedule = function(t, n, r2) {
-    return n === void 0 && (n = 0), new this.schedulerActionCtor(this, t).schedule(r2, n);
-  }, e4.now = ui.now, e4;
-})();
-var di = (function(e4) {
-  ne(t, e4);
-  function t(n, r2) {
-    r2 === void 0 && (r2 = Nt.now);
-    var i2 = e4.call(this, n, r2) || this;
-    return i2.actions = [], i2._active = false, i2;
-  }
-  return t.prototype.flush = function(n) {
-    var r2 = this.actions;
-    if (this._active) {
-      r2.push(n);
-      return;
-    }
-    var i2;
-    this._active = true;
-    do
-      if (i2 = n.execute(n.state, n.delay))
-        break;
-    while (n = r2.shift());
-    if (this._active = false, i2) {
-      for (; n = r2.shift(); )
-        n.unsubscribe();
-      throw i2;
-    }
-  }, t;
-})(Nt);
-var pi = new di(fi);
-function hi(e4) {
-  return e4 && P(e4.schedule);
-}
-function vi(e4) {
-  return e4[e4.length - 1];
-}
-function yt(e4) {
-  return hi(vi(e4)) ? e4.pop() : void 0;
-}
-var wt = (function(e4) {
-  return e4 && typeof e4.length == "number" && typeof e4 != "function";
-});
-function hn(e4) {
-  return P(e4 == null ? void 0 : e4.then);
-}
-function vn(e4) {
-  return P(e4[bt]);
-}
-function mn(e4) {
-  return Symbol.asyncIterator && P(e4 == null ? void 0 : e4[Symbol.asyncIterator]);
-}
-function gn(e4) {
-  return new TypeError("You provided " + (e4 !== null && typeof e4 == "object" ? "an invalid object" : "'" + e4 + "'") + " where a stream was expected. You can provide an Observable, Promise, ReadableStream, Array, AsyncIterable, or Iterable.");
-}
-function mi() {
-  return typeof Symbol != "function" || !Symbol.iterator ? "@@iterator" : Symbol.iterator;
-}
-var bn = mi();
-function yn(e4) {
-  return P(e4 == null ? void 0 : e4[bn]);
-}
-function wn(e4) {
-  return Qr(this, arguments, function() {
-    var n, r2, i2, o2;
-    return un(this, function(s2) {
-      switch (s2.label) {
-        case 0:
-          n = e4.getReader(), s2.label = 1;
-        case 1:
-          s2.trys.push([1, , 9, 10]), s2.label = 2;
-        case 2:
-          return [4, ve(n.read())];
-        case 3:
-          return r2 = s2.sent(), i2 = r2.value, o2 = r2.done, o2 ? [4, ve(void 0)] : [3, 5];
-        case 4:
-          return [2, s2.sent()];
-        case 5:
-          return [4, ve(i2)];
-        case 6:
-          return [4, s2.sent()];
-        case 7:
-          return s2.sent(), [3, 2];
-        case 8:
-          return [3, 10];
-        case 9:
-          return n.releaseLock(), [7];
-        case 10:
-          return [2];
-      }
-    });
-  });
-}
-function xn(e4) {
-  return P(e4 == null ? void 0 : e4.getReader);
-}
-function z(e4) {
-  if (e4 instanceof k)
-    return e4;
-  if (e4 != null) {
-    if (vn(e4))
-      return gi(e4);
-    if (wt(e4))
-      return bi(e4);
-    if (hn(e4))
-      return yi(e4);
-    if (mn(e4))
-      return Sn(e4);
-    if (yn(e4))
-      return wi(e4);
-    if (xn(e4))
-      return xi(e4);
-  }
-  throw gn(e4);
-}
-function gi(e4) {
-  return new k(function(t) {
-    var n = e4[bt]();
-    if (P(n.subscribe))
-      return n.subscribe(t);
-    throw new TypeError("Provided object does not correctly implement Symbol.observable");
-  });
-}
-function bi(e4) {
-  return new k(function(t) {
-    for (var n = 0; n < e4.length && !t.closed; n++)
-      t.next(e4[n]);
-    t.complete();
-  });
-}
-function yi(e4) {
-  return new k(function(t) {
-    e4.then(function(n) {
-      t.closed || (t.next(n), t.complete());
-    }, function(n) {
-      return t.error(n);
-    }).then(null, dn);
-  });
-}
-function wi(e4) {
-  return new k(function(t) {
-    var n, r2;
-    try {
-      for (var i2 = ge(e4), o2 = i2.next(); !o2.done; o2 = i2.next()) {
-        var s2 = o2.value;
-        if (t.next(s2), t.closed)
-          return;
-      }
-    } catch (a) {
-      n = { error: a };
-    } finally {
-      try {
-        o2 && !o2.done && (r2 = i2.return) && r2.call(i2);
-      } finally {
-        if (n) throw n.error;
-      }
-    }
-    t.complete();
-  });
-}
-function Sn(e4) {
-  return new k(function(t) {
-    Si(e4, t).catch(function(n) {
-      return t.error(n);
-    });
-  });
-}
-function xi(e4) {
-  return Sn(wn(e4));
-}
-function Si(e4, t) {
-  var n, r2, i2, o2;
-  return Gr(this, void 0, void 0, function() {
-    var s2, a;
-    return un(this, function(c) {
-      switch (c.label) {
-        case 0:
-          c.trys.push([0, 5, 6, 11]), n = Jr(e4), c.label = 1;
-        case 1:
-          return [4, n.next()];
-        case 2:
-          if (r2 = c.sent(), !!r2.done) return [3, 4];
-          if (s2 = r2.value, t.next(s2), t.closed)
-            return [2];
-          c.label = 3;
-        case 3:
-          return [3, 1];
-        case 4:
-          return [3, 11];
-        case 5:
-          return a = c.sent(), i2 = { error: a }, [3, 11];
-        case 6:
-          return c.trys.push([6, , 9, 10]), r2 && !r2.done && (o2 = n.return) ? [4, o2.call(n)] : [3, 8];
-        case 7:
-          c.sent(), c.label = 8;
-        case 8:
-          return [3, 10];
-        case 9:
-          if (i2) throw i2.error;
-          return [7];
-        case 10:
-          return [7];
-        case 11:
-          return t.complete(), [2];
-      }
-    });
-  });
-}
-function oe(e4, t, n, r2, i2) {
-  r2 === void 0 && (r2 = 0), i2 === void 0 && (i2 = false);
-  var o2 = t.schedule(function() {
-    n(), i2 ? e4.add(this.schedule(null, r2)) : this.unsubscribe();
-  }, r2);
-  if (e4.add(o2), !i2)
-    return o2;
-}
-function Tn(e4, t) {
-  return t === void 0 && (t = 0), W(function(n, r2) {
-    n.subscribe(F(r2, function(i2) {
-      return oe(r2, e4, function() {
-        return r2.next(i2);
-      }, t);
-    }, function() {
-      return oe(r2, e4, function() {
-        return r2.complete();
-      }, t);
-    }, function(i2) {
-      return oe(r2, e4, function() {
-        return r2.error(i2);
-      }, t);
-    }));
-  });
-}
-function En(e4, t) {
-  return t === void 0 && (t = 0), W(function(n, r2) {
-    r2.add(e4.schedule(function() {
-      return n.subscribe(r2);
-    }, t));
-  });
-}
-function Ti(e4, t) {
-  return z(e4).pipe(En(t), Tn(t));
-}
-function Ei(e4, t) {
-  return z(e4).pipe(En(t), Tn(t));
-}
-function Ci(e4, t) {
-  return new k(function(n) {
-    var r2 = 0;
-    return t.schedule(function() {
-      r2 === e4.length ? n.complete() : (n.next(e4[r2++]), n.closed || this.schedule());
-    });
-  });
-}
-function Pi(e4, t) {
-  return new k(function(n) {
-    var r2;
-    return oe(n, t, function() {
-      r2 = e4[bn](), oe(n, t, function() {
-        var i2, o2, s2;
-        try {
-          i2 = r2.next(), o2 = i2.value, s2 = i2.done;
-        } catch (a) {
-          n.error(a);
-          return;
-        }
-        s2 ? n.complete() : n.next(o2);
-      }, 0, true);
-    }), function() {
-      return P(r2 == null ? void 0 : r2.return) && r2.return();
-    };
-  });
-}
-function Cn(e4, t) {
-  if (!e4)
-    throw new Error("Iterable cannot be null");
-  return new k(function(n) {
-    oe(n, t, function() {
-      var r2 = e4[Symbol.asyncIterator]();
-      oe(n, t, function() {
-        r2.next().then(function(i2) {
-          i2.done ? n.complete() : n.next(i2.value);
-        });
-      }, 0, true);
-    });
-  });
-}
-function Oi(e4, t) {
-  return Cn(wn(e4), t);
-}
-function Ai(e4, t) {
-  if (e4 != null) {
-    if (vn(e4))
-      return Ti(e4, t);
-    if (wt(e4))
-      return Ci(e4, t);
-    if (hn(e4))
-      return Ei(e4, t);
-    if (mn(e4))
-      return Cn(e4, t);
-    if (yn(e4))
-      return Pi(e4, t);
-    if (xn(e4))
-      return Oi(e4, t);
-  }
-  throw gn(e4);
-}
-function Je(e4, t) {
-  return t ? Ai(e4, t) : z(e4);
-}
-function Ft() {
-  for (var e4 = [], t = 0; t < arguments.length; t++)
-    e4[t] = arguments[t];
-  var n = yt(e4);
-  return Je(e4, n);
-}
-function ki(e4) {
-  return e4 instanceof Date && !isNaN(e4);
-}
-var _i = mt(function(e4) {
-  return function(n) {
-    n === void 0 && (n = null), e4(this), this.message = "Timeout has occurred", this.name = "TimeoutError", this.info = n;
-  };
-});
-function Li(e4, t) {
-  var n = ki(e4) ? { first: e4 } : typeof e4 == "number" ? { each: e4 } : e4, r2 = n.first, i2 = n.each, o2 = n.with, s2 = o2 === void 0 ? Ii : o2, a = n.scheduler, c = a === void 0 ? pi : a, u = n.meta, l = u === void 0 ? null : u;
-  if (r2 == null && i2 == null)
-    throw new TypeError("No timeout provided.");
-  return W(function(f, v) {
-    var d, m, p = null, g = 0, h2 = function(x2) {
-      m = oe(v, c, function() {
-        try {
-          d.unsubscribe(), z(s2({
-            meta: l,
-            lastValue: p,
-            seen: g
-          })).subscribe(v);
-        } catch (E) {
-          v.error(E);
-        }
-      }, x2);
-    };
-    d = f.subscribe(F(v, function(x2) {
-      m == null || m.unsubscribe(), g++, v.next(p = x2), i2 > 0 && h2(i2);
-    }, void 0, void 0, function() {
-      m != null && m.closed || m == null || m.unsubscribe(), p = null;
-    })), !g && h2(r2 != null ? typeof r2 == "number" ? r2 : +r2 - c.now() : i2);
-  });
-}
-function Ii(e4) {
-  throw new _i(e4);
-}
-function A(e4, t) {
-  return W(function(n, r2) {
-    var i2 = 0;
-    n.subscribe(F(r2, function(o2) {
-      r2.next(e4.call(t, o2, i2++));
-    }));
-  });
-}
-var Mi = Array.isArray;
-function Ri(e4, t) {
-  return Mi(t) ? e4.apply(void 0, be([], de(t))) : e4(t);
-}
-function Di(e4) {
-  return A(function(t) {
-    return Ri(e4, t);
-  });
-}
-function $i(e4, t, n, r2, i2, o2, s2, a) {
-  var c = [], u = 0, l = 0, f = false, v = function() {
-    f && !c.length && !u && t.complete();
-  }, d = function(p) {
-    return u < r2 ? m(p) : c.push(p);
-  }, m = function(p) {
-    u++;
-    var g = false;
-    z(n(p, l++)).subscribe(F(t, function(h2) {
-      t.next(h2);
-    }, function() {
-      g = true;
-    }, void 0, function() {
-      if (g)
-        try {
-          u--;
-          for (var h2 = function() {
-            var x2 = c.shift();
-            s2 || m(x2);
-          }; c.length && u < r2; )
-            h2();
-          v();
-        } catch (x2) {
-          t.error(x2);
-        }
-    }));
-  };
-  return e4.subscribe(F(t, d, function() {
-    f = true, v();
-  })), function() {
-  };
-}
-function xt(e4, t, n) {
-  return n === void 0 && (n = 1 / 0), P(t) ? xt(function(r2, i2) {
-    return A(function(o2, s2) {
-      return t(r2, o2, i2, s2);
-    })(z(e4(r2, i2)));
-  }, n) : (typeof t == "number" && (n = t), W(function(r2, i2) {
-    return $i(r2, i2, e4, n);
-  }));
-}
-function Ni(e4) {
-  return xt(Qe, e4);
-}
-function Fi() {
-  return Ni(1);
-}
-function je() {
-  for (var e4 = [], t = 0; t < arguments.length; t++)
-    e4[t] = arguments[t];
-  return Fi()(Je(e4, yt(e4)));
-}
-var Ui = ["addListener", "removeListener"];
-var Wi = ["addEventListener", "removeEventListener"];
-var ji = ["on", "off"];
-function ut(e4, t, n, r2) {
-  if (P(n) && (r2 = n, n = void 0), r2)
-    return ut(e4, t, n).pipe(Di(r2));
-  var i2 = de(Hi(e4) ? Wi.map(function(a) {
-    return function(c) {
-      return e4[a](t, c, n);
-    };
-  }) : Bi(e4) ? Ui.map(Ut(e4, t)) : Vi(e4) ? ji.map(Ut(e4, t)) : [], 2), o2 = i2[0], s2 = i2[1];
-  if (!o2 && wt(e4))
-    return xt(function(a) {
-      return ut(a, t, n);
-    })(z(e4));
-  if (!o2)
-    throw new TypeError("Invalid event target");
-  return new k(function(a) {
-    var c = function() {
-      for (var u = [], l = 0; l < arguments.length; l++)
-        u[l] = arguments[l];
-      return a.next(1 < u.length ? u : u[0]);
-    };
-    return o2(c), function() {
-      return s2(c);
-    };
-  });
-}
-function Ut(e4, t) {
-  return function(n) {
-    return function(r2) {
-      return e4[n](t, r2);
-    };
-  };
-}
-function Bi(e4) {
-  return P(e4.addListener) && P(e4.removeListener);
-}
-function Vi(e4) {
-  return P(e4.on) && P(e4.off);
-}
-function Hi(e4) {
-  return P(e4.addEventListener) && P(e4.removeEventListener);
-}
-function Xe(e4, t) {
-  return W(function(n, r2) {
-    var i2 = 0;
-    n.subscribe(F(r2, function(o2) {
-      return e4.call(t, o2, i2++) && r2.next(o2);
-    }));
-  });
-}
-function zi(e4, t, n, r2, i2) {
-  return function(o2, s2) {
-    var a = n, c = t, u = 0;
-    o2.subscribe(F(s2, function(l) {
-      var f = u++;
-      c = a ? e4(c, l, f) : (a = true, l), s2.next(c);
-    }, i2));
-  };
-}
-function Yi(e4, t) {
-  return t === void 0 && (t = Qe), e4 = e4 ?? qi, W(function(n, r2) {
-    var i2, o2 = true;
-    n.subscribe(F(r2, function(s2) {
-      var a = t(s2);
-      (o2 || !e4(i2, a)) && (o2 = false, i2 = a, r2.next(s2));
-    }));
-  });
-}
-function qi(e4, t) {
-  return e4 === t;
-}
-function lt(e4, t) {
-  return W(zi(e4, t, arguments.length >= 2, true));
-}
-function Ki(e4) {
-  e4 === void 0 && (e4 = {});
-  var t = e4.connector, n = t === void 0 ? function() {
-    return new te();
-  } : t, r2 = e4.resetOnError, i2 = r2 === void 0 ? true : r2, o2 = e4.resetOnComplete, s2 = o2 === void 0 ? true : o2, a = e4.resetOnRefCountZero, c = a === void 0 ? true : a;
-  return function(u) {
-    var l, f, v, d = 0, m = false, p = false, g = function() {
-      f == null || f.unsubscribe(), f = void 0;
-    }, h2 = function() {
-      g(), l = v = void 0, m = p = false;
-    }, x2 = function() {
-      var E = l;
-      h2(), E == null || E.unsubscribe();
-    };
-    return W(function(E, O3) {
-      d++, !p && !m && g();
-      var b = v = v ?? n();
-      O3.add(function() {
-        d--, d === 0 && !p && !m && (f = nt(x2, c));
-      }), b.subscribe(O3), !l && d > 0 && (l = new Pe({
-        next: function(S) {
-          return b.next(S);
-        },
-        error: function(S) {
-          p = true, g(), f = nt(h2, i2, S), b.error(S);
-        },
-        complete: function() {
-          m = true, g(), f = nt(h2, s2), b.complete();
-        }
-      }), z(E).subscribe(l));
-    })(u);
-  };
-}
-function nt(e4, t) {
-  for (var n = [], r2 = 2; r2 < arguments.length; r2++)
-    n[r2 - 2] = arguments[r2];
-  if (t === true) {
-    e4();
-    return;
-  }
-  if (t !== false) {
-    var i2 = new Pe({
-      next: function() {
-        i2.unsubscribe(), e4();
-      }
-    });
-    return z(t.apply(void 0, be([], de(n)))).subscribe(i2);
-  }
-}
-function Gi(e4) {
-  return W(function(t, n) {
-    var r2 = false, i2 = F(n, function() {
-      i2 == null || i2.unsubscribe(), r2 = true;
-    }, We);
-    z(e4).subscribe(i2), t.subscribe(F(n, function(o2) {
-      return r2 && n.next(o2);
-    }));
-  });
-}
-function D() {
-  for (var e4 = [], t = 0; t < arguments.length; t++)
-    e4[t] = arguments[t];
-  var n = yt(e4);
-  return W(function(r2, i2) {
-    (n ? je(e4, r2, n) : je(e4, r2)).subscribe(i2);
-  });
-}
-function Pn(e4, t) {
-  return W(function(n, r2) {
-    var i2 = null, o2 = 0, s2 = false, a = function() {
-      return s2 && !i2 && r2.complete();
-    };
-    n.subscribe(F(r2, function(c) {
-      i2 == null || i2.unsubscribe();
-      var u = 0, l = o2++;
-      z(e4(c, l)).subscribe(i2 = F(r2, function(f) {
-        return r2.next(t ? t(c, f, l, u++) : f);
-      }, function() {
-        i2 = null, a();
-      }));
-    }, function() {
-      s2 = true, a();
-    }));
-  });
-}
-function Wt(e4) {
-  return W(function(t, n) {
-    z(e4).subscribe(F(n, function() {
-      return n.complete();
-    }, We)), !n.closed && t.subscribe(n);
-  });
-}
-function Qi(e4, t, n) {
-  var r2 = P(e4) || t || n ? { next: e4, error: t, complete: n } : e4;
-  return r2 ? W(function(i2, o2) {
-    var s2;
-    (s2 = r2.subscribe) === null || s2 === void 0 || s2.call(r2);
-    var a = true;
-    i2.subscribe(F(o2, function(c) {
-      var u;
-      (u = r2.next) === null || u === void 0 || u.call(r2, c), o2.next(c);
-    }, function() {
-      var c;
-      a = false, (c = r2.complete) === null || c === void 0 || c.call(r2), o2.complete();
-    }, function(c) {
-      var u;
-      a = false, (u = r2.error) === null || u === void 0 || u.call(r2, c), o2.error(c);
-    }, function() {
-      var c, u;
-      a && ((c = r2.unsubscribe) === null || c === void 0 || c.call(r2)), (u = r2.finalize) === null || u === void 0 || u.call(r2);
-    }));
-  }) : Qe;
-}
-var Ji = Object.defineProperty;
-var Xi = Object.defineProperties;
-var Zi = Object.getOwnPropertyDescriptors;
-var jt = Object.getOwnPropertySymbols;
-var eo = Object.prototype.hasOwnProperty;
-var to = Object.prototype.propertyIsEnumerable;
-var Bt = (e4, t, n) => t in e4 ? Ji(e4, t, { enumerable: true, configurable: true, writable: true, value: n }) : e4[t] = n;
-var q = (e4, t) => {
-  for (var n in t || (t = {}))
-    eo.call(t, n) && Bt(e4, n, t[n]);
-  if (jt)
-    for (var n of jt(t))
-      to.call(t, n) && Bt(e4, n, t[n]);
-  return e4;
-};
-var ce = (e4, t) => Xi(e4, Zi(t));
-var H = (e4, t, n) => new Promise((r2, i2) => {
-  var o2 = (c) => {
-    try {
-      a(n.next(c));
-    } catch (u) {
-      i2(u);
-    }
-  }, s2 = (c) => {
-    try {
-      a(n.throw(c));
-    } catch (u) {
-      i2(u);
-    }
-  }, a = (c) => c.done ? r2(c.value) : Promise.resolve(c.value).then(o2, s2);
-  a((n = n.apply(e4, t)).next());
-});
-var On = "lk";
-function B(e4) {
-  return typeof e4 > "u" ? false : no(e4) || ro(e4);
-}
-function no(e4) {
-  var t;
-  return e4 ? e4.hasOwnProperty("participant") && e4.hasOwnProperty("source") && e4.hasOwnProperty("track") && typeof ((t = e4.publication) == null ? void 0 : t.track) < "u" : false;
-}
-function ro(e4) {
-  return e4 ? e4.hasOwnProperty("participant") && e4.hasOwnProperty("source") && e4.hasOwnProperty("publication") && typeof e4.publication < "u" : false;
-}
-function Oe(e4) {
-  return e4 ? e4.hasOwnProperty("participant") && e4.hasOwnProperty("source") && typeof e4.publication > "u" : false;
-}
-function N(e4) {
-  if (typeof e4 == "string" || typeof e4 == "number")
-    return `${e4}`;
-  if (Oe(e4))
-    return `${e4.participant.identity}_${e4.source}_placeholder`;
-  if (B(e4))
-    return `${e4.participant.identity}_${e4.publication.source}_${e4.publication.trackSid}`;
-  throw new Error(`Can't generate a id for the given track reference: ${e4}`);
-}
-function ts(e4, t) {
-  return e4 === void 0 || t === void 0 ? false : B(e4) && B(t) ? e4.publication.trackSid === t.publication.trackSid : N(e4) === N(t);
-}
-function ns(e4, t) {
-  return typeof t > "u" ? false : B(e4) ? t.some(
-    (n) => n.participant.identity === e4.participant.identity && B(n) && n.publication.trackSid === e4.publication.trackSid
-  ) : Oe(e4) ? t.some(
-    (n) => n.participant.identity === e4.participant.identity && Oe(n) && n.source === e4.source
-  ) : false;
-}
-function io(e4, t) {
-  return Oe(e4) && B(t) && t.participant.identity === e4.participant.identity && t.source === e4.source;
-}
-function rs() {
-  const e4 = document.createElement("p");
-  e4.style.width = "100%", e4.style.height = "200px";
-  const t = document.createElement("div");
-  t.style.position = "absolute", t.style.top = "0px", t.style.left = "0px", t.style.visibility = "hidden", t.style.width = "200px", t.style.height = "150px", t.style.overflow = "hidden", t.appendChild(e4), document.body.appendChild(t);
-  const n = e4.offsetWidth;
-  t.style.overflow = "scroll";
-  let r2 = e4.offsetWidth;
-  return n === r2 && (r2 = t.clientWidth), document.body.removeChild(t), n - r2;
-}
-function is() {
-  return typeof document < "u";
-}
-function oo(e4) {
-  e4 = q({}, e4);
-  const t = "(?:(?:[a-z]+:)?//)?", n = "(?:\\S+(?::\\S*)?@)?", r2 = new RegExp(
-    "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}",
-    "g"
-  ).source, u = `(?:${t}|www\\.)${n}(?:localhost|${r2}|(?:(?:[a-z\\u00a1-\\uffff0-9][-_]*)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))\\.?)(?::\\d{2,5})?(?:[/?#][^\\s"]*)?`;
-  return e4.exact ? new RegExp(`(?:^${u}$)`, "i") : new RegExp(u, "ig");
-}
-var Vt = "[^\\.\\s@:](?:[^\\s@:]*[^\\s@:\\.])?@[^\\.\\s@]+(?:\\.[^\\.\\s@]+)*";
-function so({ exact: e4 } = {}) {
-  return e4 ? new RegExp(`^${Vt}$`) : new RegExp(Vt, "g");
-}
-function os(e4, t, n) {
-  return Ur(e4, t, () => H(this, null, function* () {
-    const { x: i2, y: o2 } = yield Vr(e4, t, {
-      placement: "top",
-      middleware: [Wr(6), Br(), jr({ padding: 5 })]
-    });
-    n == null || n(i2, o2);
-  }));
-}
-function ss(e4, t) {
-  return !e4.contains(t.target);
-}
-var as = () => ({
-  email: so(),
-  url: oo({})
-});
-function cs(e4, t) {
-  const n = Object.entries(t).map(
-    ([o2, s2], a) => Array.from(e4.matchAll(s2)).map(({ index: c, 0: u }) => ({
-      type: o2,
-      weight: a,
-      content: u,
-      index: c ?? 0
-    }))
-  ).flat().sort((o2, s2) => {
-    const a = o2.index - s2.index;
-    return a !== 0 ? a : o2.weight - s2.weight;
-  }).filter(({ index: o2 }, s2, a) => {
-    if (s2 === 0) return true;
-    const c = a[s2 - 1];
-    return c.index + c.content.length <= o2;
-  }), r2 = [];
-  let i2 = 0;
-  for (const { type: o2, content: s2, index: a } of n)
-    a > i2 && r2.push(e4.substring(i2, a)), r2.push({ type: o2, content: s2 }), i2 = a + s2.length;
-  return e4.length > i2 && r2.push(e4.substring(i2)), r2;
-}
-var ao = [
-  RoomEvent.ConnectionStateChanged,
-  RoomEvent.RoomMetadataChanged,
-  RoomEvent.ActiveSpeakersChanged,
-  RoomEvent.ConnectionQualityChanged,
-  RoomEvent.ParticipantConnected,
-  RoomEvent.ParticipantDisconnected,
-  RoomEvent.ParticipantPermissionsChanged,
-  RoomEvent.ParticipantMetadataChanged,
-  RoomEvent.ParticipantNameChanged,
-  RoomEvent.ParticipantAttributesChanged,
-  RoomEvent.TrackMuted,
-  RoomEvent.TrackUnmuted,
-  RoomEvent.TrackPublished,
-  RoomEvent.TrackUnpublished,
-  RoomEvent.TrackStreamStateChanged,
-  RoomEvent.TrackSubscriptionFailed,
-  RoomEvent.TrackSubscriptionPermissionChanged,
-  RoomEvent.TrackSubscriptionStatusChanged
-];
-var An = [
-  ...ao,
-  RoomEvent.LocalTrackPublished,
-  RoomEvent.LocalTrackUnpublished
-];
-var co = [
-  ParticipantEvent.TrackPublished,
-  ParticipantEvent.TrackUnpublished,
-  ParticipantEvent.TrackMuted,
-  ParticipantEvent.TrackUnmuted,
-  ParticipantEvent.TrackStreamStateChanged,
-  ParticipantEvent.TrackSubscribed,
-  ParticipantEvent.TrackUnsubscribed,
-  ParticipantEvent.TrackSubscriptionPermissionChanged,
-  ParticipantEvent.TrackSubscriptionFailed,
-  ParticipantEvent.LocalTrackPublished,
-  ParticipantEvent.LocalTrackUnpublished
-];
-var uo = [
-  ParticipantEvent.ConnectionQualityChanged,
-  ParticipantEvent.IsSpeakingChanged,
-  ParticipantEvent.ParticipantMetadataChanged,
-  ParticipantEvent.ParticipantPermissionsChanged,
-  ParticipantEvent.TrackMuted,
-  ParticipantEvent.TrackUnmuted,
-  ParticipantEvent.TrackPublished,
-  ParticipantEvent.TrackUnpublished,
-  ParticipantEvent.TrackStreamStateChanged,
-  ParticipantEvent.TrackSubscriptionFailed,
-  ParticipantEvent.TrackSubscriptionPermissionChanged,
-  ParticipantEvent.TrackSubscriptionStatusChanged
-];
-var kn = [
-  ...uo,
-  ParticipantEvent.LocalTrackPublished,
-  ParticipantEvent.LocalTrackUnpublished
-];
-var L = Kr.getLogger("lk-components-js");
-L.setDefaultLevel("WARN");
-function us(e4, t = {}) {
-  var n;
-  L.setLevel(e4), setLogLevel((n = t.liveKitClientLogLevel) != null ? n : e4);
-}
-function ls(e4, t = {}) {
-  var n;
-  const r2 = L.methodFactory;
-  L.methodFactory = (i2, o2, s2) => {
-    const a = r2(i2, o2, s2), c = LogLevel[i2], u = c >= o2 && c < LogLevel.silent;
-    return (l, f) => {
-      f ? a(l, f) : a(l), u && e4(c, l, f);
-    };
-  }, L.setLevel(L.getLevel()), setLogExtension((n = t.liveKitClientLogExtension) != null ? n : e4);
-}
-var fs = [
-  {
-    columns: 1,
-    rows: 1
-  },
-  {
-    columns: 1,
-    rows: 2,
-    orientation: "portrait"
-  },
-  {
-    columns: 2,
-    rows: 1,
-    orientation: "landscape"
-  },
-  {
-    columns: 2,
-    rows: 2,
-    minWidth: 560
-  },
-  {
-    columns: 3,
-    rows: 3,
-    minWidth: 700
-  },
-  {
-    columns: 4,
-    rows: 4,
-    minWidth: 960
-  },
-  {
-    columns: 5,
-    rows: 5,
-    minWidth: 1100
-  }
-];
-function lo(e4, t, n, r2) {
-  if (e4.length < 1)
-    throw new Error("At least one grid layout definition must be provided.");
-  const i2 = fo(e4);
-  if (n <= 0 || r2 <= 0)
-    return i2[0];
-  let o2 = 0;
-  const s2 = n / r2 > 1 ? "landscape" : "portrait";
-  let a = i2.find((c, u, l) => {
-    o2 = u;
-    const f = l.findIndex((v, d) => {
-      const m = !v.orientation || v.orientation === s2, p = d > u, g = v.maxTiles === c.maxTiles;
-      return p && g && m;
-    }) !== -1;
-    return c.maxTiles >= t && !f;
-  });
-  if (a === void 0)
-    if (a = i2[i2.length - 1], a)
-      L.warn(
-        `No layout found for: participantCount: ${t}, width/height: ${n}/${r2} fallback to biggest available layout (${a}).`
-      );
-    else
-      throw new Error("No layout or fallback layout found.");
-  if ((n < a.minWidth || r2 < a.minHeight) && o2 > 0) {
-    const c = i2[o2 - 1];
-    a = lo(
-      i2.slice(0, o2),
-      c.maxTiles,
-      n,
-      r2
-    );
-  }
-  return a;
-}
-function fo(e4) {
-  return [...e4].map((t) => {
-    var n, r2;
-    return {
-      name: `${t.columns}x${t.rows}`,
-      columns: t.columns,
-      rows: t.rows,
-      maxTiles: t.columns * t.rows,
-      minWidth: (n = t.minWidth) != null ? n : 0,
-      minHeight: (r2 = t.minHeight) != null ? r2 : 0,
-      orientation: t.orientation
-    };
-  }).sort((t, n) => t.maxTiles !== n.maxTiles ? t.maxTiles - n.maxTiles : t.minWidth !== 0 || n.minWidth !== 0 ? t.minWidth - n.minWidth : t.minHeight !== 0 || n.minHeight !== 0 ? t.minHeight - n.minHeight : 0);
-}
-function ds() {
-  return typeof navigator < "u" && navigator.mediaDevices && !!navigator.mediaDevices.getDisplayMedia;
-}
-function ps(e4, t) {
-  var n;
-  return ce(q({}, e4), {
-    receivedAtMediaTimestamp: (n = t.rtpTimestamp) != null ? n : 0,
-    receivedAt: t.timestamp
-  });
-}
-function hs(e4, t, n) {
-  return [...e4, ...t].reduceRight((r2, i2) => (r2.find((o2) => o2.id === i2.id) || r2.unshift(i2), r2), []).slice(0 - n);
-}
-var po = ((e4) => (e4.AgentState = "lk.agent.state", e4.PublishOnBehalf = "lk.publish_on_behalf", e4.TranscriptionFinal = "lk.transcription_final", e4.TranscriptionSegmentId = "lk.segment_id", e4.TranscribedTrackId = "lk.transcribed_track_id", e4))(po || {});
-var _n = [];
-var Ln = {
-  showChat: false,
-  unreadMessages: 0,
-  showSettings: false
-};
-function ho(e4) {
-  return typeof e4 == "object";
-}
-function vs(e4) {
-  return Array.isArray(e4) && e4.filter(ho).length > 0;
-}
-function In(e4, t) {
-  return t.audioLevel - e4.audioLevel;
-}
-function Mn(e4, t) {
-  return e4.isSpeaking === t.isSpeaking ? 0 : e4.isSpeaking ? -1 : 1;
-}
-function Rn(e4, t) {
-  var n, r2, i2, o2;
-  return e4.lastSpokeAt !== void 0 || t.lastSpokeAt !== void 0 ? ((r2 = (n = t.lastSpokeAt) == null ? void 0 : n.getTime()) != null ? r2 : 0) - ((o2 = (i2 = e4.lastSpokeAt) == null ? void 0 : i2.getTime()) != null ? o2 : 0) : 0;
-}
-function Be(e4, t) {
-  var n, r2, i2, o2;
-  return ((r2 = (n = e4.joinedAt) == null ? void 0 : n.getTime()) != null ? r2 : 0) - ((o2 = (i2 = t.joinedAt) == null ? void 0 : i2.getTime()) != null ? o2 : 0);
-}
-function vo(e4, t) {
-  return B(e4) ? B(t) ? 0 : -1 : B(t) ? 1 : 0;
-}
-function mo(e4, t) {
-  const n = e4.participant.isCameraEnabled, r2 = t.participant.isCameraEnabled;
-  return n !== r2 ? n ? -1 : 1 : 0;
-}
-function ms(e4) {
-  const t = [], n = [], r2 = [], i2 = [];
-  e4.forEach((a) => {
-    a.participant.isLocal && a.source === Track.Source.Camera ? t.push(a) : a.source === Track.Source.ScreenShare ? n.push(a) : a.source === Track.Source.Camera ? r2.push(a) : i2.push(a);
-  });
-  const o2 = go(n), s2 = bo(r2);
-  return [...t, ...o2, ...s2, ...i2];
-}
-function go(e4) {
-  const t = [], n = [];
-  return e4.forEach((i2) => {
-    i2.participant.isLocal ? t.push(i2) : n.push(i2);
-  }), t.sort((i2, o2) => Be(i2.participant, o2.participant)), n.sort((i2, o2) => Be(i2.participant, o2.participant)), [...n, ...t];
-}
-function bo(e4) {
-  const t = [], n = [];
-  return e4.forEach((r2) => {
-    r2.participant.isLocal ? t.push(r2) : n.push(r2);
-  }), n.sort((r2, i2) => r2.participant.isSpeaking && i2.participant.isSpeaking ? In(r2.participant, i2.participant) : r2.participant.isSpeaking !== i2.participant.isSpeaking ? Mn(r2.participant, i2.participant) : r2.participant.lastSpokeAt !== i2.participant.lastSpokeAt ? Rn(r2.participant, i2.participant) : B(r2) !== B(i2) ? vo(r2, i2) : r2.participant.isCameraEnabled !== i2.participant.isCameraEnabled ? mo(r2, i2) : Be(r2.participant, i2.participant)), [...t, ...n];
-}
-function gs(e4) {
-  const t = [...e4];
-  t.sort((r2, i2) => {
-    if (r2.isSpeaking && i2.isSpeaking)
-      return In(r2, i2);
-    if (r2.isSpeaking !== i2.isSpeaking)
-      return Mn(r2, i2);
-    if (r2.lastSpokeAt !== i2.lastSpokeAt)
-      return Rn(r2, i2);
-    const o2 = r2.videoTrackPublications.size > 0, s2 = i2.videoTrackPublications.size > 0;
-    return o2 !== s2 ? o2 ? -1 : 1 : Be(r2, i2);
-  });
-  const n = t.find((r2) => r2.isLocal);
-  if (n) {
-    const r2 = t.indexOf(n);
-    r2 >= 0 && (t.splice(r2, 1), t.length > 0 ? t.splice(0, 0, n) : t.push(n));
-  }
-  return t;
-}
-function yo(e4, t) {
-  return e4.reduce(
-    (n, r2, i2) => i2 % t === 0 ? [...n, [r2]] : [...n.slice(0, -1), [...n.slice(-1)[0], r2]],
-    []
-  );
-}
-function Ht(e4, t) {
-  const n = Math.max(e4.length, t.length);
-  return new Array(n).fill([]).map((r2, i2) => [e4[i2], t[i2]]);
-}
-function Ve(e4, t, n) {
-  return e4.filter((r2) => !t.map((i2) => n(i2)).includes(n(r2)));
-}
-function ft(e4) {
-  return e4.map((t) => typeof t == "string" || typeof t == "number" ? `${t}` : N(t));
-}
-function wo(e4, t) {
-  return {
-    dropped: Ve(e4, t, N),
-    added: Ve(t, e4, N)
-  };
-}
-function xo(e4) {
-  return e4.added.length !== 0 || e4.dropped.length !== 0;
-}
-function dt(e4, t) {
-  const n = t.findIndex(
-    (r2) => N(r2) === N(e4)
-  );
-  if (n === -1)
-    throw new Error(
-      `Element not part of the array: ${N(
-        e4
-      )} not in ${ft(t)}`
-    );
-  return n;
-}
-function So(e4, t, n) {
-  const r2 = dt(e4, n), i2 = dt(t, n);
-  return n.splice(r2, 1, t), n.splice(i2, 1, e4), n;
-}
-function To(e4, t) {
-  const n = dt(e4, t);
-  return t.splice(n, 1), t;
-}
-function Eo(e4, t) {
-  return [...t, e4];
-}
-function rt(e4, t) {
-  return yo(e4, t);
-}
-function bs(e4, t, n) {
-  let r2 = Co(e4, t);
-  if (r2.length < t.length) {
-    const s2 = Ve(t, r2, N);
-    r2 = [...r2, ...s2];
-  }
-  const i2 = rt(r2, n), o2 = rt(t, n);
-  if (Ht(i2, o2).forEach(([s2, a], c) => {
-    if (s2 && a) {
-      const u = rt(r2, n)[c], l = wo(u, a);
-      xo(l) && (L.debug(
-        `Detected visual changes on page: ${c}, current: ${ft(
-          s2
-        )}, next: ${ft(a)}`,
-        { changes: l }
-      ), l.added.length === l.dropped.length && Ht(l.added, l.dropped).forEach(([f, v]) => {
-        if (f && v)
-          r2 = So(f, v, r2);
-        else
-          throw new Error(
-            `For a swap action we need a addition and a removal one is missing: ${f}, ${v}`
-          );
-      }), l.added.length === 0 && l.dropped.length > 0 && l.dropped.forEach((f) => {
-        r2 = To(f, r2);
-      }), l.added.length > 0 && l.dropped.length === 0 && l.added.forEach((f) => {
-        r2 = Eo(f, r2);
-      }));
-    }
-  }), r2.length > t.length) {
-    const s2 = Ve(r2, t, N);
-    r2 = r2.filter(
-      (a) => !s2.map(N).includes(N(a))
-    );
-  }
-  return r2;
-}
-function Co(e4, t) {
-  return e4.map((n) => {
-    const r2 = t.find(
-      (i2) => (
-        // If the IDs match or ..
-        N(n) === N(i2) || // ... if the current item is a placeholder and the new item is the track reference can replace it.
-        typeof n != "number" && Oe(n) && B(i2) && io(n, i2)
-      )
-    );
-    return r2 ?? n;
-  });
-}
-function U(e4) {
-  return `${On}-${e4}`;
-}
-function ys(e4) {
-  const t = zt(e4), n = Dn(e4.participant).pipe(
-    A(() => zt(e4)),
-    D(t)
-  );
-  return { className: U(
-    e4.source === Track.Source.Camera || e4.source === Track.Source.ScreenShare ? "participant-media-video" : "participant-media-audio"
-  ), trackObserver: n };
-}
-function zt(e4) {
-  if (B(e4))
-    return e4.publication;
-  {
-    const { source: t, name: n, participant: r2 } = e4;
-    if (t && n)
-      return r2.getTrackPublications().find((i2) => i2.source === t && i2.trackName === n);
-    if (n)
-      return r2.getTrackPublicationByName(n);
-    if (t)
-      return r2.getTrackPublication(t);
-    throw new Error("At least one of source and name needs to be defined");
-  }
-}
-function pe(e4, ...t) {
-  return new k((r2) => {
-    const i2 = () => {
-      r2.next(e4);
-    };
-    return t.forEach((s2) => {
-      e4.on(s2, i2);
-    }), () => {
-      t.forEach((s2) => {
-        e4.off(s2, i2);
-      });
-    };
-  }).pipe(D(e4));
-}
-function we(e4, t) {
-  return new k((r2) => {
-    const i2 = (...s2) => {
-      r2.next(s2);
-    };
-    return e4.on(t, i2), () => {
-      e4.off(t, i2);
-    };
-  });
-}
-function ws(e4) {
-  return we(e4, RoomEvent.ConnectionStateChanged).pipe(
-    A(([t]) => t),
-    D(e4.state)
-  );
-}
-function xs(e4) {
-  return pe(
-    e4,
-    RoomEvent.RoomMetadataChanged,
-    RoomEvent.ConnectionStateChanged
-  ).pipe(
-    A((n) => ({ name: n.name, metadata: n.metadata }))
-  );
-}
-function Ss(e4) {
-  return we(e4, RoomEvent.ActiveSpeakersChanged).pipe(
-    A(([t]) => t)
-  );
-}
-function Ts(e4, t, n = true) {
-  const r2 = new k((o2) => {
-    Room.getLocalDevices(e4, n).then((s2) => {
-      o2.next(s2), o2.complete();
-    }).catch((s2) => {
-      t == null || t(s2), o2.next([]), o2.complete();
-    });
-  }), i2 = new k((o2) => {
-    var s2;
-    const a = () => H(this, null, function* () {
-      try {
-        const c = yield Room.getLocalDevices(e4, n);
-        o2.next(c);
-      } catch (c) {
-        t == null || t(c);
-      }
-    });
-    if (typeof window < "u") {
-      if (!window.isSecureContext)
-        throw new Error(
-          "Accessing media devices is available only in secure contexts (HTTPS and localhost), in some or all supporting browsers. See: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/mediaDevices"
-        );
-      (s2 = navigator == null ? void 0 : navigator.mediaDevices) == null || s2.addEventListener("devicechange", a);
-    }
-    return () => {
-      var c;
-      (c = navigator == null ? void 0 : navigator.mediaDevices) == null || c.removeEventListener("devicechange", a);
-    };
-  });
-  return je(r2, i2);
-}
-function Po(e4) {
-  return we(e4, RoomEvent.DataReceived);
-}
-function Oo(e4) {
-  return pe(e4, RoomEvent.AudioPlaybackStatusChanged).pipe(
-    A((n) => ({ canPlayAudio: n.canPlaybackAudio }))
-  );
-}
-function Ao(e4) {
-  return pe(e4, RoomEvent.VideoPlaybackStatusChanged).pipe(
-    A((n) => ({ canPlayVideo: n.canPlaybackVideo }))
-  );
-}
-function ko(e4, t) {
-  return we(e4, RoomEvent.ActiveDeviceChanged).pipe(
-    Xe(([n]) => n === t),
-    A(([n, r2]) => (L.debug("activeDeviceObservable | RoomEvent.ActiveDeviceChanged", { kind: n, deviceId: r2 }), r2))
-  );
-}
-function Es(e4, t) {
-  return we(e4, RoomEvent.ParticipantEncryptionStatusChanged).pipe(
-    Xe(
-      ([, n]) => (t == null ? void 0 : t.identity) === (n == null ? void 0 : n.identity) || !n && (t == null ? void 0 : t.identity) === e4.localParticipant.identity
-    ),
-    A(([n]) => n),
-    D(
-      t != null && t.isLocal ? t.isE2EEEnabled : !!(t != null && t.isEncrypted)
-    )
-  );
-}
-function Cs(e4) {
-  return we(e4, RoomEvent.RecordingStatusChanged).pipe(
-    A(([t]) => t),
-    D(e4.isRecording)
-  );
-}
-function xe(e4, ...t) {
-  return new k((r2) => {
-    const i2 = () => {
-      r2.next(e4);
-    };
-    return t.forEach((s2) => {
-      e4.on(s2, i2);
-    }), () => {
-      t.forEach((s2) => {
-        e4.off(s2, i2);
-      });
-    };
-  }).pipe(D(e4));
-}
-function Dn(e4) {
-  return xe(
-    e4,
-    ParticipantEvent.TrackMuted,
-    ParticipantEvent.TrackUnmuted,
-    ParticipantEvent.ParticipantPermissionsChanged,
-    // ParticipantEvent.IsSpeakingChanged,
-    ParticipantEvent.TrackPublished,
-    ParticipantEvent.TrackUnpublished,
-    ParticipantEvent.LocalTrackPublished,
-    ParticipantEvent.LocalTrackUnpublished,
-    ParticipantEvent.MediaDevicesError,
-    ParticipantEvent.TrackSubscriptionStatusChanged
-    // ParticipantEvent.ConnectionQualityChanged,
-  ).pipe(
-    A((n) => {
-      const { isMicrophoneEnabled: r2, isCameraEnabled: i2, isScreenShareEnabled: o2 } = n, s2 = n.getTrackPublication(Track.Source.Microphone), a = n.getTrackPublication(Track.Source.Camera);
-      return {
-        isCameraEnabled: i2,
-        isMicrophoneEnabled: r2,
-        isScreenShareEnabled: o2,
-        cameraTrack: a,
-        microphoneTrack: s2,
-        participant: n
-      };
-    })
-  );
-}
-function _o(e4) {
-  return e4 ? xe(
-    e4,
-    ParticipantEvent.ParticipantMetadataChanged,
-    ParticipantEvent.ParticipantNameChanged
-  ).pipe(
-    A(({ name: n, identity: r2, metadata: i2 }) => ({
-      name: n,
-      identity: r2,
-      metadata: i2
-    })),
-    D({
-      name: e4.name,
-      identity: e4.identity,
-      metadata: e4.metadata
-    })
-  ) : void 0;
-}
-function Lo(e4) {
-  return Ze(
-    e4,
-    ParticipantEvent.ConnectionQualityChanged
-  ).pipe(
-    A(([n]) => n),
-    D(e4.connectionQuality)
-  );
-}
-function Ze(e4, t) {
-  return new k((r2) => {
-    const i2 = (...s2) => {
-      r2.next(s2);
-    };
-    return e4.on(t, i2), () => {
-      e4.off(t, i2);
-    };
-  });
-}
-function Io(e4) {
-  var t, n, r2, i2;
-  return xe(
-    e4.participant,
-    ParticipantEvent.TrackMuted,
-    ParticipantEvent.TrackUnmuted,
-    ParticipantEvent.TrackSubscribed,
-    ParticipantEvent.TrackUnsubscribed,
-    ParticipantEvent.LocalTrackPublished,
-    ParticipantEvent.LocalTrackUnpublished
-  ).pipe(
-    A((o2) => {
-      var s2, a;
-      const c = (s2 = e4.publication) != null ? s2 : o2.getTrackPublication(e4.source);
-      return (a = c == null ? void 0 : c.isMuted) != null ? a : true;
-    }),
-    D(
-      (i2 = (r2 = (t = e4.publication) == null ? void 0 : t.isMuted) != null ? r2 : (n = e4.participant.getTrackPublication(e4.source)) == null ? void 0 : n.isMuted) != null ? i2 : true
-    )
-  );
-}
-function Ps(e4) {
-  return Ze(e4, ParticipantEvent.IsSpeakingChanged).pipe(
-    A(([t]) => t)
-  );
-}
-function Os(e4, t = {}) {
-  var n;
-  let r2;
-  const i2 = new k((c) => (r2 = c, () => a.unsubscribe())).pipe(D(Array.from(e4.remoteParticipants.values()))), o2 = (n = t.additionalRoomEvents) != null ? n : An, s2 = Array.from(
-    /* @__PURE__ */ new Set([
-      RoomEvent.ParticipantConnected,
-      RoomEvent.ParticipantDisconnected,
-      RoomEvent.ConnectionStateChanged,
-      ...o2
-    ])
-  ), a = pe(e4, ...s2).subscribe(
-    (c) => r2 == null ? void 0 : r2.next(Array.from(c.remoteParticipants.values()))
-  );
-  return e4.remoteParticipants.size > 0 && (r2 == null || r2.next(Array.from(e4.remoteParticipants.values()))), i2;
-}
-function As(e4, t, n = {}) {
-  var r2;
-  const i2 = (r2 = n.additionalEvents) != null ? r2 : kn;
-  return pe(
-    e4,
-    RoomEvent.ParticipantConnected,
-    RoomEvent.ParticipantDisconnected,
-    RoomEvent.ConnectionStateChanged
-  ).pipe(
-    Pn((s2) => {
-      const a = s2.getParticipantByIdentity(t);
-      return a ? xe(a, ...i2) : new k((c) => c.next(void 0));
-    }),
-    D(e4.getParticipantByIdentity(t))
-  );
-}
-function ks(e4) {
-  return Ze(
-    e4,
-    ParticipantEvent.ParticipantPermissionsChanged
-  ).pipe(
-    A(() => e4.permissions),
-    D(e4.permissions)
-  );
-}
-function _s(e4, { kind: t, identity: n }, r2 = {}) {
-  var i2;
-  const o2 = (i2 = r2.additionalEvents) != null ? i2 : kn, s2 = (c) => {
-    let u = true;
-    return t && (u = u && c.kind === t), n && (u = u && c.identity === n), u;
-  };
-  return pe(
-    e4,
-    RoomEvent.ParticipantConnected,
-    RoomEvent.ParticipantDisconnected,
-    RoomEvent.ConnectionStateChanged
-  ).pipe(
-    Pn((c) => {
-      const u = Array.from(c.remoteParticipants.values()).find(
-        (l) => s2(l)
-      );
-      return u ? xe(u, ...o2) : new k((l) => l.next(void 0));
-    }),
-    D(Array.from(e4.remoteParticipants.values()).find((c) => s2(c)))
-  );
-}
-function Ls(e4) {
-  return typeof e4 > "u" ? new k() : Ze(e4, ParticipantEvent.AttributesChanged).pipe(
-    A(([t]) => ({
-      changed: t,
-      attributes: e4.attributes
-    })),
-    D({ changed: e4.attributes, attributes: e4.attributes })
-  );
-}
-function Is(e4, t, n, r2, i2) {
-  const { localParticipant: o2 } = t, s2 = (f, v) => {
-    let d = false;
-    switch (f) {
-      case Track.Source.Camera:
-        d = v.isCameraEnabled;
-        break;
-      case Track.Source.Microphone:
-        d = v.isMicrophoneEnabled;
-        break;
-      case Track.Source.ScreenShare:
-        d = v.isScreenShareEnabled;
-        break;
-    }
-    return d;
-  }, a = Dn(o2).pipe(
-    A((f) => s2(e4, f.participant)),
-    D(s2(e4, o2))
-  ), c = new te(), u = (f, v) => H(this, null, function* () {
-    try {
-      switch (v ?? (v = n), c.next(true), e4) {
-        case Track.Source.Camera:
-          return yield o2.setCameraEnabled(
-            f ?? !o2.isCameraEnabled,
-            v,
-            r2
-          ), o2.isCameraEnabled;
-        case Track.Source.Microphone:
-          return yield o2.setMicrophoneEnabled(
-            f ?? !o2.isMicrophoneEnabled,
-            v,
-            r2
-          ), o2.isMicrophoneEnabled;
-        case Track.Source.ScreenShare:
-          return yield o2.setScreenShareEnabled(
-            f ?? !o2.isScreenShareEnabled,
-            v,
-            r2
-          ), o2.isScreenShareEnabled;
-        default:
-          throw new TypeError("Tried to toggle unsupported source");
-      }
-    } catch (d) {
-      if (i2 && d instanceof Error) {
-        i2 == null || i2(d);
-        return;
-      } else
-        throw d;
-    } finally {
-      c.next(false);
-    }
-  });
-  return {
-    className: U("button"),
-    toggle: u,
-    enabledObserver: a,
-    pendingObserver: c.asObservable()
-  };
-}
-function Ms() {
-  let e4 = false;
-  const t = new te(), n = new te(), r2 = (o2) => H(this, null, function* () {
-    n.next(true), e4 = o2 ?? !e4, t.next(e4), n.next(false);
-  });
-  return {
-    className: U("button"),
-    toggle: r2,
-    enabledObserver: t.asObservable(),
-    pendingObserver: n.asObservable()
-  };
-}
-function Rs(e4, t, n) {
-  const r2 = new pn(void 0), i2 = ko(t, e4), o2 = (a, ...c) => H(this, [a, ...c], function* (u, l = {}) {
-    var f, v, d;
-    if (t) {
-      const m = getBrowser();
-      if (e4 === "audiooutput" && ((m == null ? void 0 : m.name) === "Safari" || (m == null ? void 0 : m.os) === "iOS")) {
-        L.warn("Switching audio output device is not supported on Safari and iOS.");
-        return;
-      }
-      L.debug(`Switching active device of kind "${e4}" with id ${u}.`), yield t.switchActiveDevice(e4, u, l.exact);
-      const p = (f = t.getActiveDevice(e4)) != null ? f : u;
-      p !== u && u !== "default" && L.info(
-        `We tried to select the device with id (${u}), but the browser decided to select the device with id (${p}) instead.`
-      );
-      let g;
-      e4 === "audioinput" ? g = (v = t.localParticipant.getTrackPublication(Track.Source.Microphone)) == null ? void 0 : v.track : e4 === "videoinput" && (g = (d = t.localParticipant.getTrackPublication(Track.Source.Camera)) == null ? void 0 : d.track);
-      const h2 = u === "default" && !g || u === "default" && (g == null ? void 0 : g.mediaStreamTrack.label.startsWith("Default"));
-      r2.next(h2 ? u : p);
-    }
-  });
-  return {
-    className: U("media-device-select"),
-    activeDeviceObservable: i2,
-    setActiveMediaDevice: o2
-  };
-}
-function Ds(e4) {
-  const t = (r2) => {
-    e4.disconnect(r2);
-  };
-  return { className: U("disconnect-button"), disconnect: t };
-}
-function $s(e4) {
-  const t = U("connection-quality"), n = Lo(e4);
-  return { className: t, connectionQualityObserver: n };
-}
-function Ns(e4) {
-  let t = "track-muted-indicator-camera";
-  switch (e4.source) {
-    case Track.Source.Camera:
-      t = "track-muted-indicator-camera";
-      break;
-    case Track.Source.Microphone:
-      t = "track-muted-indicator-microphone";
-      break;
-  }
-  const n = U(t), r2 = Io(e4);
-  return { className: n, mediaMutedObserver: r2 };
-}
-function Fs(e4) {
-  return { className: "lk-participant-name", infoObserver: _o(e4) };
-}
-function Us() {
-  return {
-    className: U("participant-tile")
-  };
-}
-var Mo = {
-  CHAT: "lk.chat",
-  TRANSCRIPTION: "lk.transcription"
-};
-var Ro = {
-  CHAT: "lk-chat-topic"
-};
-function $n(e4, t) {
-  return H(this, arguments, function* (n, r2, i2 = {}) {
-    const { reliable: o2, destinationIdentities: s2, topic: a } = i2;
-    yield n.publishData(r2, {
-      destinationIdentities: s2,
-      topic: a,
-      reliable: o2
-    });
-  });
-}
-function Do(e4, t, n) {
-  const r2 = Array.isArray(t) ? t : [t], i2 = Po(e4).pipe(
-    Xe(
-      ([, , , c]) => t === void 0 || c !== void 0 && r2.includes(c)
-    ),
-    A(([c, u, , l]) => {
-      const f = {
-        payload: c,
-        topic: l,
-        from: u
-      };
-      return n == null || n(f), f;
-    })
-  );
-  let o2;
-  const s2 = new k((c) => {
-    o2 = c;
-  });
-  return { messageObservable: i2, isSendingObservable: s2, send: (c, ...u) => H(this, [c, ...u], function* (l, f = {}) {
-    o2.next(true);
-    try {
-      yield $n(e4.localParticipant, l, q({ topic: r2[0] }, f));
-    } finally {
-      o2.next(false);
-    }
-  }) };
-}
-var Ie = /* @__PURE__ */ new WeakMap();
-function $o(e4) {
-  return e4.ignoreLegacy == true;
-}
-var No = (e4) => JSON.parse(new TextDecoder().decode(e4));
-var Fo = (e4) => new TextEncoder().encode(JSON.stringify(e4));
-function Ws(e4, t) {
-  var n, r2, i2, o2, s2, a;
-  const c = () => {
-    var b, S, C;
-    return ((b = e4.serverInfo) == null ? void 0 : b.edition) === 1 || !!((S = e4.serverInfo) != null && S.version) && compareVersions((C = e4.serverInfo) == null ? void 0 : C.version, "1.8.2") > 0;
-  }, u = new te(), l = (n = t == null ? void 0 : t.channelTopic) != null ? n : Mo.CHAT, f = (r2 = t == null ? void 0 : t.channelTopic) != null ? r2 : Ro.CHAT;
-  let v = false;
-  Ie.has(e4) || (v = true);
-  const d = (i2 = Ie.get(e4)) != null ? i2 : /* @__PURE__ */ new Map(), m = (o2 = d.get(l)) != null ? o2 : new te();
-  d.set(l, m), Ie.set(e4, d);
-  const p = (s2 = t == null ? void 0 : t.messageDecoder) != null ? s2 : No;
-  if (v) {
-    e4.registerTextStreamHandler(l, (S, C) => H(this, null, function* () {
-      const { id: $2, timestamp: M2 } = S.info;
-      Je(S).pipe(
-        lt((T2, _2) => T2 + _2),
-        A((T2) => ({
-          id: $2,
-          timestamp: M2,
-          message: T2,
-          from: e4.getParticipantByIdentity(C.identity),
-          type: "chatMessage"
-          // editTimestamp: type === 'update' ? timestamp : undefined,
-        }))
-      ).subscribe({
-        next: (T2) => m.next(T2)
-      });
-    }));
-    const { messageObservable: b } = Do(e4, [f]);
-    b.pipe(
-      A((S) => {
-        const C = p(S.payload);
-        return $o(C) ? void 0 : ce(q({}, C), {
-          type: "chatMessage",
-          from: S.from
-        });
-      }),
-      Xe((S) => !!S),
-      Wt(u)
-    ).subscribe(m);
-  }
-  const g = m.pipe(
-    lt((b, S) => {
-      if ("id" in S && b.find((C) => {
-        var $2, M2;
-        return (($2 = C.from) == null ? void 0 : $2.identity) === ((M2 = S.from) == null ? void 0 : M2.identity) && C.id === S.id;
-      })) {
-        const C = b.findIndex(($2) => $2.id === S.id);
-        if (C > -1) {
-          const $2 = b[C];
-          b[C] = ce(q({}, S), {
-            timestamp: $2.timestamp,
-            editTimestamp: S.timestamp
-          });
-        }
-        return [...b];
-      }
-      return [...b, S];
-    }, []),
-    Wt(u)
-  ), h2 = new pn(false), x2 = (a = t == null ? void 0 : t.messageEncoder) != null ? a : Fo, E = (b, S) => H(this, null, function* () {
-    var C;
-    S || (S = {}), (C = S.topic) != null || (S.topic = l), h2.next(true);
-    try {
-      const M2 = {
-        id: (yield e4.localParticipant.sendText(b, S)).id,
-        timestamp: Date.now(),
-        message: b
-      }, V2 = ce(q({}, M2), {
-        attachedFiles: S.attachments
-      }), T2 = ce(q({}, V2), {
-        type: "chatMessage",
-        from: e4.localParticipant,
-        attributes: S.attributes
-      });
-      m.next(T2);
-      const _2 = x2(ce(q({}, M2), {
-        ignoreLegacy: c()
-      }));
-      try {
-        yield $n(e4.localParticipant, _2, {
-          reliable: true,
-          topic: f
-        });
-      } catch (ee2) {
-        L.info("could not send message in legacy chat format", ee2);
-      }
-      return T2;
-    } finally {
-      h2.next(false);
-    }
-  });
-  function O3() {
-    u.next(), u.complete(), m.complete(), Ie.delete(e4), e4.unregisterTextStreamHandler(l);
-  }
-  return e4.once(RoomEvent.Disconnected, O3), {
-    messageObservable: g,
-    isSendingObservable: h2,
-    send: E
-  };
-}
-function js() {
-  const e4 = (n) => H(this, null, function* () {
-    L.info("Start Audio for room: ", n), yield n.startAudio();
-  });
-  return { className: U("start-audio-button"), roomAudioPlaybackAllowedObservable: Oo, handleStartAudioPlayback: e4 };
-}
-function Bs() {
-  const e4 = (n) => H(this, null, function* () {
-    L.info("Start Video for room: ", n), yield n.startVideo();
-  });
-  return { className: U("start-audio-button"), roomVideoPlaybackAllowedObservable: Ao, handleStartVideoPlayback: e4 };
-}
-function Vs() {
-  return { className: [U("button"), U("chat-toggle")].join(" ") };
-}
-function Hs() {
-  return { className: [U("button"), U("focus-toggle-button")].join(" ") };
-}
-function zs() {
-  return { className: "lk-clear-pin-button lk-button" };
-}
-function Ys() {
-  return { className: "lk-room-container" };
-}
-function Yt(e4, t, n = true) {
-  const i2 = [e4.localParticipant, ...Array.from(e4.remoteParticipants.values())], o2 = [];
-  return i2.forEach((s2) => {
-    t.forEach((a) => {
-      const c = Array.from(
-        s2.trackPublications.values()
-      ).filter(
-        (u) => u.source === a && // either return all or only the ones that are subscribed
-        (!n || u.track)
-      ).map((u) => ({
-        participant: s2,
-        publication: u,
-        source: u.source
-      }));
-      o2.push(...c);
-    });
-  }), { trackReferences: o2, participants: i2 };
-}
-function qt(e4, t, n = false) {
-  const { sources: r2, kind: i2, name: o2 } = t;
-  return Array.from(e4.trackPublications.values()).filter(
-    (a) => (!r2 || r2.includes(a.source)) && (!i2 || a.kind === i2) && (!o2 || a.trackName === o2) && // either return all or only the ones that are subscribed
-    (!n || a.track)
-  ).map((a) => ({
-    participant: e4,
-    publication: a,
-    source: a.source
-  }));
-}
-function qs(e4, t, n) {
-  var r2, i2;
-  const o2 = (r2 = n.additionalRoomEvents) != null ? r2 : An, s2 = (i2 = n.onlySubscribed) != null ? i2 : true, a = Array.from(
-    (/* @__PURE__ */ new Set([
-      RoomEvent.ParticipantConnected,
-      RoomEvent.ParticipantDisconnected,
-      RoomEvent.ConnectionStateChanged,
-      RoomEvent.LocalTrackPublished,
-      RoomEvent.LocalTrackUnpublished,
-      RoomEvent.TrackPublished,
-      RoomEvent.TrackUnpublished,
-      RoomEvent.TrackSubscriptionStatusChanged,
-      ...o2
-    ])).values()
-  );
-  return pe(e4, ...a).pipe(
-    A((u) => {
-      const l = Yt(u, t, s2);
-      return L.debug(`TrackReference[] was updated. (length ${l.trackReferences.length})`, l), l;
-    }),
-    D(Yt(e4, t, s2))
-  );
-}
-function Ks(e4, t) {
-  return xe(e4, ...co).pipe(
-    A((r2) => {
-      const i2 = qt(r2, t);
-      return L.debug(`TrackReference[] was updated. (length ${i2.length})`, i2), i2;
-    }),
-    D(qt(e4, t))
-  );
-}
-function Nn(e4, t) {
-  return new k((r2) => {
-    const i2 = (...s2) => {
-      r2.next(s2);
-    };
-    return e4.on(t, i2), () => {
-      e4.off(t, i2);
-    };
-  });
-}
-function Gs(e4) {
-  return Nn(e4, TrackEvent.TranscriptionReceived);
-}
-function Qs(e4) {
-  return Nn(e4, TrackEvent.TimeSyncUpdate).pipe(
-    A(([t]) => t)
-  );
-}
-function Js(e4, t = 1e3) {
-  if (e4 === null) return Ft(false);
-  const n = ut(e4, "mousemove", { passive: true }).pipe(A(() => true)), r2 = n.pipe(
-    Li({
-      each: t,
-      with: () => je(Ft(false), r2.pipe(Gi(n)))
-    }),
-    Yi()
-  );
-  return r2;
-}
-function Uo(e4, t) {
-  if (typeof localStorage > "u") {
-    L.error("Local storage is not available.");
-    return;
-  }
-  try {
-    if (t) {
-      const n = Object.fromEntries(
-        Object.entries(t).filter(([, r2]) => r2 !== "")
-      );
-      localStorage.setItem(e4, JSON.stringify(n));
-    }
-  } catch (n) {
-    L.error(`Error setting item to local storage: ${n}`);
-  }
-}
-function Wo(e4) {
-  if (typeof localStorage > "u") {
-    L.error("Local storage is not available.");
-    return;
-  }
-  try {
-    const t = localStorage.getItem(e4);
-    if (!t) {
-      L.warn(`Item with key ${e4} does not exist in local storage.`);
-      return;
-    }
-    return JSON.parse(t);
-  } catch (t) {
-    L.error(`Error getting item from local storage: ${t}`);
-    return;
-  }
-}
-function jo(e4) {
-  return {
-    load: () => Wo(e4),
-    save: (t) => Uo(e4, t)
-  };
-}
-var Bo = `${On}-user-choices`;
-var Ee = {
-  videoEnabled: true,
-  audioEnabled: true,
-  videoDeviceId: "default",
-  audioDeviceId: "default",
-  username: ""
-};
-var { load: Vo, save: Ho } = jo(Bo);
-function Xs(e4, t = false) {
-  t !== true && Ho(e4);
-}
-function Zs(e4, t = false) {
-  var n, r2, i2, o2, s2;
-  const a = {
-    videoEnabled: (n = e4 == null ? void 0 : e4.videoEnabled) != null ? n : Ee.videoEnabled,
-    audioEnabled: (r2 = e4 == null ? void 0 : e4.audioEnabled) != null ? r2 : Ee.audioEnabled,
-    videoDeviceId: (i2 = e4 == null ? void 0 : e4.videoDeviceId) != null ? i2 : Ee.videoDeviceId,
-    audioDeviceId: (o2 = e4 == null ? void 0 : e4.audioDeviceId) != null ? o2 : Ee.audioDeviceId,
-    username: (s2 = e4 == null ? void 0 : e4.username) != null ? s2 : Ee.username
-  };
-  if (t)
-    return a;
-  {
-    const c = Vo();
-    return q(q({}, a), c ?? {});
-  }
-}
-var it = null;
-var ot = null;
-var zo = 0;
-function Kt() {
-  return it || (it = /* @__PURE__ */ new Map()), it;
-}
-function Yo() {
-  return ot || (ot = /* @__PURE__ */ new WeakMap()), ot;
-}
-function qo(e4, t) {
-  const n = Yo();
-  let r2 = n.get(e4);
-  return r2 || (r2 = `room_${zo++}`, n.set(e4, r2)), `${r2}:${t}`;
-}
-function ea(e4, t) {
-  const n = qo(e4, t), r2 = Kt(), i2 = r2.get(n);
-  if (i2)
-    return i2;
-  const o2 = new te();
-  let s2 = [];
-  const a = "lk.segment_id", c = o2.pipe(
-    Qi({
-      subscribe: () => {
-        e4.registerTextStreamHandler(t, (u, l) => H(this, null, function* () {
-          var f;
-          const v = Je(u).pipe(
-            lt((m, p) => m + p, "")
-          ), d = !!((f = u.info.attributes) != null && f[a]);
-          v.subscribe((m) => {
-            const p = s2.findIndex(
-              (g) => {
-                var h2, x2;
-                return g.streamInfo.id === u.info.id || d && ((h2 = g.streamInfo.attributes) == null ? void 0 : h2[a]) === ((x2 = u.info.attributes) == null ? void 0 : x2[a]);
-              }
-            );
-            p !== -1 ? (s2[p] = ce(q({}, s2[p]), {
-              text: m
-            }), o2.next([...s2])) : (s2.push({
-              text: m,
-              participantInfo: l,
-              streamInfo: u.info
-            }), o2.next([...s2]));
-          });
-        }));
-      },
-      finalize: () => {
-        e4.unregisterTextStreamHandler(t);
-      }
-    }),
-    Ki()
-  );
-  return r2.set(n, c), e4.on(RoomEvent.Disconnected, () => {
-    Kt().delete(n), s2 = [], o2.next([]);
-  }), c;
-}
-function Fn(e4, t) {
-  if (t.msg === "show_chat")
-    return { ...e4, showChat: true, unreadMessages: 0 };
-  if (t.msg === "hide_chat")
-    return { ...e4, showChat: false };
-  if (t.msg === "toggle_chat") {
-    const n = { ...e4, showChat: !e4.showChat };
-    return n.showChat === true && (n.unreadMessages = 0), n;
-  } else return t.msg === "unread_msg" ? { ...e4, unreadMessages: t.count } : t.msg === "toggle_settings" ? { ...e4, showSettings: !e4.showSettings } : { ...e4 };
-}
-function Un(e4, t) {
-  return t.msg === "set_pin" ? [t.trackReference] : t.msg === "clear_pin" ? [] : { ...e4 };
-}
-var Wn = I.createContext(void 0);
-function ta() {
-  const e4 = I.useContext(Wn);
-  if (!e4)
-    throw Error("Tried to access LayoutContext context outside a LayoutContextProvider provider.");
-  return e4;
-}
-function na(e4) {
-  const t = Ko();
-  if (e4 ?? (e4 = t), !e4)
-    throw Error("Tried to access LayoutContext context outside a LayoutContextProvider provider.");
-  return e4;
-}
-function ra() {
-  const [e4, t] = I.useReducer(Un, _n), [n, r2] = I.useReducer(Fn, Ln);
-  return {
-    pin: { dispatch: t, state: e4 },
-    widget: { dispatch: r2, state: n }
-  };
-}
-function ia(e4) {
-  const [t, n] = I.useReducer(Un, _n), [r2, i2] = I.useReducer(Fn, Ln);
-  return e4 ?? {
-    pin: { dispatch: n, state: t },
-    widget: { dispatch: i2, state: r2 }
-  };
-}
-function Ko() {
-  return I.useContext(Wn);
-}
-var jn = I.createContext(
-  void 0
-);
-function oa() {
-  const e4 = I.useContext(jn);
-  if (!e4)
-    throw Error("tried to access track context outside of track context provider");
-  return e4;
-}
-function Bn() {
-  return I.useContext(jn);
-}
-function sa(e4) {
-  const t = Bn(), n = e4 ?? t;
-  if (!n)
-    throw new Error(
-      "No TrackRef, make sure you are inside a TrackRefContext or pass the TrackRef explicitly"
-    );
-  return n;
-}
-var Vn = I.createContext(void 0);
-function aa() {
-  const e4 = I.useContext(Vn);
-  if (!e4)
-    throw Error("tried to access participant context outside of participant context provider");
-  return e4;
-}
-function Go() {
-  return I.useContext(Vn);
-}
-function ca(e4) {
-  const t = Go(), n = Bn(), r2 = e4 ?? t ?? (n == null ? void 0 : n.participant);
-  if (!r2)
-    throw new Error(
-      "No participant provided, make sure you are inside a participant context or pass the participant explicitly"
-    );
-  return r2;
-}
-var Hn = I.createContext(void 0);
-function ua() {
-  const e4 = I.useContext(Hn);
-  if (!e4)
-    throw Error("tried to access room context outside of livekit room component");
-  return e4;
-}
-function Qo() {
-  return I.useContext(Hn);
-}
-function la(e4) {
-  const t = Qo(), n = e4 ?? t;
-  if (!n)
-    throw new Error(
-      "No room provided, make sure you are inside a Room context or pass the room explicitly"
-    );
-  return n;
-}
-var zn = I.createContext(void 0);
-function fa() {
-  const e4 = I.useContext(zn);
-  if (!e4)
-    throw Error("tried to access session context outside of SessionProvider component");
-  return e4;
-}
-function Jo() {
-  return I.useContext(zn);
-}
-function da(e4) {
-  const t = Jo(), n = e4 ?? t;
-  if (!n)
-    throw new Error(
-      "No session provided, make sure you are inside a Session context or pass the session explicitly"
-    );
-  return n;
-}
-var Xo = I.createContext(void 0);
-function pa(e4) {
-  const t = I.useContext(Xo);
-  if (e4 === true) {
-    if (t)
-      return t;
-    throw Error("tried to access feature context, but none is present");
-  }
-  return t;
-}
-
-// node_modules/@livekit/components-react/dist/room-Bb6uLxS5.mjs
-var i = __toESM(require_react(), 1);
-function L2(n) {
-  var e4, o2, t = "";
-  if (typeof n == "string" || typeof n == "number") t += n;
-  else if (typeof n == "object") if (Array.isArray(n)) {
-    var r2 = n.length;
-    for (e4 = 0; e4 < r2; e4++) n[e4] && (o2 = L2(n[e4])) && (t && (t += " "), t += o2);
-  } else for (o2 in n) n[o2] && (t && (t += " "), t += o2);
-  return t;
-}
-function A2() {
-  for (var n, e4, o2 = 0, t = "", r2 = arguments.length; o2 < r2; o2++) (n = arguments[o2]) && (e4 = L2(n)) && (t && (t += " "), t += e4);
-  return t;
-}
-function I2(...n) {
-  return (...e4) => {
-    for (const o2 of n)
-      if (typeof o2 == "function")
-        try {
-          o2(...e4);
-        } catch (t) {
-          console.error(t);
-        }
-  };
-}
-function M(...n) {
-  const e4 = { ...n[0] };
-  for (let o2 = 1; o2 < n.length; o2++) {
-    const t = n[o2];
-    for (const r2 in t) {
-      const d = e4[r2], a = t[r2];
-      typeof d == "function" && typeof a == "function" && // This is a lot faster than a regex.
-      r2[0] === "o" && r2[1] === "n" && r2.charCodeAt(2) >= /* 'A' */
-      65 && r2.charCodeAt(2) <= /* 'Z' */
-      90 ? e4[r2] = I2(d, a) : (r2 === "className" || r2 === "UNSAFE_className") && typeof d == "string" && typeof a == "string" ? e4[r2] = A2(d, a) : e4[r2] = a !== void 0 ? a : d;
-    }
-  }
-  return e4;
-}
-function J2(n) {
-  return n !== void 0;
-}
-function G2(...n) {
-  return M(...n.filter(J2));
-}
-function H2(n, e4, o2) {
-  return i.Children.map(n, (t) => i.isValidElement(t) && i.Children.only(n) ? (t.props.className && (e4 ?? (e4 = {}), e4.className = A2(t.props.className, e4.className), e4.style = { ...t.props.style, ...e4.style }), i.cloneElement(t, { ...e4, key: o2 })) : t);
-}
-function Q(n) {
-  var e4, o2;
-  if (typeof window < "u" && typeof process < "u" && // eslint-disable-next-line turbo/no-undeclared-env-vars
-  (((e4 = process == null ? void 0 : process.env) == null ? void 0 : e4.NODE_ENV) === "dev" || // eslint-disable-next-line turbo/no-undeclared-env-vars
-  ((o2 = process == null ? void 0 : process.env) == null ? void 0 : o2.NODE_ENV) === "development")) {
-    const t = document.querySelector(".lk-room-container");
-    t && !getComputedStyle(t).getPropertyValue("--lk-has-imported-styles") && L.warn(
-      "It looks like you're not using the `@livekit/components-styles package`. To render the UI with the default styling, please import it in your layout or page."
-    );
-  }
-}
-function T(n, e4) {
-  return n === "processor" && e4 && typeof e4 == "object" && "name" in e4 ? e4.name : n === "e2ee" && e4 ? "e2ee-enabled" : e4;
-}
-var q2 = {
-  connect: true,
-  audio: false,
-  video: false
-};
-function $(n) {
-  const {
-    token: e4,
-    serverUrl: o2,
-    options: t,
-    room: r2,
-    connectOptions: d,
-    connect: a,
-    audio: p,
-    video: y,
-    screen: g,
-    onConnected: v,
-    onDisconnected: h2,
-    onError: c,
-    onMediaDeviceFailure: b,
-    onEncryptionError: E,
-    simulateParticipants: w,
-    ...N2
-  } = { ...q2, ...n };
-  t && r2 && L.warn(
-    "when using a manually created room, the options object will be ignored. set the desired options directly when creating the room instead."
-  );
-  const [s2, O3] = i.useState(), C = i.useRef(a);
-  i.useEffect(() => {
-    O3(r2 ?? new Room(t));
-  }, [r2, JSON.stringify(t, T)]);
-  const F2 = i.useMemo(() => {
-    const { className: m } = Ys();
-    return M(N2, { className: m });
-  }, [N2]);
-  return i.useEffect(() => {
-    if (!s2) return;
-    const m = () => {
-      const f = s2.localParticipant;
-      L.debug("trying to publish local tracks"), Promise.all([
-        f.setMicrophoneEnabled(!!p, typeof p != "boolean" ? p : void 0),
-        f.setCameraEnabled(!!y, typeof y != "boolean" ? y : void 0),
-        f.setScreenShareEnabled(!!g, typeof g != "boolean" ? g : void 0)
-      ]).catch((R) => {
-        L.warn(R), c == null || c(R);
-      });
-    }, P2 = (f, R) => {
-      const K3 = MediaDeviceFailure.getFailure(f);
-      b == null || b(K3, R);
-    }, S = (f) => {
-      E == null || E(f);
-    }, k2 = (f) => {
-      h2 == null || h2(f);
-    }, D2 = () => {
-      v == null || v();
-    };
-    return s2.on(RoomEvent.SignalConnected, m).on(RoomEvent.MediaDevicesError, P2).on(RoomEvent.EncryptionError, S).on(RoomEvent.Disconnected, k2).on(RoomEvent.Connected, D2), () => {
-      s2.off(RoomEvent.SignalConnected, m).off(RoomEvent.MediaDevicesError, P2).off(RoomEvent.EncryptionError, S).off(RoomEvent.Disconnected, k2).off(RoomEvent.Connected, D2);
-    };
-  }, [
-    s2,
-    p,
-    y,
-    g,
-    c,
-    E,
-    b,
-    v,
-    h2
-  ]), i.useEffect(() => {
-    if (s2) {
-      if (w) {
-        s2.simulateParticipants({
-          participants: {
-            count: w
-          },
-          publish: {
-            audio: true,
-            useRealTracks: true
-          }
-        });
-        return;
-      }
-      if (a) {
-        if (C.current = true, L.debug("connecting"), !e4) {
-          L.debug("no token yet");
-          return;
-        }
-        if (!o2) {
-          L.warn("no livekit url provided"), c == null || c(Error("no livekit url provided"));
-          return;
-        }
-        s2.connect(o2, e4, d).catch((m) => {
-          L.warn(m), C.current === true && (c == null || c(m));
-        });
-      } else
-        L.debug("disconnecting because connect is false"), C.current = false, s2.disconnect();
-    }
-  }, [
-    a,
-    e4,
-    JSON.stringify(d),
-    s2,
-    c,
-    o2,
-    w
-  ]), i.useEffect(() => {
-    if (s2)
-      return () => {
-        L.info("disconnecting on onmount"), s2.disconnect();
-      };
-  }, [s2]), { room: s2, htmlProps: F2 };
-}
-var W2 = i.forwardRef(function(e4, o2) {
-  const { room: t, htmlProps: r2 } = $(e4);
-  return i.createElement("div", { ref: o2, ...r2 }, t && i.createElement(Hn.Provider, { value: t }, i.createElement(Xo.Provider, { value: e4.featureFlags }, e4.children)));
-});
-
-// node_modules/@livekit/components-react/dist/hooks-0IvkS6LV.mjs
-var jt2 = (e4) => {
-  const n = s.useRef(e4);
-  return s.useEffect(() => {
-    n.current = e4;
-  }), n;
-};
-function Wt2(e4, n) {
-  const t = Gt(), r2 = jt2(n);
-  return s.useLayoutEffect(() => {
-    let o2 = false;
-    const i2 = e4.current;
-    if (!i2) return;
-    function a(c, u) {
-      o2 || r2.current(c, u);
-    }
-    return t == null || t.subscribe(i2, a), () => {
-      o2 = true, t == null || t.unsubscribe(i2, a);
-    };
-  }, [e4.current, t, r2]), t == null ? void 0 : t.observer;
-}
-function zt2() {
-  let e4 = false, n = [];
-  const t = /* @__PURE__ */ new Map();
-  if (typeof window > "u")
-    return;
-  const r2 = new ResizeObserver((o2, i2) => {
-    n = n.concat(o2), e4 || window.requestAnimationFrame(() => {
-      const a = /* @__PURE__ */ new Set();
-      for (let c = 0; c < n.length; c++) {
-        if (a.has(n[c].target)) continue;
-        a.add(n[c].target);
-        const u = t.get(n[c].target);
-        u == null || u.forEach((p) => p(n[c], i2));
-      }
-      n = [], e4 = false;
-    }), e4 = true;
-  });
-  return {
-    observer: r2,
-    subscribe(o2, i2) {
-      r2.observe(o2);
-      const a = t.get(o2) ?? [];
-      a.push(i2), t.set(o2, a);
-    },
-    unsubscribe(o2, i2) {
-      const a = t.get(o2) ?? [];
-      if (a.length === 1) {
-        r2.unobserve(o2), t.delete(o2);
-        return;
-      }
-      const c = a.indexOf(i2);
-      c !== -1 && a.splice(c, 1), t.set(o2, a);
-    }
-  };
-}
-var de2;
-var Gt = () => de2 || (de2 = zt2());
-var Jt2 = (e4) => {
-  const [n, t] = s.useState({ width: 0, height: 0 });
-  s.useLayoutEffect(() => {
-    if (e4.current) {
-      const { width: o2, height: i2 } = e4.current.getBoundingClientRect();
-      t({ width: o2, height: i2 });
-    }
-  }, [e4.current]);
-  const r2 = s.useCallback(
-    (o2) => t(o2.contentRect),
-    []
-  );
-  return Wt2(e4, r2), n;
-};
-function O(e4, n, t = true) {
-  const [r2, o2] = s.useState(n);
-  return s.useEffect(() => {
-    if (t && o2(n), typeof window > "u" || !e4) return;
-    const i2 = e4.subscribe(o2);
-    return () => i2.unsubscribe();
-  }, [e4, t]), r2;
-}
-function Dn2(e4) {
-  const n = (i2) => typeof window < "u" ? window.matchMedia(i2).matches : false, [t, r2] = s.useState(n(e4));
-  function o2() {
-    r2(n(e4));
-  }
-  return s.useEffect(() => {
-    const i2 = window.matchMedia(e4);
-    return o2(), i2.addListener ? i2.addListener(o2) : i2.addEventListener("change", o2), () => {
-      i2.removeListener ? i2.removeListener(o2) : i2.removeEventListener("change", o2);
-    };
-  }, [e4]), t;
-}
-function In2(e4) {
-  const n = la(e4), t = s.useCallback(async () => {
-    await n.startAudio();
-  }, [n]), r2 = s.useMemo(
-    () => Oo(n),
-    [n]
-  ), { canPlayAudio: o2 } = O(r2, {
-    canPlayAudio: n.canPlaybackAudio
-  });
-  return { canPlayAudio: o2, startAudio: t };
-}
-function Nn2(e4) {
-  const { state: n, dispatch: t } = ta().pin;
-  return { buttonProps: s.useMemo(() => {
-    const { className: o2 } = zs();
-    return M(e4, {
-      className: o2,
-      disabled: !(n != null && n.length),
-      onClick: () => {
-        t && t({ msg: "clear_pin" });
-      }
-    });
-  }, [e4, t, n]) };
-}
-function _n2(e4 = {}) {
-  const n = ca(e4.participant), { className: t, connectionQualityObserver: r2 } = s.useMemo(
-    () => $s(n),
-    [n]
-  ), o2 = O(r2, n.connectionQuality);
-  return { className: t, quality: o2 };
-}
-function re(e4) {
-  const n = la(e4), t = s.useMemo(() => ws(n), [n]);
-  return O(t, n.state);
-}
-function Fn2(e4, n) {
-  const t = typeof e4 == "function" ? e4 : n, r2 = typeof e4 == "string" ? e4 : void 0, o2 = ua(), { send: i2, messageObservable: a, isSendingObservable: c } = s.useMemo(
-    () => Do(o2, r2, t),
-    [o2, r2, t]
-  ), u = O(a, void 0), p = O(c, false);
-  return {
-    message: u,
-    send: i2,
-    isSending: p
-  };
-}
-function xn2(e4) {
-  const n = ua(), t = re(n);
-  return { buttonProps: s.useMemo(() => {
-    const { className: o2, disconnect: i2 } = Ds(n);
-    return M(e4, {
-      className: o2,
-      onClick: () => i2(e4.stopTracks ?? true),
-      disabled: t === ConnectionState.Disconnected
-    });
-  }, [n, e4, t]) };
-}
-function $t2(e4) {
-  if (e4.publication instanceof LocalTrackPublication) {
-    const n = e4.publication.track;
-    if (n) {
-      const { facingMode: t } = facingModeFromLocalTrack(n);
-      return t;
-    }
-  }
-  return "undefined";
-}
-function Un2({ trackRef: e4, props: n }) {
-  const t = sa(e4), r2 = Ko(), { className: o2 } = s.useMemo(() => Hs(), []), i2 = s.useMemo(() => ns(t, r2 == null ? void 0 : r2.pin.state), [t, r2 == null ? void 0 : r2.pin.state]);
-  return { mergedProps: s.useMemo(
-    () => M(n, {
-      className: o2,
-      onClick: (c) => {
-        var u, p, h2, l, d;
-        (u = n.onClick) == null || u.call(n, c), i2 ? (h2 = r2 == null ? void 0 : (p = r2.pin).dispatch) == null || h2.call(p, {
-          msg: "clear_pin"
-        }) : (d = r2 == null ? void 0 : (l = r2.pin).dispatch) == null || d.call(l, {
-          msg: "set_pin",
-          trackReference: t
-        });
-      }
-    }),
-    [n, o2, t, i2, r2 == null ? void 0 : r2.pin]
-  ), inFocus: i2 };
-}
-function Hn2(e4, n, t = {}) {
-  const r2 = t.gridLayouts ?? fs, { width: o2, height: i2 } = Jt2(e4), a = lo(r2, n, o2, i2);
-  return s.useEffect(() => {
-    e4.current && a && (e4.current.style.setProperty("--lk-col-count", a == null ? void 0 : a.columns.toString()), e4.current.style.setProperty("--lk-row-count", a == null ? void 0 : a.rows.toString()));
-  }, [e4, a]), {
-    layout: a,
-    containerWidth: o2,
-    containerHeight: i2
-  };
-}
-function Ee2(e4, n = {}) {
-  var c, u;
-  const t = typeof e4 == "string" ? n.participant : e4.participant, r2 = ca(t), o2 = typeof e4 == "string" ? { participant: r2, source: e4 } : e4, [i2, a] = s.useState(
-    !!((c = o2.publication) != null && c.isMuted || (u = r2.getTrackPublication(o2.source)) != null && u.isMuted)
-  );
-  return s.useEffect(() => {
-    const p = Io(o2).subscribe(a);
-    return () => p.unsubscribe();
-  }, [N(o2)]), i2;
-}
-function Qt2(e4) {
-  const n = ca(e4), t = s.useMemo(() => Ps(n), [n]);
-  return O(t, n.isSpeaking);
-}
-function xe2(e4 = {}) {
-  const n = la(e4.room), [t, r2] = s.useState(n.localParticipant), [o2, i2] = s.useState(
-    t.isMicrophoneEnabled
-  ), [a, c] = s.useState(t.isCameraEnabled), [u, p] = s.useState(
-    t.isScreenShareEnabled
-  ), [h2, l] = s.useState(
-    t.lastMicrophoneError
-  ), [d, v] = s.useState(t.lastCameraError), [M2, w] = s.useState(
-    void 0
-  ), [A3, P2] = s.useState(void 0), D2 = (R) => {
-    c(R.isCameraEnabled), i2(R.isMicrophoneEnabled), p(R.isScreenShareEnabled), P2(R.cameraTrack), w(R.microphoneTrack), l(R.participant.lastMicrophoneError), v(R.participant.lastCameraError), r2(R.participant);
-  };
-  return s.useEffect(() => {
-    const R = Dn(n.localParticipant).subscribe(D2);
-    return () => R.unsubscribe();
-  }, [n]), {
-    isMicrophoneEnabled: o2,
-    isScreenShareEnabled: u,
-    isCameraEnabled: a,
-    microphoneTrack: M2,
-    cameraTrack: A3,
-    lastMicrophoneError: h2,
-    lastCameraError: d,
-    localParticipant: t
-  };
-}
-function Bn2() {
-  const e4 = ua(), n = s.useMemo(
-    () => ks(e4.localParticipant),
-    [e4]
-  );
-  return O(n, e4.localParticipant.permissions);
-}
-function Vn2({
-  kind: e4,
-  room: n,
-  track: t,
-  requestPermissions: r2,
-  onError: o2
-}) {
-  const i2 = Qo(), a = s.useMemo(() => n ?? i2 ?? new Room(), [n, i2]), c = s.useMemo(
-    () => Ts(e4, o2, r2),
-    [e4, r2, o2]
-  ), u = O(c, []), [p, h2] = s.useState(
-    (a == null ? void 0 : a.getActiveDevice(e4)) ?? "default"
-  ), { className: l, activeDeviceObservable: d, setActiveMediaDevice: v } = s.useMemo(
-    () => Rs(e4, a),
-    [e4, a, t]
-  );
-  return s.useEffect(() => {
-    const M2 = d.subscribe((w) => {
-      w && (L.info("setCurrentDeviceId", w), h2(w));
-    });
-    return () => {
-      M2 == null || M2.unsubscribe();
-    };
-  }, [d]), { devices: u, className: l, activeDeviceId: p, setActiveMediaDevice: v };
-}
-function qn({
-  kind: e4,
-  onError: n
-}) {
-  const t = s.useMemo(
-    () => Ts(e4, n),
-    [e4, n]
-  );
-  return O(t, []);
-}
-function Kt2(e4, n, t = {}) {
-  const r2 = s.useRef([]), o2 = s.useRef(-1), i2 = n !== o2.current, a = typeof t.customSortFunction == "function" ? t.customSortFunction(e4) : ms(e4);
-  let c = [...a];
-  if (i2 === false)
-    try {
-      c = bs(r2.current, a, n);
-    } catch (u) {
-      L.error("Error while running updatePages(): ", u);
-    }
-  return i2 ? r2.current = a : r2.current = c, o2.current = n, c;
-}
-function jn2(e4, n) {
-  const [t, r2] = s.useState(1), o2 = Math.max(Math.ceil(n.length / e4), 1);
-  t > o2 && r2(o2);
-  const i2 = t * e4, a = i2 - e4, c = (l) => {
-    r2((d) => l === "next" ? d === o2 ? d : d + 1 : d === 1 ? d : d - 1);
-  }, u = (l) => {
-    l > o2 ? r2(o2) : l < 1 ? r2(1) : r2(l);
-  }, h2 = Kt2(n, e4).slice(a, i2);
-  return {
-    totalPageCount: o2,
-    nextPage: () => c("next"),
-    prevPage: () => c("previous"),
-    setPage: u,
-    firstItemIndex: a,
-    lastItemIndex: i2,
-    tracks: h2,
-    currentPage: t
-  };
-}
-function Yt2(e4 = {}) {
-  let n = Go();
-  e4.participant && (n = e4.participant);
-  const t = s.useMemo(() => _o(n), [n]), { identity: r2, name: o2, metadata: i2 } = O(t, {
-    name: n == null ? void 0 : n.name,
-    identity: n == null ? void 0 : n.identity,
-    metadata: n == null ? void 0 : n.metadata
-  });
-  return { identity: r2, name: o2, metadata: i2 };
-}
-function Wn2(e4 = {}) {
-  const n = ca(e4.participant), t = s.useMemo(() => ks(n), [n]);
-  return O(t, n.permissions);
-}
-function zn2({
-  trackRef: e4,
-  onParticipantClick: n,
-  disableSpeakingIndicator: t,
-  htmlProps: r2
-}) {
-  const o2 = sa(e4), i2 = s.useMemo(() => {
-    const { className: d } = Us();
-    return M(r2, {
-      className: d,
-      onClick: (v) => {
-        var M2;
-        if ((M2 = r2.onClick) == null || M2.call(r2, v), typeof n == "function") {
-          const w = o2.publication ?? o2.participant.getTrackPublication(o2.source);
-          n({ participant: o2.participant, track: w });
-        }
-      }
-    });
-  }, [
-    r2,
-    n,
-    o2.publication,
-    o2.source,
-    o2.participant
-  ]), a = o2.participant.getTrackPublication(Track.Source.Microphone), c = s.useMemo(() => ({
-    participant: o2.participant,
-    source: Track.Source.Microphone,
-    publication: a
-  }), [a, o2.participant]), u = Ee2(o2), p = Ee2(c), h2 = Qt2(o2.participant), l = $t2(o2);
-  return {
-    elementProps: {
-      "data-lk-audio-muted": p,
-      "data-lk-video-muted": u,
-      "data-lk-speaking": t === true ? false : h2,
-      "data-lk-local-participant": o2.participant.isLocal,
-      "data-lk-source": o2.source,
-      "data-lk-facing-mode": l,
-      ...i2
-    }
-  };
-}
-function ve2(e4 = {}) {
-  const n = la(e4.room), [t, r2] = s.useState([]);
-  return s.useEffect(() => {
-    const o2 = Os(n, {
-      additionalRoomEvents: e4.updateOnlyOn
-    }).subscribe(r2);
-    return () => o2.unsubscribe();
-  }, [n, JSON.stringify(e4.updateOnlyOn)]), t;
-}
-function Xt2(e4 = {}) {
-  const n = ve2(e4), { localParticipant: t } = xe2(e4);
-  return s.useMemo(
-    () => [t, ...n],
-    [t, n]
-  );
-}
-function Gn(e4) {
-  return e4 = na(e4), s.useMemo(() => (e4 == null ? void 0 : e4.pin.state) !== void 0 && e4.pin.state.length >= 1 ? e4.pin.state : [], [e4.pin.state]);
-}
-function Jn2(e4, n = {}) {
-  const t = ua(), [r2] = s.useState(n.updateOnlyOn), o2 = s.useMemo(() => typeof e4 == "string" ? As(t, e4, {
-    additionalEvents: r2
-  }) : _s(t, e4, {
-    additionalEvents: r2
-  }), [t, JSON.stringify(e4), r2]), [i2, a] = s.useState({
-    p: void 0
-  });
-  return s.useEffect(() => {
-    const c = o2.subscribe((u) => a({ p: u }));
-    return () => c.unsubscribe();
-  }, [o2]), i2.p;
-}
-function $n2(e4 = {}) {
-  const n = la(e4.room), t = s.useMemo(() => xs(n), [n]), { name: r2, metadata: o2 } = O(t, {
-    name: n.name,
-    metadata: n.metadata
-  });
-  return { name: r2, metadata: o2 };
-}
-function Zt2(e4) {
-  const n = la(e4 == null ? void 0 : e4.room), t = s.useMemo(() => Ss(n), [n]);
-  return O(t, n.activeSpeakers);
-}
-function Qn(e4) {
-  const [n, t] = s.useState(
-    gs(e4)
-  ), r2 = Zt2();
-  return s.useEffect(() => {
-    t(gs(e4));
-  }, [r2, e4]), n;
-}
-function Kn({ room: e4, props: n }) {
-  const t = la(e4), { className: r2, roomAudioPlaybackAllowedObservable: o2, handleStartAudioPlayback: i2 } = s.useMemo(
-    () => js(),
-    []
-  ), a = s.useMemo(
-    () => o2(t),
-    [t, o2]
-  ), { canPlayAudio: c } = O(a, {
-    canPlayAudio: t.canPlaybackAudio
-  });
-  return { mergedProps: s.useMemo(
-    () => M(n, {
-      className: r2,
-      onClick: () => {
-        i2(t);
-      },
-      style: { display: c ? "none" : "block" }
-    }),
-    [n, r2, c, i2, t]
-  ), canPlayAudio: c };
-}
-function Yn({ room: e4, props: n }) {
-  const t = la(e4), { className: r2, roomVideoPlaybackAllowedObservable: o2, handleStartVideoPlayback: i2 } = s.useMemo(
-    () => Bs(),
-    []
-  ), a = s.useMemo(
-    () => o2(t),
-    [t, o2]
-  ), { canPlayVideo: c } = O(a, {
-    canPlayVideo: t.canPlaybackVideo
-  });
-  return { mergedProps: s.useMemo(
-    () => M(n, {
-      className: r2,
-      onClick: () => {
-        i2(t);
-      },
-      style: { display: c ? "none" : "block" }
-    }),
-    [n, r2, c, i2, t]
-  ), canPlayVideo: c };
-}
-function Xn2(e4, n = {}) {
-  const t = s.useRef(null), r2 = s.useRef(null), o2 = n.minSwipeDistance ?? 50, i2 = (u) => {
-    r2.current = null, t.current = u.targetTouches[0].clientX;
-  }, a = (u) => {
-    r2.current = u.targetTouches[0].clientX;
-  }, c = s.useCallback(() => {
-    if (!t.current || !r2.current)
-      return;
-    const u = t.current - r2.current, p = u > o2, h2 = u < -o2;
-    p && n.onLeftSwipe && n.onLeftSwipe(), h2 && n.onRightSwipe && n.onRightSwipe();
-  }, [o2, n]);
-  s.useEffect(() => {
-    const u = e4.current;
-    return u && (u.addEventListener("touchstart", i2, { passive: true }), u.addEventListener("touchmove", a, { passive: true }), u.addEventListener("touchend", c, { passive: true })), () => {
-      u && (u.removeEventListener("touchstart", i2), u.removeEventListener("touchmove", a), u.removeEventListener("touchend", c));
-    };
-  }, [e4, c]);
-}
-function Zn2({ props: e4 }) {
-  const { dispatch: n, state: t } = ta().widget, { className: r2 } = s.useMemo(() => Vs(), []);
-  return { mergedProps: s.useMemo(() => M(e4, {
-    className: r2,
-    onClick: () => {
-      n && n({ msg: "toggle_chat" });
-    },
-    "aria-pressed": t != null && t.showChat ? "true" : "false",
-    "data-lk-unread-msgs": t ? t.unreadMessages < 10 ? t.unreadMessages.toFixed(0) : "9+" : "0"
-  }), [e4, r2, n, t]) };
-}
-function er2(e4, n, t = {}) {
-  const [r2, o2] = s.useState(void 0);
-  return s.useEffect(() => {
-    var a;
-    if (e4 === void 0)
-      throw Error("token endpoint needs to be defined");
-    if (((a = t.userInfo) == null ? void 0 : a.identity) === void 0)
-      return;
-    (async () => {
-      L.debug("fetching token");
-      const c = new URLSearchParams({ ...t.userInfo, roomName: n }), u = await fetch(`${e4}?${c.toString()}`);
-      if (!u.ok) {
-        L.error(
-          `Could not fetch token. Server responded with status ${u.status}: ${u.statusText}`
-        );
-        return;
-      }
-      const { accessToken: p } = await u.json();
-      o2(p);
-    })();
-  }, [e4, n, JSON.stringify(t)]), r2;
-}
-function tr2(e4) {
-  var i2, a;
-  const n = sa(e4), { className: t, mediaMutedObserver: r2 } = s.useMemo(
-    () => Ns(n),
-    [N(n)]
-  );
-  return { isMuted: O(
-    r2,
-    !!((i2 = n.publication) != null && i2.isMuted || (a = n.participant.getTrackPublication(n.source)) != null && a.isMuted)
-  ), className: t };
-}
-function nr2({
-  source: e4,
-  onChange: n,
-  initialState: t,
-  captureOptions: r2,
-  publishOptions: o2,
-  onDeviceError: i2,
-  room: a,
-  ...c
-}) {
-  var m;
-  const u = Qo(), p = s.useMemo(() => a ?? u, [a, u]), h2 = (m = p == null ? void 0 : p.localParticipant) == null ? void 0 : m.getTrackPublication(e4), l = s.useRef(false), { toggle: d, className: v, pendingObserver: M2, enabledObserver: w } = s.useMemo(
-    () => p ? Is(e4, p, r2, o2, i2) : Ms(),
-    [p, e4, JSON.stringify(r2), o2]
-  ), A3 = O(M2, false), P2 = O(w, t ?? !!(h2 != null && h2.isEnabled));
-  s.useEffect(() => {
-    n == null || n(P2, l.current), l.current = false;
-  }, [P2, n]), s.useEffect(() => {
-    t !== void 0 && (L.debug("forcing initial toggle state", e4, t), d(t));
-  }, []);
-  const D2 = s.useMemo(() => M(c, { className: v }), [c, v]), R = s.useCallback(
-    (f) => {
-      var b;
-      l.current = true, d().catch(() => l.current = false), (b = c.onClick) == null || b.call(c, f);
-    },
-    [c, d]
-  );
-  return {
-    toggle: d,
-    enabled: P2,
-    pending: A3,
-    track: h2,
-    buttonProps: {
-      ...D2,
-      "aria-pressed": P2,
-      "data-lk-source": e4,
-      "data-lk-enabled": P2,
-      disabled: A3,
-      onClick: R
-    }
-  };
-}
-function rr2(e4 = [
-  Track.Source.Camera,
-  Track.Source.Microphone,
-  Track.Source.ScreenShare,
-  Track.Source.ScreenShareAudio,
-  Track.Source.Unknown
-], n = {}) {
-  const t = la(n.room), [r2, o2] = s.useState([]), [i2, a] = s.useState([]), c = s.useMemo(() => e4.map((p) => ho(p) ? p.source : p), [JSON.stringify(e4)]);
-  return s.useEffect(() => {
-    const p = qs(t, c, {
-      additionalRoomEvents: n.updateOnlyOn,
-      onlySubscribed: n.onlySubscribed
-    }).subscribe(({ trackReferences: h2, participants: l }) => {
-      L.debug("setting track bundles", h2, l), o2(h2), a(l);
-    });
-    return () => p.unsubscribe();
-  }, [
-    t,
-    JSON.stringify(n.onlySubscribed),
-    JSON.stringify(n.updateOnlyOn),
-    JSON.stringify(e4)
-  ]), s.useMemo(() => {
-    if (vs(e4)) {
-      const p = tn2(e4, i2), h2 = Array.from(r2);
-      return i2.forEach((l) => {
-        p.has(l.identity) && (p.get(l.identity) ?? []).forEach((v) => {
-          if (r2.find(
-            ({ participant: w, publication: A3 }) => l.identity === w.identity && A3.source === v
-          ))
-            return;
-          L.debug(
-            `Add ${v} placeholder for participant ${l.identity}.`
-          );
-          const M2 = {
-            participant: l,
-            source: v
-          };
-          h2.push(M2);
-        });
-      }), h2;
-    } else
-      return r2;
-  }, [r2, i2, e4]);
-}
-function en2(e4, n) {
-  const t = new Set(e4);
-  for (const r2 of n)
-    t.delete(r2);
-  return t;
-}
-function tn2(e4, n) {
-  const t = /* @__PURE__ */ new Map();
-  if (vs(e4)) {
-    const r2 = e4.filter((o2) => o2.withPlaceholder).map((o2) => o2.source);
-    n.forEach((o2) => {
-      const i2 = o2.getTrackPublications().map((c) => {
-        var u;
-        return (u = c.track) == null ? void 0 : u.source;
-      }).filter((c) => c !== void 0), a = Array.from(
-        en2(new Set(r2), new Set(i2))
-      );
-      a.length > 0 && t.set(o2.identity, a);
-    });
-  }
-  return t;
-}
-function nn2(e4) {
-  const [n, t] = s.useState(zt(e4)), { trackObserver: r2 } = s.useMemo(() => ys(e4), [e4.participant.sid ?? e4.participant.identity, e4.source]);
-  return s.useEffect(() => {
-    const o2 = r2.subscribe((i2) => {
-      t(i2);
-    });
-    return () => o2 == null ? void 0 : o2.unsubscribe();
-  }, [r2]), {
-    participant: e4.participant,
-    source: e4.source ?? Track.Source.Unknown,
-    publication: n
-  };
-}
-function sr2(e4, n) {
-  const t = ca(n);
-  return nn2({ name: e4, participant: t });
-}
-function rn2(e4) {
-  const n = la(e4 == null ? void 0 : e4.room), t = re(n), r2 = s.useMemo(
-    () => t === ConnectionState.Disconnected,
-    [t]
-  ), o2 = s.useMemo(
-    () => Ws(n, e4),
-    [n, e4, r2]
-  ), i2 = O(o2.isSendingObservable, false), a = O(o2.messageObservable, []);
-  return { send: o2.send, chatMessages: a, isSending: i2 };
-}
-function or2(e4 = {}) {
-  const [n, t] = s.useState(
-    Zs(e4.defaults, e4.preventLoad ?? false)
-  ), r2 = s.useCallback((u) => {
-    t((p) => ({ ...p, audioEnabled: u }));
-  }, []), o2 = s.useCallback((u) => {
-    t((p) => ({ ...p, videoEnabled: u }));
-  }, []), i2 = s.useCallback((u) => {
-    t((p) => ({ ...p, audioDeviceId: u }));
-  }, []), a = s.useCallback((u) => {
-    t((p) => ({ ...p, videoDeviceId: u }));
-  }, []), c = s.useCallback((u) => {
-    t((p) => ({ ...p, username: u }));
-  }, []);
-  return s.useEffect(() => {
-    Xs(n, e4.preventSave ?? false);
-  }, [n, e4.preventSave]), {
-    userChoices: n,
-    saveAudioInputEnabled: r2,
-    saveVideoInputEnabled: o2,
-    saveAudioInputDeviceId: i2,
-    saveVideoInputDeviceId: a,
-    saveUsername: c
-  };
-}
-function ar2(e4, n = {}) {
-  const t = ca(e4), r2 = la(n.room), o2 = s.useMemo(() => Es(r2, t), [r2, t]);
-  return O(
-    o2,
-    t.isLocal ? t.isE2EEEnabled : !!(t != null && t.isEncrypted)
-  );
-}
-function ir2(e4, n = { fftSize: 32, smoothingTimeConstant: 0 }) {
-  const t = B(e4) ? e4.publication.track : e4, [r2, o2] = s.useState(0);
-  return s.useEffect(() => {
-    if (!t || !t.mediaStream)
-      return;
-    const { cleanup: i2, analyser: a } = createAudioAnalyser(t, n), c = a.frequencyBinCount, u = new Uint8Array(c), h2 = setInterval(() => {
-      a.getByteFrequencyData(u);
-      let l = 0;
-      for (let d = 0; d < u.length; d++) {
-        const v = u[d];
-        l += v * v;
-      }
-      o2(Math.sqrt(l / u.length) / 255);
-    }, 1e3 / 30);
-    return () => {
-      i2(), clearInterval(h2);
-    };
-  }, [t, t == null ? void 0 : t.mediaStream, JSON.stringify(n)]), r2;
-}
-var sn2 = (e4) => {
-  const n = (t) => {
-    let i2 = 1 - Math.max(-100, Math.min(-10, t)) * -1 / 100;
-    return i2 = Math.sqrt(i2), i2;
-  };
-  return e4.map((t) => t === -1 / 0 ? 0 : n(t));
-};
-var on2 = {
-  bands: 5,
-  loPass: 100,
-  hiPass: 600,
-  updateInterval: 32,
-  analyserOptions: { fftSize: 2048 }
-};
-function cr2(e4, n = {}) {
-  var a;
-  const t = e4 instanceof Track ? e4 : (a = e4 == null ? void 0 : e4.publication) == null ? void 0 : a.track, r2 = { ...on2, ...n }, [o2, i2] = s.useState(
-    new Array(r2.bands).fill(0)
-  );
-  return s.useEffect(() => {
-    if (!t || !(t != null && t.mediaStream)) {
-      i2((v) => v.slice().fill(0));
-      return;
-    }
-    const { analyser: c, cleanup: u } = createAudioAnalyser(t, r2.analyserOptions), p = c.frequencyBinCount, h2 = new Float32Array(p), d = setInterval(() => {
-      c.getFloatFrequencyData(h2);
-      let v = new Float32Array(h2.length);
-      for (let P2 = 0; P2 < h2.length; P2++)
-        v[P2] = h2[P2];
-      v = v.slice(r2.loPass, r2.hiPass);
-      const M2 = sn2(v), w = M2.length, A3 = [];
-      for (let P2 = 0; P2 < r2.bands; P2++) {
-        const D2 = Math.floor(P2 * w / r2.bands), R = Math.floor((P2 + 1) * w / r2.bands), m = M2.slice(D2, R), f = m.length;
-        if (f === 0)
-          A3.push(0);
-        else {
-          const b = m.reduce((g, y) => g += y, 0);
-          A3.push(b / f);
-        }
-      }
-      i2(A3);
-    }, r2.updateInterval);
-    return () => {
-      u(), clearInterval(d);
-    };
-  }, [t, t == null ? void 0 : t.mediaStream, JSON.stringify(n)]), o2;
-}
-var an2 = {
-  barCount: 120,
-  volMultiplier: 5,
-  updateInterval: 20
-};
-function ur2(e4, n = {}) {
-  var h2;
-  const t = e4 instanceof Track ? e4 : (h2 = e4 == null ? void 0 : e4.publication) == null ? void 0 : h2.track, r2 = { ...an2, ...n }, o2 = s.useRef(new Float32Array()), i2 = s.useRef(performance.now()), a = s.useRef(0), [c, u] = s.useState([]), p = s.useCallback((l) => {
-    u(
-      Array.from(
-        un2(l, r2.barCount).map((d) => Math.sqrt(d) * r2.volMultiplier)
-        // wave.slice(0, opts.barCount).map((v) => sigmoid(v * opts.volMultiplier, 0.08, 0.2)),
-      )
-    );
-  }, []);
-  return s.useEffect(() => {
-    if (!t || !(t != null && t.mediaStream))
-      return;
-    const { analyser: l, cleanup: d } = createAudioAnalyser(t, {
-      fftSize: ke2(r2.barCount)
-    }), v = ke2(r2.barCount), M2 = new Float32Array(v), w = () => {
-      if (A3 = requestAnimationFrame(w), l.getFloatTimeDomainData(M2), o2.current.map((P2, D2) => P2 + M2[D2]), a.current += 1, performance.now() - i2.current >= r2.updateInterval) {
-        const P2 = M2.map((D2) => D2 / a.current);
-        p(P2), i2.current = performance.now(), a.current = 0;
-      }
-    };
-    let A3 = requestAnimationFrame(w);
-    return () => {
-      d(), cancelAnimationFrame(A3);
-    };
-  }, [t, t == null ? void 0 : t.mediaStream, JSON.stringify(n), p]), {
-    bars: c
-  };
-}
-function ke2(e4) {
-  return e4 < 32 ? 32 : cn2(e4);
-}
-function cn2(e4) {
-  let n = 2;
-  for (; e4 >>= 1; )
-    n <<= 1;
-  return n;
-}
-function un2(e4, n) {
-  const t = Math.floor(e4.length / n), r2 = new Float32Array(n);
-  for (let o2 = 0; o2 < n; o2++) {
-    const i2 = t * o2;
-    let a = 0;
-    for (let c = 0; c < t; c++)
-      a = a + Math.abs(e4[i2 + c]);
-    r2[o2] = a / t;
-  }
-  return r2;
-}
-function ie2(e4, n = {}) {
-  let t, r2;
-  typeof n == "string" ? t = n : (t = n == null ? void 0 : n.participantIdentity, r2 = n == null ? void 0 : n.room);
-  const o2 = Go(), i2 = Xt2({ room: r2, updateOnlyOn: [] }), a = s.useMemo(() => t ? i2.find((p) => p.identity === t) : o2, [t, i2, o2]), c = s.useMemo(() => {
-    if (a)
-      return Ks(a, { sources: e4 });
-  }, [a, JSON.stringify(e4)]);
-  return O(c, []);
-}
-function dn2(e4) {
-  var t, r2, o2;
-  const n = s.useMemo(
-    () => {
-      var i2;
-      return (i2 = e4 == null ? void 0 : e4.publication) != null && i2.track ? Qs(e4 == null ? void 0 : e4.publication.track) : void 0;
-    },
-    [(t = e4 == null ? void 0 : e4.publication) == null ? void 0 : t.track]
-  );
-  return O(n, {
-    timestamp: Date.now(),
-    rtpTimestamp: (o2 = (r2 = e4 == null ? void 0 : e4.publication) == null ? void 0 : r2.track) == null ? void 0 : o2.rtpTimestamp
-  });
-}
-var ln2 = {
-  bufferSize: 100
-  // maxAge: 2_000,
-};
-function fn2(e4, n) {
-  const t = { ...ln2, ...n }, [r2, o2] = s.useState([]), i2 = dn2(e4), a = (c) => {
-    var u;
-    (u = t.onTranscription) == null || u.call(t, c), o2(
-      (p) => hs(
-        p,
-        // when first receiving a segment, add the current media timestamp to it
-        c.map((h2) => ps(h2, i2)),
-        t.bufferSize
-      )
-    );
-  };
-  return s.useEffect(() => {
-    if (!(e4 != null && e4.publication))
-      return;
-    const c = Gs(e4.publication).subscribe((u) => {
-      a(...u);
-    });
-    return () => {
-      c.unsubscribe();
-    };
-  }, [e4 && N(e4), a]), { segments: r2 };
-}
-function mn2(e4 = {}) {
-  const n = Go(), t = e4.participant ?? n, r2 = s.useMemo(
-    // weird typescript constraint
-    () => t ? Ls(t) : Ls(t),
-    [t]
-  );
-  return O(r2, {
-    attributes: t == null ? void 0 : t.attributes
-  });
-}
-function dr2(e4, n = {}) {
-  const t = ca(n.participant), [r2, o2] = s.useState(t.attributes[e4]);
-  return s.useEffect(() => {
-    if (!t)
-      return;
-    const i2 = Ls(t).subscribe((a) => {
-      a.changed[e4] !== void 0 && o2(a.attributes[e4]);
-    });
-    return () => {
-      i2.unsubscribe();
-    };
-  }, [t, e4]), r2;
-}
-var we2 = po.AgentState;
-function lr2() {
-  const e4 = ve2(), n = e4.find(
-    (l) => l.kind === ParticipantInfo_Kind.AGENT && !(po.PublishOnBehalf in l.attributes)
-  ), t = e4.find(
-    (l) => l.kind === ParticipantInfo_Kind.AGENT && l.attributes[po.PublishOnBehalf] === (n == null ? void 0 : n.identity)
-  ), r2 = ie2(
-    [Track.Source.Microphone, Track.Source.Camera],
-    n == null ? void 0 : n.identity
-  ), o2 = ie2(
-    [Track.Source.Microphone, Track.Source.Camera],
-    t == null ? void 0 : t.identity
-  ), i2 = r2.find((l) => l.source === Track.Source.Microphone) ?? o2.find((l) => l.source === Track.Source.Microphone), a = r2.find((l) => l.source === Track.Source.Camera) ?? o2.find((l) => l.source === Track.Source.Camera), { segments: c } = fn2(i2), u = re(), { attributes: p } = mn2({ participant: n }), h2 = s.useMemo(() => u === ConnectionState.Disconnected ? "disconnected" : u === ConnectionState.Connecting || !n || !(p != null && p[we2]) ? "connecting" : p[we2], [p, n, u]);
-  return {
-    agent: n,
-    state: h2,
-    audioTrack: i2,
-    videoTrack: a,
-    agentTranscriptions: c,
-    agentAttributes: p
-  };
-}
-function fr2(e4) {
-  const n = la(e4), t = re(n), r2 = s.useMemo(() => Cs(n), [n, t]);
-  return O(r2, n.isRecording);
-}
-function pn2(e4, n) {
-  const t = la(n == null ? void 0 : n.room), o2 = re(t) === ConnectionState.Disconnected, i2 = s.useMemo(() => ea(t, e4), [t, e4]);
-  return { textStreams: O(o2 ? void 0 : i2, []) };
-}
-function hn2(e4) {
-  const { participantIdentities: n, trackSids: t } = e4 ?? {}, { textStreams: r2 } = pn2(Mo.TRANSCRIPTION, { room: e4 == null ? void 0 : e4.room });
-  return s.useMemo(
-    () => r2.filter(
-      (i2) => n ? n.includes(i2.participantInfo.identity) : true
-    ).filter(
-      (i2) => {
-        var a;
-        return t ? t.includes(
-          ((a = i2.streamInfo.attributes) == null ? void 0 : a[po.TranscribedTrackId]) ?? ""
-        ) : true;
-      }
-    ),
-    [r2, n, t]
-  );
-}
-var Pe2 = 2;
-var Le2 = 400;
-var Ae2 = 3;
-var Re2 = 1e3;
-function mr2(e4) {
-  const n = (0, import_react.useRef)([]), t = (0, import_react.useMemo)(() => new _(), []), r2 = (0, import_react.useCallback)(async () => t.lock().then(async (h2) => {
-    for (; ; ) {
-      const l = n.current.pop();
-      if (!l) {
-        h2();
-        break;
-      }
-      switch (l.type) {
-        case "connect":
-          await l.room.connect(...l.args).then(l.resolve).catch(l.reject);
-          break;
-        case "disconnect":
-          await l.room.disconnect(...l.args).then(l.resolve).catch(l.reject);
-          break;
-      }
-    }
-  }), []), o2 = (0, import_react.useRef)([]), i2 = (0, import_react.useCallback)((h2) => {
-    let l = 0;
-    o2.current = o2.current.filter((d) => {
-      const v = h2.getTime() - d.getTime() < Re2;
-      return v && (l += 1), v;
-    }), l > Ae2 && L.warn(
-      `useSequentialRoomConnectDisconnect: room changed reference rapidly (over ${Ae2}x in ${Re2}ms). This is not recommended.`
-    );
-  }, []);
-  (0, import_react.useEffect)(() => {
-    n.current = [];
-    const h2 = /* @__PURE__ */ new Date();
-    o2.current.push(h2), i2(h2);
-  }, [e4, i2]);
-  const a = (0, import_react.useRef)([]), c = (0, import_react.useCallback)((h2) => {
-    let l = 0;
-    a.current = a.current.filter((d) => {
-      const v = h2.getTime() - d.getTime() < Le2;
-      return v && (l += 1), v;
-    }), l > Pe2 && L.warn(
-      `useSequentialRoomConnectDisconnect: room connect / disconnect occurring in rapid sequence (over ${Pe2}x in ${Le2}ms). This is not recommended and may be the sign of a bug like a useEffect dependency changing every render.`
-    );
-  }, []), u = (0, import_react.useCallback)(
-    async (...h2) => new Promise((l, d) => {
-      if (!e4)
-        throw new Error("Called connect(), but room was unset");
-      const v = /* @__PURE__ */ new Date();
-      c(v), n.current.push({ type: "connect", room: e4, args: h2, resolve: l, reject: d }), a.current.push(v), r2();
-    }),
-    [e4, c, r2]
-  ), p = (0, import_react.useCallback)(
-    async (...h2) => new Promise((l, d) => {
-      if (!e4)
-        throw new Error("Called discconnect(), but room was unset");
-      const v = /* @__PURE__ */ new Date();
-      c(v), n.current.push({ type: "disconnect", room: e4, args: h2, resolve: l, reject: d }), a.current.push(v), r2();
-    }),
-    [e4, c, r2]
-  );
-  return {
-    connect: e4 ? u : null,
-    disconnect: e4 ? p : null
-  };
-}
-var oe2 = { exports: {} };
-var Oe2;
-function bn2() {
-  if (Oe2) return oe2.exports;
-  Oe2 = 1;
-  var e4 = typeof Reflect == "object" ? Reflect : null, n = e4 && typeof e4.apply == "function" ? e4.apply : function(f, b, g) {
-    return Function.prototype.apply.call(f, b, g);
-  }, t;
-  e4 && typeof e4.ownKeys == "function" ? t = e4.ownKeys : Object.getOwnPropertySymbols ? t = function(f) {
-    return Object.getOwnPropertyNames(f).concat(Object.getOwnPropertySymbols(f));
-  } : t = function(f) {
-    return Object.getOwnPropertyNames(f);
-  };
-  function r2(m) {
-    console && console.warn && console.warn(m);
-  }
-  var o2 = Number.isNaN || function(f) {
-    return f !== f;
-  };
-  function i2() {
-    i2.init.call(this);
-  }
-  oe2.exports = i2, oe2.exports.once = P2, i2.EventEmitter = i2, i2.prototype._events = void 0, i2.prototype._eventsCount = 0, i2.prototype._maxListeners = void 0;
-  var a = 10;
-  function c(m) {
-    if (typeof m != "function")
-      throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof m);
-  }
-  Object.defineProperty(i2, "defaultMaxListeners", {
-    enumerable: true,
-    get: function() {
-      return a;
-    },
-    set: function(m) {
-      if (typeof m != "number" || m < 0 || o2(m))
-        throw new RangeError('The value of "defaultMaxListeners" is out of range. It must be a non-negative number. Received ' + m + ".");
-      a = m;
-    }
-  }), i2.init = function() {
-    (this._events === void 0 || this._events === Object.getPrototypeOf(this)._events) && (this._events = /* @__PURE__ */ Object.create(null), this._eventsCount = 0), this._maxListeners = this._maxListeners || void 0;
-  }, i2.prototype.setMaxListeners = function(f) {
-    if (typeof f != "number" || f < 0 || o2(f))
-      throw new RangeError('The value of "n" is out of range. It must be a non-negative number. Received ' + f + ".");
-    return this._maxListeners = f, this;
-  };
-  function u(m) {
-    return m._maxListeners === void 0 ? i2.defaultMaxListeners : m._maxListeners;
-  }
-  i2.prototype.getMaxListeners = function() {
-    return u(this);
-  }, i2.prototype.emit = function(f) {
-    for (var b = [], g = 1; g < arguments.length; g++) b.push(arguments[g]);
-    var y = f === "error", T2 = this._events;
-    if (T2 !== void 0)
-      y = y && T2.error === void 0;
-    else if (!y)
-      return false;
-    if (y) {
-      var C;
-      if (b.length > 0 && (C = b[0]), C instanceof Error)
-        throw C;
-      var k2 = new Error("Unhandled error." + (C ? " (" + C.message + ")" : ""));
-      throw k2.context = C, k2;
-    }
-    var F2 = T2[f];
-    if (F2 === void 0)
-      return false;
-    if (typeof F2 == "function")
-      n(F2, this, b);
-    else
-      for (var B3 = F2.length, H3 = M2(F2, B3), g = 0; g < B3; ++g)
-        n(H3[g], this, b);
-    return true;
-  };
-  function p(m, f, b, g) {
-    var y, T2, C;
-    if (c(b), T2 = m._events, T2 === void 0 ? (T2 = m._events = /* @__PURE__ */ Object.create(null), m._eventsCount = 0) : (T2.newListener !== void 0 && (m.emit(
-      "newListener",
-      f,
-      b.listener ? b.listener : b
-    ), T2 = m._events), C = T2[f]), C === void 0)
-      C = T2[f] = b, ++m._eventsCount;
-    else if (typeof C == "function" ? C = T2[f] = g ? [b, C] : [C, b] : g ? C.unshift(b) : C.push(b), y = u(m), y > 0 && C.length > y && !C.warned) {
-      C.warned = true;
-      var k2 = new Error("Possible EventEmitter memory leak detected. " + C.length + " " + String(f) + " listeners added. Use emitter.setMaxListeners() to increase limit");
-      k2.name = "MaxListenersExceededWarning", k2.emitter = m, k2.type = f, k2.count = C.length, r2(k2);
-    }
-    return m;
-  }
-  i2.prototype.addListener = function(f, b) {
-    return p(this, f, b, false);
-  }, i2.prototype.on = i2.prototype.addListener, i2.prototype.prependListener = function(f, b) {
-    return p(this, f, b, true);
-  };
-  function h2() {
-    if (!this.fired)
-      return this.target.removeListener(this.type, this.wrapFn), this.fired = true, arguments.length === 0 ? this.listener.call(this.target) : this.listener.apply(this.target, arguments);
-  }
-  function l(m, f, b) {
-    var g = { fired: false, wrapFn: void 0, target: m, type: f, listener: b }, y = h2.bind(g);
-    return y.listener = b, g.wrapFn = y, y;
-  }
-  i2.prototype.once = function(f, b) {
-    return c(b), this.on(f, l(this, f, b)), this;
-  }, i2.prototype.prependOnceListener = function(f, b) {
-    return c(b), this.prependListener(f, l(this, f, b)), this;
-  }, i2.prototype.removeListener = function(f, b) {
-    var g, y, T2, C, k2;
-    if (c(b), y = this._events, y === void 0)
-      return this;
-    if (g = y[f], g === void 0)
-      return this;
-    if (g === b || g.listener === b)
-      --this._eventsCount === 0 ? this._events = /* @__PURE__ */ Object.create(null) : (delete y[f], y.removeListener && this.emit("removeListener", f, g.listener || b));
-    else if (typeof g != "function") {
-      for (T2 = -1, C = g.length - 1; C >= 0; C--)
-        if (g[C] === b || g[C].listener === b) {
-          k2 = g[C].listener, T2 = C;
-          break;
-        }
-      if (T2 < 0)
-        return this;
-      T2 === 0 ? g.shift() : w(g, T2), g.length === 1 && (y[f] = g[0]), y.removeListener !== void 0 && this.emit("removeListener", f, k2 || b);
-    }
-    return this;
-  }, i2.prototype.off = i2.prototype.removeListener, i2.prototype.removeAllListeners = function(f) {
-    var b, g, y;
-    if (g = this._events, g === void 0)
-      return this;
-    if (g.removeListener === void 0)
-      return arguments.length === 0 ? (this._events = /* @__PURE__ */ Object.create(null), this._eventsCount = 0) : g[f] !== void 0 && (--this._eventsCount === 0 ? this._events = /* @__PURE__ */ Object.create(null) : delete g[f]), this;
-    if (arguments.length === 0) {
-      var T2 = Object.keys(g), C;
-      for (y = 0; y < T2.length; ++y)
-        C = T2[y], C !== "removeListener" && this.removeAllListeners(C);
-      return this.removeAllListeners("removeListener"), this._events = /* @__PURE__ */ Object.create(null), this._eventsCount = 0, this;
-    }
-    if (b = g[f], typeof b == "function")
-      this.removeListener(f, b);
-    else if (b !== void 0)
-      for (y = b.length - 1; y >= 0; y--)
-        this.removeListener(f, b[y]);
-    return this;
-  };
-  function d(m, f, b) {
-    var g = m._events;
-    if (g === void 0)
-      return [];
-    var y = g[f];
-    return y === void 0 ? [] : typeof y == "function" ? b ? [y.listener || y] : [y] : b ? A3(y) : M2(y, y.length);
-  }
-  i2.prototype.listeners = function(f) {
-    return d(this, f, true);
-  }, i2.prototype.rawListeners = function(f) {
-    return d(this, f, false);
-  }, i2.listenerCount = function(m, f) {
-    return typeof m.listenerCount == "function" ? m.listenerCount(f) : v.call(m, f);
-  }, i2.prototype.listenerCount = v;
-  function v(m) {
-    var f = this._events;
-    if (f !== void 0) {
-      var b = f[m];
-      if (typeof b == "function")
-        return 1;
-      if (b !== void 0)
-        return b.length;
-    }
-    return 0;
-  }
-  i2.prototype.eventNames = function() {
-    return this._eventsCount > 0 ? t(this._events) : [];
-  };
-  function M2(m, f) {
-    for (var b = new Array(f), g = 0; g < f; ++g)
-      b[g] = m[g];
-    return b;
-  }
-  function w(m, f) {
-    for (; f + 1 < m.length; f++)
-      m[f] = m[f + 1];
-    m.pop();
-  }
-  function A3(m) {
-    for (var f = new Array(m.length), b = 0; b < f.length; ++b)
-      f[b] = m[b].listener || m[b];
-    return f;
-  }
-  function P2(m, f) {
-    return new Promise(function(b, g) {
-      function y(C) {
-        m.removeListener(f, T2), g(C);
-      }
-      function T2() {
-        typeof m.removeListener == "function" && m.removeListener("error", y), b([].slice.call(arguments));
-      }
-      R(m, f, T2, { once: true }), f !== "error" && D2(m, y, { once: true });
-    });
-  }
-  function D2(m, f, b) {
-    typeof m.on == "function" && R(m, "error", f, b);
-  }
-  function R(m, f, b, g) {
-    if (typeof m.on == "function")
-      g.once ? m.once(f, b) : m.on(f, b);
-    else if (typeof m.addEventListener == "function")
-      m.addEventListener(f, function y(T2) {
-        g.once && m.removeEventListener(f, y), b(T2);
-      });
-    else
-      throw new TypeError('The "emitter" argument must be of type EventEmitter. Received type ' + typeof m);
-  }
-  return oe2.exports;
-}
-var ge2 = bn2();
-var vn2 = 2e4;
-var gn2 = ((e4) => (e4.CameraChanged = "cameraChanged", e4.MicrophoneChanged = "microphoneChanged", e4.StateChanged = "stateChanged", e4))(gn2 || {});
-var x = (e4) => ({
-  isConnected: e4 === "listening" || e4 === "thinking" || e4 === "speaking",
-  canListen: e4 === "pre-connect-buffering" || e4 === "listening" || e4 === "thinking" || e4 === "speaking",
-  isFinished: e4 === "disconnected" || e4 === "failed",
-  isPending: e4 === "connecting" || e4 === "initializing" || e4 === "idle"
-});
-var Sn2 = () => {
-  const [e4, n] = s.useState(
-    null
-  ), [t, r2] = s.useState(
-    null
-  ), o2 = s.useRef("connecting"), i2 = s.useRef(false), a = (c) => setTimeout(() => {
-    if (!i2.current) {
-      n("Agent did not join the room.");
-      return;
-    }
-    const { isConnected: u } = x(o2.current);
-    if (!u) {
-      n("Agent joined the room but did not complete initializing.");
-      return;
-    }
-  }, c ?? vn2);
-  return {
-    agentTimeoutFailureReason: e4,
-    startAgentTimeout: s.useCallback(
-      (c) => {
-        t && clearTimeout(t), n(null), r2(a(c)), o2.current = "connecting", i2.current = false;
-      },
-      [t]
-    ),
-    clearAgentTimeout: s.useCallback(() => {
-      t && clearTimeout(t), n(null), r2(null), o2.current = "connecting", i2.current = false;
-    }, [t]),
-    clearAgentTimeoutFailureReason: s.useCallback(() => {
-      n(null);
-    }, []),
-    updateAgentTimeoutState: s.useCallback((c) => {
-      o2.current = c;
-    }, []),
-    updateAgentTimeoutParticipantExists: s.useCallback((c) => {
-      i2.current = c;
-    }, [])
-  };
-};
-function yn2(e4, n) {
-  const t = s.useRef(n);
-  s.useEffect(() => {
-    t.current = n;
-  }, [n]);
-  const r2 = s.useCallback(
-    async (a) => {
-      const { isConnected: c } = x(t.current);
-      if (!c)
-        return new Promise((u, p) => {
-          const h2 = (v) => {
-            const { isConnected: M2 } = x(v);
-            M2 && (d(), u());
-          }, l = () => {
-            d(), p(new Error("useAgent(/* ... */).waitUntilConnected - signal aborted"));
-          }, d = () => {
-            e4.off("stateChanged", h2), a == null || a.removeEventListener("abort", l);
-          };
-          e4.on("stateChanged", h2), a == null || a.addEventListener("abort", l);
-        });
-    },
-    [e4]
-  ), o2 = s.useCallback(
-    async (a) => {
-      const { canListen: c } = x(t.current);
-      if (!c)
-        return new Promise((u, p) => {
-          const h2 = (v) => {
-            const { canListen: M2 } = x(v);
-            M2 && (d(), u());
-          }, l = () => {
-            d(), p(new Error("useAgent(/* ... */).waitUntilCouldBeListening - signal aborted"));
-          }, d = () => {
-            e4.off("stateChanged", h2), a == null || a.removeEventListener("abort", l);
-          };
-          e4.on("stateChanged", h2), a == null || a.addEventListener("abort", l);
-        });
-    },
-    [e4]
-  ), i2 = s.useCallback(
-    async (a) => {
-      const { isFinished: c } = x(t.current);
-      if (!c)
-        return new Promise((u, p) => {
-          const h2 = (v) => {
-            const { isFinished: M2 } = x(v);
-            M2 && (d(), u());
-          }, l = () => {
-            d(), p(new Error("useAgent(/* ... */).waitUntilFinished - signal aborted"));
-          }, d = () => {
-            e4.off("stateChanged", h2), a == null || a.removeEventListener("abort", l);
-          };
-          e4.on("stateChanged", h2), a == null || a.addEventListener("abort", l);
-        });
-    },
-    [e4]
-  );
-  return { waitUntilConnected: r2, waitUntilCouldBeListening: o2, waitUntilFinished: i2 };
-}
-function Ue2(e4) {
-  const n = Jo();
-  if (e4 = e4 ?? n, !e4)
-    throw new Error(
-      "No session provided, make sure you are inside a Session context or pass the session explicitly"
-    );
-  const {
-    room: t,
-    internal: {
-      agentConnectTimeoutMilliseconds: r2,
-      agentTimeoutFailureReason: o2,
-      startAgentTimeout: i2,
-      clearAgentTimeout: a,
-      clearAgentTimeoutFailureReason: c,
-      updateAgentTimeoutState: u,
-      updateAgentTimeoutParticipantExists: p
-    }
-  } = e4, h2 = s.useMemo(() => new ge2.EventEmitter(), []), l = ve2({ room: t }), d = s.useMemo(() => l.find(
-    (S) => S.kind === ParticipantInfo_Kind.AGENT && !(po.PublishOnBehalf in S.attributes)
-  ) ?? null, [l]), v = s.useMemo(() => d ? l.find(
-    (S) => S.kind === ParticipantInfo_Kind.AGENT && S.attributes[po.PublishOnBehalf] === d.identity
-  ) ?? null : null, [d, l]), [M2, w] = s.useState((d == null ? void 0 : d.attributes) ?? {});
-  s.useEffect(() => {
-    if (!d)
-      return;
-    const S = (_2) => {
-      w(_2);
-    };
-    return d.on(ParticipantEvent.AttributesChanged, S), () => {
-      d.off(ParticipantEvent.AttributesChanged, S);
-    };
-  }, [d, h2]);
-  const A3 = ie2([Track.Source.Camera, Track.Source.Microphone], {
-    room: t,
-    participantIdentity: d == null ? void 0 : d.identity
-  }), P2 = ie2([Track.Source.Camera, Track.Source.Microphone], {
-    room: t,
-    participantIdentity: v == null ? void 0 : v.identity
-  }), D2 = s.useMemo(
-    () => A3.find((S) => S.source === Track.Source.Camera) ?? P2.find((S) => S.source === Track.Source.Camera),
-    [A3, P2]
-  );
-  s.useEffect(() => {
-    h2.emit("cameraChanged", D2);
-  }, [h2, D2]);
-  const R = s.useMemo(
-    () => A3.find((S) => S.source === Track.Source.Microphone) ?? P2.find((S) => S.source === Track.Source.Microphone),
-    [A3, P2]
-  );
-  s.useEffect(() => {
-    h2.emit("microphoneChanged", R);
-  }, [h2, R]);
-  const [m, f] = s.useState(t.state);
-  s.useEffect(() => {
-    const S = (_2) => {
-      f(_2);
-    };
-    return t.on(RoomEvent.ConnectionStateChanged, S), () => {
-      t.off(RoomEvent.ConnectionStateChanged, S);
-    };
-  }, [t]), s.useEffect(() => {
-    d && c();
-  }, [d]);
-  const [b, g] = s.useState(null);
-  s.useEffect(() => {
-    if (!d)
-      return;
-    const S = (_2) => {
-      _2.identity === (d == null ? void 0 : d.identity) && g("Agent left the room unexpectedly.");
-    };
-    return t.on(RoomEvent.ParticipantDisconnected, S), () => {
-      t.off(RoomEvent.ParticipantDisconnected, S);
-    };
-  }, [d, t]), s.useEffect(() => {
-    m === ConnectionState.Disconnected && g(null);
-  }, [m]);
-  const [y, T2] = s.useState(
-    () => t.localParticipant.getTrackPublication(Track.Source.Microphone) ?? null
-  );
-  s.useEffect(() => {
-    const S = () => {
-      T2(t.localParticipant.getTrackPublication(Track.Source.Microphone) ?? null);
-    }, _2 = () => {
-      T2(null);
-    };
-    return t.localParticipant.on(
-      ParticipantEvent.LocalTrackPublished,
-      S
-    ), t.localParticipant.on(
-      ParticipantEvent.LocalTrackUnpublished,
-      _2
-    ), () => {
-      t.localParticipant.off(
-        ParticipantEvent.LocalTrackPublished,
-        S
-      ), t.localParticipant.off(
-        ParticipantEvent.LocalTrackUnpublished,
-        _2
-      );
-    };
-  }, [t.localParticipant]);
-  const C = s.useMemo(() => {
-    const S = [];
-    return o2 && S.push(o2), b && S.push(b), S;
-  }, [o2, b]), k2 = s.useMemo(() => {
-    if (C.length > 0)
-      return "failed";
-    let S = "disconnected";
-    return m !== ConnectionState.Disconnected && (S = "connecting"), y && (S = "pre-connect-buffering"), d && M2[po.AgentState] && (S = M2[po.AgentState]), S;
-  }, [
-    C,
-    m,
-    y,
-    d,
-    M2
-  ]);
-  s.useEffect(() => {
-    h2.emit("stateChanged", k2), u(k2);
-  }, [h2, k2]), s.useEffect(() => {
-    p(d !== null);
-  }, [d]);
-  const F2 = e4.connectionState === "disconnected";
-  s.useEffect(() => {
-    if (!F2)
-      return i2(r2), () => {
-        a();
-      };
-  }, [F2, r2]);
-  const {
-    identity: B3,
-    name: H3,
-    metadata: K3
-  } = Yt2({ participant: d ?? void 0 }), te3 = s.useMemo(() => {
-    const S = {
-      attributes: M2,
-      internal: {
-        agentParticipant: d,
-        workerParticipant: v,
-        emitter: h2
-      }
-    };
-    switch (k2) {
-      case "disconnected":
-        return {
-          ...S,
-          identity: void 0,
-          name: void 0,
-          metadata: void 0,
-          state: k2,
-          ...x(k2),
-          failureReasons: null,
-          // Clear inner values if no longer connected
-          cameraTrack: void 0,
-          microphoneTrack: void 0
-        };
-      case "connecting":
-        return {
-          ...S,
-          identity: void 0,
-          name: void 0,
-          metadata: void 0,
-          state: k2,
-          ...x(k2),
-          failureReasons: null,
-          // Clear inner values if no longer connected
-          cameraTrack: void 0,
-          microphoneTrack: void 0
-        };
-      case "initializing":
-      case "idle":
-        return {
-          ...S,
-          identity: B3,
-          name: H3,
-          metadata: K3,
-          state: k2,
-          ...x(k2),
-          failureReasons: null,
-          cameraTrack: D2,
-          microphoneTrack: R
-        };
-      case "pre-connect-buffering":
-        return {
-          ...S,
-          identity: B3,
-          name: H3,
-          metadata: K3,
-          state: k2,
-          ...x(k2),
-          failureReasons: null,
-          cameraTrack: D2,
-          microphoneTrack: R
-        };
-      case "listening":
-      case "thinking":
-      case "speaking":
-        return {
-          ...S,
-          identity: B3,
-          name: H3,
-          metadata: K3,
-          state: k2,
-          ...x(k2),
-          failureReasons: null,
-          cameraTrack: D2,
-          microphoneTrack: R
-        };
-      case "failed":
-        return {
-          ...S,
-          identity: void 0,
-          name: void 0,
-          metadata: void 0,
-          state: "failed",
-          ...x("failed"),
-          failureReasons: C,
-          // Clear inner values if no longer connected
-          cameraTrack: void 0,
-          microphoneTrack: void 0
-        };
-    }
-  }, [
-    B3,
-    H3,
-    K3,
-    M2,
-    h2,
-    d,
-    k2,
-    D2,
-    R
-  ]), { waitUntilConnected: X2, waitUntilCouldBeListening: L3, waitUntilFinished: N2 } = yn2(h2, k2), q3 = s.useCallback(
-    (S) => new Promise((_2, Z2) => {
-      const W3 = (J3) => {
-        J3 && (G3(), _2(J3));
-      }, z3 = () => {
-        G3(), Z2(new Error("useAgent(/* ... */).waitUntilCamera - signal aborted"));
-      }, G3 = () => {
-        h2.off("cameraChanged", W3), S == null || S.removeEventListener("abort", z3);
-      };
-      h2.on("cameraChanged", W3), S == null || S.addEventListener("abort", z3);
-    }),
-    [h2]
-  ), se2 = s.useCallback(
-    (S) => new Promise((_2, Z2) => {
-      const W3 = (J3) => {
-        J3 && (G3(), _2(J3));
-      }, z3 = () => {
-        G3(), Z2(new Error("useAgent(/* ... */).waitUntilMicrophone - signal aborted"));
-      }, G3 = () => {
-        h2.off("microphoneChanged", W3), S == null || S.removeEventListener("abort", z3);
-      };
-      h2.on("microphoneChanged", W3), S == null || S.addEventListener("abort", z3);
-    }),
-    [h2]
-  );
-  return s.useMemo(() => ({
-    ...te3,
-    waitUntilConnected: X2,
-    waitUntilCouldBeListening: L3,
-    waitUntilFinished: N2,
-    waitUntilCamera: q3,
-    waitUntilMicrophone: se2
-  }), [
-    te3,
-    X2,
-    L3,
-    N2,
-    q3,
-    se2
-  ]);
-}
-var Cn2 = ((e4) => (e4.ConnectionStateChanged = "connectionStateChanged", e4.MediaDevicesError = "mediaDevicesError", e4.EncryptionError = "encryptionError", e4))(Cn2 || {});
-function Mn2(e4, n) {
-  const t = /* @__PURE__ */ new Set([...Object.keys(e4), ...Object.keys(n)]);
-  for (const r2 of t)
-    switch (r2) {
-      case "roomName":
-      case "participantName":
-      case "participantIdentity":
-      case "participantMetadata":
-      case "participantAttributes":
-      case "agentName":
-      case "agentMetadata":
-        if (e4[r2] !== n[r2])
-          return false;
-        break;
-      default:
-        const o2 = r2;
-        throw new Error(`Options key ${o2} not being checked for equality!`);
-    }
-  return true;
-}
-function Tn2(e4, n) {
-  const t = s.useRef(n);
-  return s.useEffect(() => {
-    t.current = n;
-  }, [n]), s.useCallback(
-    async (o2, i2) => {
-      if (t.current !== o2)
-        return new Promise((a, c) => {
-          const u = (l) => {
-            l === o2 && (h2(), a());
-          }, p = () => {
-            h2(), c(
-              new Error(
-                `useSession(/* ... */).waitUntilConnectionState(${o2}, /* signal */) - signal aborted`
-              )
-            );
-          }, h2 = () => {
-            e4.off("connectionStateChanged", u), i2 == null || i2.removeEventListener("abort", p);
-          };
-          e4.on("connectionStateChanged", u), i2 == null || i2.addEventListener("abort", p);
-        });
-    },
-    [e4]
-  );
-}
-function En2(e4, n) {
-  const t = e4 instanceof TokenSourceConfigurable, r2 = s.useRef(
-    t ? n : null
-  );
-  return s.useEffect(() => {
-    if (!t) {
-      r2.current = null;
-      return;
-    }
-    r2.current !== null && Mn2(r2.current, n) || (r2.current = n);
-  }, [t, n]), s.useCallback(async () => {
-    if (t) {
-      if (!r2.current)
-        throw new Error(
-          "AgentSession - memoized token fetch options are not set, but the passed tokenSource was an instance of TokenSourceConfigurable. If you are seeing this please make a new GitHub issue!"
-        );
-      return e4.fetch(r2.current);
-    } else
-      return e4.fetch();
-  }, [t, e4]);
-}
-function pr2(e4, n = {}) {
-  const { room: t, agentConnectTimeoutMilliseconds: r2, ...o2 } = n, i2 = Qo(), a = s.useMemo(
-    () => i2 ?? t ?? new Room(),
-    [i2, t]
-  ), c = s.useMemo(
-    () => new ge2.EventEmitter(),
-    []
-  ), u = s.useCallback(
-    (L3) => ({
-      isConnected: L3 === ConnectionState.Connected || L3 === ConnectionState.Reconnecting || L3 === ConnectionState.SignalReconnecting
-    }),
-    []
-  ), [p, h2] = s.useState(a.state);
-  s.useEffect(() => {
-    const L3 = (N2) => {
-      h2(N2);
-    };
-    return a.on(RoomEvent.ConnectionStateChanged, L3), () => {
-      a.off(RoomEvent.ConnectionStateChanged, L3);
-    };
-  }, [a]), s.useEffect(() => {
-    const L3 = async (N2) => {
-      c.emit("mediaDevicesError", N2);
-    };
-    return a.on(RoomEvent.MediaDevicesError, L3), () => {
-      a.off(RoomEvent.MediaDevicesError, L3);
-    };
-  }, [a, c]), s.useEffect(() => {
-    const L3 = async (N2) => {
-      c.emit("encryptionError", N2);
-    };
-    return a.on(RoomEvent.EncryptionError, L3), () => {
-      a.off(RoomEvent.EncryptionError, L3);
-    };
-  }, [a, c]);
-  const { localParticipant: l } = xe2({ room: a }), d = l.getTrackPublication(Track.Source.Camera), v = s.useMemo(() => {
-    if (d)
-      return {
-        source: Track.Source.Camera,
-        participant: l,
-        publication: d
-      };
-  }, [l, d]), M2 = l.getTrackPublication(Track.Source.Microphone), w = s.useMemo(() => {
-    if (M2)
-      return {
-        source: Track.Source.Microphone,
-        participant: l,
-        publication: M2
-      };
-  }, [l, M2]), A3 = l.getTrackPublication(Track.Source.ScreenShare), P2 = s.useMemo(() => {
-    if (A3)
-      return {
-        source: Track.Source.ScreenShare,
-        participant: l,
-        publication: A3
-      };
-  }, [l, A3]), {
-    agentTimeoutFailureReason: D2,
-    startAgentTimeout: R,
-    clearAgentTimeout: m,
-    clearAgentTimeoutFailureReason: f,
-    updateAgentTimeoutState: b,
-    updateAgentTimeoutParticipantExists: g
-  } = Sn2(), y = s.useMemo(
-    () => ({
-      emitter: c,
-      tokenSource: e4,
-      agentConnectTimeoutMilliseconds: r2,
-      agentTimeoutFailureReason: D2,
-      startAgentTimeout: R,
-      clearAgentTimeout: m,
-      clearAgentTimeoutFailureReason: f,
-      updateAgentTimeoutState: b,
-      updateAgentTimeoutParticipantExists: g
-    }),
-    [
-      c,
-      r2,
-      e4,
-      D2,
-      R,
-      m,
-      f,
-      b,
-      g
-    ]
-  ), T2 = s.useMemo(() => {
-    const L3 = {
-      room: a,
-      internal: y
-    };
-    switch (p) {
-      case ConnectionState.Connecting:
-        return {
-          ...L3,
-          connectionState: ConnectionState.Connecting,
-          ...u(ConnectionState.Connecting),
-          local: {
-            cameraTrack: void 0,
-            microphoneTrack: void 0,
-            screenShareTrack: void 0
-          }
-        };
-      case ConnectionState.Connected:
-      case ConnectionState.Reconnecting:
-      case ConnectionState.SignalReconnecting:
-        return {
-          ...L3,
-          connectionState: p,
-          ...u(p),
-          local: {
-            cameraTrack: v,
-            microphoneTrack: w,
-            screenShareTrack: P2
-          }
-        };
-      case ConnectionState.Disconnected:
-        return {
-          ...L3,
-          connectionState: ConnectionState.Disconnected,
-          ...u(ConnectionState.Disconnected),
-          local: {
-            cameraTrack: void 0,
-            microphoneTrack: void 0,
-            screenShareTrack: void 0
-          }
-        };
-    }
-  }, [
-    y,
-    a,
-    p,
-    v,
-    w,
-    u
-  ]);
-  s.useEffect(() => {
-    c.emit("connectionStateChanged", T2.connectionState);
-  }, [c, T2.connectionState]);
-  const C = Tn2(
-    c,
-    T2.connectionState
-  ), k2 = s.useCallback(
-    async (L3) => C(
-      ConnectionState.Connected,
-      L3
-    ),
-    [C]
-  ), F2 = s.useCallback(
-    async (L3) => C(ConnectionState.Disconnected, L3),
-    [C]
-  ), B3 = Ue2(
-    s.useMemo(
-      () => ({
-        connectionState: T2.connectionState,
-        room: a,
-        internal: y
-      }),
-      [T2, a, y]
-    )
-  ), H3 = En2(e4, o2), K3 = s.useCallback(
-    async (L3 = {}) => {
-      var Z2, W3, z3, G3, J3, Se2;
-      const {
-        signal: N2,
-        tracks: q3 = { microphone: { enabled: true, publishOptions: { preConnectBuffer: true } } },
-        roomConnectOptions: se2
-      } = L3;
-      await F2(N2);
-      const S = () => {
-        a.disconnect();
-      };
-      N2 == null || N2.addEventListener("abort", S);
-      let _2 = false;
-      await Promise.all([
-        H3().then(({ serverUrl: He2, participantToken: ye3 }) => {
-          var Ce3, Me3;
-          return _2 = (((Me3 = (Ce3 = decodeTokenPayload(ye3).roomConfig) == null ? void 0 : Ce3.agents) == null ? void 0 : Me3.length) ?? 0) > 0, a.connect(He2, ye3, se2);
-        }),
-        // Start microphone (with preconnect buffer) by default
-        (Z2 = q3.microphone) != null && Z2.enabled ? a.localParticipant.setMicrophoneEnabled(
-          true,
-          void 0,
-          ((W3 = q3.microphone) == null ? void 0 : W3.publishOptions) ?? {}
-        ) : Promise.resolve(),
-        (z3 = q3.camera) != null && z3.enabled ? a.localParticipant.setCameraEnabled(
-          true,
-          void 0,
-          ((G3 = q3.camera) == null ? void 0 : G3.publishOptions) ?? {}
-        ) : Promise.resolve(),
-        (J3 = q3.screenShare) != null && J3.enabled ? a.localParticipant.setScreenShareEnabled(
-          true,
-          void 0,
-          ((Se2 = q3.screenShare) == null ? void 0 : Se2.publishOptions) ?? {}
-        ) : Promise.resolve()
-      ]), await k2(N2), _2 && await B3.waitUntilConnected(N2), N2 == null || N2.removeEventListener("abort", S);
-    },
-    [a, F2, H3, k2, B3.waitUntilConnected]
-  ), te3 = s.useCallback(async () => {
-    await a.disconnect();
-  }, [a]), X2 = s.useCallback(async () => {
-    const L3 = await H3();
-    await a.prepareConnection(L3.serverUrl, L3.participantToken);
-  }, [H3, a]);
-  return s.useEffect(
-    () => {
-      X2().catch((L3) => {
-        console.warn("WARNING: Room.prepareConnection failed:", L3);
-      });
-    },
-    [
-      /* note: no prepareConnection here, this effect should only ever run once! */
-    ]
-  ), s.useMemo(
-    () => ({
-      ...T2,
-      waitUntilConnected: k2,
-      waitUntilDisconnected: F2,
-      prepareConnection: X2,
-      start: K3,
-      end: te3
-    }),
-    [T2, k2, F2, X2, K3, te3]
-  );
-}
-function hr2(e4, n, t, r2) {
-  const o2 = s.useMemo(() => () => {
-  }, []), i2 = s.useCallback(t ?? o2, r2 ?? []), a = r2 ? i2 : t, c = s.useMemo(() => e4 ? "internal" in e4 ? e4.internal.emitter : e4 : null, [e4]);
-  s.useEffect(() => {
-    if (!(!c || !a))
-      return c.on(n, a), () => {
-        c.off(n, a);
-      };
-  }, [c, n, a]);
-}
-var kn2 = ((e4) => (e4.MessageReceived = "messageReceived", e4))(kn2 || {});
-function br2(e4) {
-  const { room: n } = da(e4), t = s.useMemo(
-    () => new ge2.EventEmitter(),
-    []
-  ), r2 = Ue2(e4), o2 = hn2({ room: n }), i2 = s.useMemo(() => ({ room: n }), [n]), a = rn2(i2), c = s.useMemo(() => o2.map((d) => {
-    var v, M2, w;
-    switch (d.participantInfo.identity) {
-      case n.localParticipant.identity:
-        return {
-          type: "userTranscript",
-          message: d.text,
-          id: d.streamInfo.id,
-          timestamp: d.streamInfo.timestamp,
-          from: n.localParticipant
-        };
-      case ((v = r2.internal.agentParticipant) == null ? void 0 : v.identity):
-      case ((M2 = r2.internal.workerParticipant) == null ? void 0 : M2.identity):
-        return {
-          type: "agentTranscript",
-          message: d.text,
-          id: d.streamInfo.id,
-          timestamp: d.streamInfo.timestamp,
-          from: ((w = r2.internal.agentParticipant) == null ? void 0 : w.identity) === d.participantInfo.identity ? r2.internal.agentParticipant : r2.internal.workerParticipant
-        };
-      default:
-        return {
-          type: "agentTranscript",
-          message: d.text,
-          id: d.streamInfo.id,
-          timestamp: d.streamInfo.timestamp,
-          from: Array.from(n.remoteParticipants.values()).find(
-            (A3) => A3.identity === d.participantInfo.identity
-          )
-        };
-    }
-  }), [o2, n]), u = s.useMemo(() => [...c, ...a.chatMessages], [c, a.chatMessages]), p = s.useRef(/* @__PURE__ */ new Map()), h2 = s.useMemo(() => {
-    const d = /* @__PURE__ */ new Date();
-    for (const v of u)
-      p.current.has(v.id) || p.current.set(v.id, d);
-    return u.sort((v, M2) => {
-      const w = p.current.get(v.id), A3 = p.current.get(M2.id);
-      return typeof w > "u" || typeof A3 > "u" ? 0 : w.getTime() - A3.getTime();
-    });
-  }, [u]), l = s.useRef(/* @__PURE__ */ new Set());
-  return s.useEffect(() => {
-    for (const d of h2)
-      l.current.has(d.id) || (l.current.add(d.id), t.emit("messageReceived", d));
-  }, [h2]), s.useMemo(
-    () => ({
-      messages: h2,
-      send: a.send,
-      isSending: a.isSending,
-      internal: { emitter: t }
-    }),
-    [h2, a.send, a.isSending]
-  );
-}
-
-// node_modules/@livekit/components-react/dist/prefabs.mjs
-var e3 = __toESM(require_react(), 1);
-
-// node_modules/@livekit/components-react/dist/components-B0PMXyIS.mjs
-var e2 = __toESM(require_react(), 1);
-var import_react2 = __toESM(require_react(), 1);
-var ca2 = e2.forwardRef(
-  function(n, a) {
-    const { buttonProps: c } = Nn2(n);
-    return e2.createElement("button", { ref: a, ...c }, n.children);
-  }
-);
-var la2 = e2.forwardRef(
-  function({ room: n, ...a }, c) {
-    const r2 = re(n);
-    return e2.createElement("div", { ref: c, ...a }, r2);
-  }
-);
-var sa2 = e2.forwardRef(
-  function(n, a) {
-    const { mergedProps: c } = Zn2({ props: n });
-    return e2.createElement("button", { ref: a, ...c }, n.children);
-  }
-);
-var ia2 = e2.forwardRef(
-  function(n, a) {
-    const { buttonProps: c } = xn2(n);
-    return e2.createElement("button", { ref: a, ...c }, n.children);
-  }
-);
-var pt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentColor", ...t }, e2.createElement("path", { d: "M1.354.646a.5.5 0 1 0-.708.708l14 14a.5.5 0 0 0 .708-.708L11 10.293V4.5A1.5 1.5 0 0 0 9.5 3H3.707zM0 4.5a1.5 1.5 0 0 1 .943-1.393l9.532 9.533c-.262.224-.603.36-.975.36h-8A1.5 1.5 0 0 1 0 11.5z" }), e2.createElement("path", { d: "m15.2 3.6-2.8 2.1a1 1 0 0 0-.4.8v3a1 1 0 0 0 .4.8l2.8 2.1a.5.5 0 0 0 .8-.4V4a.5.5 0 0 0-.8-.4z" }));
-var wt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentColor", ...t }, e2.createElement("path", { d: "M0 4.5A1.5 1.5 0 0 1 1.5 3h8A1.5 1.5 0 0 1 11 4.5v7A1.5 1.5 0 0 1 9.5 13h-8A1.5 1.5 0 0 1 0 11.5zM15.2 3.6l-2.8 2.1a1 1 0 0 0-.4.8v3a1 1 0 0 0 .4.8l2.8 2.1a.5.5 0 0 0 .8-.4V4a.5.5 0 0 0-.8-.4z" }));
-var oa2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, viewBox: "0 0 24 24", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "#FFF",
-    d: "M4.99 3.99a1 1 0 0 0-.697 1.717L10.586 12l-6.293 6.293a1 1 0 1 0 1.414 1.414L12 13.414l6.293 6.293a1 1 0 1 0 1.414-1.414L13.414 12l6.293-6.293a1 1 0 0 0-.727-1.717 1 1 0 0 0-.687.303L12 10.586 5.707 4.293a1 1 0 0 0-.717-.303z"
-  }
-));
-var ua2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 18, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M0 2.75A2.75 2.75 0 0 1 2.75 0h10.5A2.75 2.75 0 0 1 16 2.75v13.594a.75.75 0 0 1-1.234.572l-3.691-3.12a1.25 1.25 0 0 0-.807-.296H2.75A2.75 2.75 0 0 1 0 10.75v-8ZM2.75 1.5c-.69 0-1.25.56-1.25 1.25v8c0 .69.56 1.25 1.25 1.25h7.518c.65 0 1.279.23 1.775.65l2.457 2.077V2.75c0-.69-.56-1.25-1.25-1.25H2.75Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M3 4.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm0 2a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5Zm0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5Z",
-    clipRule: "evenodd"
-  }
-));
-var ie3 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentcolor",
-    fillRule: "evenodd",
-    d: "M5.293 2.293a1 1 0 0 1 1.414 0l4.823 4.823a1.25 1.25 0 0 1 0 1.768l-4.823 4.823a1 1 0 0 1-1.414-1.414L9.586 8 5.293 3.707a1 1 0 0 1 0-1.414z",
-    clipRule: "evenodd"
-  }
-));
-var kt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement("g", { stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5 }, e2.createElement("path", { d: "M10 1.75h4.25m0 0V6m0-4.25L9 7M6 14.25H1.75m0 0V10m0 4.25L7 9" })));
-var da2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentcolor",
-    fillRule: "evenodd",
-    d: "M8.961.894C8.875-.298 7.125-.298 7.04.894c-.066.912-1.246 1.228-1.76.472-.67-.99-2.186-.115-1.664.96.399.824-.465 1.688-1.288 1.289-1.076-.522-1.95.994-.961 1.665.756.513.44 1.693-.472 1.759-1.192.086-1.192 1.836 0 1.922.912.066 1.228 1.246.472 1.76-.99.67-.115 2.186.96 1.664.824-.399 1.688.465 1.289 1.288-.522 1.076.994 1.95 1.665.961.513-.756 1.693-.44 1.759.472.086 1.192 1.836 1.192 1.922 0 .066-.912 1.246-1.228 1.76-.472.67.99 2.186.115 1.664-.96-.399-.824.465-1.688 1.288-1.289 1.076.522 1.95-.994.961-1.665-.756-.513-.44-1.693.472-1.759 1.192-.086 1.192-1.836 0-1.922-.912-.066-1.228-1.246-.472-1.76.99-.67.115-2.186-.96-1.664-.824.399-1.688-.465-1.289-1.288.522-1.076-.994-1.95-1.665-.961-.513.756-1.693.44-1.759-.472ZM8 13A5 5 0 1 0 8 3a5 5 0 0 0 0 10Z",
-    clipRule: "evenodd"
-  }
-));
-var ma = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M2 2.75A2.75 2.75 0 0 1 4.75 0h6.5A2.75 2.75 0 0 1 14 2.75v10.5A2.75 2.75 0 0 1 11.25 16h-6.5A2.75 2.75 0 0 1 2 13.25v-.5a.75.75 0 0 1 1.5 0v.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V2.75c0-.69-.56-1.25-1.25-1.25h-6.5c-.69 0-1.25.56-1.25 1.25v.5a.75.75 0 0 1-1.5 0v-.5Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M8.78 7.47a.75.75 0 0 1 0 1.06l-2.25 2.25a.75.75 0 1 1-1.06-1.06l.97-.97H1.75a.75.75 0 0 1 0-1.5h4.69l-.97-.97a.75.75 0 0 1 1.06-1.06l2.25 2.25Z",
-    clipRule: "evenodd"
-  }
-));
-var Rt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentcolor",
-    fillRule: "evenodd",
-    d: "M4 6.104V4a4 4 0 1 1 8 0v2.104c1.154.326 2 1.387 2 2.646v4.5A2.75 2.75 0 0 1 11.25 16h-6.5A2.75 2.75 0 0 1 2 13.25v-4.5c0-1.259.846-2.32 2-2.646ZM5.5 4a2.5 2.5 0 0 1 5 0v2h-5V4Z",
-    clipRule: "evenodd"
-  }
-));
-var Mt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentColor", ...t }, e2.createElement("path", { d: "M12.227 11.52a5.477 5.477 0 0 0 1.246-2.97.5.5 0 0 0-.995-.1 4.478 4.478 0 0 1-.962 2.359l-1.07-1.07C10.794 9.247 11 8.647 11 8V3a3 3 0 0 0-6 0v1.293L1.354.646a.5.5 0 1 0-.708.708l14 14a.5.5 0 0 0 .708-.708zM8 12.5c.683 0 1.33-.152 1.911-.425l.743.743c-.649.359-1.378.59-2.154.66V15h2a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1h2v-1.522a5.502 5.502 0 0 1-4.973-4.929.5.5 0 0 1 .995-.098A4.5 4.5 0 0 0 8 12.5z" }), e2.createElement("path", { d: "M8.743 10.907 5 7.164V8a3 3 0 0 0 3.743 2.907z" }));
-var yt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentColor", ...t }, e2.createElement(
-  "path",
-  {
-    fillRule: "evenodd",
-    d: "M2.975 8.002a.5.5 0 0 1 .547.449 4.5 4.5 0 0 0 8.956 0 .5.5 0 1 1 .995.098A5.502 5.502 0 0 1 8.5 13.478V15h2a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1h2v-1.522a5.502 5.502 0 0 1-4.973-4.929.5.5 0 0 1 .448-.547z",
-    clipRule: "evenodd"
-  }
-), e2.createElement("path", { d: "M5 3a3 3 0 1 1 6 0v5a3 3 0 0 1-6 0z" }));
-var bt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentcolor", ...t }, e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-6a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-6a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }));
-var St = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentcolor", ...t }, e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("g", { opacity: 0.25 }, e2.createElement("path", { d: "M12 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M12 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" })));
-var Ct2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentcolor", ...t }, e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("g", { opacity: 0.25 }, e2.createElement("path", { d: "M6 6.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M6 6.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zm6-6a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" }), e2.createElement("path", { d: "M12 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z" })));
-var It2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "currentColor", ...t }, e2.createElement("g", { opacity: 0.25 }, e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4Zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-9Zm6-6a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V.5Z" }), e2.createElement("path", { d: "M0 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4Zm6-5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-9Zm6-6a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V.5Z" })));
-var Re3 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 20, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M0 2.75A2.75 2.75 0 0 1 2.75 0h14.5A2.75 2.75 0 0 1 20 2.75v10.5A2.75 2.75 0 0 1 17.25 16H2.75A2.75 2.75 0 0 1 0 13.25V2.75ZM2.75 1.5c-.69 0-1.25.56-1.25 1.25v10.5c0 .69.56 1.25 1.25 1.25h14.5c.69 0 1.25-.56 1.25-1.25V2.75c0-.69-.56-1.25-1.25-1.25H2.75Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M9.47 4.22a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1-1.06 1.06l-.97-.97v4.69a.75.75 0 0 1-1.5 0V6.56l-.97.97a.75.75 0 0 1-1.06-1.06l2.25-2.25Z",
-    clipRule: "evenodd"
-  }
-));
-var xt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 20, height: 16, fill: "none", ...t }, e2.createElement("g", { fill: "currentColor" }, e2.createElement("path", { d: "M7.28 4.22a.75.75 0 0 0-1.06 1.06L8.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L10 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L11.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L10 6.94z" }), e2.createElement(
-  "path",
-  {
-    fillRule: "evenodd",
-    d: "M2.75 0A2.75 2.75 0 0 0 0 2.75v10.5A2.75 2.75 0 0 0 2.75 16h14.5A2.75 2.75 0 0 0 20 13.25V2.75A2.75 2.75 0 0 0 17.25 0zM1.5 2.75c0-.69.56-1.25 1.25-1.25h14.5c.69 0 1.25.56 1.25 1.25v10.5c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25z",
-    clipRule: "evenodd"
-  }
-)));
-var oe3 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M8 0a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M8 12a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-1.5 0v-2.5A.75.75 0 0 1 8 12Z",
-    clipRule: "evenodd",
-    opacity: 0.7
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M12 1.072a.75.75 0 0 1 .274 1.024l-1.25 2.165a.75.75 0 0 1-1.299-.75l1.25-2.165A.75.75 0 0 1 12 1.072Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M6 11.464a.75.75 0 0 1 .274 1.025l-1.25 2.165a.75.75 0 0 1-1.299-.75l1.25-2.165A.75.75 0 0 1 6 11.464Z",
-    clipRule: "evenodd",
-    opacity: 0.6
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M14.928 4a.75.75 0 0 1-.274 1.025l-2.165 1.25a.75.75 0 1 1-.75-1.3l2.165-1.25A.75.75 0 0 1 14.928 4Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M4.536 10a.75.75 0 0 1-.275 1.024l-2.165 1.25a.75.75 0 0 1-.75-1.298l2.165-1.25A.75.75 0 0 1 4.536 10Z",
-    clipRule: "evenodd",
-    opacity: 0.5
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M16 8a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h2.5A.75.75 0 0 1 16 8Z",
-    clipRule: "evenodd"
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M4 8a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h2.5A.75.75 0 0 1 4 8Z",
-    clipRule: "evenodd",
-    opacity: 0.4
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M14.928 12a.75.75 0 0 1-1.024.274l-2.165-1.25a.75.75 0 0 1 .75-1.299l2.165 1.25A.75.75 0 0 1 14.928 12Z",
-    clipRule: "evenodd",
-    opacity: 0.9
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M4.536 6a.75.75 0 0 1-1.025.275l-2.165-1.25a.75.75 0 1 1 .75-1.3l2.165 1.25A.75.75 0 0 1 4.536 6Z",
-    clipRule: "evenodd",
-    opacity: 0.3
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M12 14.928a.75.75 0 0 1-1.024-.274l-1.25-2.165a.75.75 0 0 1 1.298-.75l1.25 2.165A.75.75 0 0 1 12 14.928Z",
-    clipRule: "evenodd",
-    opacity: 0.8
-  }
-), e2.createElement(
-  "path",
-  {
-    fill: "currentColor",
-    fillRule: "evenodd",
-    d: "M6 4.536a.75.75 0 0 1-1.024-.275l-1.25-2.165a.75.75 0 1 1 1.299-.75l1.25 2.165A.75.75 0 0 1 6 4.536Z",
-    clipRule: "evenodd",
-    opacity: 0.2
-  }
-));
-var Pt2 = (t) => e2.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: 16, height: 16, fill: "none", ...t }, e2.createElement("g", { stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5 }, e2.createElement("path", { d: "M13.25 7H9m0 0V2.75M9 7l5.25-5.25M2.75 9H7m0 0v4.25M7 9l-5.25 5.25" })));
-var Tt = e2.forwardRef(
-  function({ trackRef: n, ...a }, c) {
-    const r2 = Bn(), { mergedProps: s2, inFocus: o2 } = Un2({
-      trackRef: n ?? r2,
-      props: a
-    });
-    return e2.createElement(Wn.Consumer, null, (l) => l !== void 0 && e2.createElement("button", { ref: c, ...s2 }, a.children ? a.children : o2 ? e2.createElement(Pt2, null) : e2.createElement(kt2, null)));
-  }
-);
-var fa2 = e2.forwardRef(
-  function({
-    kind: n,
-    initialSelection: a,
-    onActiveDeviceChange: c,
-    onDeviceListChange: r2,
-    onDeviceSelectError: s2,
-    exactMatch: o2,
-    track: l,
-    requestPermissions: i2,
-    onError: d,
-    ...u
-  }, v) {
-    const f = Qo(), p = e2.useRef("default"), E = e2.useCallback(
-      (w) => {
-        f && f.emit(RoomEvent.MediaDevicesError, w), d == null || d(w);
-      },
-      [f, d]
-    ), { devices: h2, activeDeviceId: m, setActiveMediaDevice: y, className: C } = Vn2({
-      kind: n,
-      room: f,
-      track: l,
-      requestPermissions: i2,
-      onError: E
-    });
-    e2.useEffect(() => {
-      a !== void 0 && y(a);
-    }, [y]), e2.useEffect(() => {
-      typeof r2 == "function" && r2(h2);
-    }, [r2, h2]), e2.useEffect(() => {
-      m !== p.current && (c == null || c(m)), p.current = m;
-    }, [m]);
-    const A3 = async (w) => {
-      try {
-        await y(w, { exact: o2 ?? true });
-      } catch (M2) {
-        if (M2 instanceof Error)
-          s2 == null || s2(M2);
-        else
-          throw M2;
-      }
-    }, N2 = e2.useMemo(
-      () => G2(u, { className: C }, { className: "lk-list" }),
-      [C, u]
-    ), g = !!h2.find((w) => w.label.toLowerCase().startsWith("default"));
-    function R(w, M2, P2) {
-      return w === M2 || !g && P2 === 0 && M2 === "default";
-    }
-    return e2.createElement("ul", { ref: v, ...N2 }, h2.map((w, M2) => e2.createElement(
-      "li",
-      {
-        key: w.deviceId,
-        id: w.deviceId,
-        "data-lk-active": R(w.deviceId, m, M2),
-        "aria-selected": R(w.deviceId, m, M2),
-        role: "option"
-      },
-      e2.createElement("button", { className: "lk-button", onClick: () => A3(w.deviceId) }, w.label)
-    )));
-  }
-);
-var ha = e2.forwardRef(
-  function({ label: n = "Allow Audio", ...a }, c) {
-    const r2 = la(a.room), { mergedProps: s2 } = Kn({ room: r2, props: a });
-    return e2.createElement("button", { ref: c, ...s2 }, n);
-  }
-);
-var ga = e2.forwardRef(
-  function({ label: n, ...a }, c) {
-    const r2 = ua(), { mergedProps: s2, canPlayAudio: o2 } = Kn({ room: r2, props: a }), { mergedProps: l, canPlayVideo: i2 } = Yn({ room: r2, props: s2 }), { style: d, ...u } = l;
-    return d.display = o2 && i2 ? "none" : "block", e2.createElement("button", { ref: c, style: d, ...u }, n ?? `Start ${o2 ? "Video" : "Audio"}`);
-  }
-);
-function Me2(t, n) {
-  switch (t) {
-    case Track.Source.Microphone:
-      return n ? e2.createElement(yt2, null) : e2.createElement(Mt2, null);
-    case Track.Source.Camera:
-      return n ? e2.createElement(wt2, null) : e2.createElement(pt2, null);
-    case Track.Source.ScreenShare:
-      return n ? e2.createElement(xt2, null) : e2.createElement(Re3, null);
-    default:
-      return;
-  }
-}
-function At2(t) {
-  switch (t) {
-    case ConnectionQuality.Excellent:
-      return e2.createElement(bt2, null);
-    case ConnectionQuality.Good:
-      return e2.createElement(St, null);
-    case ConnectionQuality.Poor:
-      return e2.createElement(Ct2, null);
-    default:
-      return e2.createElement(It2, null);
-  }
-}
-var va = e2.forwardRef(function({ showIcon: n, ...a }, c) {
-  const { buttonProps: r2, enabled: s2 } = nr2(a), [o2, l] = e2.useState(false);
-  return e2.useEffect(() => {
-    l(true);
-  }, []), o2 && e2.createElement("button", { ref: c, ...r2 }, (n ?? true) && Me2(a.source, s2), a.children);
-});
-var ye2 = e2.forwardRef(function(n, a) {
-  const { className: c, quality: r2 } = _n2(n), s2 = e2.useMemo(() => ({ ...G2(n, { className: c }), "data-lk-quality": r2 }), [r2, n, c]);
-  return e2.createElement("div", { ref: a, ...s2 }, n.children ?? At2(r2));
-});
-var K2 = e2.forwardRef(
-  function({ participant: n, ...a }, c) {
-    const r2 = ca(n), { className: s2, infoObserver: o2 } = e2.useMemo(() => Fs(r2), [r2]), { identity: l, name: i2 } = O(o2, {
-      name: r2.name,
-      identity: r2.identity,
-      metadata: r2.metadata
-    }), d = e2.useMemo(() => G2(a, { className: s2, "data-lk-participant-name": i2 }), [a, s2, i2]);
-    return e2.createElement("span", { ref: c, ...d }, i2 !== "" ? i2 : l, a.children);
-  }
-);
-var be2 = e2.forwardRef(
-  function({ trackRef: n, show: a = "always", ...c }, r2) {
-    const { className: s2, isMuted: o2 } = tr2(n), l = a === "always" || a === "muted" && o2 || a === "unmuted" && !o2, i2 = e2.useMemo(
-      () => G2(c, {
-        className: s2
-      }),
-      [s2, c]
-    );
-    return l ? e2.createElement("div", { ref: r2, ...i2, "data-lk-muted": o2 }, c.children ?? Me2(n.source, !o2)) : null;
-  }
-);
-var Nt2 = (t) => e2.createElement(
-  "svg",
-  {
-    width: 320,
-    height: 320,
-    viewBox: "0 0 320 320",
-    preserveAspectRatio: "xMidYMid meet",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    ...t
-  },
-  e2.createElement(
-    "path",
-    {
-      d: "M160 180C204.182 180 240 144.183 240 100C240 55.8172 204.182 20 160 20C115.817 20 79.9997 55.8172 79.9997 100C79.9997 144.183 115.817 180 160 180Z",
-      fill: "white",
-      fillOpacity: 0.25
-    }
-  ),
-  e2.createElement(
-    "path",
-    {
-      d: "M97.6542 194.614C103.267 191.818 109.841 192.481 115.519 195.141C129.025 201.466 144.1 205 159.999 205C175.899 205 190.973 201.466 204.48 195.141C210.158 192.481 216.732 191.818 222.345 194.614C262.703 214.719 291.985 253.736 298.591 300.062C300.15 310.997 291.045 320 280 320H39.9997C28.954 320 19.8495 310.997 21.4087 300.062C28.014 253.736 57.2966 214.72 97.6542 194.614Z",
-      fill: "white",
-      fillOpacity: 0.25
-    }
-  )
-);
-function Se(t, n = {}) {
-  const [a, c] = e2.useState(zt(t)), [r2, s2] = e2.useState(a == null ? void 0 : a.isMuted), [o2, l] = e2.useState(a == null ? void 0 : a.isSubscribed), [i2, d] = e2.useState(a == null ? void 0 : a.track), [u, v] = e2.useState("landscape"), f = e2.useRef(), { className: p, trackObserver: E } = e2.useMemo(() => ys(t), [
-    t.participant.sid ?? t.participant.identity,
-    t.source,
-    B(t) && t.publication.trackSid
-  ]);
-  return e2.useEffect(() => {
-    const h2 = E.subscribe((m) => {
-      L.debug("update track", m), c(m), s2(m == null ? void 0 : m.isMuted), l(m == null ? void 0 : m.isSubscribed), d(m == null ? void 0 : m.track);
-    });
-    return () => h2 == null ? void 0 : h2.unsubscribe();
-  }, [E]), e2.useEffect(() => {
-    var h2, m;
-    return i2 && (f.current && i2.detach(f.current), (h2 = n.element) != null && h2.current && !(t.participant.isLocal && (i2 == null ? void 0 : i2.kind) === "audio") && i2.attach(n.element.current)), f.current = (m = n.element) == null ? void 0 : m.current, () => {
-      f.current && (i2 == null || i2.detach(f.current));
-    };
-  }, [i2, n.element]), e2.useEffect(() => {
-    var h2, m;
-    if (typeof ((h2 = a == null ? void 0 : a.dimensions) == null ? void 0 : h2.width) == "number" && typeof ((m = a == null ? void 0 : a.dimensions) == null ? void 0 : m.height) == "number") {
-      const y = a.dimensions.width > a.dimensions.height ? "landscape" : "portrait";
-      v(y);
-    }
-  }, [a]), {
-    publication: a,
-    isMuted: r2,
-    isSubscribed: o2,
-    track: i2,
-    elementProps: G2(n.props, {
-      className: p,
-      "data-lk-local-participant": t.participant.isLocal,
-      "data-lk-source": a == null ? void 0 : a.source,
-      ...(a == null ? void 0 : a.kind) === "video" && { "data-lk-orientation": u }
-    })
-  };
-}
-var Y;
-var ue3;
-function Lt2() {
-  if (ue3) return Y;
-  ue3 = 1;
-  var t = "Expected a function", n = NaN, a = "[object Symbol]", c = /^\s+|\s+$/g, r2 = /^[-+]0x[0-9a-f]+$/i, s2 = /^0b[01]+$/i, o2 = /^0o[0-7]+$/i, l = parseInt, i2 = typeof es == "object" && es && es.Object === Object && es, d = typeof self == "object" && self && self.Object === Object && self, u = i2 || d || Function("return this")(), v = Object.prototype, f = v.toString, p = Math.max, E = Math.min, h2 = function() {
-    return u.Date.now();
-  };
-  function m(g, R, w) {
-    var M2, P2, O3, L3, b, T2, F2 = 0, re2 = false, Z2 = false, D2 = true;
-    if (typeof g != "function")
-      throw new TypeError(t);
-    R = N2(R) || 0, y(w) && (re2 = !!w.leading, Z2 = "maxWait" in w, O3 = Z2 ? p(N2(w.maxWait) || 0, R) : O3, D2 = "trailing" in w ? !!w.trailing : D2);
-    function U2(k2) {
-      var x2 = M2, H3 = P2;
-      return M2 = P2 = void 0, F2 = k2, L3 = g.apply(H3, x2), L3;
-    }
-    function xe3(k2) {
-      return F2 = k2, b = setTimeout(W3, R), re2 ? U2(k2) : L3;
-    }
-    function Pe3(k2) {
-      var x2 = k2 - T2, H3 = k2 - F2, se2 = R - x2;
-      return Z2 ? E(se2, O3 - H3) : se2;
-    }
-    function ce2(k2) {
-      var x2 = k2 - T2, H3 = k2 - F2;
-      return T2 === void 0 || x2 >= R || x2 < 0 || Z2 && H3 >= O3;
-    }
-    function W3() {
-      var k2 = h2();
-      if (ce2(k2))
-        return le2(k2);
-      b = setTimeout(W3, Pe3(k2));
-    }
-    function le2(k2) {
-      return b = void 0, D2 && M2 ? U2(k2) : (M2 = P2 = void 0, L3);
-    }
-    function Te() {
-      b !== void 0 && clearTimeout(b), F2 = 0, M2 = T2 = P2 = b = void 0;
-    }
-    function Ae3() {
-      return b === void 0 ? L3 : le2(h2());
-    }
-    function G3() {
-      var k2 = h2(), x2 = ce2(k2);
-      if (M2 = arguments, P2 = this, T2 = k2, x2) {
-        if (b === void 0)
-          return xe3(T2);
-        if (Z2)
-          return b = setTimeout(W3, R), U2(T2);
-      }
-      return b === void 0 && (b = setTimeout(W3, R)), L3;
-    }
-    return G3.cancel = Te, G3.flush = Ae3, G3;
-  }
-  function y(g) {
-    var R = typeof g;
-    return !!g && (R == "object" || R == "function");
-  }
-  function C(g) {
-    return !!g && typeof g == "object";
-  }
-  function A3(g) {
-    return typeof g == "symbol" || C(g) && f.call(g) == a;
-  }
-  function N2(g) {
-    if (typeof g == "number")
-      return g;
-    if (A3(g))
-      return n;
-    if (y(g)) {
-      var R = typeof g.valueOf == "function" ? g.valueOf() : g;
-      g = y(R) ? R + "" : R;
-    }
-    if (typeof g != "string")
-      return g === 0 ? g : +g;
-    g = g.replace(c, "");
-    var w = s2.test(g);
-    return w || o2.test(g) ? l(g.slice(2), w ? 2 : 8) : r2.test(g) ? n : +g;
-  }
-  return Y = m, Y;
-}
-var zt3 = Lt2();
-var de3 = Hr(zt3);
-function Vt2(t) {
-  const n = (0, import_react2.useRef)(t);
-  n.current = t, (0, import_react2.useEffect)(
-    () => () => {
-      n.current();
-    },
-    []
-  );
-}
-function Ft2(t, n = 500, a) {
-  const c = (0, import_react2.useRef)();
-  Vt2(() => {
-    c.current && c.current.cancel();
-  });
-  const r2 = (0, import_react2.useMemo)(() => {
-    const s2 = de3(t, n, a), o2 = (...l) => s2(...l);
-    return o2.cancel = () => {
-      s2.cancel();
-    }, o2.isPending = () => !!c.current, o2.flush = () => s2.flush(), o2;
-  }, [t, n, a]);
-  return (0, import_react2.useEffect)(() => {
-    c.current = de3(t, n, a);
-  }, [t, n, a]), r2;
-}
-function Zt3(t, n, a) {
-  const c = ((d, u) => d === u), r2 = t instanceof Function ? t() : t, [s2, o2] = (0, import_react2.useState)(r2), l = (0, import_react2.useRef)(r2), i2 = Ft2(
-    o2,
-    n,
-    a
-  );
-  return c(l.current, r2) || (i2(r2), l.current = r2), [s2, i2];
-}
-function Ht2({
-  threshold: t = 0,
-  root: n = null,
-  rootMargin: a = "0%",
-  freezeOnceVisible: c = false,
-  initialIsIntersecting: r2 = false,
-  onChange: s2
-} = {}) {
-  var o2;
-  const [l, i2] = (0, import_react2.useState)(null), [d, u] = (0, import_react2.useState)(() => ({
-    isIntersecting: r2,
-    entry: void 0
-  })), v = (0, import_react2.useRef)();
-  v.current = s2;
-  const f = ((o2 = d.entry) == null ? void 0 : o2.isIntersecting) && c;
-  (0, import_react2.useEffect)(() => {
-    if (!l || !("IntersectionObserver" in window) || f)
-      return;
-    const h2 = new IntersectionObserver(
-      (m) => {
-        const y = Array.isArray(h2.thresholds) ? h2.thresholds : [h2.thresholds];
-        m.forEach((C) => {
-          const A3 = C.isIntersecting && y.some((N2) => C.intersectionRatio >= N2);
-          u({ isIntersecting: A3, entry: C }), v.current && v.current(A3, C);
-        });
-      },
-      { threshold: t, root: n, rootMargin: a }
-    );
-    return h2.observe(l), () => {
-      h2.disconnect();
-    };
-  }, [
-    l,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(t),
-    n,
-    a,
-    f,
-    c
-  ]);
-  const p = (0, import_react2.useRef)(null);
-  (0, import_react2.useEffect)(() => {
-    var h2;
-    !l && ((h2 = d.entry) != null && h2.target) && !c && !f && p.current !== d.entry.target && (p.current = d.entry.target, u({ isIntersecting: r2, entry: void 0 }));
-  }, [l, d.entry, c, f, r2]);
-  const E = [
-    i2,
-    !!d.isIntersecting,
-    d.entry
-  ];
-  return E.ref = E[0], E.isIntersecting = E[1], E.entry = E[2], E;
-}
-var Bt2 = e2.forwardRef(
-  function({
-    onTrackClick: n,
-    onClick: a,
-    onSubscriptionStatusChanged: c,
-    trackRef: r2,
-    manageSubscription: s2,
-    ...o2
-  }, l) {
-    const i2 = sa(r2), d = e2.useRef(null);
-    e2.useImperativeHandle(l, () => d.current);
-    const u = Ht2({ root: d.current }), [v] = Zt3(u, 3e3);
-    e2.useEffect(() => {
-      s2 && i2.publication instanceof RemoteTrackPublication && (v == null ? void 0 : v.isIntersecting) === false && (u == null ? void 0 : u.isIntersecting) === false && i2.publication.setSubscribed(false);
-    }, [v, i2, s2]), e2.useEffect(() => {
-      s2 && i2.publication instanceof RemoteTrackPublication && (u == null ? void 0 : u.isIntersecting) === true && i2.publication.setSubscribed(true);
-    }, [u, i2, s2]);
-    const {
-      elementProps: f,
-      publication: p,
-      isSubscribed: E
-    } = Se(i2, {
-      element: d,
-      props: o2
-    });
-    e2.useEffect(() => {
-      c == null || c(!!E);
-    }, [E, c]);
-    const h2 = (m) => {
-      a == null || a(m), n == null || n({ participant: i2 == null ? void 0 : i2.participant, track: p });
-    };
-    return e2.createElement("video", { ref: d, ...f, muted: true, onClick: h2 });
-  }
-);
-var ne3 = e2.forwardRef(
-  function({ trackRef: n, onSubscriptionStatusChanged: a, volume: c, ...r2 }, s2) {
-    const o2 = sa(n), l = e2.useRef(null);
-    e2.useImperativeHandle(s2, () => l.current);
-    const {
-      elementProps: i2,
-      isSubscribed: d,
-      track: u,
-      publication: v
-    } = Se(o2, {
-      element: l,
-      props: r2
-    });
-    return e2.useEffect(() => {
-      a == null || a(!!d);
-    }, [d, a]), e2.useEffect(() => {
-      u === void 0 || c === void 0 || (u instanceof RemoteAudioTrack ? u.setVolume(c) : L.warn("Volume can only be set on remote audio tracks."));
-    }, [c, u]), e2.useEffect(() => {
-      v === void 0 || r2.muted === void 0 || (v instanceof RemoteTrackPublication ? v.setEnabled(!r2.muted) : L.warn("Can only call setEnabled on remote track publications."));
-    }, [r2.muted, v, u]), e2.createElement("audio", { ref: l, ...i2 });
-  }
-);
-function jt3(t) {
-  const n = !!Go();
-  return t.participant && !n ? e2.createElement(Vn.Provider, { value: t.participant }, t.children) : e2.createElement(e2.Fragment, null, t.children);
-}
-function _t2(t) {
-  const n = !!Bn();
-  return t.trackRef && !n ? e2.createElement(jn.Provider, { value: t.trackRef }, t.children) : e2.createElement(e2.Fragment, null, t.children);
-}
-var Ot2 = e2.forwardRef(
-  function({
-    trackRef: n,
-    children: a,
-    onParticipantClick: c,
-    disableSpeakingIndicator: r2,
-    ...s2
-  }, o2) {
-    var p, E;
-    const l = sa(n), { elementProps: i2 } = zn2({
-      htmlProps: s2,
-      disableSpeakingIndicator: r2,
-      onParticipantClick: c,
-      trackRef: l
-    }), d = ar2(l.participant), u = Ko(), v = (p = pa()) == null ? void 0 : p.autoSubscription, f = e2.useCallback(
-      (h2) => {
-        l.source && !h2 && u && u.pin.dispatch && ns(l, u.pin.state) && u.pin.dispatch({ msg: "clear_pin" });
-      },
-      [l, u]
-    );
-    return e2.createElement("div", { ref: o2, style: { position: "relative" }, ...i2 }, e2.createElement(_t2, { trackRef: l }, e2.createElement(jt3, { participant: l.participant }, a ?? e2.createElement(e2.Fragment, null, B(l) && (((E = l.publication) == null ? void 0 : E.kind) === "video" || l.source === Track.Source.Camera || l.source === Track.Source.ScreenShare) ? e2.createElement(
-      Bt2,
-      {
-        trackRef: l,
-        onSubscriptionStatusChanged: f,
-        manageSubscription: v
-      }
-    ) : B(l) && e2.createElement(
-      ne3,
-      {
-        trackRef: l,
-        onSubscriptionStatusChanged: f
-      }
-    ), e2.createElement("div", { className: "lk-participant-placeholder" }, e2.createElement(Nt2, null)), e2.createElement("div", { className: "lk-participant-metadata" }, e2.createElement("div", { className: "lk-participant-metadata-item" }, l.source === Track.Source.Camera ? e2.createElement(e2.Fragment, null, d && e2.createElement(Rt2, { style: { marginRight: "0.25rem" } }), e2.createElement(
-      be2,
-      {
-        trackRef: {
-          participant: l.participant,
-          source: Track.Source.Microphone
-        },
-        show: "muted"
-      }
-    ), e2.createElement(K2, null)) : e2.createElement(e2.Fragment, null, e2.createElement(Re3, { style: { marginRight: "0.25rem" } }), e2.createElement(K2, null, "'s screen"))), e2.createElement(ye2, { className: "lk-participant-metadata-item" }))), e2.createElement(Tt, { trackRef: l }))));
-  }
-);
-function Ea(t) {
-  const n = G2(t, { className: "lk-focus-layout" });
-  return e2.createElement("div", { ...n }, t.children);
-}
-function pa2({ trackRef: t, ...n }) {
-  return e2.createElement(Ot2, { trackRef: t, ...n });
-}
-function Ce2({ tracks: t, ...n }) {
-  return e2.createElement(e2.Fragment, null, t.map((a) => e2.createElement(
-    jn.Provider,
-    {
-      value: a,
-      key: N(a)
-    },
-    H2(n.children)
-  )));
-}
-function Wt3({
-  totalPageCount: t,
-  nextPage: n,
-  prevPage: a,
-  currentPage: c,
-  pagesContainer: r2
-}) {
-  const [s2, o2] = e2.useState(false);
-  return e2.useEffect(() => {
-    let l;
-    return r2 && (l = Js(r2.current, 2e3).subscribe(
-      o2
-    )), () => {
-      l && l.unsubscribe();
-    };
-  }, [r2]), e2.createElement("div", { className: "lk-pagination-control", "data-lk-user-interaction": s2 }, e2.createElement("button", { className: "lk-button", onClick: a }, e2.createElement(ie3, null)), e2.createElement("span", { className: "lk-pagination-count" }, `${c} of ${t}`), e2.createElement("button", { className: "lk-button", onClick: n }, e2.createElement(ie3, null)));
-}
-var qt2 = e2.forwardRef(
-  function({ totalPageCount: n, currentPage: a }, c) {
-    const r2 = new Array(n).fill("").map((s2, o2) => o2 + 1 === a ? e2.createElement("span", { "data-lk-active": true, key: o2 }) : e2.createElement("span", { key: o2 }));
-    return e2.createElement("div", { ref: c, className: "lk-pagination-indicator" }, r2);
-  }
-);
-function wa({ tracks: t, ...n }) {
-  const a = e2.createRef(), c = e2.useMemo(
-    () => G2(n, { className: "lk-grid-layout" }),
-    [n]
-  ), { layout: r2 } = Hn2(a, t.length), s2 = jn2(r2.maxTiles, t);
-  return Xn2(a, {
-    onLeftSwipe: s2.nextPage,
-    onRightSwipe: s2.prevPage
-  }), e2.createElement("div", { ref: a, "data-lk-pagination": s2.totalPageCount > 1, ...c }, e2.createElement(Ce2, { tracks: s2.tracks }, n.children), t.length > r2.maxTiles && e2.createElement(e2.Fragment, null, e2.createElement(
-    qt2,
-    {
-      totalPageCount: s2.totalPageCount,
-      currentPage: s2.currentPage
-    }
-  ), e2.createElement(Wt3, { pagesContainer: a, ...s2 })));
-}
-var $t3 = 130;
-var Dt2 = 140;
-var me2 = 1;
-var Ie2 = 16 / 10;
-var Ut2 = (1 - Ie2) * -1;
-function ka({ tracks: t, orientation: n, ...a }) {
-  const c = e2.useRef(null), [r2, s2] = e2.useState(0), { width: o2, height: l } = Jt2(c), i2 = n || (l >= o2 ? "vertical" : "horizontal"), d = i2 === "vertical" ? Math.max(o2 * Ut2, $t3) : Math.max(l * Ie2, Dt2), u = rs(), v = Math.max(i2 === "vertical" ? (l - u) / d : (o2 - u) / d, me2);
-  let f = Math.round(v);
-  Math.abs(v - r2) < 0.5 ? f = Math.round(r2) : r2 !== v && s2(v);
-  const p = Kt2(t, f);
-  return e2.useLayoutEffect(() => {
-    c.current && (c.current.dataset.lkOrientation = i2, c.current.style.setProperty("--lk-max-visible-tiles", f.toString()));
-  }, [f, i2]), e2.createElement("aside", { key: i2, className: "lk-carousel", ref: c, ...a }, e2.createElement(Ce2, { tracks: p }, a.children));
-}
-function Ra({
-  value: t,
-  onPinChange: n,
-  onWidgetChange: a,
-  children: c
-}) {
-  const r2 = ia(t);
-  return e2.useEffect(() => {
-    L.debug("PinState Updated", { state: r2.pin.state }), n && r2.pin.state && n(r2.pin.state);
-  }, [r2.pin.state, n]), e2.useEffect(() => {
-    L.debug("Widget Updated", { widgetState: r2.widget.state }), a && r2.widget.state && a(r2.widget.state);
-  }, [a, r2.widget.state]), e2.createElement(Wn.Provider, { value: r2 }, c);
-}
-var Ma = e2.forwardRef(
-  function({ trackRef: n, ...a }, c) {
-    const u = sa(n), v = cr2(u, { bands: 7, loPass: 300 });
-    return e2.createElement(
-      "svg",
-      {
-        ref: c,
-        width: "100%",
-        height: "100%",
-        viewBox: "0 0 200 90",
-        ...a,
-        className: "lk-audio-visualizer"
-      },
-      e2.createElement("rect", { x: "0", y: "0", width: "100%", height: "100%" }),
-      e2.createElement(
-        "g",
-        {
-          style: {
-            transform: `translate(${130 / 2}px, 0)`
-          }
-        },
-        v.map((f, p) => e2.createElement(
-          "rect",
-          {
-            key: p,
-            x: p * 10,
-            y: 90 / 2 - f * 50 / 2,
-            width: 6,
-            height: f * 50
-          }
-        ))
-      )
-    );
-  }
-);
-function ya({ participants: t, ...n }) {
-  return e2.createElement(e2.Fragment, null, t.map((a) => e2.createElement(Vn.Provider, { value: a, key: a.identity }, H2(n.children))));
-}
-function ba({ room: t, volume: n, muted: a }) {
-  const c = rr2(
-    [Track.Source.Microphone, Track.Source.ScreenShareAudio, Track.Source.Unknown],
-    {
-      updateOnlyOn: [],
-      onlySubscribed: true,
-      room: t
-    }
-  ).filter((r2) => !r2.participant.isLocal && r2.publication.kind === Track.Kind.Audio);
-  return e2.createElement("div", { style: { display: "none" } }, c.map((r2) => e2.createElement(
-    ne3,
-    {
-      key: N(r2),
-      trackRef: r2,
-      volume: n,
-      muted: a
-    }
-  )));
-}
-var Sa = e2.forwardRef(function({ childrenPosition: n = "before", children: a, ...c }, r2) {
-  const { name: s2 } = $n2();
-  return e2.createElement("span", { ref: r2, ...c }, n === "before" && a, s2, n === "after" && a);
-});
-function Gt2(t) {
-  const n = e2.useMemo(() => G2(t, { className: "lk-toast" }), [t]);
-  return e2.createElement("div", { ...n }, t.children);
-}
-var Qt3 = (t) => {
-  const n = [];
-  for (let a = 0; a < t; a++)
-    n.push([a, t - 1 - a]);
-  return n;
-};
-var fe2 = (t) => [[Math.floor(t / 2)], [-1]];
-var Xt3 = (t, n, a) => {
-  const [c, r2] = (0, import_react2.useState)(0), [s2, o2] = (0, import_react2.useState)([[]]);
-  (0, import_react2.useEffect)(() => {
-    if (t === "thinking")
-      o2(fe2(n));
-    else if (t === "connecting" || t === "initializing") {
-      const i2 = [...Qt3(n)];
-      o2(i2);
-    } else o2(t === "listening" ? fe2(n) : t === void 0 || t === "speaking" ? [new Array(n).fill(0).map((i2, d) => d)] : [[]]);
-    r2(0);
-  }, [t, n]);
-  const l = (0, import_react2.useRef)(null);
-  return (0, import_react2.useEffect)(() => {
-    let i2 = performance.now();
-    const d = (u) => {
-      u - i2 >= a && (r2((f) => f + 1), i2 = u), l.current = requestAnimationFrame(d);
-    };
-    return l.current = requestAnimationFrame(d), () => {
-      l.current !== null && cancelAnimationFrame(l.current);
-    };
-  }, [a, n, t, s2.length]), s2[c % s2.length];
-};
-var Yt3 = /* @__PURE__ */ new Map([
-  ["connecting", 2e3],
-  ["initializing", 2e3],
-  ["listening", 500],
-  ["thinking", 150]
-]);
-var Jt3 = (t, n) => {
-  if (t === void 0)
-    return 1e3;
-  let a = Yt3.get(t);
-  if (a)
-    switch (t) {
-      case "connecting":
-        a /= n;
-        break;
-    }
-  return a;
-};
-var Kt3 = e2.forwardRef(
-  function({ state: n, options: a, barCount: c = 15, trackRef: r2, track: s2, children: o2, ...l }, i2) {
-    const d = G2(l, { className: "lk-audio-bar-visualizer" });
-    let u = Bn();
-    (r2 || s2) && (u = r2 || s2);
-    const v = cr2(u, {
-      bands: c,
-      loPass: 100,
-      hiPass: 200
-    }), f = (a == null ? void 0 : a.minHeight) ?? 20, p = (a == null ? void 0 : a.maxHeight) ?? 100, E = Xt3(
-      n,
-      c,
-      Jt3(n, c) ?? 100
-    );
-    return e2.createElement("div", { ref: i2, ...d, "data-lk-va-state": n }, v.map(
-      (h2, m) => o2 ? H2(o2, {
-        "data-lk-highlighted": E.includes(m),
-        "data-lk-bar-index": m,
-        className: "lk-audio-bar",
-        style: { height: `${Math.min(p, Math.max(f, h2 * 100 + 5))}%` }
-      }) : e2.createElement(
-        "span",
-        {
-          key: m,
-          "data-lk-highlighted": E.includes(m),
-          "data-lk-bar-index": m,
-          className: `lk-audio-bar ${E.includes(m) && "lk-highlighted"}`,
-          style: {
-            // TODO transform animations would be more performant, however the border-radius gets distorted when using scale transforms. a 9-slice approach (or 3 in this case) could work
-            // transform: `scale(1, ${Math.min(maxHeight, Math.max(minHeight, volume))}`,
-            height: `${Math.min(p, Math.max(f, h2 * 100 + 5))}%`
-          }
-        }
-      )
-    ));
-  }
-);
-var Ca = e2.forwardRef(
-  function({
-    children: n,
-    disableSpeakingIndicator: a,
-    onParticipantClick: c,
-    trackRef: r2,
-    ...s2
-  }, o2) {
-    const l = sa(r2), { elementProps: i2 } = zn2({
-      trackRef: l,
-      htmlProps: s2,
-      disableSpeakingIndicator: a,
-      onParticipantClick: c
-    });
-    return e2.createElement("div", { ref: o2, style: { position: "relative", minHeight: "160px" }, ...i2 }, e2.createElement(jn.Provider, { value: l }, n ?? e2.createElement(e2.Fragment, null, B(l) && e2.createElement(ne3, { trackRef: l }), e2.createElement(Kt3, { barCount: 7, options: { minHeight: 8 } }), e2.createElement("div", { className: "lk-participant-metadata" }, e2.createElement("div", { className: "lk-participant-metadata-item" }, e2.createElement(be2, { trackRef: l }), e2.createElement(K2, null)), e2.createElement(ye2, { className: "lk-participant-metadata-item" })))));
-  }
-);
-function Ia(t) {
-  const [n, a] = e2.useState(void 0), c = re(t.room);
-  return e2.useEffect(() => {
-    switch (c) {
-      case ConnectionState.Reconnecting:
-        a(
-          e2.createElement(e2.Fragment, null, e2.createElement(oe3, { className: "lk-spinner" }), " Reconnecting")
-        );
-        break;
-      case ConnectionState.Connecting:
-        a(
-          e2.createElement(e2.Fragment, null, e2.createElement(oe3, { className: "lk-spinner" }), " Connecting")
-        );
-        break;
-      case ConnectionState.Disconnected:
-        a(e2.createElement(e2.Fragment, null, "Disconnected"));
-        break;
-      default:
-        a(void 0);
-        break;
-    }
-  }, [c]), n ? e2.createElement(Gt2, { className: "lk-toast-connection-state" }, n) : e2.createElement(e2.Fragment, null);
-}
-var xa = e2.forwardRef(
-  function({ entry: n, hideName: a = false, hideTimestamp: c = false, messageFormatter: r2, ...s2 }, o2) {
-    var f, p, E, h2;
-    const l = e2.useMemo(() => r2 ? r2(n.message) : n.message, [n.message, r2]), i2 = !!n.editTimestamp, d = new Date(n.timestamp), u = typeof navigator < "u" ? navigator.language : "en-US", v = ((f = n.from) == null ? void 0 : f.name) ?? ((p = n.from) == null ? void 0 : p.identity);
-    return e2.createElement(
-      "li",
-      {
-        ref: o2,
-        className: "lk-chat-entry",
-        title: d.toLocaleTimeString(u, { timeStyle: "full" }),
-        "data-lk-message-origin": (E = n.from) != null && E.isLocal ? "local" : "remote",
-        ...s2
-      },
-      (!c || !a || i2) && e2.createElement("span", { className: "lk-meta-data" }, !a && e2.createElement("strong", { className: "lk-participant-name" }, v), (!c || i2) && e2.createElement("span", { className: "lk-timestamp" }, i2 && "edited ", d.toLocaleTimeString(u, { timeStyle: "short" }))),
-      e2.createElement("span", { className: "lk-message-body" }, l),
-      e2.createElement("span", { className: "lk-message-attachements" }, (h2 = n.attachedFiles) == null ? void 0 : h2.map(
-        (m) => m.type.startsWith("image/") && e2.createElement(
-          "img",
-          {
-            style: { maxWidth: "300px", maxHeight: "300px" },
-            key: m.name,
-            src: URL.createObjectURL(m),
-            alt: m.name
-          }
-        )
-      ))
-    );
-  }
-);
-function Pa(t) {
-  return cs(t, as()).map((n, a) => {
-    if (typeof n == "string")
-      return n;
-    {
-      const c = n.content.toString(), r2 = n.type === "url" ? /^http(s?):\/\//.test(c) ? c : `https://${c}` : `mailto:${c}`;
-      return e2.createElement("a", { className: "lk-chat-link", key: a, href: r2, target: "_blank", rel: "noreferrer" }, c);
-    }
-  });
-}
-function Ta(t) {
-  return e2.createElement(zn.Provider, { value: t.session }, e2.createElement(Hn.Provider, { value: t.session.room }, t.children));
-}
-
-// node_modules/@livekit/components-react/dist/prefabs.mjs
-function ee({
-  messageFormatter: r2,
-  messageDecoder: d,
-  messageEncoder: u,
-  channelTopic: n,
-  ...S
-}) {
-  const g = e3.useRef(null), m = e3.useRef(null), l = e3.useMemo(() => ({ messageDecoder: d, messageEncoder: u, channelTopic: n }), [d, u, n]), { chatMessages: c, send: I3, isSending: t } = rn2(l), h2 = Ko(), i2 = e3.useRef(0);
-  async function v(s2) {
-    s2.preventDefault(), m.current && m.current.value.trim() !== "" && (await I3(m.current.value), m.current.value = "", m.current.focus());
-  }
-  return e3.useEffect(() => {
-    var s2;
-    g && ((s2 = g.current) == null || s2.scrollTo({ top: g.current.scrollHeight }));
-  }, [g, c]), e3.useEffect(() => {
-    var o2, E, a, w, b;
-    if (!h2 || c.length === 0)
-      return;
-    if ((o2 = h2.widget.state) != null && o2.showChat && c.length > 0 && i2.current !== ((E = c[c.length - 1]) == null ? void 0 : E.timestamp)) {
-      i2.current = (a = c[c.length - 1]) == null ? void 0 : a.timestamp;
-      return;
-    }
-    const s2 = c.filter(
-      (A3) => !i2.current || A3.timestamp > i2.current
-    ).length, { widget: f } = h2;
-    s2 > 0 && ((w = f.state) == null ? void 0 : w.unreadMessages) !== s2 && ((b = f.dispatch) == null || b.call(f, { msg: "unread_msg", count: s2 }));
-  }, [c, h2 == null ? void 0 : h2.widget]), e3.createElement("div", { ...S, className: "lk-chat" }, e3.createElement("div", { className: "lk-chat-header" }, "Messages", h2 && e3.createElement(sa2, { className: "lk-close-button" }, e3.createElement(oa2, null))), e3.createElement("ul", { className: "lk-list lk-chat-messages", ref: g }, S.children ? c.map(
-    (s2, f) => H2(S.children, {
-      entry: s2,
-      key: s2.id ?? f,
-      messageFormatter: r2
-    })
-  ) : c.map((s2, f, o2) => {
-    const E = f >= 1 && o2[f - 1].from === s2.from, a = f >= 1 && s2.timestamp - o2[f - 1].timestamp < 6e4;
-    return e3.createElement(
-      xa,
-      {
-        key: s2.id ?? f,
-        hideName: E,
-        hideTimestamp: E === false ? false : a,
-        entry: s2,
-        messageFormatter: r2
-      }
-    );
-  })), e3.createElement("form", { className: "lk-chat-form", onSubmit: v }, e3.createElement(
-    "input",
-    {
-      className: "lk-form-control lk-chat-form-input",
-      disabled: t,
-      ref: m,
-      type: "text",
-      placeholder: "Enter a message...",
-      onInput: (s2) => s2.stopPropagation(),
-      onKeyDown: (s2) => s2.stopPropagation(),
-      onKeyUp: (s2) => s2.stopPropagation()
-    }
-  ), e3.createElement("button", { type: "submit", className: "lk-button lk-chat-form-button", disabled: t }, "Send")));
-}
-function O2({
-  kind: r2,
-  initialSelection: d,
-  onActiveDeviceChange: u,
-  tracks: n,
-  requestPermissions: S = false,
-  ...g
-}) {
-  const [m, l] = e3.useState(false), [c, I3] = e3.useState([]), [t, h2] = e3.useState(true), [i2, v] = e3.useState(S), s2 = (a, w) => {
-    L.debug("handle device change"), l(false), u == null || u(a, w);
-  }, f = e3.useRef(null), o2 = e3.useRef(null);
-  e3.useLayoutEffect(() => {
-    m && v(true);
-  }, [m]), e3.useLayoutEffect(() => {
-    let a;
-    return f.current && o2.current && (c || t) && (a = os(f.current, o2.current, (w, b) => {
-      o2.current && Object.assign(o2.current.style, { left: `${w}px`, top: `${b}px` });
-    })), h2(false), () => {
-      a == null || a();
-    };
-  }, [f, o2, c, t]);
-  const E = e3.useCallback(
-    (a) => {
-      o2.current && a.target !== f.current && m && ss(o2.current, a) && l(false);
-    },
-    [m, o2, f]
-  );
-  return e3.useEffect(() => (document.addEventListener("click", E), () => {
-    document.removeEventListener("click", E);
-  }), [E]), e3.createElement(e3.Fragment, null, e3.createElement(
-    "button",
-    {
-      className: "lk-button lk-button-menu",
-      "aria-pressed": m,
-      ...g,
-      onClick: () => l(!m),
-      ref: f
-    },
-    g.children
-  ), !g.disabled && e3.createElement(
-    "div",
-    {
-      className: "lk-device-menu",
-      ref: o2,
-      style: { visibility: m ? "visible" : "hidden" }
-    },
-    r2 ? e3.createElement(
-      fa2,
-      {
-        initialSelection: d,
-        onActiveDeviceChange: (a) => s2(r2, a),
-        onDeviceListChange: I3,
-        kind: r2,
-        track: n == null ? void 0 : n[r2],
-        requestPermissions: i2
-      }
-    ) : e3.createElement(e3.Fragment, null, e3.createElement("div", { className: "lk-device-menu-heading" }, "Audio inputs"), e3.createElement(
-      fa2,
-      {
-        kind: "audioinput",
-        onActiveDeviceChange: (a) => s2("audioinput", a),
-        onDeviceListChange: I3,
-        track: n == null ? void 0 : n.audioinput,
-        requestPermissions: i2
-      }
-    ), e3.createElement("div", { className: "lk-device-menu-heading" }, "Video inputs"), e3.createElement(
-      fa2,
-      {
-        kind: "videoinput",
-        onActiveDeviceChange: (a) => s2("videoinput", a),
-        onDeviceListChange: I3,
-        track: n == null ? void 0 : n.videoinput,
-        requestPermissions: i2
-      }
-    ))
-  ));
-}
-function j2() {
-  e3.useEffect(() => {
-    Q();
-  }, []);
-}
-function Ke2(r2, d) {
-  const [u, n] = e3.useState(), S = e3.useMemo(() => new _(), []);
-  return e3.useEffect(() => {
-    let g = false, m = [];
-    return S.lock().then(async (l) => {
-      try {
-        (r2.audio || r2.video) && (m = await createLocalTracks(r2), g ? m.forEach((c) => c.stop()) : n(m));
-      } catch (c) {
-        d && c instanceof Error ? d(c) : L.error(c);
-      } finally {
-        l();
-      }
-    }), () => {
-      g = true, m.forEach((l) => {
-        l.stop();
-      });
-    };
-  }, [JSON.stringify(r2, T), d, S]), u;
-}
-function et2(r2, d, u) {
-  const [n, S] = e3.useState(null), [g, m] = e3.useState(false), l = qn({ kind: u }), [c, I3] = e3.useState(
-    void 0
-  ), [t, h2] = e3.useState(), [i2, v] = e3.useState(d);
-  e3.useEffect(() => {
-    v(d);
-  }, [d]);
-  const s2 = async (E, a) => {
-    try {
-      const w = a === "videoinput" ? await createLocalVideoTrack({
-        deviceId: E,
-        resolution: VideoPresets.h720.resolution
-      }) : await createLocalAudioTrack({ deviceId: E }), b = await w.getDeviceId(false);
-      b && E !== b && (o2.current = b, v(b)), h2(w);
-    } catch (w) {
-      w instanceof Error && S(w);
-    }
-  }, f = async (E, a) => {
-    await E.setDeviceId(a), o2.current = a;
-  }, o2 = e3.useRef(i2);
-  return e3.useEffect(() => {
-    r2 && !t && !n && !g && (L.debug("creating track", u), m(true), s2(i2, u).finally(() => {
-      m(false);
-    }));
-  }, [r2, t, n, g]), e3.useEffect(() => {
-    t && (r2 ? c != null && c.deviceId && o2.current !== (c == null ? void 0 : c.deviceId) ? (L.debug(`switching ${u} device from`, o2.current, c.deviceId), f(t, c.deviceId)) : (L.debug(`unmuting local ${u} track`), t.unmute()) : (L.debug(`muting ${u} track`), t.mute().then(() => L.debug(t.mediaStreamTrack))));
-  }, [t, c, r2, u]), e3.useEffect(() => () => {
-    t && (L.debug(`stopping local ${u} track`), t.stop(), t.mute());
-  }, []), e3.useEffect(() => {
-    I3(l == null ? void 0 : l.find((E) => E.deviceId === i2));
-  }, [i2, l]), {
-    selectedDevice: c,
-    localTrack: t,
-    deviceError: n
-  };
-}
-function tt2({
-  defaults: r2 = {},
-  onValidate: d,
-  onSubmit: u,
-  onError: n,
-  debug: S,
-  joinLabel: g = "Join Room",
-  micLabel: m = "Microphone",
-  camLabel: l = "Camera",
-  userLabel: c = "Username",
-  persistUserChoices: I3 = true,
-  videoProcessor: t,
-  ...h2
-}) {
-  const {
-    userChoices: i2,
-    saveAudioInputDeviceId: v,
-    saveAudioInputEnabled: s2,
-    saveVideoInputDeviceId: f,
-    saveVideoInputEnabled: o2,
-    saveUsername: E
-  } = or2({
-    defaults: r2,
-    preventSave: !I3,
-    preventLoad: !I3
-  }), [a, w] = e3.useState(i2), [b, A3] = e3.useState(a.audioEnabled), [y, L3] = e3.useState(a.videoEnabled), [T2, $2] = e3.useState(a.audioDeviceId), [p, M2] = e3.useState(a.videoDeviceId), [V2, ae] = e3.useState(a.username);
-  e3.useEffect(() => {
-    s2(b);
-  }, [b, s2]), e3.useEffect(() => {
-    o2(y);
-  }, [y, o2]), e3.useEffect(() => {
-    v(T2);
-  }, [T2, v]), e3.useEffect(() => {
-    f(p);
-  }, [p, f]), e3.useEffect(() => {
-    E(V2);
-  }, [V2, E]);
-  const D2 = Ke2(
-    {
-      audio: b ? { deviceId: i2.audioDeviceId } : false,
-      video: y ? { deviceId: i2.videoDeviceId, processor: t } : false
-    },
-    n
-  ), U2 = e3.useRef(null), P2 = e3.useMemo(
-    () => D2 == null ? void 0 : D2.filter((C) => C.kind === Track.Kind.Video)[0],
-    [D2]
-  ), ne4 = e3.useMemo(() => {
-    if (P2) {
-      const { facingMode: C } = facingModeFromLocalTrack(P2);
-      return C;
-    } else
-      return "undefined";
-  }, [P2]), q3 = e3.useMemo(
-    () => D2 == null ? void 0 : D2.filter((C) => C.kind === Track.Kind.Audio)[0],
-    [D2]
-  );
-  e3.useEffect(() => (U2.current && P2 && (P2.unmute(), P2.attach(U2.current)), () => {
-    P2 == null || P2.detach();
-  }), [P2]);
-  const [ce2, se2] = e3.useState(), _2 = e3.useCallback(
-    (C) => typeof d == "function" ? d(C) : C.username !== "",
-    [d]
-  );
-  e3.useEffect(() => {
-    const C = {
-      username: V2,
-      videoEnabled: y,
-      videoDeviceId: p,
-      audioEnabled: b,
-      audioDeviceId: T2
-    };
-    w(C), se2(_2(C));
-  }, [V2, y, _2, b, T2, p]);
-  function re2(C) {
-    C.preventDefault(), _2(a) ? typeof u == "function" && u(a) : L.warn("Validation failed with: ", a);
-  }
-  return j2(), e3.createElement("div", { className: "lk-prejoin", ...h2 }, e3.createElement("div", { className: "lk-video-container" }, P2 && e3.createElement("video", { ref: U2, width: "1280", height: "720", "data-lk-facing-mode": ne4 }), (!P2 || !y) && e3.createElement("div", { className: "lk-camera-off-note" }, e3.createElement(Nt2, null))), e3.createElement("div", { className: "lk-button-group-container" }, e3.createElement("div", { className: "lk-button-group audio" }, e3.createElement(
-    va,
-    {
-      initialState: b,
-      source: Track.Source.Microphone,
-      onChange: (C) => A3(C)
-    },
-    m
-  ), e3.createElement("div", { className: "lk-button-group-menu" }, e3.createElement(
-    O2,
-    {
-      initialSelection: T2,
-      kind: "audioinput",
-      disabled: !q3,
-      tracks: { audioinput: q3 },
-      onActiveDeviceChange: (C, F2) => $2(F2)
-    }
-  ))), e3.createElement("div", { className: "lk-button-group video" }, e3.createElement(
-    va,
-    {
-      initialState: y,
-      source: Track.Source.Camera,
-      onChange: (C) => L3(C)
-    },
-    l
-  ), e3.createElement("div", { className: "lk-button-group-menu" }, e3.createElement(
-    O2,
-    {
-      initialSelection: p,
-      kind: "videoinput",
-      disabled: !P2,
-      tracks: { videoinput: P2 },
-      onActiveDeviceChange: (C, F2) => M2(F2)
-    }
-  )))), e3.createElement("form", { className: "lk-username-container" }, e3.createElement(
-    "input",
-    {
-      className: "lk-form-control",
-      id: "username",
-      name: "username",
-      type: "text",
-      defaultValue: V2,
-      placeholder: c,
-      onChange: (C) => ae(C.target.value),
-      autoComplete: "off"
-    }
-  ), e3.createElement(
-    "button",
-    {
-      className: "lk-button lk-join-button",
-      type: "submit",
-      onClick: re2,
-      disabled: !ce2
-    },
-    g
-  )), S && e3.createElement(e3.Fragment, null, e3.createElement("strong", null, "User Choices:"), e3.createElement("ul", { className: "lk-list", style: { overflow: "hidden", maxWidth: "15rem" } }, e3.createElement("li", null, "Username: ", `${a.username}`), e3.createElement("li", null, "Video Enabled: ", `${a.videoEnabled}`), e3.createElement("li", null, "Audio Enabled: ", `${a.audioEnabled}`), e3.createElement("li", null, "Video Device: ", `${a.videoDeviceId}`), e3.createElement("li", null, "Audio Device: ", `${a.audioDeviceId}`))));
-}
-function Ge2({ props: r2 }) {
-  const { dispatch: d, state: u } = ta().widget, n = "lk-button lk-settings-toggle";
-  return { mergedProps: e3.useMemo(() => M(r2, {
-    className: n,
-    onClick: () => {
-      d && d({ msg: "toggle_settings" });
-    },
-    "aria-pressed": u != null && u.showSettings ? "true" : "false"
-  }), [r2, n, d, u]) };
-}
-var Je2 = e3.forwardRef(
-  function(d, u) {
-    const { mergedProps: n } = Ge2({ props: d });
-    return e3.createElement("button", { ref: u, ...n }, d.children);
-  }
-);
-var ze2 = (r2) => {
-  switch (r2) {
-    case Track.Source.Camera:
-      return 1;
-    case Track.Source.Microphone:
-      return 2;
-    case Track.Source.ScreenShare:
-      return 3;
-    default:
-      return 0;
-  }
-};
-function te2({
-  variation: r2,
-  controls: d,
-  saveUserChoices: u = true,
-  onDeviceError: n,
-  ...S
-}) {
-  var $2;
-  const [g, m] = e3.useState(false), l = Ko();
-  e3.useEffect(() => {
-    var p, M2;
-    ((p = l == null ? void 0 : l.widget.state) == null ? void 0 : p.showChat) !== void 0 && m((M2 = l == null ? void 0 : l.widget.state) == null ? void 0 : M2.showChat);
-  }, [($2 = l == null ? void 0 : l.widget.state) == null ? void 0 : $2.showChat]);
-  const I3 = Dn2(`(max-width: ${g ? 1e3 : 760}px)`) ? "minimal" : "verbose";
-  r2 ?? (r2 = I3);
-  const t = { leave: true, ...d }, h2 = Bn2();
-  if (!h2)
-    t.camera = false, t.chat = false, t.microphone = false, t.screenShare = false;
-  else {
-    const p = (M2) => h2.canPublish && (h2.canPublishSources.length === 0 || h2.canPublishSources.includes(ze2(M2)));
-    t.camera ?? (t.camera = p(Track.Source.Camera)), t.microphone ?? (t.microphone = p(Track.Source.Microphone)), t.screenShare ?? (t.screenShare = p(Track.Source.ScreenShare)), t.chat ?? (t.chat = h2.canPublishData && (d == null ? void 0 : d.chat));
-  }
-  const i2 = e3.useMemo(
-    () => r2 === "minimal" || r2 === "verbose",
-    [r2]
-  ), v = e3.useMemo(
-    () => r2 === "textOnly" || r2 === "verbose",
-    [r2]
-  ), s2 = ds(), [f, o2] = e3.useState(false), E = e3.useCallback(
-    (p) => {
-      o2(p);
-    },
-    [o2]
-  ), a = G2({ className: "lk-control-bar" }, S), {
-    saveAudioInputEnabled: w,
-    saveVideoInputEnabled: b,
-    saveAudioInputDeviceId: A3,
-    saveVideoInputDeviceId: y
-  } = or2({ preventSave: !u }), L3 = e3.useCallback(
-    (p, M2) => M2 ? w(p) : null,
-    [w]
-  ), T2 = e3.useCallback(
-    (p, M2) => M2 ? b(p) : null,
-    [b]
-  );
-  return e3.createElement("div", { ...a }, t.microphone && e3.createElement("div", { className: "lk-button-group" }, e3.createElement(
-    va,
-    {
-      source: Track.Source.Microphone,
-      showIcon: i2,
-      onChange: L3,
-      onDeviceError: (p) => n == null ? void 0 : n({ source: Track.Source.Microphone, error: p })
-    },
-    v && "Microphone"
-  ), e3.createElement("div", { className: "lk-button-group-menu" }, e3.createElement(
-    O2,
-    {
-      kind: "audioinput",
-      onActiveDeviceChange: (p, M2) => A3(M2 ?? "default")
-    }
-  ))), t.camera && e3.createElement("div", { className: "lk-button-group" }, e3.createElement(
-    va,
-    {
-      source: Track.Source.Camera,
-      showIcon: i2,
-      onChange: T2,
-      onDeviceError: (p) => n == null ? void 0 : n({ source: Track.Source.Camera, error: p })
-    },
-    v && "Camera"
-  ), e3.createElement("div", { className: "lk-button-group-menu" }, e3.createElement(
-    O2,
-    {
-      kind: "videoinput",
-      onActiveDeviceChange: (p, M2) => y(M2 ?? "default")
-    }
-  ))), t.screenShare && s2 && e3.createElement(
-    va,
-    {
-      source: Track.Source.ScreenShare,
-      captureOptions: { audio: true, selfBrowserSurface: "include" },
-      showIcon: i2,
-      onChange: E,
-      onDeviceError: (p) => n == null ? void 0 : n({ source: Track.Source.ScreenShare, error: p })
-    },
-    v && (f ? "Stop screen share" : "Share screen")
-  ), t.chat && e3.createElement(sa2, null, i2 && e3.createElement(ua2, null), v && "Chat"), t.settings && e3.createElement(Je2, null, i2 && e3.createElement(da2, null), v && "Settings"), t.leave && e3.createElement(ia2, null, i2 && e3.createElement(ma, null), v && "Leave"), e3.createElement(ga, null));
-}
-function at2({
-  chatMessageFormatter: r2,
-  chatMessageDecoder: d,
-  chatMessageEncoder: u,
-  SettingsComponent: n,
-  ...S
-}) {
-  var s2, f;
-  const [g, m] = e3.useState({
-    showChat: false,
-    unreadMessages: 0,
-    showSettings: false
-  }), l = e3.useRef(null), c = rr2(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: false }
-    ],
-    { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
-  ), I3 = (o2) => {
-    L.debug("updating widget state", o2), m(o2);
-  }, t = ra(), h2 = c.filter(B).filter((o2) => o2.publication.source === Track.Source.ScreenShare), i2 = (s2 = Gn(t)) == null ? void 0 : s2[0], v = c.filter((o2) => !ts(o2, i2));
-  return e3.useEffect(() => {
-    var o2, E, a, w, b, A3;
-    if (h2.some((y) => y.publication.isSubscribed) && l.current === null ? (L.debug("Auto set screen share focus:", { newScreenShareTrack: h2[0] }), (E = (o2 = t.pin).dispatch) == null || E.call(o2, { msg: "set_pin", trackReference: h2[0] }), l.current = h2[0]) : l.current && !h2.some(
-      (y) => {
-        var L3, T2;
-        return y.publication.trackSid === ((T2 = (L3 = l.current) == null ? void 0 : L3.publication) == null ? void 0 : T2.trackSid);
-      }
-    ) && (L.debug("Auto clearing screen share focus."), (w = (a = t.pin).dispatch) == null || w.call(a, { msg: "clear_pin" }), l.current = null), i2 && !B(i2)) {
-      const y = c.find(
-        (L3) => L3.participant.identity === i2.participant.identity && L3.source === i2.source
-      );
-      y !== i2 && B(y) && ((A3 = (b = t.pin).dispatch) == null || A3.call(b, { msg: "set_pin", trackReference: y }));
-    }
-  }, [
-    h2.map((o2) => `${o2.publication.trackSid}_${o2.publication.isSubscribed}`).join(),
-    (f = i2 == null ? void 0 : i2.publication) == null ? void 0 : f.trackSid,
-    c
-  ]), j2(), e3.createElement("div", { className: "lk-video-conference", ...S }, is() && e3.createElement(
-    Ra,
-    {
-      value: t,
-      onWidgetChange: I3
-    },
-    e3.createElement("div", { className: "lk-video-conference-inner" }, i2 ? e3.createElement("div", { className: "lk-focus-layout-wrapper" }, e3.createElement(Ea, null, e3.createElement(ka, { tracks: v }, e3.createElement(Ot2, null)), i2 && e3.createElement(pa2, { trackRef: i2 }))) : e3.createElement("div", { className: "lk-grid-layout-wrapper" }, e3.createElement(wa, { tracks: c }, e3.createElement(Ot2, null))), e3.createElement(te2, { controls: { chat: true, settings: !!n } })),
-    e3.createElement(
-      ee,
-      {
-        style: { display: g.showChat ? "grid" : "none" },
-        messageFormatter: r2,
-        messageEncoder: u,
-        messageDecoder: d
-      }
-    ),
-    n && e3.createElement(
-      "div",
-      {
-        className: "lk-settings-menu-modal",
-        style: { display: g.showSettings ? "block" : "none" }
-      },
-      e3.createElement(n, null)
-    )
-  ), e3.createElement(ba, null), e3.createElement(Ia, null));
-}
-function nt2({ ...r2 }) {
-  const [d, u] = e3.useState({
-    showChat: false,
-    unreadMessages: 0
-  }), n = rr2([Track.Source.Microphone]);
-  return j2(), e3.createElement(Ra, { onWidgetChange: u }, e3.createElement("div", { className: "lk-audio-conference", ...r2 }, e3.createElement("div", { className: "lk-audio-conference-stage" }, e3.createElement(Ce2, { tracks: n }, e3.createElement(Ca, null))), e3.createElement(
-    te2,
-    {
-      controls: { microphone: true, screenShare: false, camera: false, chat: true }
-    }
-  ), d.showChat && e3.createElement(ee, null)));
-}
-function ct2({
-  controls: r2,
-  saveUserChoices: d = true,
-  onDeviceError: u,
-  ...n
-}) {
-  const S = { leave: true, microphone: true, ...r2 }, g = Bn2(), { microphoneTrack: m, localParticipant: l } = xe2(), c = e3.useMemo(() => ({
-    participant: l,
-    source: Track.Source.Microphone,
-    publication: m
-  }), [l, m]);
-  g ? S.microphone ?? (S.microphone = g.canPublish) : S.microphone = false;
-  const I3 = G2({ className: "lk-agent-control-bar" }, n), { saveAudioInputEnabled: t, saveAudioInputDeviceId: h2 } = or2({
-    preventSave: !d
-  }), i2 = e3.useCallback(
-    (v, s2) => {
-      s2 && t(v);
-    },
-    [t]
-  );
-  return e3.createElement("div", { ...I3 }, S.microphone && e3.createElement("div", { className: "lk-button-group" }, e3.createElement(
-    va,
-    {
-      source: Track.Source.Microphone,
-      showIcon: true,
-      onChange: i2,
-      onDeviceError: (v) => u == null ? void 0 : u({ source: Track.Source.Microphone, error: v })
-    },
-    e3.createElement(Kt3, { trackRef: c, barCount: 7, options: { minHeight: 5 } })
-  ), e3.createElement("div", { className: "lk-button-group-menu" }, e3.createElement(
-    O2,
-    {
-      kind: "audioinput",
-      onActiveDeviceChange: (v, s2) => h2(s2 ?? "default")
-    }
-  ))), S.leave && e3.createElement(ia2, null, "Disconnect"), e3.createElement(ga, null));
-}
 export {
-  gn2 as AgentEvent,
-  nt2 as AudioConference,
-  ne3 as AudioTrack,
-  Ma as AudioVisualizer,
-  Kt3 as BarVisualizer,
-  pt2 as CameraDisabledIcon,
-  wt2 as CameraIcon,
-  ka as CarouselLayout,
-  ee as Chat,
-  oa2 as ChatCloseIcon,
-  xa as ChatEntry,
-  ua2 as ChatIcon,
-  sa2 as ChatToggle,
-  ie3 as Chevron,
-  ca2 as ClearPinButton,
-  ye2 as ConnectionQualityIndicator,
-  la2 as ConnectionState,
-  Ia as ConnectionStateToast,
-  te2 as ControlBar,
-  ia2 as DisconnectButton,
-  pa2 as FocusLayout,
-  Ea as FocusLayoutContainer,
-  Tt as FocusToggle,
-  kt2 as FocusToggleIcon,
-  da2 as GearIcon,
-  wa as GridLayout,
-  Xo as LKFeatureContext,
-  Wn as LayoutContext,
-  Ra as LayoutContextProvider,
-  ma as LeaveIcon,
-  W2 as LiveKitRoom,
-  Rt2 as LockLockedIcon,
-  O2 as MediaDeviceMenu,
-  fa2 as MediaDeviceSelect,
-  kn2 as MessagesEvent,
-  Mt2 as MicDisabledIcon,
-  yt2 as MicIcon,
-  Ca as ParticipantAudioTile,
-  Vn as ParticipantContext,
-  jt3 as ParticipantContextIfNeeded,
-  ya as ParticipantLoop,
-  K2 as ParticipantName,
-  Nt2 as ParticipantPlaceholder,
-  Ot2 as ParticipantTile,
-  tt2 as PreJoin,
-  bt2 as QualityExcellentIcon,
-  St as QualityGoodIcon,
-  Ct2 as QualityPoorIcon,
-  It2 as QualityUnknownIcon,
-  ba as RoomAudioRenderer,
-  Hn as RoomContext,
-  Sa as RoomName,
-  Re3 as ScreenShareIcon,
-  xt2 as ScreenShareStopIcon,
-  Cn2 as SessionEvent,
-  Ta as SessionProvider,
-  oe3 as SpinnerIcon,
-  ha as StartAudio,
-  ga as StartMediaButton,
-  Gt2 as Toast,
-  Ce2 as TrackLoop,
-  be2 as TrackMutedIndicator,
-  jn as TrackRefContext,
-  _t2 as TrackRefContextIfNeeded,
-  va as TrackToggle,
-  Pt2 as UnfocusToggleIcon,
-  at2 as VideoConference,
-  Bt2 as VideoTrack,
-  ct2 as VoiceAssistantControlBar,
-  Pa as formatChatMessageLinks,
-  B as isTrackReference,
-  ls as setLogExtension,
-  us as setLogLevel,
-  Ue2 as useAgent,
-  In2 as useAudioPlayback,
-  ur2 as useAudioWaveform,
-  rn2 as useChat,
-  Zn2 as useChatToggle,
-  Nn2 as useClearPinButton,
-  _n2 as useConnectionQualityIndicator,
-  re as useConnectionState,
-  ra as useCreateLayoutContext,
-  Fn2 as useDataChannel,
-  xn2 as useDisconnectButton,
-  ia as useEnsureCreateLayoutContext,
-  na as useEnsureLayoutContext,
-  ca as useEnsureParticipant,
-  la as useEnsureRoom,
-  da as useEnsureSession,
-  sa as useEnsureTrackRef,
-  hr2 as useEvents,
-  $t2 as useFacingMode,
-  pa as useFeatureContext,
-  Un2 as useFocusToggle,
-  Hn2 as useGridLayout,
-  ar2 as useIsEncrypted,
-  Ee2 as useIsMuted,
-  fr2 as useIsRecording,
-  Qt2 as useIsSpeaking,
-  ta as useLayoutContext,
-  $ as useLiveKitRoom,
-  xe2 as useLocalParticipant,
-  Bn2 as useLocalParticipantPermissions,
-  Ko as useMaybeLayoutContext,
-  Go as useMaybeParticipantContext,
-  Qo as useMaybeRoomContext,
-  Jo as useMaybeSessionContext,
-  Bn as useMaybeTrackRefContext,
-  Vn2 as useMediaDeviceSelect,
-  qn as useMediaDevices,
-  cr2 as useMultibandTrackVolume,
-  jn2 as usePagination,
-  dr2 as useParticipantAttribute,
-  mn2 as useParticipantAttributes,
-  aa as useParticipantContext,
-  Yt2 as useParticipantInfo,
-  Wn2 as useParticipantPermissions,
-  zn2 as useParticipantTile,
-  ie2 as useParticipantTracks,
-  Xt2 as useParticipants,
-  or2 as usePersistentUserChoices,
-  Gn as usePinnedTracks,
-  et2 as usePreviewDevice,
-  Ke2 as usePreviewTracks,
-  Jn2 as useRemoteParticipant,
-  ve2 as useRemoteParticipants,
-  ua as useRoomContext,
-  $n2 as useRoomInfo,
-  mr2 as useSequentialRoomConnectDisconnect,
-  pr2 as useSession,
-  fa as useSessionContext,
-  br2 as useSessionMessages,
-  Qn as useSortedParticipants,
-  Zt2 as useSpeakingParticipants,
-  Kn as useStartAudio,
-  Yn as useStartVideo,
-  Xn2 as useSwipe,
-  pn2 as useTextStream,
-  er2 as useToken,
-  sr2 as useTrackByName,
-  tr2 as useTrackMutedIndicator,
-  oa as useTrackRefContext,
-  nr2 as useTrackToggle,
-  fn2 as useTrackTranscription,
-  ir2 as useTrackVolume,
-  rr2 as useTracks,
-  hn2 as useTranscriptions,
-  Kt2 as useVisualStableUpdate,
-  lr2 as useVoiceAssistant
+  AudioPresets,
+  BackupCodecPolicy,
+  BaseKeyProvider,
+  CheckStatus,
+  Checker,
+  ConnectionCheck,
+  ConnectionError,
+  ConnectionErrorReason,
+  ConnectionQuality,
+  ConnectionState,
+  CriticalTimers,
+  CryptorError,
+  CryptorErrorReason,
+  CryptorEvent,
+  DataPacket_Kind,
+  DataStreamError,
+  DataStreamErrorReason,
+  DefaultReconnectPolicy,
+  DeviceUnsupportedError,
+  DisconnectReason,
+  EncryptionEvent,
+  Encryption_Type,
+  EngineEvent,
+  ExternalE2EEKeyProvider,
+  KeyHandlerEvent,
+  KeyProviderEvent,
+  LivekitError,
+  LocalAudioTrack,
+  LocalParticipant,
+  LocalTrack,
+  LocalTrackPublication,
+  LocalTrackRecorder,
+  LocalVideoTrack,
+  LogLevel,
+  LoggerNames,
+  MediaDeviceFailure,
+  _ as Mutex,
+  NegotiationError,
+  Participant,
+  ParticipantEvent,
+  ParticipantInfo_Kind as ParticipantKind,
+  PublishDataError,
+  PublishTrackError,
+  RemoteAudioTrack,
+  RemoteParticipant,
+  RemoteTrack,
+  RemoteTrackPublication,
+  RemoteVideoTrack,
+  Room,
+  RoomEvent,
+  RpcError,
+  ScreenSharePresets,
+  SignalReconnectError,
+  SignalRequestError,
+  SimulatedError,
+  SubscriptionError,
+  TokenSource,
+  TokenSourceConfigurable,
+  TokenSourceFixed,
+  Track,
+  TrackEvent,
+  TrackInvalidError,
+  TrackPublication,
+  TrackType,
+  UnexpectedConnectionState,
+  UnsupportedServer,
+  VideoPreset,
+  VideoPresets,
+  VideoPresets43,
+  VideoQuality,
+  areTokenSourceFetchOptionsEqual,
+  asEncryptablePacket,
+  attachToElement,
+  attributeTypings as attributes,
+  audioCodecs,
+  compareVersions,
+  createAudioAnalyser,
+  createE2EEKey,
+  createKeyMaterialFromBuffer,
+  createKeyMaterialFromString,
+  createLocalAudioTrack,
+  createLocalScreenTracks,
+  createLocalTracks,
+  createLocalVideoTrack,
+  decodeTokenPayload,
+  deriveKeys,
+  detachTrack,
+  facingModeFromDeviceLabel,
+  facingModeFromLocalTrack,
+  getBrowser,
+  getEmptyAudioStreamTrack,
+  getEmptyVideoStreamTrack,
+  getLogger,
+  importKey,
+  isAudioCodec,
+  isAudioTrack,
+  isBackupCodec,
+  isBackupVideoCodec,
+  isBrowserSupported,
+  isE2EESupported,
+  isInsertableStreamSupported,
+  isLocalParticipant,
+  isLocalTrack,
+  isRemoteParticipant,
+  isRemoteTrack,
+  isScriptTransformSupported,
+  isVideoCodec,
+  isVideoFrame,
+  isVideoTrack,
+  needsRbspUnescaping,
+  parseRbsp,
+  protocolVersion,
+  ratchet,
+  setLogExtension,
+  setLogLevel,
+  supportsAV1,
+  supportsAdaptiveStream,
+  supportsAudioOutputSelection,
+  supportsDynacast,
+  supportsVP9,
+  version,
+  videoCodecs,
+  writeRbsp
 };
-//# sourceMappingURL=@livekit_components-react.js.map
+//# sourceMappingURL=livekit-client.js.map
