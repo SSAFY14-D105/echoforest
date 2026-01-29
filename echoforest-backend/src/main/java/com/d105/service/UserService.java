@@ -23,6 +23,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final SessionService sessionService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     // 회원가입
     @Transactional
@@ -62,6 +63,10 @@ public class UserService {
 
         // 4. 세션 저장 (Redis) - 기존 세션 자동 무효화
         sessionService.saveSession(user.getId(), token);
+
+        // 5. 로그인 이벤트 발행 (실시간 중복 로그인 처리용)
+        eventPublisher
+                .publishEvent(new com.d105.event.UserLoggedInEvent(this, user.getId(), user.getUsername(), token));
 
         // 5. 토큰과 닉네임, userId를 Map에 담아서 반환
         return Map.of(
