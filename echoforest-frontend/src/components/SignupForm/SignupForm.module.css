@@ -10,7 +10,8 @@
 .inputGroup {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 10px;
+    transform: translateX(-30px);
 }
 
 /* 라벨 - 흰색, 갈무리 체 */
@@ -53,6 +54,7 @@
     margin: -12px 0 0 180px;
     /* 라벨 너비(160px) + 간격(20px) 고려하여 조정 */
     padding: 4px 8px;
+    transform: translateX(-100px);
 }
 
 .checking {
@@ -83,7 +85,7 @@
     padding: 14px 40px;
     border: none;
     background: #5a7a7a;
-    color: #ccc;
+    color: #ffffff;
     font-family: var(--font-title);
     font-size: 22px;
     cursor: pointer;
@@ -110,19 +112,27 @@
     color: #888;
 }
 
-/* 뒤로가기 링크 */
+/* 뒤로가기 버튼 */
 .linkBtn {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
     background: transparent;
     border: none;
-    color: #aaa;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
     cursor: pointer;
-    font-size: 14px;
-    text-decoration: underline;
-    padding: 8px;
-    align-self: center;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    text-decoration: none;
+    padding: 0;
 }
 
 .linkBtn:hover {
-    color: #ffd700;
+    color: #ffffff;
+    transform: translateX(-5px);
 }

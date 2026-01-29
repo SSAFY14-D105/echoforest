@@ -17,26 +17,23 @@ export default function LobbyPage() {
   const [joinError, setJoinError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // 방 만들기 (WebSocket CREATE 메시지 전송) - 싱글톤 사용
+  // 방 만들기 (WebSocket CREATE 메시지 전송)
   const handleHost = async () => {
     if (isConnecting) return;
     setIsConnecting(true);
     setJoinError('');
 
     try {
-      // 1. 기존 연결 확실히 끊기
       if (gameWebSocket.isConnected()) {
         console.log('🔌 로비: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // 2. 재연결 시도
       console.log('🔌 로비: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
 
-      // 3. 메시지 핸들러 재설정
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
@@ -50,7 +47,6 @@ export default function LobbyPage() {
         setIsConnecting(false);
       });
 
-      // 4. CREATE 전송
       gameWebSocket.createRoom();
 
     } catch (error) {
@@ -62,32 +58,27 @@ export default function LobbyPage() {
   };
 
   const handleSoloPlay = async () => {
-    // 솔로 모드: 기존 UI 유지하면서 WebSocket 연결 (게임 서버 → AI 서버 체인용)
     if (isConnecting) return;
     setIsConnecting(true);
     setJoinError('');
 
     try {
-      // 1. 기존 연결 끊기
       if (gameWebSocket.isConnected()) {
         console.log('🔌 솔로: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // 2. WebSocket 연결
       console.log('🔌 솔로: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
       console.log('✅ 솔로: WebSocket 연결 완료');
 
-      // 3. 방 생성 핸들러 등록
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
           console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
 
-          // 방 참가 + 게임 즉시 시작 (솔로 UI)
           useGameStore.getState().joinGame(roomCode, true);
           useGameStore.setState({
             isSoloMode: true,
@@ -104,7 +95,6 @@ export default function LobbyPage() {
         setIsConnecting(false);
       });
 
-      // 4. 방 생성 요청
       gameWebSocket.createRoom();
       console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
 
@@ -118,64 +108,55 @@ export default function LobbyPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.lobbyCard}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.userInfo}>
-            <div className={styles.avatar}>{nickname.charAt(0).toUpperCase()}</div>
-            <span className={styles.username}>{nickname}</span>
-          </div>
-          <div className={styles.headerActions}>
-            <button className={styles.settingsIcon} title="설정" onClick={() => setShowSettings(true)}>
-              <img
-                src="/assets/ui/settings.png"
-                alt="Settings"
-                style={{ width: '24px', height: '24px', objectFit: 'contain', mixBlendMode: 'multiply' }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerText = '⚙️';
-                }}
-              />
-            </button>
-          </div>
-        </div>
+      {/* 배경 이미지 */}
+      <img
+        className={styles.bgImage}
+        src="/assets/backgrounds/main_page.png"
+        alt="메아리의 숲"
+      />
 
-        {/* Title */}
-        <div className={styles.titleSection}>
-          <h1 className={styles.title}>🌲 에코 포레스트</h1>
-          <p className={styles.subtitle}>친구들과 함께 숲을 탐험하세요!</p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className={styles.actions}>
-          <button className={`${styles.actionBtn} ${styles.hostBtn}`} onClick={handleHost} disabled={isConnecting}>
-            <span className={styles.btnIcon}>🏠</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>방 만들기</div>
-              <div className={styles.btnDesc}>새로운 게임 세션을 시작합니다</div>
-            </div>
-          </button>
-
-          <button className={`${styles.actionBtn} ${styles.joinBtn}`} onClick={() => setShowJoinModal(true)} disabled={isConnecting}>
-            <span className={styles.btnIcon}>🚪</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>방 참가하기</div>
-              <div className={styles.btnDesc}>초대 코드로 친구의 방에 입장합니다</div>
-            </div>
-          </button>
-
-          <button className={`${styles.actionBtn} ${styles.soloBtn}`} onClick={handleSoloPlay}>
-            <span className={styles.btnIcon}>🧪</span>
-            <div className={styles.btnContent}>
-              <div className={styles.btnTitle}>혼자하기</div>
-              <div className={styles.btnDesc}>테스트 모드</div>
-            </div>
-          </button>
-        </div>
-
-        {/* Error display */}
-        {joinError && <p className={styles.errorMessage}>{joinError}</p>}
+      {/* 오른쪽 상단 버튼들 */}
+      <div className={styles.topRightButtons}>
+        <button
+          className={styles.soloButton}
+          onClick={handleSoloPlay}
+          disabled={isConnecting}
+        >
+          🧪 혼자하기
+        </button>
       </div>
+
+      {/* 메뉴 (검정 보드 위치) */}
+      <div className={styles.menuWrapper}>
+        <div className={styles.menuItems}>
+          <button
+            className={styles.menuButton}
+            onClick={handleHost}
+            disabled={isConnecting}
+          >
+            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+            방 만들기
+          </button>
+          <button
+            className={styles.menuButton}
+            onClick={() => setShowJoinModal(true)}
+            disabled={isConnecting}
+          >
+            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+            방 참여하기
+          </button>
+          <button
+            className={styles.menuButton}
+            onClick={() => setShowSettings(true)}
+          >
+            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+            설정
+          </button>
+        </div>
+      </div>
+
+      {/* 에러 메시지 */}
+      {joinError && <div className={styles.errorToast}>{joinError}</div>}
 
       {/* Modals */}
       {showJoinModal && (

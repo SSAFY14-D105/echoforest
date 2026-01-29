@@ -1,257 +1,213 @@
-/* 모달 오버레이 */
-.modalOverlay {
+/* 설정 페이지 - 전체 화면 레이아웃 */
+.container {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 100vw;
+    height: 100vh;
     z-index: 1000;
-    animation: fadeIn 0.2s;
-    backdrop-filter: blur(2px);
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.modal {
-    background: white;
-    border: 4px solid var(--frog-dark);
-    box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 0.2);
-    padding: 32px 24px;
-    width: 90%;
-    max-width: 520px;
-    animation: slideUp 0.3s;
-    box-sizing: border-box;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.modal h3 {
-    margin: 0 0 24px 0;
-    font-size: 24px;
-    color: var(--frog-dark);
-    text-align: center;
-    font-family: var(--font-title);
-    border-bottom: 2px dashed var(--frog-dark);
-    padding-bottom: 16px;
-}
-
-.settingSection {
-    margin-bottom: 24px;
-}
-
-.settingLabel {
-    display: block;
-    font-weight: 600;
-    color: var(--frog-dark);
-    margin-bottom: 10px;
-    font-size: 16px;
-    font-family: var(--font-title);
-}
-
-.input {
-    width: 100%;
-    padding: 12px;
-    border: 3px solid var(--frog-dark);
-    font-size: 16px;
-    transition: all 0.2s;
-    box-sizing: border-box;
-    font-family: var(--font-main);
-    background: #fdfdfd;
-}
-
-.input:focus {
-    outline: none;
-    background: white;
-    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.1);
-}
-
-/* 볼륨 컨트롤 */
-.volumeControl {
     display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 16px;
-    background: var(--bg-cream);
-    padding: 12px;
-    border: 2px solid var(--frog-dark);
-}
-
-.volumeControl span:first-child {
-    font-size: 20px;
-}
-
-.slider {
-    flex: 1;
-    height: 12px;
-    background: white;
-    border: 2px solid var(--frog-dark);
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 24px;
-    height: 24px;
-    background: var(--frog-green);
-    border: 2px solid var(--frog-dark);
-    cursor: pointer;
-    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.2);
-}
-
-.slider::-webkit-slider-thumb:hover {
-    background: #8ce15a;
-}
-
-.volumeValue {
-    font-weight: 600;
-    color: var(--frog-dark);
-    min-width: 45px;
-    text-align: right;
-    font-family: var(--font-title);
-}
-
-/* 카메라 미리보기 */
-.cameraPreview {
-    background: #333;
-    border: 3px solid var(--frog-dark);
-    padding: 4px;
-    text-align: center;
-    color: white;
     overflow: hidden;
-    position: relative;
-    min-height: 240px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-.videoContainer {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #000;
-}
-
-.previewVideo {
+/* 배경 이미지 */
+.bgImage {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleX(-1);
-    border: 1px solid #555;
+    z-index: 0;
 }
 
-.cameraError {
-    color: #ff6b6b;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    border: 2px solid #ff6b6b;
-}
-
-.cameraPreview p {
-    margin: 0 0 8px 0;
-}
-
-/* 모달 액션 */
-.modalActions {
-    display: flex;
-    gap: 16px;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 2px dashed #ddd;
-}
-
-.btnPrimary,
-.btnSecondary {
-    flex: 1;
-    padding: 14px;
-    border: 3px solid var(--frog-dark);
-    font-size: 18px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.1s;
-    font-family: var(--font-title);
-    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
-}
-
-.btnPrimary {
-    background: var(--frog-green);
-    color: white;
-}
-
-.btnPrimary:hover {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.15);
-    filter: brightness(1.1);
-}
-
-.btnSecondary {
-    background: white;
-    color: var(--frog-dark);
-}
-
-.btnSecondary:hover {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.15);
-    background: var(--bg-cream);
-}
-
-.btnPrimary:active,
-.btnSecondary:active {
-    transform: translate(4px, 4px);
-    box-shadow: none;
-}
-
-/* 로그아웃 버튼 */
-.logoutSection {
-    margin-top: 24px;
-    text-align: center;
-    padding-top: 16px;
-    border-top: 2px dashed #eee;
-}
-
-.logoutBtn {
-    background: none;
+/* 뒤로가기 버튼 */
+.backButton {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
+    background: transparent;
     border: none;
-    color: #999;
-    font-size: 14px;
-    text-decoration: underline;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
     cursor: pointer;
-    padding: 8px 16px;
-    transition: color 0.2s;
-    font-family: var(--font-main);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
 }
 
-.logoutBtn:hover {
-    color: var(--scarf-red);
+.backButton:hover {
+    color: #ffffff;
+    transform: translateX(-5px);
+}
+
+/* 보드 래퍼 - 화면 중앙 */
+.boardWrapper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transform: translate(-40px);
+}
+
+/* 보드 컨텐츠 */
+.boardContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 400px;
+}
+
+/* 섹션 */
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 섹션 헤더 (나뭇잎 + 텍스트) */
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #ffeeb0;
+    font-family: var(--font-title);
+    font-size: 32px;
     font-weight: bold;
+    text-shadow:
+        3px 3px 0px #000,
+        -1px -1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000;
+}
+
+/* 나뭇잎 아이콘 */
+.leafIcon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    filter: drop-shadow(3px 3px 0px rgba(0, 0, 0, 0.5));
+}
+
+/* 닉네임 컬럼 레이아웃 */
+.nicknameColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 닉네임 입력 행 */
+.nicknameRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 60px;
+}
+
+/* SignupForm 스타일 적용: 둥근 모서리 */
+.nicknameInput {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-family: var(--font-main);
+    border: none;
+    background: #fff;
+    color: #333;
+    border-radius: 12px;
+    /* SignupForm style */
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+}
+
+.nicknameInput:focus {
+    outline: 3px solid #7ab;
+    /* SignupForm focus style */
+}
+
+/* 확인 버튼 - SignupForm 스타일 적용 */
+.confirmButton {
+    padding: 12px 24px;
+    border: none;
+    background: #5a7a7a;
+    /* SignupForm Button Color */
+    color: #ffffff;
+    /* Changed to white */
+    font-family: var(--font-title);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 16px;
+    /* SignupForm style */
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+}
+
+.confirmButton:hover:not(:disabled) {
+    background: #6a8a8a;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.confirmButton:active:not(:disabled) {
+    background: #4a6a6a;
+}
+
+.confirmButton:disabled {
+    background-color: rgba(100, 100, 100, 0.6);
+    cursor: not-allowed;
+    color: #888;
+}
+
+/* 유효성 검사 메시지 - SignupForm 색상 일치 */
+.checkStatus {
+    font-size: 14px;
+    font-family: var(--font-main);
+    margin: 0 0 0 60px;
+    font-weight: bold;
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+}
+
+.checking {
+    color: #ffd700;
+    /* SignupForm Yellow */
+}
+
+.available {
+    color: #7cba4c;
+    /* SignupForm Green */
+}
+
+.duplicate {
+    color: #ff6b6b;
+    /* SignupForm Red */
+}
+
+/* 메뉴 버튼 (추억 돌아보기 & 로그아웃) */
+.menuButton {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-family: var(--font-title);
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+    text-shadow:
+        3px 3px 0px #000,
+        -1px -1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000;
+}
+
+.menuButton:hover {
+    color: #ffffff;
+    transform: scale(1.03);
 }

@@ -1,220 +1,162 @@
-/* 컨테이너 - 숲 속 느낌의 배경 */
+/* 로비 페이지 - MainPage와 동일한 스타일 */
 .container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: var(--bg-cream);
-  /* 옅은 모눈종이 패턴 추가 */
-  background-image:
-    linear-gradient(rgba(58, 92, 34, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(58, 92, 34, 0.05) 1px, transparent 1px);
-  background-size: 40px 40px;
-  padding: 20px;
-  box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* 메인 카드 (픽셀 박스) */
-.lobbyCard {
-  background: #ffffff;
-  border: 4px solid var(--frog-dark);
-  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.15);
-  padding: 40px 32px;
-  width: 100%;
-  max-width: 480px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  position: relative;
+/* 배경 이미지 (main_page.png) */
+.bgImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
 }
 
-/* 장식용 나뭇잎 (가상 요소로 처리 가능하지만 일단 심플하게) */
-
-/* 헤더 */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+/* 오른쪽 상단 버튼들 */
+.topRightButtons {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 12px;
 }
 
-.userInfo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: var(--bg-cream);
-  border: 2px solid var(--frog-dark);
-  border-radius: 4px;
-  /* 살짝 둥글지만 픽셀 느낌 유지 */
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.1);
+.soloButton {
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px solid #ffeeb0;
+    color: #ffeeb0;
+    font-family: var(--font-title);
+    font-size: 18px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-shadow: 2px 2px 0px #000;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  background: var(--frog-green);
-  border: 2px solid var(--frog-dark);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-family: var(--font-title);
-  font-size: 16px;
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.1);
+.soloButton:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.05);
 }
 
-.username {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--frog-dark);
+.soloButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.headerActions {
-  display: flex;
-  gap: 8px;
+.settingsButton {
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px solid #ffeeb0;
+    color: #ffeeb0;
+    font-size: 24px;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* 설정 버튼 등 아이콘 버튼 */
-.settingsIcon {
-  background: white;
-  border: 2px solid var(--frog-dark);
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.1);
-  transition: all 0.1s;
+.settingsButton:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.05);
 }
 
-.settingsIcon:hover {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px 0px rgba(0, 0, 0, 0.1);
-  background-color: var(--bg-cream);
+/* 메뉴 래퍼 - 화면 중앙보다 살짝 위로 + 왼쪽으로 이동 (보드 위치에 맞춤) */
+.menuWrapper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* 왼쪽으로 이동 */
+    transform: translate(-100px);
 }
 
-.settingsIcon:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+/* 메뉴 아이템들 */
+.menuItems {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
 }
 
-/* 타이틀 섹션 */
-.titleSection {
-  text-align: center;
-  margin-bottom: 16px;
+/* 메뉴 버튼 (MainPage와 동일) */
+.menuButton {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-family: var(--font-title);
+    font-size: 42px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+
+    /* 픽셀 아트 느낌의 두꺼운 테두리 효과 */
+    text-shadow:
+        4px 4px 0px #000,
+        -2px -2px 0px #000,
+        2px -2px 0px #000,
+        -2px 2px 0px #000,
+        2px 2px 0px #000;
 }
 
-.title {
-  font-family: var(--font-title);
-  font-size: 36px;
-  color: var(--frog-dark);
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  text-shadow: 2px 2px 0px var(--frog-green);
+.menuButton:hover:not(:disabled) {
+    color: #ffffff;
+    transform: scale(1.05);
 }
 
-.subtitle {
-  color: #666;
-  margin: 0;
-  font-size: 14px;
+.menuButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-/* 액션 버튼 그룹 */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* 나뭇잎 아이콘 */
+.leafIcon {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.5));
 }
 
-/* 공통 버튼 스타일 */
-.actionBtn {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  border: 3px solid var(--frog-dark);
-  background: white;
-  cursor: pointer;
-  transition: all 0.1s;
-  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
-  position: relative;
-  overflow: hidden;
+/* 에러 토스트 */
+.errorToast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(220, 53, 69, 0.95);
+    color: white;
+    padding: 16px 32px;
+    border: 3px solid #fff;
+    font-family: var(--font-title);
+    font-size: 18px;
+    text-shadow: 2px 2px 0px #000;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
 }
 
-.actionBtn:hover:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.15);
-  background-color: var(--bg-cream);
-}
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
 
-.actionBtn:active:not(:disabled) {
-  transform: translate(4px, 4px);
-  box-shadow: none;
-}
-
-.actionBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background-color: #eee;
-  border-color: #aaa;
-  color: #888;
-}
-
-/* 아이콘 영역 */
-.btnIcon {
-  font-size: 28px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.05);
-  border: 2px solid var(--frog-dark);
-}
-
-.btnContent {
-  flex: 1;
-  text-align: left;
-}
-
-.btnTitle {
-  font-family: var(--font-title);
-  font-size: 20px;
-  margin-bottom: 4px;
-  color: var(--frog-dark);
-}
-
-.btnDesc {
-  font-size: 12px;
-  color: #666;
-}
-
-/* 개별 버튼 색상 포인트 (아이콘 배경 등) */
-.hostBtn .btnIcon {
-  background: #ffeaa7;
-}
-
-.joinBtn .btnIcon {
-  background: #74b9ff;
-}
-
-.soloBtn .btnIcon {
-  background: #55efc4;
-}
-
-/* 에러 메시지 */
-.errorMessage {
-  margin-top: 16px;
-  color: var(--scarf-red);
-  text-align: center;
-  font-weight: bold;
-  font-size: 14px;
-  background: #fff0f0;
-  padding: 8px;
-  border: 2px solid var(--scarf-red);
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.1);
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
