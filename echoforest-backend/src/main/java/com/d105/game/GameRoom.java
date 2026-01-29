@@ -288,6 +288,11 @@ public class GameRoom implements Runnable {
             if (p == null)
                 continue;
 
+            // [FIX] 연결 끊긴 플레이어는 브로드캐스트 제외 (Ghost 현상 방지)
+            if (p.isDisconnected()) {
+                continue;
+            }
+
             // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
             Set<String> activeCurses = p.getVisibleCurses();
@@ -446,6 +451,10 @@ public class GameRoom implements Runnable {
                 synchronized (session) {
                     session.sendMessage(
                             new org.springframework.web.socket.TextMessage(objectMapper.writeValueAsString(msg)));
+
+                    // [FIX] 메시지 전송 보장을 위해 잠시 대기
+                    Thread.sleep(200);
+
                     // 메시지 전송 후 즉시 종료보다는 약간의 텀을 두거나, 클라이언트가 끊게 유도
                     // 하지만 보안상 서버가 끊는 게 확실함. 메시지 전송은 동기적이므로 보내고 바로 닫아도 됨.
                     session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION.withReason(reason));
