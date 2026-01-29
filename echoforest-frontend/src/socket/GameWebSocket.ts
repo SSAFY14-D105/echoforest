@@ -31,6 +31,7 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
+    | 'DUPLICATE_LOGIN' // Server→Client: 중복 로그인으로 인한 강제 로그아웃
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     | 'STAGE_EXIT'    // [NEW] 골 탈출 신호 (Client -> Server)
@@ -215,6 +216,14 @@ class GameWebSocket {
                         // 에러 메시지 처리
                         if (message.type === 'ERROR') {
                             this.onErrorHandler?.(message.content || '알 수 없는 오류');
+                        }
+
+                        // 중복 로그인 처리
+                        if (message.type === 'DUPLICATE_LOGIN') {
+                            alert(message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.");
+                            // 강제 로그아웃 처리 (페이지 새로고침 또는 로그인 페이지로 이동)
+                            window.location.href = '/login';
+                            return;
                         }
 
                         // 1. 레거시 핸들러 실행
