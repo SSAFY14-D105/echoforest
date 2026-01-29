@@ -637,6 +637,62 @@ public class GameService {
         }
     }
 
+    // =========================================================
+    // Ending Mission Handlers (모든 플레이어 골 도달 시)
+    // =========================================================
+
+    /**
+     * 엔딩 미션 시작 (Host -> Server -> All Clients)
+     * 호스트가 모든 플레이어의 골 도달을 감지하면 전체 클라이언트에 브로드캐스트
+     */
+    public void handleEndingMissionStart(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 엔딩 미션 시작 메시지 생성
+            GameMessageDto endingStartMsg = new GameMessageDto();
+            endingStartMsg.setType("ENDING_MISSION_START");
+            endingStartMsg.setRoomId(roomId);
+            endingStartMsg.setUsername(username);
+
+            // 모든 클라이언트에게 브로드캐스트 (자기 자신 포함 - 동기화를 위해)
+            room.broadcast(endingStartMsg, null);
+
+            log.info("🎉 Room {}: Ending Mission Started by {}", roomId, username);
+        }
+    }
+
+    /**
+     * 엔딩 미션 종료 (Host -> Server -> All Clients)
+     * 캡처 완료 후 호스트가 종료 신호를 보내면 전체 클라이언트에 브로드캐스트
+     */
+    public void handleEndingMissionEnd(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+
+        if (roomId == null || username == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 엔딩 미션 종료 메시지 생성
+            GameMessageDto endingEndMsg = new GameMessageDto();
+            endingEndMsg.setType("ENDING_MISSION_END");
+            endingEndMsg.setRoomId(roomId);
+            endingEndMsg.setUsername(username);
+
+            // 모든 클라이언트에게 브로드캐스트
+            room.broadcast(endingEndMsg, null);
+
+            log.info("🏁 Room {}: Ending Mission Ended by {}", roomId, username);
+        }
+    }
+
     /**
      * 중복 로그인 이벤트 처리
      * UserService에서 로그인 성공 시 발행
