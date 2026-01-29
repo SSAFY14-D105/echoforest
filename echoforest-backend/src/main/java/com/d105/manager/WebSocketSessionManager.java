@@ -39,13 +39,30 @@ public class WebSocketSessionManager {
     }
 
     /**
-     * 세션 제거
+     * 세션 제거 (Safe)
+     * 저장된 세션이 요청된 세션과 일치할 때만 제거합니다.
+     * 
+     * @param username 사용자명
+     * @param session  제거 대상 세션
+     */
+    public void removeSession(String username, WebSocketSession session) {
+        sessions.computeIfPresent(username, (key, existingSession) -> {
+            if (existingSession.getId().equals(session.getId())) {
+                log.info("Removed global session for user: {} (Session ID: {})", username, session.getId());
+                return null; // 제거
+            }
+            return existingSession; // 유지
+        });
+    }
+
+    /**
+     * 세션 제거 (Unsafe - Force)
      * 
      * @param username 사용자명
      */
     public void removeSession(String username) {
         sessions.remove(username);
-        log.info("Removed global session for user: {}", username);
+        log.info("Removed global session for user: {} (Force)", username);
     }
 
     /**
@@ -68,6 +85,8 @@ public class WebSocketSessionManager {
         WebSocketSession session = sessions.get(username);
         if (session != null && session.isOpen()) {
             try {
+                log.info("Kicking session {} for user {} due to: {}", session.getId(), username, reason);
+
                 // 알림 메시지 전송
                 GameMessageDto msg = new GameMessageDto();
                 msg.setType("DUPLICATE_LOGIN");
@@ -77,11 +96,13 @@ public class WebSocketSessionManager {
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(msg)));
                     session.close(org.springframework.web.socket.CloseStatus.POLICY_VIOLATION.withReason(reason));
                 }
-                log.info("Kicked user {} due to: {}", username, reason);
             } catch (IOException e) {
                 log.error("Failed to kick user {}", username, e);
             } finally {
-                removeSession(username);
+                // 여기서 removeSession(username, session)을 호출하면 좋겠지만,
+                // afterConnectionClosed가 닫힘 이벤트를 받아 처리할 것이므로 중복 제거 방지
+                // 다만 명시적으로 제거하고 싶다면:
+                removeSession(username, session);
             }
         }
     }

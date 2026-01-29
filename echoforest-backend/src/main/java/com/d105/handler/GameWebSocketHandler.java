@@ -125,7 +125,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         String username = (String) session.getAttributes().get("username");
         if (username != null) {
-            sessionManager.removeSession(username);
+            // [Fix] 세션 ID가 일치하는 경우에만 제거 (Race Condition 방지)
+            sessionManager.removeSession(username, session);
         }
         gameService.handleLeave(session);
     }
