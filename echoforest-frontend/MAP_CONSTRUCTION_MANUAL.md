@@ -35,6 +35,19 @@
 > 2. 레이어 Custom Property에 **`collides: true`**가 설정된 경우
 > 3. 레이어 Class가 **`Solid`**인 경우
 
+> 3. 레이어 Class가 **`Solid`**인 경우
+
+### 1.3. 배경 화면 설정 (Map Background)
+맵의 배경 이미지를 설정하려면 Scene 코드에서 `MapManager.initialize` 호출 시 세 번째 인자로 이미지 키를 전달해야 합니다.
+
+```typescript
+// 예시: LobbyScene.ts
+this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
+```
+
+- **배경 이미지 파일**: `public/assets/backgrounds/` 폴더에 위치해야 합니다.
+- **코드 연결**: Scene의 `preload()`에서 이미지를 로드하고, `initialize()`에서 해당 키를 사용합니다.
+
 ---
 
 ## 2. 오브젝트 배치 및 회전 (Rotation Rules)
