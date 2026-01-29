@@ -706,9 +706,12 @@ public class GameService {
      */
     @org.springframework.context.event.EventListener
     public void handleDuplicateLogin(com.d105.event.UserLoggedInEvent event) {
-        // String username = event.getUsername();
-        // log.info("UserLoggedInEvent received for {}. Skipping safe-kick check to
-        // avoid race conditions.", username);
-        // sessionManager.kickSession(username, "DUPLICATE_LOGIN");
+        String username = event.getUsername();
+        // String newToken = event.getNewToken();
+
+        // 전역 세션 관리자에서 해당 유저의 기존 세션 강제 종료
+        // (게임 중이든 로비에 있든 상관없이 처리됨)
+        log.info("UserLoggedInEvent received for {}. Checking for active sessions...", username);
+        sessionManager.kickSession(username, "DUPLICATE_LOGIN");
     }
 }
