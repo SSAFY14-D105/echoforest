@@ -45,6 +45,14 @@ public class RoomSessionManager {
         // GameRoom 로직에 따라 다르지만, 여기서는 순수 Map 관리만 제공.
     }
 
+    /**
+     * 세션과 플레이어 상태를 모두 제거 (완전 퇴장 또는 재접속 시 구 세션 정리용)
+     */
+    public void removeSessionAndPlayer(String sessionId) {
+        sessions.remove(sessionId);
+        players.remove(sessionId);
+    }
+
     public PlayerState getPlayer(String sessionId) {
         return players.get(sessionId);
     }
