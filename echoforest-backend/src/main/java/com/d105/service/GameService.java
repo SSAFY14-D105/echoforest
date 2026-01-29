@@ -2,6 +2,7 @@ package com.d105.service;
 
 import com.d105.dto.GameMessageDto;
 import com.d105.game.GameRoom;
+import com.d105.manager.WebSocketSessionManager;
 import com.d105.repository.GameRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class GameService {
     private final RedisRoomService redisRoomService;
     private final AiSentimentService aiSentimentService;
     private final ObjectMapper objectMapper;
+    private final WebSocketSessionManager sessionManager;
 
     // 가상 스레드 실행기 (각 GameRoom의 Tick Loop를 돌리기 위함)
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -157,6 +159,7 @@ public class GameService {
             // [DEBUG] 수신 데이터 확인
             // anim != null && !anim.equals("idle")) {
             // ("[MOVE Debug] session={}, vx={}, vy={}, anim={}",
+            //
             //
 
             // 좌표가 있으면 PlayerState에 직접 반영 (물리 연산 X)
@@ -646,26 +649,9 @@ public class GameService {
         String username = event.getUsername();
         String newToken = event.getNewToken();
 
-        // 사용자가 현재 참여 중인 방 조회
-        String roomId = redisRoomService.getUserRoom(username);
-        if (roomId == null) {
-            return; // 게임 중이 아님
-        }
-
-        GameRoom room = gameRepository.getRoom(roomId);
-        if (room != null) {
-            // 해당 방에서 사용자의 구 세션 찾기
-            String oldSessionId = room.findSessionIdByUsername(username);
-
-            if (oldSessionId != null) {
-                // 세션은 가져오되, sessionManager에서 찾아서 메시지 전송
-                // GameRoom.getSessionBySessionId 같은 메서드가 없으므로,
-                // RoomSessionManager에 접근하거나 로직 내에서 해결해야 함.
-                // 여기서는 GameRoom에 kickUser 메서드를 추가하여 처리하는 것이 깔끔함.
-                log.info("🚨 Duplicate login detected for user {}. Kicking old session from room {}.", username,
-                        roomId);
-                room.kickUser(oldSessionId, "DUPLICATE_LOGIN");
-            }
-        }
+        // 전역 세션 관리자에서 해당 유저의 기존 세션 강제 종료
+        // (게임 중이든 로비에 있든 상관없이 처리됨)
+        log.info("UserLoggedInEvent received for {}. Checking for active sessions...", username);
+        sessionManager.kickSession(username, "DUPLICATE_LOGIN");
     }
 }

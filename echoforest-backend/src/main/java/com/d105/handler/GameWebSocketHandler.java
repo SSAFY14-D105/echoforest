@@ -1,6 +1,7 @@
 package com.d105.handler;
 
 import com.d105.dto.GameMessageDto;
+import com.d105.manager.WebSocketSessionManager;
 import com.d105.service.GameService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,23 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     private final GameService gameService;
     private final ObjectMapper objectMapper;
+    private final WebSocketSessionManager sessionManager;
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        String username = (String) session.getAttributes().get("username");
+        if (username != null) {
+            // 중복 로그인 체크: 이미 접속 중인 세션이 있다면 종료
+            WebSocketSession existingSession = sessionManager.getSession(username);
+            if (existingSession != null && existingSession.isOpen()) {
+                log.info("Duplicate login detected for user {} during WS connect. Kicking old session.", username);
+                sessionManager.kickSession(username, "DUPLICATE_LOGIN");
+            }
+
+            // 새 세션 등록
+            sessionManager.addSession(username, session);
+        }
+    }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
@@ -98,6 +116,10 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        String username = (String) session.getAttributes().get("username");
+        if (username != null) {
+            sessionManager.removeSession(username);
+        }
         gameService.handleLeave(session);
     }
 }
