@@ -850,28 +850,26 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     protected handleMushroomCollision(labelA: string, labelB: string): void {
         const mushroomLabel = labelA.startsWith('mushroom-') ? labelA : labelB;
+        const playerLabel = labelA.startsWith('mushroom-') ? labelB : labelA;
         const mushroomId = mushroomLabel.replace('mushroom-', '');
         const mushroom = this.poisonMushrooms.find(m => m.id === mushroomId);
 
         if (mushroom && !mushroom.getIsTriggered()) {
+            // 로컬 플레이어가 밟았을 때만 처리 (Client-Authoritative)
+            if (playerLabel !== this.myPlayerId) return;
+
             mushroom.trigger();
 
-            // 참여 중인 모든 플레이어 중 랜덤 타겟 선정
-            const playerNicknames = Array.from(this.players.keys());
-            if (playerNicknames.length > 0) {
-                const randomIdx = Math.floor(Math.random() * playerNicknames.length);
-                const randomTarget = playerNicknames[randomIdx];
-                const randomCurse = getRandomCurseId();
+            // 버섯을 밟은 본인에게 저주 적용
+            const randomCurse = getRandomCurseId();
+            console.log(`[PoisonMushroom] Applying curse '${randomCurse}' to self (${this.myPlayerId})`);
+            this.applyCurseToPlayer(this.myPlayerId, randomCurse);
 
-                console.log(`[PoisonMushroom] Applying random curse '${randomCurse}' to ${randomTarget} `);
-                this.applyCurseToPlayer(randomTarget, randomCurse);
-
-                // 피드백 텍스트
-                const targetPlayer = this.players.get(randomTarget);
-                if (targetPlayer) {
-                    const pos = targetPlayer.getPosition();
-                    this.showFloatingText(pos.x, pos.y - 40, `독버섯 저주: ${randomCurse} !`, 0x9B59B6);
-                }
+            // 피드백 텍스트
+            const myPlayer = this.players.get(this.myPlayerId);
+            if (myPlayer) {
+                const pos = myPlayer.getPosition();
+                this.showFloatingText(pos.x, pos.y - 40, `독버섯 저주: ${randomCurse}!`, 0x9B59B6);
             }
         }
     }
