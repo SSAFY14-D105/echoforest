@@ -64,7 +64,7 @@
     padding: 16px 48px;
     border: none;
     background: #5a7a7a;
-    color: #ccc;
+    color: #ffffff;
     font-family: var(--font-title);
     font-size: 24px;
     cursor: pointer;
@@ -91,19 +91,27 @@
     color: #888;
 }
 
-/* 뒤로가기 링크 */
+/* 뒤로가기 버튼 */
 .linkBtn {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
     background: transparent;
     border: none;
-    color: #aaa;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
     cursor: pointer;
-    font-size: 14px;
-    text-decoration: underline;
-    padding: 8px;
-    align-self: center;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    text-decoration: none;
+    padding: 0;
 }
 
 .linkBtn:hover {
-    color: #ffd700;
+    color: #ffffff;
+    transform: translateX(-5px);
 }

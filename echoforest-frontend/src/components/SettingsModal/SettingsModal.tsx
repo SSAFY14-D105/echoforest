@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
-import { createLocalTracks, LocalVideoTrack } from 'livekit-client';
+import { checkNickname } from '../../apis/authApi';
 import styles from './SettingsModal.module.css';
 
 interface SettingsModalProps {
@@ -13,64 +13,47 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
     // 임시 상태
     const [tempNickname, setTempNickname] = useState(nickname);
-    const [micVolume, setMicVolume] = useState(50);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
+    const [nicknameCheckStatus, setNicknameCheckStatus] = useState<'unchecked' | 'checking' | 'available' | 'duplicate'>('unchecked');
 
-    // 카메라 프리뷰 상태
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [videoTrack, setVideoTrack] = useState<LocalVideoTrack | null>(null);
-    const [cameraError, setCameraError] = useState<string | null>(null);
-
-    // 카메라 프리뷰 시작
+    // 닉네임 중복 확인 (debounce)
     useEffect(() => {
-        let mounted = true;
-
-        const startCamera = async () => {
-            try {
-                const tracks = await createLocalTracks({
-                    audio: false,
-                    video: true,
-                });
-
-                const vidTrack = tracks.find(t => t.kind === 'video') as LocalVideoTrack;
-
-                if (mounted && vidTrack) {
-                    setVideoTrack(vidTrack);
-                    if (videoRef.current) {
-                        vidTrack.attach(videoRef.current);
-                    }
-                } else {
-                    tracks.forEach(t => t.stop());
-                }
-            } catch (error) {
-                console.error('Failed to get local tracks:', error);
-                if (mounted) {
-                    setCameraError('카메라를 찾을 수 없거나 권한이 없습니다.');
-                }
-            }
-        };
-
-        startCamera();
-
-        return () => {
-            mounted = false;
-            if (videoTrack) {
-                videoTrack.stop();
-            }
-        };
-    }, []);
-
-    // Cleanup tracks on unmount
-    useEffect(() => {
-        return () => {
-            videoTrack?.stop();
-        };
-    }, [videoTrack]);
-
-    const handleSave = () => {
-        if (tempNickname.trim()) {
-            setNickname(tempNickname.trim());
+        // 현재 닉네임과 같으면 중복 체크 안 함 (변경 없음)
+        if (tempNickname === nickname) {
+            setNicknameCheckStatus('unchecked');
+            return;
         }
-        onClose();
+
+        if (!tempNickname || tempNickname.length < 2) {
+            setNicknameCheckStatus('unchecked');
+            return;
+        }
+
+        setNicknameCheckStatus('checking');
+        const timer = setTimeout(async () => {
+            try {
+                const res = await checkNickname(tempNickname);
+                setNicknameCheckStatus(res.isDuplicate ? 'duplicate' : 'available');
+            } catch {
+                setNicknameCheckStatus('unchecked');
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [tempNickname, nickname]);
+
+    const handleNicknameChange = () => {
+        if (tempNickname.trim() && tempNickname.trim() !== nickname && nicknameCheckStatus === 'available') {
+            setIsSaving(true);
+            setNickname(tempNickname.trim());
+            localStorage.setItem('nickname', tempNickname.trim());
+            setSaveMessage('✅ 저장됨!');
+            setTimeout(() => {
+                setIsSaving(false);
+                setSaveMessage('');
+            }, 2000);
+        }
     };
 
     const handleLogout = () => {
@@ -78,73 +61,88 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             localStorage.removeItem('token');
             localStorage.removeItem('loginId');
             localStorage.removeItem('nickname');
-            setNickname(''); // Store 초기화 -> App.tsx에서 로그인 페이지로 전환됨
-            gameWebSocket.disconnect(); // 소켓 연결 끊기
+            setNickname('');
+            gameWebSocket.disconnect();
             onClose();
         }
     };
 
+    const handleMemoriesClick = () => {
+        alert('추억 돌아보기 페이지는 준비 중입니다! 🌲');
+    };
+
     return (
-        <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <h3>⚙️ 설정</h3>
+        <div className={styles.container}>
+            {/* 배경 이미지 */}
+            <img
+                className={styles.bgImage}
+                src="/assets/backgrounds/main_page.png"
+                alt="메아리의 숲"
+            />
 
-                {/* 1. 닉네임 변경 */}
-                <div className={styles.settingSection}>
-                    <label className={styles.settingLabel}>닉네임</label>
-                    <input
-                        type="text"
-                        value={tempNickname}
-                        onChange={(e) => setTempNickname(e.target.value)}
-                        placeholder="닉네임 입력"
-                        className={styles.input}
-                        maxLength={12}
-                    />
-                </div>
+            {/* 뒤로가기 버튼 */}
+            <button className={styles.backButton} onClick={onClose}>
+                ← 뒤로가기
+            </button>
 
-                {/* 2. 카메라 프리뷰 */}
-                <div className={styles.settingSection}>
-                    <label className={styles.settingLabel}>카메라 미리보기</label>
-                    <div className={styles.cameraPreview}>
-                        {cameraError ? (
-                            <div className={styles.cameraError}>{cameraError}</div>
-                        ) : (
-                            <div className={styles.videoContainer}>
-                                <video ref={videoRef} className={styles.previewVideo} autoPlay muted playsInline />
+            {/* 메인 컨텐츠 (보드 스타일) */}
+            <div className={styles.boardWrapper}>
+                <div className={styles.boardContent}>
+
+                    {/* 닉네임 변경 */}
+                    <div className={styles.section}>
+                        <div className={styles.sectionHeader}>
+                            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+                            <span>닉네임 변경</span>
+                        </div>
+                        <div className={styles.nicknameColumn}>
+                            <div className={styles.nicknameRow}>
+                                <input
+                                    type="text"
+                                    value={tempNickname}
+                                    onChange={(e) => setTempNickname(e.target.value)}
+                                    placeholder="닉네임 입력"
+                                    className={styles.nicknameInput}
+                                    maxLength={12}
+                                />
+                                <button
+                                    className={styles.confirmButton}
+                                    onClick={handleNicknameChange}
+                                    disabled={isSaving || !tempNickname.trim() || tempNickname === nickname || nicknameCheckStatus !== 'available'}
+                                >
+                                    {saveMessage || '확인'}
+                                </button>
                             </div>
-                        )}
-                        {!videoTrack && !cameraError && <p>카메라 연결 중...</p>}
+
+                            {/* 중복 확인 메시지 */}
+                            {tempNickname !== nickname && tempNickname.length >= 2 && (
+                                <p className={`${styles.checkStatus} ${nicknameCheckStatus === 'checking' ? styles.checking :
+                                    nicknameCheckStatus === 'available' ? styles.available :
+                                        nicknameCheckStatus === 'duplicate' ? styles.duplicate : ''
+                                    }`}>
+                                    {nicknameCheckStatus === 'checking' && '⏳ 확인 중...'}
+                                    {nicknameCheckStatus === 'available' && '✅ 사용 가능한 닉네임입니다'}
+                                    {nicknameCheckStatus === 'duplicate' && '❌ 이미 사용 중인 닉네임입니다'}
+                                </p>
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* 3. 마이크 볼륨 */}
-                <div className={styles.settingSection}>
-                    <label className={styles.settingLabel}>마이크 볼륨</label>
-                    <div className={styles.volumeControl}>
-                        <span>🎙️</span>
-                        <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={micVolume}
-                            onChange={(e) => setMicVolume(Number(e.target.value))}
-                            className={styles.slider}
-                        />
-                        <span className={styles.volumeValue}>{micVolume}%</span>
+                    {/* 추억 돌아보기 */}
+                    <div className={styles.section}>
+                        <button className={styles.menuButton} onClick={handleMemoriesClick}>
+                            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+                            추억 돌아보기
+                        </button>
                     </div>
-                </div>
 
-                {/* 모달 액션 */}
-                <div className={styles.modalActions}>
-                    <button onClick={onClose} className={styles.btnSecondary}>취소</button>
-                    <button onClick={handleSave} className={styles.btnPrimary}>저장</button>
-                </div>
-
-                {/* 로그아웃 버튼 */}
-                <div className={styles.logoutSection}>
-                    <button className={styles.logoutBtn} onClick={handleLogout}>
-                        로그아웃
-                    </button>
+                    {/* 로그아웃 (추억 돌아보기와 동일한 스타일) */}
+                    <div className={styles.section}>
+                        <button className={styles.menuButton} onClick={handleLogout}>
+                            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+                            로그아웃
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
