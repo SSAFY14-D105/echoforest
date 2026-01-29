@@ -636,7 +636,6 @@ public class GameService {
         if (room != null) {
             // 보낸 사람(Interactor)을 제외하고 브로드캐스트
             room.broadcast(message, session.getId());
-            room.broadcast(message, session.getId());
         }
     }
 
