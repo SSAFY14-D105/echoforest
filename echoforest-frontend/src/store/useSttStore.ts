@@ -1,46 +1,31 @@
 /**
- * useSttStore - STT 상태 관리 + 비즈니스 로직
+ * useSttStore - STT 상태 관리 (Zustand)
+ * 
+ * Web Worker 도입으로 역할 분리:
+ * - Store: 상태 저장 + UI 표시용 데이터만 관리
+ * - Worker: 텍스트 분석, 배치 큐, 타이머 (SttWorkerService)
  * 
  * 로그 플로우:
- * 1. [최종 인식] 문장 → 2. [배치 추가] → 3. [배치 전송] → 4. [서버 응답]
+ * 1. Worker에서 분석 → 2. Store 상태 업데이트 → 3. WebSocket 전송
  */
 import { create } from 'zustand';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import { useGameStore } from './useGameStore';
 
-// === 로깅 헬퍼 (통일된 접두사) ===
+// === 로깅 헬퍼 ===
 const LOG_PREFIX = '✅[STT]';
 const log = {
-    info: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ${msg}`, ...args),
-    success: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ✅ ${msg}`, ...args),
-    warn: (msg: string, ...args: any[]) => console.warn(`${LOG_PREFIX} ⚠️ ${msg}`, ...args),
-    error: (msg: string, ...args: any[]) => console.error(`${LOG_PREFIX} ❌ ${msg}`, ...args),
-
-    // 배치 관련
-    batchAdd: (text: string, queueSize: number, queue: string[]) => {
-        console.log(`${LOG_PREFIX} 📥 [배치 추가] "${text}" (큐: ${queueSize}개)`, queue);
-    },
-    batchSend: (count: number, texts: string[]) => {
-        console.log(`${LOG_PREFIX} 📤 [배치 전송] ${count}개 문장 → 게임서버`, texts);
-    },
-    batchTimer: (action: 'start' | 'tick' | 'end', seconds?: number) => {
-        if (action === 'start') {
-            console.log(`${LOG_PREFIX} ⏱️ [타이머] ${seconds}초 후 전송 예정`);
-        } else if (action === 'end') {
-            console.log(`${LOG_PREFIX} ⏱️ [타이머] 완료 - 전송 시작`);
-        }
-    },
-
-    // 서버 통신
-    serverSend: (type: string, data: any) => {
+    info: (msg: string, ...args: unknown[]) => console.log(`${LOG_PREFIX} ${msg}`, ...args),
+    success: (msg: string, ...args: unknown[]) => console.log(`${LOG_PREFIX} ✅ ${msg}`, ...args),
+    warn: (msg: string, ...args: unknown[]) => console.warn(`${LOG_PREFIX} ⚠️ ${msg}`, ...args),
+    error: (msg: string, ...args: unknown[]) => console.error(`${LOG_PREFIX} ❌ ${msg}`, ...args),
+    serverSend: (type: string, data: unknown) => {
         console.log(`${LOG_PREFIX} 🌐 [→ 게임서버] ${type}`, data);
     },
-    serverReceive: (type: string, data: any) => {
+    serverReceive: (type: string, data: unknown) => {
         console.log(`${LOG_PREFIX} 🌐 [← 게임서버] ${type}`, data);
     },
-
-    // 저주 관련
-    curse: (action: string, data: any) => {
+    curse: (action: string, data: unknown) => {
         console.log(`${LOG_PREFIX} 💀 [저주] ${action}`, data);
     },
     positive: (word: string, isCursed: boolean) => {
@@ -51,10 +36,6 @@ const log = {
         }
     }
 };
-
-// 긍정어 목록
-const POSITIVE_WORDS = ['뽀뽀', '사랑해', '좋아해'];
-const BATCH_INTERVAL_MS = 5000;
 
 export interface WarningModal {
     isVisible: boolean;
@@ -85,16 +66,25 @@ export interface SttState {
     warningModal: WarningModal;
     analysisResult: string | null;
     penaltyLevel: number | null;
+
+    // === Actions ===
     setBoosterMode: (active: boolean) => void;
-    processTranscript: (text: string, isFinal: boolean) => void;
-    hideWarningModal: () => void;
+    setTranscript: (text: string) => void;
+
+    // Worker 결과 핸들러
+    onPositiveDetected: (word: string, isCursed: boolean) => void;
+    onQueueUpdate: (count: number, texts: string[]) => void;
+    onCountdownUpdate: (countdown: number) => void;
+    onBatchReady: (texts: string[]) => void;
+
+    // 서버 이벤트 핸들러
     onStackUpdated: (stack: number, delta: number, reason?: string) => void;
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => void;
     onCurseReleased: (releasedPlayerId: string, word: string) => void;
+
+    hideWarningModal: () => void;
     reset: () => void;
 }
-
-let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useSttStore = create<SttState>((set, get) => ({
     isListening: false,
@@ -121,97 +111,97 @@ export const useSttStore = create<SttState>((set, get) => ({
     analysisResult: null,
     penaltyLevel: null,
 
+    // === 기본 액션 ===
     setBoosterMode: (active: boolean) => {
         log.info(`부스터 모드: ${active ? 'ON 🟢' : 'OFF 🔴'}`);
         set({ isBoosterMode: active });
     },
 
-    processTranscript: (text: string, isFinal: boolean) => {
-        const state = get();
-        const cleanText = text.trim();
+    setTranscript: (text: string) => {
+        set({ transcript: text });
+    },
 
-        if (!cleanText) return;
+    // === Worker 결과 핸들러 ===
+    onPositiveDetected: (word: string, isCursed: boolean) => {
+        log.positive(word, isCursed);
 
-        set({ transcript: cleanText });
-
-        // 긍정어 체크 (부스터 모드에서만)
-        if (state.isBoosterMode) {
-            const foundPositive = POSITIVE_WORDS.find(word => cleanText.includes(word));
-
-            if (foundPositive) {
-                const isCursed = state.curseState.cursedPlayer !== null;
-                log.positive(foundPositive, isCursed);
-
-                if (isCursed) {
-                    set({
-                        lastDetectedWord: foundPositive,
-                        wordType: 'positive',
-                        boosterActive: true,
-                        warningModal: {
-                            isVisible: true,
-                            level: 0,
-                            emoji: '✨',
-                            title: '저주 해제!',
-                            message: `"${foundPositive}"로 저주가 해제됩니다!`,
-                            keyword: foundPositive,
-                        },
-                    });
-
-                    const { roomId } = useGameStoreCompat();
-                    if (roomId && gameWebSocket.isConnected()) {
-                        sendCurseRelease(roomId, foundPositive);
-                    }
-                } else {
-                    set({
-                        lastDetectedWord: foundPositive,
-                        wordType: 'positive',
-                        boosterActive: true,
-                        warningModal: {
-                            isVisible: true,
-                            level: 0,
-                            emoji: '💖',
-                            title: '긍정어 발동!',
-                            message: `"${foundPositive}" 감지!\n(저주 상태가 아닙니다)`,
-                            keyword: foundPositive,
-                        },
-                    });
-                }
-
-                setTimeout(() => {
-                    set({
-                        boosterActive: false,
-                        warningModal: { ...get().warningModal, isVisible: false }
-                    });
-                }, 3000);
-
-                return;
-            }
-        }
-
-        // 최종 결과만 배치 큐에 추가
-        if (isFinal) {
-            const queue = [...state.speechQueue, cleanText];
-            log.batchAdd(cleanText, queue.length, queue);
-
+        if (isCursed) {
             set({
-                speechQueue: queue,
-                curseState: {
-                    ...state.curseState,
-                    isCollecting: true,
-                    queueCount: queue.length,
-                }
+                lastDetectedWord: word,
+                wordType: 'positive',
+                boosterActive: true,
+                warningModal: {
+                    isVisible: true,
+                    level: 0,
+                    emoji: '✨',
+                    title: '저주 해제!',
+                    message: `"${word}"로 저주가 해제됩니다!`,
+                    keyword: word,
+                },
             });
 
-            if (!batchTimer) {
-                startBatchTimer();
+            // 서버로 저주 해제 요청
+            const { roomId } = useGameStoreCompat();
+            if (roomId && gameWebSocket.isConnected()) {
+                sendCurseRelease(roomId, word);
             }
+        } else {
+            set({
+                lastDetectedWord: word,
+                wordType: 'positive',
+                boosterActive: true,
+                warningModal: {
+                    isVisible: true,
+                    level: 0,
+                    emoji: '💖',
+                    title: '긍정어 발동!',
+                    message: `"${word}" 감지!\n(저주 상태가 아닙니다)`,
+                    keyword: word,
+                },
+            });
+        }
+
+        // 3초 후 모달 숨김
+        setTimeout(() => {
+            set({
+                boosterActive: false,
+                warningModal: { ...get().warningModal, isVisible: false }
+            });
+        }, 3000);
+    },
+
+    onQueueUpdate: (count: number, texts: string[]) => {
+        set({
+            speechQueue: texts,
+            curseState: {
+                ...get().curseState,
+                isCollecting: count > 0,
+                queueCount: count,
+            }
+        });
+    },
+
+    onCountdownUpdate: (countdown: number) => {
+        set({
+            curseState: {
+                ...get().curseState,
+                countdown,
+            }
+        });
+    },
+
+    onBatchReady: (texts: string[]) => {
+        log.info(`📤 [배치 전송] ${texts.length}개 문장`, texts);
+
+        const { roomId } = useGameStoreCompat();
+        if (roomId && gameWebSocket.isConnected()) {
+            sendSpeechBatch(roomId, texts);
+        } else {
+            log.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
         }
     },
 
-    hideWarningModal: () => {
-        set({ warningModal: { ...get().warningModal, isVisible: false } });
-    },
-
+    // === 서버 이벤트 핸들러 ===
     onStackUpdated: (stack: number, delta: number, reason?: string) => {
         const prevStack = get().curseState.stack;
         log.serverReceive('STACK_UPDATED', {
@@ -275,13 +265,12 @@ export const useSttStore = create<SttState>((set, get) => ({
         }, 3000);
     },
 
+    hideWarningModal: () => {
+        set({ warningModal: { ...get().warningModal, isVisible: false } });
+    },
+
     reset: () => {
         log.info('STT 상태 초기화');
-        if (batchTimer) {
-            clearTimeout(batchTimer);
-            batchTimer = null;
-        }
-
         set({
             isListening: false,
             transcript: '',
@@ -310,77 +299,7 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 }));
 
-// 배치 타이머
-function startBatchTimer() {
-    const countdown = BATCH_INTERVAL_MS / 1000;
-    log.batchTimer('start', countdown);
-
-    useSttStore.setState({
-        curseState: {
-            ...useSttStore.getState().curseState,
-            countdown,
-        }
-    });
-
-    let remaining = countdown;
-    const countdownInterval = setInterval(() => {
-        remaining--;
-        if (remaining > 0) {
-            useSttStore.setState({
-                curseState: {
-                    ...useSttStore.getState().curseState,
-                    countdown: remaining,
-                }
-            });
-        }
-    }, 1000);
-
-    batchTimer = setTimeout(() => {
-        clearInterval(countdownInterval);
-        log.batchTimer('end');
-        sendBatch();
-        batchTimer = null;
-    }, BATCH_INTERVAL_MS);
-}
-
-// 배치 전송
-async function sendBatch() {
-    const { speechQueue } = useSttStore.getState();
-
-    if (speechQueue.length === 0) {
-        log.info('[배치] 전송할 문장 없음 - 스킵');
-        useSttStore.setState({
-            curseState: {
-                ...useSttStore.getState().curseState,
-                isCollecting: false,
-                queueCount: 0,
-                countdown: 0,
-            }
-        });
-        return;
-    }
-
-    log.batchSend(speechQueue.length, speechQueue);
-
-    const { roomId } = useGameStoreCompat();
-
-    if (roomId && gameWebSocket.isConnected()) {
-        sendSpeechBatch(roomId, speechQueue);
-    } else {
-        log.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
-    }
-
-    useSttStore.setState({
-        speechQueue: [],
-        curseState: {
-            ...useSttStore.getState().curseState,
-            isCollecting: false,
-            queueCount: 0,
-            countdown: 0,
-        }
-    });
-}
-
+// === 헬퍼 함수 ===
 function useGameStoreCompat(): { roomId: string; isSoloMode: boolean; nickname: string } {
     const state = useGameStore.getState();
     return {
@@ -395,7 +314,7 @@ function sendSpeechBatch(roomId: string, texts: string[]) {
     log.info('→ 게임서버가 AI서버(/api/v1/analyze/batch)에 분석 요청 예정');
 
     gameWebSocket.send({
-        type: 'SPEECH_BATCH' as any,
+        type: 'SPEECH_BATCH' as never,
         roomId,
         texts,
     });
@@ -404,7 +323,7 @@ function sendSpeechBatch(roomId: string, texts: string[]) {
 function sendCurseRelease(roomId: string, word: string) {
     log.serverSend('CURSE_RELEASE', { roomId, word });
     gameWebSocket.send({
-        type: 'CURSE_RELEASE' as any,
+        type: 'CURSE_RELEASE' as never,
         roomId,
         word,
     });
