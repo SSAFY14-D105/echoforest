@@ -1,13 +1,16 @@
 package com.d105.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -16,7 +19,10 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // 비밀번호 암호화 기계 (BCrypt)
     @Bean
@@ -31,14 +37,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .formLogin(AbstractHttpConfigurer::disable) // 기본 로그인 폼 끄기
                 .httpBasic(AbstractHttpConfigurer::disable) // HTTP Basic 인증 끄기
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 로그인, 회원가입, Swagger는 누구나 접근 가능
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/api/rooms/**",
                                 "/api/images/**", "/error")
                         .permitAll()
-                        // 그 외 모든 요청은 인증 필요 (나중에 JWT 필터 추가 예정)
-                        .anyRequest().permitAll() // ⚠️ 개발 단계라 일단 모두 허용 (추후 .authenticated()로 변경)
-                );
+                        // 그 외 모든 요청도 일단 허용 (JWT 필터에서 세션 검증)
+                        .anyRequest().permitAll())
+                // JWT 필터 등록 (UsernamePasswordAuthenticationFilter 앞에 위치)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -22,6 +22,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final SessionService sessionService;
 
     // 회원가입
     @Transactional
@@ -59,7 +60,10 @@ public class UserService {
         // 3. 토큰 생성
         String token = jwtUtil.createToken(user.getId(), user.getUsername());
 
-        // 4. 토큰과 닉네임을 Map에 담아서 반환
+        // 4. 세션 저장 (Redis) - 기존 세션 자동 무효화
+        sessionService.saveSession(user.getId(), token);
+
+        // 5. 토큰과 닉네임을 Map에 담아서 반환
         return Map.of(
                 "token", token,
                 "nickname", user.getNickname());
@@ -74,7 +78,6 @@ public class UserService {
     public boolean checkNicknameDuplicate(String nickname) {
         return userRepository.existsByNickname(nickname);
     }
-
 
     // 닉네임 수정
     @Transactional
@@ -106,7 +109,6 @@ public class UserService {
                     log.info("Updated stats for user {}: +{} kisses, +{} curses",
                             username, kissCount, curseCount);
                 },
-                () -> log.warn("Failed to update stats: User {} not found", username)
-        );
+                () -> log.warn("Failed to update stats: User {} not found", username));
     }
 }
