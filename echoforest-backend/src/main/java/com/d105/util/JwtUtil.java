@@ -9,11 +9,11 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
-    
+
     // Jenkins 환경변수에서 주입 (application.properties 경유)
     @Value("${jwt.secret-key}")
     private String secretKey;
-    
+
     @Value("${jwt.access-token-validity:86400000}")
     private long accessTokenValidity; // 기본값: 24시간 (밀리초)
 
@@ -31,6 +31,13 @@ public class JwtUtil {
         return JWT.require(Algorithm.HMAC256(secretKey))
                 .build().verify(token)
                 .getSubject();
+    }
+
+    // 2. 토큰에서 userId(PK) 꺼내기
+    public Long getUserId(String token) {
+        return JWT.require(Algorithm.HMAC256(secretKey))
+                .build().verify(token)
+                .getClaim("userId").asLong();
     }
 
     // 2. 토큰이 유효한지 검사하기 (위조 여부, 만료 여부)
