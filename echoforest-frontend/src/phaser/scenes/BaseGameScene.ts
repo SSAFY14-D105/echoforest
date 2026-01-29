@@ -1156,6 +1156,19 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             console.log(`[BaseGameScene] Initial placement complete for ${storePlayers.length} players.`);
             this.isInitialPlacement = false;
         }
+
+        // [FIX] Store에 없는 플레이어 제거 (Ghost 방지)
+        // syncPlayersFromStore가 호출되었다는 것은 Store가 갱신되었다는 의미이므로
+        // Store에 없는 플레이어는 퇴장한 것으로 간주하고 즉시 제거함.
+        const activeNicknames = new Set(storePlayers.map(p => p.nickname));
+        const currentKeys = Array.from(this.players.keys());
+
+        currentKeys.forEach(nickname => {
+            if (!activeNicknames.has(nickname)) {
+                console.log(`[Sync] Player ${nickname} not in store, removing sprite.`);
+                this.removePlayer(nickname);
+            }
+        });
     }
 
     private addPlayer(storePlayer: StorePlayer, index: number, currentNickname: string): void {

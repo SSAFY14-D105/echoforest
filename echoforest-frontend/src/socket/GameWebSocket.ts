@@ -7,6 +7,7 @@
  * - getInstance()로 전역 인스턴스 접근
  */
 import { API_BASE_URL } from '../config.ts';
+import { useGameStore } from '../store/useGameStore';
 
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
@@ -35,6 +36,7 @@ export type MessageType =
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     | 'STAGE_EXIT'    // [NEW] 골 탈출 신호 (Client -> Server)
+    | 'PLAYER_DISCONNECTED' // Server→Others: 플레이어 연결 끊김 (Ghost 방지)
     // STT 저주 시스템 (추가)
     | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
     | 'STACK_UPDATED'     // Server→All: 스택 변경 (stack, delta, reason)
@@ -112,6 +114,7 @@ class GameWebSocket {
     private onConnectHandler: (() => void) | null = null;
     private onErrorHandler: ((error: string) => void) | null = null;
     private onCloseHandler: (() => void) | null = null;
+    private isLoggingOut: boolean = false; // 중복 로그아웃 방지 플래그
 
     private constructor() {
         // private constructor for singleton
@@ -220,7 +223,12 @@ class GameWebSocket {
 
                         // 중복 로그인 처리
                         if (message.type === 'DUPLICATE_LOGIN') {
+                            if (this.isLoggingOut) return; // 이미 로그아웃 처리 중이면 무시
+                            this.isLoggingOut = true;
+
                             alert(message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.");
+                            // [FIX] 스토어 로그아웃 호출 (localStorage 정리 및 상태 초기화)
+                            useGameStore.getState().logout();
                             // 강제 로그아웃 처리 (페이지 새로고침 또는 로그인 페이지로 이동)
                             window.location.href = '/login';
                             return;
