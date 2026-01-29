@@ -75,7 +75,8 @@ public class GameRoom implements Runnable {
                 log.info("Player {} reconnected!", username);
 
                 // 세션 교체 + 상태 복구
-                sessionManager.removeSession(existingSessionId);
+                // [FIX] 기존 세션 ID로 된 map entry를 완전히 제거해야 함 (중복 방지)
+                sessionManager.removeSessionAndPlayer(existingSessionId);
                 sessionManager.addSession(session, existingPlayer);
 
                 existingPlayer.setDisconnected(false);
