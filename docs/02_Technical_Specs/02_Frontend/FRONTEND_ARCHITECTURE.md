@@ -29,83 +29,42 @@
 ---
 
 ## 3. 폴더 구조
-### 3.1 AS-IS: Legacy (Feature-Sliced Design)
-> ⚠️ 현재 실제 코드 구조 (Refactoring 대상)
+### 3.1 Project Structure
+> 📅 Current Structure (Updated: 2026-01-26)
 
 ```
 src/
-├── App.tsx                    # 라우팅 (Login → Lobby → Game)
-├── main.tsx                   # 엔트리 포인트
-├── features/                  # 기능별 모듈
-│   ├── auth/                  # 인증
-│   │   ├── api/authApi.ts
-│   │   ├── components/LoginForm.tsx
-│   │   └── pages/LoginPage.tsx
-│   ├── game/                  # 게임 (핵심)
-│   │   ├── components/        # React UI
-│   │   │   ├── CameraArea.tsx
-│   │   │   └── StageSelectScreen.tsx
-│   │   ├── pages/GamePage.tsx
-│   │   ├── store/useGameStore.ts
-│   │   └── phaser/            # Phaser 게임 엔진
-│   │       ├── PhaserGame.tsx
-│   │       ├── config/curseConfig.ts
-│   │       ├── entities/Player.ts
-│   │       ├── gimmicks/
-│   │       ├── scenes/
-│   │       └── utils/
-│   ├── livekit/               # 화상통화
-│   │   ├── api/livekitApi.ts
-│   │   ├── hooks/useLiveKit.ts
-│   │   └── components/TestVideo.tsx
-│   └── lobby/                 # 로비
-│       ├── components/JoinGameModal.tsx
-│       └── pages/LobbyPage.tsx
-├── shared/                    # 공통 컴포넌트
-│   └── components/CaptureConsentModal/
-└── socket/                    # 통신 레이어
-    ├── GameWebSocket.ts       # 게임 WebSocket 싱글톤
-    └── LiveKitService.ts      # LiveKit 서비스
-```
-
-### 3.2 TO-BE: New Standard (Layered Architecture)
-> ✅ 리팩토링 목표 구조
-
-```
-src/
-├── assets/                    # 정적 자산 (이미지, 아이콘 등)
-├── components/                # 재사용 가능한 UI 컴포넌트
-│   ├── auth/                  # 인증 관련 컴포넌트 (LoginForm 등)
-│   ├── common/                # 공통 컴포넌트 (Button, Modal 등)
-│   ├── game/                  # 게임 관련 UI (CameraArea, StageSelect 등)
-│   ├── livekit/               # 화상통화 관련 UI
-│   └── lobby/                 # 로비 관련 UI
-├── config/                    # 상수 및 설정 파일
-│   └── curseConfig.ts         # 저주 설정 등
-├── game/                      # Phaser 게임 엔진 로직 (Non-React)
-│   ├── scenes/                # 게임 씬 (LobbyScene, Stage1Scene 등)
-│   ├── entities/              # 게임 엔티티 (Player 등)
-│   ├── gimmicks/              # 게임 기믹 (Spike, Goal 등)
-│   └── utils/                 # 게임 내부 헬퍼 함수
-├── hooks/                     # 커스텀 React Hooks
-│   ├── useAuth.ts
-│   ├── useGame.ts
-│   └── useLiveKit.ts
-├── pages/                     # 라우팅 페이지
-│   ├── GamePage.tsx
-│   ├── LobbyPage.tsx
-│   └── LoginPage.tsx
-├── services/                  # 비즈니스 로직 및 외부 서비스 통신
-│   ├── api/                   # REST API (Axios)
-│   ├── socket/                # 실시간 통신 (WebSocket)
-│   └── livekit/               # LiveKit 서비스 로직
-├── store/                     # 전역 상태 관리 (Zustand)
-│   ├── useAuthStore.ts
-│   └── useGameStore.ts
-├── styles/                    # 전역 스타일
-├── utils/                     # 공통 유틸리티 함수
-├── App.tsx                    # 라우팅 설정
-└── main.tsx                   # 엔트리 포인트
+├── apis/                  # API 통신 (Axios)
+├── components/            # React UI 컴포넌트
+│   ├── CameraArea/        # 카메라 영역
+│   ├── CaptureConsentModal/# 캡처 동의 모달
+│   ├── JoinGameModal/     # 게임 참가 모달
+│   ├── LoginForm/         # 로그인 폼
+│   ├── SettingsModal/     # 설정 모달
+│   ├── SignupForm/        # 회원가입 폼
+│   ├── StageSelectScreen/ # 스테이지 선택 화면
+│   ├── TestVideo/         # 테스트 비디오
+│   ├── game/              # 게임 관련 컴포넌트
+│   └── stt/               # 음성 인식 컴포넌트
+├── hooks/                 # 커스텀 React Hooks
+├── pages/                 # 라우팅 페이지
+│   ├── auth/              # 인증 페이지 (Login)
+│   ├── game/              # 게임 페이지
+│   ├── livekit/           # 화상통화 페이지
+│   └── lobby/             # 로비 페이지
+├── phaser/                # Phaser 게임 엔진 로직
+│   ├── PhaserGame.tsx     # Phaser 리액트 래퍼
+│   ├── config/            # Phaser 설정
+│   ├── entities/          # 엔티티 (Player 등)
+│   ├── gimmicks/          # 기믹 (Spike, Goal 등)
+│   ├── scenes/            # 게임 씬 (Lobby, Stage 등)
+│   └── utils/             # Phaser 유틸리티
+├── socket/                # WebSocket 통신
+├── store/                 # 전역 상태 관리 (Zustand)
+├── styles/                # 전역 스타일
+├── App.tsx                # 앱 라우팅 및 레이아웃
+├── config.ts              # 환경 설정
+└── main.tsx               # 엔트리 포인트
 ```
 
 ---

@@ -12,6 +12,36 @@
 
 ---
 
+## 🏗️ 시스템 아키텍처
+
+### 1. 통신 흐름
+```mermaid
+graph LR
+    User[Client] --Voice--> STT[LiveKit/Google STT]
+    STT --Text--> Spring[Backend Game Server]
+    Spring --Batch Request--> FastAPI[AI Inference Server]
+    FastAPI --Analysis Result--> Spring
+    Spring --Game Logic--> User
+```
+
+### 2. 핵심 로직: 감정/혐오 분석
+- **모델:** `smilegate-ai/kor_unsmile` (Hugging Face)
+- **알고리즘:** BERT 기반의 Sequence Classification
+- **최적화:**
+  - **Threshold:** 0.1 (10%) - 게임 내 가벼운 비속어도 탐지하기 위해 민감도 상향
+  - **Singleton:** 모델 로딩 시간 단축을 위해 전역 인스턴스 재사용
+  - **Batch Processing:** 여러 명의 발화를 한 번에 분석하여 통신 오버헤드 최소화
+
+### 3. API 명세
+
+| Method | Endpoint | Description | Note |
+|--------|----------|-------------|------|
+| `GET` | `/health` | 서버 상태 확인 | GPU 로드 여부 반환 |
+| `POST` | `/analyze` | 단일 텍스트 분석 | 심각도(Severity) 및 스택 반환 |
+| `POST` | `/analyze/batch` | 다중 텍스트 일괄 분석 | **4인 협동 게임용** (총 저주 스택 계산) |
+
+---
+
 ## 🛠️ 설치 방법
 
 ### 방법 1: requirements.txt로 설치 (추천)
@@ -71,14 +101,17 @@ python -c "from transformers import pipeline; print('OK')"
 ## 📂 폴더 구조
 
 ```
-01_AI/
-├── 01_STT/                    # 음성→텍스트 (Whisper)
-├── 02_Sentiment_Analysis/     # 감정/혐오 분석
-│   ├── benchmark_sentiment.py # 모델 벤치마크
-│   └── test_sentiment.py      # 단일 테스트
-├── requirements_ai_server.txt # pip 패키지 목록
-├── environment.yml            # conda 환경 파일
-└── README.md                  # 현재 파일
+echoforest-ai/
+└── inference/                 # AI 추론 서버
+    ├── app/                   # FastAPI 애플리케이션
+    │   ├── main.py            # 엔트리 포인트
+    │   ├── model.py           # AI 모델 로딩 및 추론 로직
+    │   ├── routes.py          # API 라우팅
+    │   └── schemas.py         # Pydantic 스키마
+    ├── docs/                  # 문서
+    ├── tests/                 # 테스트 코드
+    ├── Dockerfile             # 컨테이너 빌드
+    └── requirements.txt       # 의존성 패키지 목록
 ```
 
 ---

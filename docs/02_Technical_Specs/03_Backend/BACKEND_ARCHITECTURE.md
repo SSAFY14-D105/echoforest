@@ -31,38 +31,30 @@ springdoc-openapi              # Swagger UI
 
 ```
 com.d105/
-├── config/              # 설정
-│   ├── WebSocketConfig      # /ws/game 엔드포인트 등록
-│   ├── SecurityConfig       # JWT 필터
-│   ├── RedisConfig
-│   └── LiveKitProperties
-├── controller/          # REST API
-│   ├── UserController       # 회원가입/로그인
-│   ├── RoomController       # 방 조회/강퇴
-│   ├── LiveKitController    # LiveKit 토큰 발급
-│   └── AiController         # AI 이미지 생성
-├── handler/             # WebSocket
-│   └── GameWebSocketHandler # 게임 메시지 라우팅
+├── config/              # 설정 (Security, Swagger, WebSocket 등)
+├── controller/          # REST API 컨트롤러
+│   ├── UserController
+│   ├── RoomController
+│   ├── LiveKitController
+│   └── AiController
+├── dto/                 # 데이터 전송 객체 (DTO)
+├── entity/              # JPA 엔티티 (User, Map, Image 등)
+├── game/                # 게임 엔진 로직
+│   ├── GameRoom             # 게임 루프 및 상태 관리
+│   ├── PlayerState          # 플레이어 상태
+│   └── constant/            # 게임 상수 (CurseType 등)
+├── handler/             # WebSocket 핸들러
+│   └── GameWebSocketHandler
+├── interceptor/         # 인터셉터 (JWT 검증 등)
+├── repository/          # JPA 리포지토리
+├── scheduler/           # 스케줄러 (방 정리 등)
 ├── service/             # 비즈니스 로직
-│   ├── GameService          # 게임 로직 (방생성/참가/이동)
-│   ├── RedisRoomService     # Redis 방 상태 관리
-│   ├── UserService          # 회원 CRUD
-│   └── LiveKitService       # LiveKit 토큰 생성
-├── game/                # 게임 엔진
-│   ├── GameRoom             # 게임 루프 (Tick Loop)
-│   ├── PlayerState          # 플레이어 상태 (위치/저주/물리)
-│   ├── TileCollisionManager # 충돌 처리
-│   └── constant/
-│       ├── CurseType        # 저주 종류 (ENUM)
-│       └── RoomStatus       # 방 상태 (ENUM)
-├── entity/              # JPA 엔티티
-│   ├── User
-│   ├── Map
-│   └── Image
-├── dto/                 # 데이터 전송 객체
-│   ├── GameMessageDto       # WebSocket 메시지 규격
-│   └── RoomInfoDto
-└── repository/          # JPA Repository
+│   ├── GameService
+│   ├── RedisRoomService
+│   ├── UserService
+│   └── LiveKitService
+├── util/                # 유틸리티 클래스
+└── EchoforestApplication.java
 ```
 
 ---
