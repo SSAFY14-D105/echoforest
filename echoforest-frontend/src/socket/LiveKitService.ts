@@ -163,6 +163,7 @@ export class LiveKitService {
             this.notifyParticipantUpdate();
         });
 
+        //this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
         this.room.on(RoomEvent.TrackSubscribed, (track) => {
             //console.log('🎥 트랙 구독:', track.kind, participant.identity);
 

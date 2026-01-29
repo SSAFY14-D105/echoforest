@@ -103,15 +103,16 @@ function processTranscript(text: string, isFinal: boolean, isCursed: boolean) {
     // 트랜스크립트 업데이트 알림
     self.postMessage({ type: 'TRANSCRIPT_UPDATE', text: cleanText } as WorkerOutMessage);
 
-    // 부스터 모드에서 긍정어 체크
+    // 부스터 모드(버튼 누름) 시 항상 긍정어 체크
+    // 서버에서 실제 저주 상태 확인 후 해제 처리
     if (isBoosterMode) {
         const foundPositive = findPositiveWord(cleanText);
         if (foundPositive) {
-            log(`💖 긍정어 감지: "${foundPositive}"`, { isCursed });
+            log(`💖 긍정어 감지: "${foundPositive}"`, { isBoosterMode, isCursed });
             self.postMessage({
                 type: 'POSITIVE_DETECTED',
                 word: foundPositive,
-                isCursed
+                isCursed: true  // 서버에서 판단하도록 항상 true
             } as WorkerOutMessage);
             return; // 긍정어 발견 시 배치 큐에 추가하지 않음
         }

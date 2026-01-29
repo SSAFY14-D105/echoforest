@@ -52,7 +52,12 @@ export function useSttProcessor(): UseSttProcessorReturn {
         reset,
     } = useSttStore();
 
-    const { isGameStarted, currentStage } = useGameStore();
+    const { isGameStarted, currentStage, players, nickname } = useGameStore();
+
+    // 로컬 플레이어의 저주 상태 확인 (버섯 저주 포함)
+    const localPlayer = players.find(p => p.nickname === nickname);
+    const hasIndividualCurse = (localPlayer?.curses?.length ?? 0) > 0;
+    const isCursed = curseState.cursedPlayer !== null || hasIndividualCurse;
 
     const lastProcessedRef = useRef('');
     const prevGameStartedRef = useRef(false);
@@ -137,10 +142,10 @@ export function useSttProcessor(): UseSttProcessorReturn {
                 transcript,
                 true, // isFinal
                 isBoosterMode,
-                curseState.cursedPlayer !== null
+                isCursed
             );
         }
-    }, [transcript, isBoosterMode, curseState.cursedPlayer]);
+    }, [transcript, isBoosterMode, isCursed]);
 
     // 중간 결과 처리 → Worker로 전송 (부스터 모드에서 긍정어 감지용)
     useEffect(() => {
@@ -149,10 +154,10 @@ export function useSttProcessor(): UseSttProcessorReturn {
                 interimTranscript,
                 false, // isFinal
                 isBoosterMode,
-                curseState.cursedPlayer !== null
+                isCursed
             );
         }
-    }, [interimTranscript, isBoosterMode, curseState.cursedPlayer]);
+    }, [interimTranscript, isBoosterMode, isCursed]);
 
     // 수동 재시작 함수
     const restartListening = useCallback(() => {
