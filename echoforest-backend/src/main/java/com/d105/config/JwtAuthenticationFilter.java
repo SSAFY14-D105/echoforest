@@ -50,7 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 4. Redis 세션 검증 (중복 로그인 체크)
                     if (!sessionService.isValidSession(userId, token)) {
                         // 다른 기기에서 로그인됨 → 401 반환
-                        log.warn("Session invalidated for user {} - logged in from another device", username);
+                        log.warn("Session invalidated for user {} - logged in from another device. Request URI: {}",
+                                username, request.getRequestURI());
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         response.setContentType("application/json;charset=UTF-8");
                         response.getWriter().write("{\"error\":\"SESSION_EXPIRED\",\"message\":\"다른 기기에서 로그인되었습니다.\"}");
