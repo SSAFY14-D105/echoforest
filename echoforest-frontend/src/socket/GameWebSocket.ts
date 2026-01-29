@@ -7,6 +7,7 @@
  * - getInstance()로 전역 인스턴스 접근
  */
 import { API_BASE_URL } from '../config.ts';
+import { useGameStore } from '../store/useGameStore';
 
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
@@ -35,6 +36,7 @@ export type MessageType =
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     | 'STAGE_EXIT'    // [NEW] 골 탈출 신호 (Client -> Server)
+    | 'PLAYER_DISCONNECTED' // Server→Others: 플레이어 연결 끊김 (Ghost 방지)
     // STT 저주 시스템 (추가)
     | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
     | 'STACK_UPDATED'     // Server→All: 스택 변경 (stack, delta, reason)
@@ -51,7 +53,10 @@ export type MessageType =
     | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
     | 'RESUME_GAME'   // Client->Server: 재개 요청
     | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
-    | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
+    | 'GAME_RESUMED'  // Server->All: 게임 재개 알림 (content: username)
+    // 엔딩 미션 (서버 동기화)
+    | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
+    | 'ENDING_MISSION_END';   // Server->All: 엔딩 미션 종료
 
 // ... (Interface declarations remain same) ...
 
@@ -112,6 +117,7 @@ class GameWebSocket {
     private onConnectHandler: (() => void) | null = null;
     private onErrorHandler: ((error: string) => void) | null = null;
     private onCloseHandler: (() => void) | null = null;
+    private isLoggingOut: boolean = false; // 중복 로그아웃 방지 플래그
 
     private constructor() {
         // private constructor for singleton
@@ -220,7 +226,12 @@ class GameWebSocket {
 
                         // 중복 로그인 처리
                         if (message.type === 'DUPLICATE_LOGIN') {
+                            if (this.isLoggingOut) return; // 이미 로그아웃 처리 중이면 무시
+                            this.isLoggingOut = true;
+
                             alert(message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.");
+                            // [FIX] 스토어 로그아웃 호출 (localStorage 정리 및 상태 초기화)
+                            useGameStore.getState().logout();
                             // 강제 로그아웃 처리 (페이지 새로고침 또는 로그인 페이지로 이동)
                             window.location.href = '/login';
                             return;
@@ -498,6 +509,34 @@ class GameWebSocket {
         const message: GameMessage = {
             type: 'STAGE_EXIT',
             roomId: roomId,
+            content: ''
+        };
+        this.send(message);
+    }
+
+    /**
+     * 엔딩 미션 시작 요청 (호스트가 모든 플레이어 골 도달 감지 시)
+     */
+    sendEndingMissionStart(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_START',
+            roomId: roomId,
+            username: this.username,
+            content: ''
+        };
+        this.send(message);
+    }
+
+    /**
+     * 엔딩 미션 종료 요청 (캡처 완료 후)
+     */
+    sendEndingMissionEnd(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_END',
+            roomId: roomId,
+            username: this.username,
             content: ''
         };
         this.send(message);

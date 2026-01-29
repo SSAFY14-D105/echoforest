@@ -44,7 +44,7 @@ export default function CameraArea() {
         if (isSoloMode) return;
         if (!roomId || !nickname) return;
 
-        liveKitService.onParticipantsChange((infos) => {
+        const unsubscribe = liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
         });
 
@@ -53,7 +53,12 @@ export default function CameraArea() {
             setIsCameraEnabled(liveKitService.isCameraEnabled);
         }
 
-        if (isLiveKitConnecting || liveKitService.isConnected) return;
+        // 이미 연결 중이거나 연결됨 -> 연결 로직 스킵하지만 cleanup은 유지
+        if (isLiveKitConnecting || liveKitService.isConnected) {
+            return () => {
+                unsubscribe();
+            };
+        }
 
         const connectLiveKit = async () => {
             console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
@@ -74,6 +79,7 @@ export default function CameraArea() {
         connectLiveKit();
 
         return () => {
+            unsubscribe();
             liveKitService.disconnect();
         };
     }, [roomId, nickname, isSoloMode]);

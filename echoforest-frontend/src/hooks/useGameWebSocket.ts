@@ -72,6 +72,10 @@ export function useGameWebSocket() {
                     if (msg.content) {
                         try {
                             const serverPlayers: ServerPlayerState[] = JSON.parse(msg.content);
+                            // [DEBUG]
+                            if (Math.random() < 0.05) {
+                                console.log(`[UDPATE] Received ${serverPlayers.length} players. Names: ${serverPlayers.map(p => p.id).join(', ')}`);
+                            }
                             syncPlayersFromServer(serverPlayers);
                         } catch (e) {
                             // 파싱 에러만 로그
@@ -110,9 +114,10 @@ export function useGameWebSocket() {
 
                 case 'LEAVE':
                 case 'PLAYER_LEFT':
+                case 'PLAYER_DISCONNECTED':
                     if (msg.username) {
                         removePlayerByNickname(msg.username);
-                        gameLog.player('퇴장', msg.username);
+                        gameLog.player('퇴장 (연결종료)', msg.username);
                     }
                     break;
 
