@@ -168,6 +168,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             document.removeEventListener('visibilitychange', this.handleVisibilityChange);
             document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
+            // 저주 해제 이벤트 리스너 등록
+            window.removeEventListener('curse-released', this.handleCurseReleased);
+            window.addEventListener('curse-released', this.handleCurseReleased);
+
+            // 저주 적용 이벤트 리스너 등록
+            window.removeEventListener('curse-triggered', this.handleCurseTriggered);
+            window.addEventListener('curse-triggered', this.handleCurseTriggered);
+
             // 씬 중지/삭제 시 클린업 등록
             // shutdown()에서 리스너 제거 및 자원 해제를 담당함
             this.events.off('shutdown', this.shutdown, this); // 중복 등록 방지
@@ -258,6 +266,43 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 4. 강제 렌더링 리프레시
             this.scale?.refresh();
+        }
+    };
+
+    // 저주 해제 이벤트 핸들러
+    private handleCurseReleased = (event: Event) => {
+        const customEvent = event as CustomEvent<{ playerId: string; word: string }>;
+        const { playerId } = customEvent.detail;
+
+        console.log(`[Curse] 저주 해제 이벤트 수신:`, customEvent.detail);
+
+        // 본인이면 저주 해제
+        if (playerId === this.myPlayerId) {
+            const myPlayer = this.players.get(this.myPlayerId);
+            if (myPlayer && myPlayer.hasCurse()) {
+                myPlayer.removeCurse();
+                BaseGameScene.persistentCurses.delete(this.myPlayerId);
+                console.log(`[Curse] ✨ 저주 해제 완료: ${this.myPlayerId}`);
+            }
+        }
+    };
+
+    // 저주 적용 이벤트 핸들러 (팀 스택 10 도달 시)
+    private handleCurseTriggered = (event: Event) => {
+        const customEvent = event as CustomEvent<{ playerId: string; mapId: number }>;
+        const { playerId } = customEvent.detail;
+
+        console.log(`[Curse] 저주 적용 이벤트 수신:`, customEvent.detail);
+
+        // 본인이면 저주 적용
+        if (playerId === this.myPlayerId) {
+            const myPlayer = this.players.get(this.myPlayerId);
+            if (myPlayer && !myPlayer.hasCurse()) {
+                const randomCurse = getRandomCurseId();
+                myPlayer.applyCurse(randomCurse);
+                BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
+                console.log(`[Curse] 💀 저주 적용 완료: ${this.myPlayerId}, 저주: ${randomCurse}`);
+            }
         }
     };
 
@@ -2080,6 +2125,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // [CRITICAL FIX] 글로벌 이벤트 리스너 제거
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        window.removeEventListener('curse-released', this.handleCurseReleased);
+        window.removeEventListener('curse-triggered', this.handleCurseTriggered);
 
         try {
             // 스토어 구독 해제

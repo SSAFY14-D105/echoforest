@@ -47,6 +47,7 @@ class SttWorkerService {
             );
 
             this.worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
+                console.log(`[SttWorkerService] 📩 Worker 메시지:`, event.data.type, `(핸들러 ${this.resultHandlers.length}개)`);
                 this.resultHandlers.forEach(handler => handler(event.data));
             };
 

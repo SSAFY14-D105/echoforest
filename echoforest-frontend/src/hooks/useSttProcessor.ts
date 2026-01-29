@@ -66,8 +66,11 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // Worker 결과 핸들러
     const handleWorkerResult = useCallback((message: WorkerOutMessage) => {
+        log(`📩 Worker 메시지 수신: ${message.type}`);
+
         switch (message.type) {
             case 'POSITIVE_DETECTED':
+                log(`💖 긍정어 핸들러 호출: ${message.word}, isCursed=${message.isCursed}`);
                 onPositiveDetected(message.word, message.isCursed);
                 break;
 
@@ -89,19 +92,24 @@ export function useSttProcessor(): UseSttProcessorReturn {
         }
     }, [onPositiveDetected, onQueueUpdate, onCountdownUpdate, onBatchReady, setTranscript]);
 
-    // Worker 초기화 및 결과 핸들러 등록
+    // Worker 초기화 (한 번만)
     useEffect(() => {
         if (workerInitializedRef.current) return;
 
         log('🚀 Worker 초기화');
         sttWorkerService.initialize();
-        const cleanup = sttWorkerService.onResult(handleWorkerResult);
         workerInitializedRef.current = true;
 
         return () => {
-            cleanup();
             sttWorkerService.reset();
         };
+    }, []);
+
+    // 결과 핸들러 등록 (handleWorkerResult 변경 시 재등록)
+    useEffect(() => {
+        log('📝 Handler 등록');
+        const cleanup = sttWorkerService.onResult(handleWorkerResult);
+        return cleanup;
     }, [handleWorkerResult]);
 
     // 부스터 모드 변경 시 Worker에 알림
