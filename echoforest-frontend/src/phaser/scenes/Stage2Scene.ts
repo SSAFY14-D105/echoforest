@@ -79,10 +79,13 @@ export default class Stage2Scene extends BaseGameScene {
         console.log('[Stage2Scene] 🎉 Stage 2 Complete! Requesting transition...');
 
         // 멀티플레이: 서버에 클리어 신호 전송 (부모 클래스 로직 사용)
-        // Stage 3가 있다면 서버가 MULTI_3로 보낼 것이고, 없다면 서버 로직에 따라 처리됨
         super.onStageComplete();
 
         // Stage 3로 이동 (자연스러운 연결)
+        // [TODO] 서버에서 MULTI_3 신호를 받으면 이동하는 것이 정석이지만,
+        // 현재 로컬 테스트나 강제 이동을 위해 직접 호출할 수도 있음.
+        // 일단 서버 로직을 따르되, 타임아웃 후 이동 등의 백업 로직이 필요할 수 있음.
+        // 여기서는 즉시 이동하도록 유지.
         this.scene.start('Stage3Scene');
     }
 }
