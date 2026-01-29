@@ -431,8 +431,7 @@ export default class MapManager {
                 this.scene.matter.add.rectangle(centerX, centerY, width, height, { isStatic: true, label: 'ground' });
                 break;
             }
-            case 'Respawn':
-            case 'Spawn': {
+            case 'Respawn': {
                 const props = this.getAllObjectProperties(obj);
                 const isDefault = props.isDefault === true;
                 const playerIndex = props.playerIndex !== undefined ? props.playerIndex : undefined;
