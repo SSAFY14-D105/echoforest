@@ -85,6 +85,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "BLOCK_UPDATE": // 미는 박스 동기화 (Interactor -> Clients)
                     gameService.handleBlockUpdate(session, messageDto);
                     break;
+                // ===== 엔딩 미션 (모든 플레이어 골 도달 시) =====
+                case "ENDING_MISSION_START": // 엔딩 미션 시작 (Host -> Server -> All)
+                    gameService.handleEndingMissionStart(session, messageDto);
+                    break;
+                case "ENDING_MISSION_END": // 엔딩 미션 종료 (Host -> Server -> All)
+                    gameService.handleEndingMissionEnd(session, messageDto);
+                    break;
                 default:
                     log.warn("Unknown message type: {}", messageDto.getType());
             }
