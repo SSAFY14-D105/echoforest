@@ -36,6 +36,7 @@ export class LiveKitService {
     private room: Room | null = null;
     private localVideoElement: HTMLVideoElement | null = null;
     private connectionOpId = 0; // Async race condition 방지용 ID
+    private _cameraEnabledPreference = true; // 사용자 카메라 ON/OFF 상태 저장
 
     private onParticipantUpdate: ParticipantUpdateCallback | null = null;
     private onConnectedCallback: ConnectionCallback | null = null;
@@ -118,7 +119,7 @@ export class LiveKitService {
                 adaptiveStream: true,
                 dynacast: true,
                 videoCaptureDefaults: {
-                    resolution: VideoPresets.h720.resolution,
+                    resolution: VideoPresets.h540.resolution,
                 }
             });
 
@@ -147,9 +148,6 @@ export class LiveKitService {
     }
 
     // LiveKit Room 연결 (API 사용)
-
-
-
     private setupRoomEvents() {
         if (!this.room) return;
 
@@ -207,6 +205,11 @@ export class LiveKitService {
                     }
                 }
             }
+
+            // 저장된 카메라 상태 적용 (대기실에서 꺼둔 경우 유지)
+            if (!this._cameraEnabledPreference && this.room?.localParticipant) {
+                await this.room.localParticipant.setCameraEnabled(false);
+            }
         } catch (publishErr) {
             console.warn('트랙 발행 중 오류 (연결 해제됨?):', publishErr);
         }
@@ -231,7 +234,7 @@ export class LiveKitService {
                 adaptiveStream: true,
                 dynacast: true,
                 videoCaptureDefaults: {
-                    resolution: VideoPresets.h720.resolution,
+                    resolution: VideoPresets.h540.resolution,
                 }
             });
 
@@ -279,9 +282,10 @@ export class LiveKitService {
 
     // 카메라 토글
     async toggleCamera(): Promise<boolean> {
-        if (!this.room || !this.room.localParticipant) return false;
+        if (!this.room || !this.room.localParticipant) return this._cameraEnabledPreference;
         const newState = !this.room.localParticipant.isCameraEnabled;
         await this.room.localParticipant.setCameraEnabled(newState);
+        this._cameraEnabledPreference = newState; // 상태 저장
         return newState;
     }
 
