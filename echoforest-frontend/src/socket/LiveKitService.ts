@@ -239,13 +239,13 @@ export class LiveKitService {
 
 
     // LiveKit Room 연결 (API 사용)
-    async connect(roomName: string, userId: string, username: string): Promise<void> {
+    async connect(roomName: string, username: string): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
         // console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${roomName}, User: ${username}`);
 
         try {
-            const { token } = await getLiveKitToken({ roomId: roomName, userId, username });
+            const { token } = await getLiveKitToken({ roomId: roomName, username });
 
             if (myId !== this.connectionOpId) return;
 

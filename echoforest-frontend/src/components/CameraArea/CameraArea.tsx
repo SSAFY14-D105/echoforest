@@ -66,7 +66,7 @@ export default function CameraArea() {
             try {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
                 // [FIX] nickname을 identity로 사용하여 다른 플레이어와 매칭
-                await liveKitService.connect(roomId, nickname, nickname);
+                await liveKitService.connect(roomId, nickname);
                 setIsMicEnabled(liveKitService.isMicEnabled);
                 setIsCameraEnabled(liveKitService.isCameraEnabled);
             } catch (error) {

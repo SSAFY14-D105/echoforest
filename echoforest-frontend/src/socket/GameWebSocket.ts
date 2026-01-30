@@ -7,7 +7,7 @@
  * - getInstance()로 전역 인스턴스 접근
  */
 import { API_BASE_URL } from '../config.ts';
-import { useGameStore } from '../store/useGameStore';
+
 
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
@@ -32,7 +32,7 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
-    | 'DUPLICATE_LOGIN' // Server→Client: 중복 로그인으로 인한 강제 로그아웃
+
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     | 'STAGE_EXIT'    // [NEW] 골 탈출 신호 (Client -> Server)
@@ -118,7 +118,7 @@ class GameWebSocket {
     private onConnectHandler: (() => void) | null = null;
     private onErrorHandler: ((error: string) => void) | null = null;
     private onCloseHandler: (() => void) | null = null;
-    private isLoggingOut: boolean = false; // 중복 로그아웃 방지 플래그
+
     private messageQueue: GameMessage[] = []; // [FIX] 연결 중 메시지 큐
 
     private constructor() {
@@ -227,28 +227,7 @@ class GameWebSocket {
                             this.onErrorHandler?.(message.content || '알 수 없는 오류');
                         }
 
-                        // 중복 로그인 처리
-                        if (message.type === 'DUPLICATE_LOGIN') {
-                            if (this.isLoggingOut) return; // 이미 로그아웃 처리 중이면 무시
-                            this.isLoggingOut = true;
 
-                            // [FIX] Toast 알림으로 변경 (UI 블로킹 방지)
-                            import('../store/useToastStore').then(({ useToastStore }) => {
-                                useToastStore.getState().showToast(
-                                    message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.",
-                                    'warning',
-                                    5000
-                                );
-                            });
-
-                            // [FIX] 스토어 로그아웃 호출 (localStorage 정리 및 상태 초기화)
-                            useGameStore.getState().logout();
-                            // 강제 로그아웃 처리 - 약간의 딜레이로 Toast 표시 보장
-                            setTimeout(() => {
-                                window.location.href = '/login';
-                            }, 1500);
-                            return;
-                        }
 
                         // 1. 레거시 핸들러 실행
                         this.onMessageHandler?.(message);
@@ -592,7 +571,7 @@ class GameWebSocket {
         // 따라서 핸들러를 유지해야 재연결 시 정상 작동함.
         this.listeners.clear();
         this.messageQueue = [];
-        this.isLoggingOut = false;
+
         console.log('[GameWebSocket] Disconnected. Handlers preserved, listeners/queue cleared.');
     }
 
