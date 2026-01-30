@@ -231,11 +231,21 @@ class GameWebSocket {
                             if (this.isLoggingOut) return; // 이미 로그아웃 처리 중이면 무시
                             this.isLoggingOut = true;
 
-                            alert(message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.");
+                            // [FIX] Toast 알림으로 변경 (UI 블로킹 방지)
+                            import('../store/useToastStore').then(({ useToastStore }) => {
+                                useToastStore.getState().showToast(
+                                    message.content || "다른 기기에서 로그인하여 접속이 종료됩니다.",
+                                    'warning',
+                                    5000
+                                );
+                            });
+
                             // [FIX] 스토어 로그아웃 호출 (localStorage 정리 및 상태 초기화)
                             useGameStore.getState().logout();
-                            // 강제 로그아웃 처리 (페이지 새로고침 또는 로그인 페이지로 이동)
-                            window.location.href = '/login';
+                            // 강제 로그아웃 처리 - 약간의 딜레이로 Toast 표시 보장
+                            setTimeout(() => {
+                                window.location.href = '/login';
+                            }, 1500);
                             return;
                         }
 
