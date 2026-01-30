@@ -20,6 +20,8 @@ function getErrorMessage(status: number): string {
             return '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
         case 405:
             return '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        case 409:
+            return '이미 다른 기기에서 접속 중입니다.';
         case 419:
             return '인증이 만료되었습니다. 다시 로그인해주세요.';
         case 429:
@@ -79,20 +81,23 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
     });
 
     if (!res.ok) {
-        // 에러 응답 body에서 메시지 추출 시도
+
+        // 에러 메시지 파싱 (GlobalExceptionHandler의 "message" 또는 "error" 필드)
         try {
             const errorData = await res.json();
             if (errorData.message) {
                 throw new Error(errorData.message);
             }
-        } catch {
-            // JSON 파싱 실패 시 기본 에러 메시지 사용
+            if (errorData.error) {
+                throw new Error(errorData.error);
+            }
+        } catch (e) {
+            if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+                throw e;
+            }
         }
 
-        // 로그인 실패 시 더 명확한 메시지
-        if (res.status === 500) {
-            throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
-        }
+        // 상태 코드별 기본 메시지
         throw new Error(getErrorMessage(res.status));
     }
 
@@ -163,5 +168,18 @@ export async function updateNickname(userId: number, newNickname: string): Promi
         } catch { }
 
         throw new Error(getErrorMessage(res.status));
+    }
+}
+
+/**
+ * 로그아웃 API
+ */
+export async function logout(): Promise<void> {
+    const res = await httpClient('/user/logout', {
+        method: 'POST',
+    });
+
+    if (!res.ok) {
+        throw new Error('로그아웃에 실패했습니다.');
     }
 }
