@@ -2,7 +2,6 @@ package com.d105.game;
 
 import com.d105.dto.GameMessageDto;
 import com.d105.dto.PlayerUpdateDto;
-import com.d105.game.constant.CurseType;
 import com.d105.game.manager.CurseManager;
 import com.d105.game.manager.RoomSessionManager;
 import com.d105.game.network.GameBroadcaster;
@@ -561,7 +560,74 @@ public class GameRoom implements Runnable {
                 allFinished);
 
         if (allFinished && activePlayerCount > 0) {
-            log.info("All players finished stage {}. Transitioning to next stage.", currentMapId);
+            log.info("All players finished stage {}. Starting Ending Mission.", currentMapId);
+            broadcastEndingMissionStart();
+        }
+    }
+
+    /**
+     * 엔딩 미션 시작 브로드캐스트
+     */
+    private void broadcastEndingMissionStart() {
+        GameMessageDto msg = new GameMessageDto();
+        msg.setType("ENDING_MISSION_START");
+        msg.setRoomId(roomId);
+        broadcast(msg, null);
+        log.info("🎉 Room {}: ENDING_MISSION_START broadcasted", roomId);
+    }
+
+    /**
+     * 엔딩 미션 완료 처리 (각 플레이어가 개별적으로 전송)
+     */
+    public void handleEndingMissionComplete(String username) {
+        String sid = sessionManager.findSessionIdByUsername(username);
+        if (sid == null)
+            return;
+
+        PlayerState player = sessionManager.getPlayer(sid);
+        if (player == null)
+            return;
+
+        if (!player.isEndingMissionComplete()) {
+            player.setEndingMissionComplete(true);
+            log.info("📸 Room {}: Player {} completed ending mission", roomId, username);
+        }
+
+        // 모든 플레이어 완료 체크
+        checkEndingMissionCompletion();
+    }
+
+    /**
+     * 모든 플레이어 엔딩 미션 완료 체크
+     */
+    private void checkEndingMissionCompletion() {
+        boolean allComplete = true;
+        int activeCount = 0;
+        int completeCount = 0;
+
+        for (PlayerState p : sessionManager.getPlayers().values()) {
+            if (!p.isDisconnected()) {
+                activeCount++;
+                if (p.isEndingMissionComplete()) {
+                    completeCount++;
+                } else {
+                    allComplete = false;
+                }
+            }
+        }
+
+        log.info("[DEBUG] Ending Mission Check: Active={}, Complete={}, AllDone={}",
+                activeCount, completeCount, allComplete);
+
+        if (allComplete && activeCount > 0) {
+            log.info("🏁 Room {}: All players completed ending mission. Transitioning...", roomId);
+
+            // ENDING_MISSION_END 브로드캐스트 (모든 클라이언트 오버레이 닫기)
+            GameMessageDto endMsg = new GameMessageDto();
+            endMsg.setType("ENDING_MISSION_END");
+            endMsg.setRoomId(roomId);
+            broadcast(endMsg, null);
+
             transitionToNextStage();
         }
     }
@@ -576,6 +642,7 @@ public class GameRoom implements Runnable {
             p.setDead(false);
             p.setHp(100);
             p.clearCurses();
+            p.setEndingMissionComplete(false); // 엔딩 미션 완료 상태 리셋
             // 위치는 클라이언트가 새 맵 로드 시 스폰 포인트로 이동하므로 초기화하지 않음 (혹은 안전하게 0,0으로?)
             // p.setX(0); p.setY(0);
         });
