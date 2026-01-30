@@ -59,4 +59,14 @@ public class UserController {
         userService.updateNickname(username, req.getNewNickname());
         return ResponseEntity.ok(Map.of("message", "닉네임 변경 성공"));
     }
+
+    @Operation(summary = "로그아웃", description = "서버 세션을 제거합니다.")
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String username) {
+        if (username != null) {
+            userService.logout(username);
+        }
+        return ResponseEntity.ok(Map.of("message", "로그아웃 성공"));
+    }
 }
