@@ -707,4 +707,22 @@ public class GameService {
         log.info("UserLoggedInEvent received for {}. Checking for active sessions...", username);
         sessionManager.kickSession(username, "DUPLICATE_LOGIN");
     }
+
+    /**
+     * 강제 동기화 요청 처리 (SYNC_REQUEST)
+     * 클라이언트 마운트 후 플레이어 목록을 다시 받기 위해 호출됨.
+     * Race Condition으로 인해 초기 UPDATE를 놓친 경우를 위한 안전장치.
+     */
+    public void handleSyncRequest(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        if (roomId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 현재 플레이어 상태를 즉시 브로드캐스트
+            room.forceBroadcastState();
+            log.debug("SYNC_REQUEST: Forced broadcast for room {}", roomId);
+        }
+    }
 }
