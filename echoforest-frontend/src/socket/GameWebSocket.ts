@@ -585,15 +585,14 @@ class GameWebSocket {
             this.ws.close();
             this.ws = null;
         }
-        // [FIX] 모든 핸들러 및 상태 초기화 (방 재입장 시 Stale 핸들러 방지)
-        this.onMessageHandler = null;
-        this.onConnectHandler = null;
-        this.onErrorHandler = null;
-        this.onCloseHandler = null;
+        // [FIX] 리스너와 큐만 초기화, 핸들러는 유지
+        // 핸들러(onMessageHandler 등)는 useGameWebSocket에서 설정되며,
+        // roomId/nickname이 변경되지 않으면 useEffect가 다시 실행되지 않음.
+        // 따라서 핸들러를 유지해야 재연결 시 정상 작동함.
         this.listeners.clear();
         this.messageQueue = [];
         this.isLoggingOut = false;
-        console.log('[GameWebSocket] Disconnected and cleaned up all handlers.');
+        console.log('[GameWebSocket] Disconnected. Handlers preserved, listeners/queue cleared.');
     }
 
     // 연결 상태 확인
