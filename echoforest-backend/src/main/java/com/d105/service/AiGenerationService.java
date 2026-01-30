@@ -167,6 +167,7 @@ public class AiGenerationService {
     private ImageResponseDto processResponseAndSave(ResponseEntity<String> response, String roomId, Long userId) {
         try {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("AI API Response Body: {}", response.getBody()); // 디버깅용 로그 추가
                 JsonNode root = objectMapper.readTree(response.getBody());
 
                 // Google Vertex AI 응답: { "predictions": [ { "bytesBase64Encoded": "...",
