@@ -19,6 +19,7 @@ import java.util.Map;
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final com.d105.service.SessionService sessionService; // [FIX] Redis 세션 검증 추가
 
     /**
      * 웹소켓 연결 전(Before Handshake)에 실행됩니다.
@@ -40,11 +41,17 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         // 3. 토큰에서 유저 정보(ID) 추출
+        Long userId = jwtUtil.getUserId(token);
         String username = jwtUtil.getUsername(token);
 
-        // 4. 웹소켓 세션(attributes)에 저장
-        // 이렇게 저장하면 나중에 GameWebSocketHandler에서 session.getAttributes().get("username")로
-        // 꺼낼 수 있습니다.
+        // 4. [FIX] Redis 세션 검증 (로그아웃된 토큰 거부)
+        if (!sessionService.isValidSession(userId, token)) {
+            log.warn("[WebSocket Handshake Failed] Session invalid or logged out for user: {}", username);
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+
+        // 5. 웹소켓 세션(attributes)에 저장
         attributes.put("username", username);
 
         log.info("[WebSocket Handshake Success] User: {}", username);
