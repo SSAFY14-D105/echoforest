@@ -296,9 +296,9 @@ public class GameRoom implements Runnable {
                 continue;
 
             // [FIX] 연결 끊긴 플레이어는 브로드캐스트 제외 (Ghost 현상 방지)
-            // if (p.isDisconnected()) {
-            // continue;
-            // }
+            if (p.isDisconnected()) {
+                continue;
+            }
 
             // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
