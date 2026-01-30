@@ -16,5 +16,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest() // 400 에러 코드
                 .body(Map.of("error", e.getMessage())); // 에러 메시지 그대로 전송
+
+    }
+
+    // "이미 다른 기기에서 접속 중입니다" 같은 상태 에러를 잡아서 409(Conflict)로 반환
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalStateException(IllegalStateException e) {
+        return ResponseEntity
+                .status(409) // 409 Conflict
+                .body(Map.of("message", e.getMessage()));
     }
 }

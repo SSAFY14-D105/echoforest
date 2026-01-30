@@ -28,25 +28,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiGenerationService {
 
-    // AI 생성 프롬프트 (그리드 레이아웃 + 제공된 캐릭터 이미지 활용)
-    private static final String B_GRADE_STYLE_PROMPT = "Create a cute commemorative photo frame with photos arranged in a grid layout. "
+    // AI 생성 프롬프트 (템플릿 기반 이미지 합성)
+    private static final String B_GRADE_STYLE_PROMPT = "The FIRST image I provide is a template frame with white placeholder areas. "
             +
-            "IMPORTANT: Place each person's photo in their own separate grid cell. Do NOT merge or combine faces. " +
-            "Layout: Arrange the provided photos in a neat grid (2x2 or similar). Each photo should be clearly visible in its own box. "
-            +
-            "Decoration: I am also providing character images (our game mascots). Use these provided character images to decorate around the photo grid. "
-            +
-            "Add simple pixel art forest elements (trees, leaves, stars) as additional decoration. " +
-            "Style: The photos stay realistic. The character mascots should be placed cutely around the frame. Bright and cheerful colors. ";
+            "IMPORTANT: Place each of the OTHER provided photos into the white/empty areas of this template frame. " +
+            "Each person's photo should be placed in its own separate white box in the template. " +
+            "Do NOT modify the template frame itself - just fill in the white areas with the photos. " +
+            "Keep the photos realistic and clearly visible. The result should look like a cute commemorative photo frame. ";
 
     private final AiProperties aiProperties;
     private final ImageService imageService;
@@ -79,6 +74,14 @@ public class AiGenerationService {
 
             // 2. 파일 읽기 및 Base64 변환
             List<String> base64Images = new ArrayList<>();
+
+            // 2.1 템플릿 이미지 추가 (가장 먼저 추가하여 프롬프트의 'FIRST image' 조건 충족)
+            String templateImage = loadTemplateImage();
+            if (templateImage != null) {
+                base64Images.add(templateImage);
+            }
+
+            // 2.2 유저 이미지 추가 (빈 칸 채우기용)
             for (String imagePath : selectedImagePaths) {
                 Path path = Paths.get(uploadDir, imagePath);
                 if (Files.exists(path)) {
@@ -87,10 +90,8 @@ public class AiGenerationService {
                 }
             }
 
-            // 2.5 캐릭터 에셋 추가 (resources/assets/characters)
-            List<String> characterImages = loadCharacterAssets();
-            base64Images.addAll(characterImages);
-            log.info("Added {} character assets", characterImages.size());
+            log.info("Total images prepared: {} (1 Template + {} User Photos)", base64Images.size(),
+                    base64Images.size() - 1);
 
             // 3. API 호출 및 저장/전송
             return callAiApiAndSave(base64Images, roomId, userId);
@@ -145,37 +146,31 @@ public class AiGenerationService {
             log.info("First image base64 length: {} chars", base64Images.get(0).length());
         }
 
-        // API 요청 헤더
+        // API 요청 헤더 (OpenAI 스타일)
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        // Google AI Studio API는 Authorization: Bearer 대신 x-goog-api-key 헤더 사용
-        headers.set("x-goog-api-key", aiProperties.getApiKey());
+        headers.set("Authorization", "Bearer " + aiProperties.getApiKey());
 
-        // Google Vertex AI (Imagen) 요청 바디 구성
+        // OpenAI gpt-image-1-mini 요청 바디 구성
         // {
-        // "instances": [ { "prompt": "..." } ],
-        // "parameters": { "sampleCount": 1, "aspectRatio": "1:1" }
+        // "model": "gpt-image-1-mini",
+        // "prompt": "...",
+        // "image": ["data:image/png;base64,...", ...] // 또는 단일 이미지
         // }
-        Map<String, Object> instance = new HashMap<>();
-        instance.put("prompt", finalPrompt);
-
-        // 이미지 데이터 추가 (첫 번째 이미지를 base_image로 사용 - Imagen API 제약 고려)
-        // 여러 장을 합성하려면 별도 전처리나 멀티모달 모델(Gemini) 사용이 필요하지만,
-        // 여기서는 첫 번째 이미지를 대표 이미지로 전송 시도.
-        if (!base64Images.isEmpty()) {
-            Map<String, String> imageMap = new HashMap<>();
-            imageMap.put("bytesBase64Encoded", base64Images.get(0));
-            // "image" 필드 사용 (Subject to API spec)
-            instance.put("image", imageMap);
-        }
-
-        Map<String, Object> parameters = new HashMap<>();
-        parameters.put("sampleCount", 1);
-        parameters.put("aspectRatio", "1:1"); // 인스타그램/포스터용 1:1 비율
-
         Map<String, Object> body = new HashMap<>();
-        body.put("instances", Collections.singletonList(instance));
-        body.put("parameters", parameters);
+        body.put("model", "gpt-image-1-mini");
+        body.put("prompt", finalPrompt);
+        body.put("size", "1024x1024");
+
+        // 이미지 데이터 추가 (모든 이미지를 배열로 전송)
+        if (!base64Images.isEmpty()) {
+            List<String> formattedImages = new ArrayList<>();
+            for (String base64 : base64Images) {
+                formattedImages.add("data:image/png;base64," + base64);
+            }
+            body.put("image", formattedImages);
+            log.info("Sending {} images to AI model", formattedImages.size());
+        }
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
@@ -288,6 +283,7 @@ public class AiGenerationService {
                             <p>친구 혹은 가족들과 함께한 오늘의 추억을 간직하세요! 🥰</p>
                             <br/>
                             <p>감사합니다.</p>
+                            <p>-메아리의 숲 일동.</p>
                         </body>
                         </html>
                         """.formatted(user.getNickname());
@@ -337,42 +333,20 @@ public class AiGenerationService {
                 .collect(Collectors.toList());
     }
 
-    private List<String> loadCharacterAssets() {
-        List<String> assets = new ArrayList<>();
+    private String loadTemplateImage() {
         try {
-            // Spring ResourceLoader 등을 사용하는 것이 좋으나, 여기서는 ClassLoader로 접근
-            // JAR 배포 시에는 getResourceAsStream 등을 써야 함.
-            // 개발 환경(FileSystem)과 배포 환경(JAR) 호환을 위해 ResourcePatternResolver 사용 권장하지만,
-            // 간단하게 File 접근 시도해보고 안되면 리턴.
-
-            // 주의: JAR 내부 파일은 File 객체로 읽을 수 없음. InputStream으로 읽어야 함.
-            // 여기서는 개발 환경(c:\SSAFY...) 절대경로가 있으니 일단 물리 경로 체크.
-
-            // 사용자가 만든 물리 경로: src/main/resources/assets/characters
-            // 실행 시점(target/classes...)과는 다를 수 있음.
-            // 일단 물리적 소스 경로를 하드코딩해서 읽거나(개발용), classpath 리소스를 읽어야 함.
-
-            // 개발 편의를 위해 소스 디렉토리에서 읽기 시도 (사용자가 방금 mkdir 했으므로)
-            Path assetDir = Paths.get("src/main/resources/assets/characters");
-            if (Files.exists(assetDir) && Files.isDirectory(assetDir)) {
-                try (Stream<Path> stream = Files.list(assetDir)) {
-                    stream.filter(Files::isRegularFile)
-                            .forEach(p -> {
-                                try {
-                                    byte[] b = Files.readAllBytes(p);
-                                    assets.add(Base64.getEncoder().encodeToString(b));
-                                    log.info("Loaded character asset: {}", p.getFileName());
-                                } catch (Exception e) {
-                                    log.warn("Failed to read asset: {}", p, e);
-                                }
-                            });
-                }
+            // 개발 편의를 위해 소스 디렉토리에서 읽기 시도
+            Path templatePath = Paths.get("src/main/resources/assets/image_grid_view.png");
+            if (Files.exists(templatePath)) {
+                byte[] bytes = Files.readAllBytes(templatePath);
+                log.info("Loaded template image: {}", templatePath.getFileName());
+                return Base64.getEncoder().encodeToString(bytes);
             } else {
-                log.warn("Character asset directory not found: {}", assetDir.toAbsolutePath());
+                log.warn("Template image not found: {}", templatePath.toAbsolutePath());
             }
         } catch (Exception e) {
-            log.warn("Error loading character assets", e);
+            log.warn("Error loading template image", e);
         }
-        return assets;
+        return null;
     }
 }
