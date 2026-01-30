@@ -13,7 +13,6 @@ export const LIVEKIT_SERVER_URL = LIVEKIT_URL;
  * 토큰 발급 요청 타입
  */
 export interface LiveKitTokenRequest {
-    userId: string;
     username: string;
     roomId?: string;   // 기존 코드용
     roomName?: string; // LiveKitService용
@@ -57,7 +56,6 @@ export async function fetchLiveKitToken(
  */
 export async function getLiveKitToken(request: LiveKitTokenRequest): Promise<LiveKitTokenResponse> {
     const mappedRequest: LiveKitTokenRequest = {
-        userId: request.userId,
         username: request.username,
         roomId: request.roomId || request.roomName // 둘 중 하나를 사용
     };
