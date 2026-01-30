@@ -682,16 +682,9 @@ public class GameService {
 
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
-            // 엔딩 미션 종료 메시지 생성
-            GameMessageDto endingEndMsg = new GameMessageDto();
-            endingEndMsg.setType("ENDING_MISSION_END");
-            endingEndMsg.setRoomId(roomId);
-            endingEndMsg.setUsername(username);
-
-            // 모든 클라이언트에게 브로드캐스트
-            room.broadcast(endingEndMsg, null);
-
-            log.info("🏁 Room {}: Ending Mission Ended by {}", roomId, username);
+            // 개별 플레이어 완료 처리 (GameRoom에서 모든 플레이어 완료 시 전환)
+            room.handleEndingMissionComplete(username);
+            log.info("📸 Room {}: {} sent ENDING_MISSION_END", roomId, username);
         }
     }
 
