@@ -44,7 +44,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
             }
 
             const roomInfo = await response.json();
-            console.log('📋 방 정보 조회 성공:', roomInfo);
+            // console.log('📋 방 정보 조회 성공:', roomInfo);
 
             // 내가 호스트인지 확인 (닉네임 기준)
             const amIHost = roomInfo.hostId === nickname;
@@ -83,7 +83,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
             // 3. 잠시 후 게임 페이지로 이동 (에러가 없을 경우)
             setTimeout(() => {
                 if (!hasWSError) {
-                    console.log(`🚀 방 입장 성공: ${roomCode} (Host: ${amIHost}, Stage: ${roomInfo.currentStage})`);
+                    // console.log(`🚀 방 입장 성공: ${roomCode} (Host: ${amIHost}, Stage: ${roomInfo.currentStage})`);
 
                     // 핸들러 정리는 페이지 이동 후 GamePage에서 다시 설정되므로 자연스럽게 교체됨
                     // 하지만 명시적으로 정리해주는 것이 좋을 수 있음 (GameWebSocket 구조상 onMessage가 덮어씌워짐)

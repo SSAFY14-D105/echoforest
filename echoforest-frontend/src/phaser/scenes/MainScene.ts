@@ -133,7 +133,7 @@ export default class MainScene extends Phaser.Scene {
                 this.myPlayerId = storePlayer.id;
             }
 
-            console.log(`[MainScene] Player added: ${storePlayer.nickname} (${isLocalPlayer ? 'local' : 'remote'})`);
+            // console.log(`[MainScene] Player added: ${storePlayer.nickname} (${isLocalPlayer ? 'local' : 'remote'})`);
         } catch (error) {
             console.warn(`[MainScene] Failed to add player (physics not ready): ${storePlayer.nickname}`);
         }
@@ -145,7 +145,7 @@ export default class MainScene extends Phaser.Scene {
         if (player) {
             player.destroy();
             this.players.delete(playerId);
-            console.log(`[MainScene] Player removed: ${playerId}`);
+            // console.log(`[MainScene] Player removed: ${playerId}`);
         }
     }
 

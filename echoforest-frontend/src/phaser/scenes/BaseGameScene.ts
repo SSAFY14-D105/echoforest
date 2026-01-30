@@ -185,7 +185,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.events.on('destroy', this.shutdown, this);
 
             // [LIFECYCLE] Scene Created Log
-            console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
+            // console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
         } catch (e) {
             console.error(`[CRITICAL] Error in ${this.getSceneKey()} create():`, e);
         }
@@ -197,7 +197,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
     private handleVisibilityChange = () => {
         if (document.hidden) {
-            console.log(`[VISIBILITY] State: hidden, Scene: ${this.getSceneKey()}`);
+            // console.log(`[VISIBILITY] State: hidden, Scene: ${this.getSceneKey()}`);
             // 물리 엔진 일시정지 (탭 전환 시 추락 방지)
             this.matter.world.pause();
 
@@ -218,7 +218,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 }
             }
         } else {
-            console.log(`[VISIBILITY] State: visible, Scene: ${this.getSceneKey()}`);
+            // console.log(`[VISIBILITY] State: visible, Scene: ${this.getSceneKey()}`);
 
             // [CHECKPOINT] 화면 복귀 시
             if (!this.scene || !this.cameras || !this.cameras.main) {
@@ -254,13 +254,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 }
 
                 if (player.isLocalPlayer) {
-                    console.log(`[VISIBILITY] Restored Local Player: ${player.nickname}`);
+                    // console.log(`[VISIBILITY] Restored Local Player: ${player.nickname}`);
                 }
             });
 
             // 3. 디버그 그래픽 재생성 (디버그 모드일 경우)
             if (this.matter.world.drawDebug) {
-                console.log('[VISIBILITY] Re-creating debug graphic...');
+                // console.log('[VISIBILITY] Re-creating debug graphic...');
                 this.matter.world.createDebugGraphic();
             }
 
@@ -274,7 +274,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const customEvent = event as CustomEvent<{ playerId: string; word: string }>;
         const { playerId } = customEvent.detail;
 
-        console.log(`[Curse] 저주 해제 이벤트 수신:`, customEvent.detail);
+        // console.log(`[Curse] 저주 해제 이벤트 수신:`, customEvent.detail);
 
         // 본인이면 저주 해제
         if (playerId === this.myPlayerId) {
@@ -282,7 +282,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (myPlayer && myPlayer.hasCurse()) {
                 myPlayer.removeCurse();
                 BaseGameScene.persistentCurses.delete(this.myPlayerId);
-                console.log(`[Curse] ✨ 저주 해제 완료: ${this.myPlayerId}`);
+                // console.log(`[Curse] ✨ 저주 해제 완료: ${this.myPlayerId}`);
             }
         }
     };
@@ -292,7 +292,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const customEvent = event as CustomEvent<{ playerId: string; mapId: number }>;
         const { playerId } = customEvent.detail;
 
-        console.log(`[Curse] 저주 적용 이벤트 수신:`, customEvent.detail);
+        // console.log(`[Curse] 저주 적용 이벤트 수신:`, customEvent.detail);
 
         // 본인이면 저주 적용
         if (playerId === this.myPlayerId) {
@@ -301,7 +301,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 const randomCurse = getRandomCurseId();
                 myPlayer.applyCurse(randomCurse);
                 BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
-                console.log(`[Curse] 💀 저주 적용 완료: ${this.myPlayerId}, 저주: ${randomCurse}`);
+                // console.log(`[Curse] 💀 저주 적용 완료: ${this.myPlayerId}, 저주: ${randomCurse}`);
             }
         }
     };
@@ -440,7 +440,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
         // 시작 시 하단으로 스크롤 고정
         this.cameras.main.scrollY = Math.max(0, worldHeight - this.cameras.main.height);
-        console.log(`[BaseGameScene] Camera setup: Bounds(0, 0, ${worldWidth}, ${worldHeight}), ScrollY: ${this.cameras.main.scrollY}`);
+        // console.log(`[BaseGameScene] Camera setup: Bounds(0, 0, ${worldWidth}, ${worldHeight}), ScrollY: ${this.cameras.main.scrollY}`);
     }
 
     private subscribeToStore(): void {
@@ -461,7 +461,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         });
 
-        console.log(`[${this.getSceneKey()}] Store subscription enabled`);
+        // console.log(`[${this.getSceneKey()}] Store subscription enabled`);
     }
 
     // 충돌 처리 설정
@@ -670,7 +670,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     if (targetGoals.length > 0) {
                         targetGoals.forEach(targetGoal => {
                             targetGoal.setVisible(true);
-                            console.log(`[${this.getSceneKey()}] Goal activated (Prop targetGoalId: ${lock.targetGoalId}) via Lock: ${lock.id}`);
+                            // console.log(`[${this.getSceneKey()}] Goal activated (Prop targetGoalId: ${lock.targetGoalId}) via Lock: ${lock.id}`);
                         });
                     } else {
                         console.warn(`[${this.getSceneKey()}] No goals found with targetGoalId: ${lock.targetGoalId}`);
@@ -697,7 +697,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         );
                         goal.setVisible(true); // 명시적으로 보이게 설정
                         this.goals.push(goal);
-                        console.log(`[${this.getSceneKey()}] Goal spawned at Lock position: ${lock.id}`);
+                        // console.log(`[${this.getSceneKey()}] Goal spawned at Lock position: ${lock.id}`);
                     }
                 }
             });
@@ -711,7 +711,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const player = this.players.get(playerLabel);
 
         if (player) {
-            console.log(`[${this.getSceneKey()}] Player hit spike!`);
+            // console.log(`[${this.getSceneKey()}] Player hit spike!`);
             this.triggerDeath('spike');
         }
     }
@@ -720,10 +720,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
      * 플레이어 좽음 및 맵 재시작 처리
      * @param reason 좽음 이유 (spike, curse 등)
      */
-    private triggerDeath(reason: string): void {
+    private triggerDeath(_reason: string): void {
         if (this.isDead) return;
 
-        console.log(`[${this.getSceneKey()}] Death triggered by ${reason}.`);
+        // console.log(`[${this.getSceneKey()}] Death triggered by ${reason}.`);
         this.isDead = true; // [FIX] 즉시 isDead 설정
 
         // 로컬 플레이어 사망 애니메이션 재생
@@ -732,11 +732,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             myPlayer.die(); // _isDead = true 설정 및 속도 0
         }
 
-        console.log(`[BaseGameScene] Waiting 1000ms for death animation before Global Reset...`);
+        // console.log(`[BaseGameScene] Waiting 1000ms for death animation before Global Reset...`);
         this.time.delayedCall(1000, () => {
             const roomId = useGameStore.getState().roomId;
             if (roomId) {
-                console.log(`[BaseGameScene] Sending GAME_RESET for room ${roomId}`);
+                // console.log(`[BaseGameScene] Sending GAME_RESET for room ${roomId}`);
                 gameWebSocket.sendGameReset(roomId);
             } else {
                 console.error('[BaseGameScene] Cannot send GAME_RESET: No roomId found');
@@ -752,7 +752,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.isDead = false;
         }
 
-        console.log(`[${this.getSceneKey()}] 🔄 Executing Global Game Reset...`);
+        // console.log(`[${this.getSceneKey()}] 🔄 Executing Global Game Reset...`);
 
         // 1. 모든 플레이어 리스폰
         // 1. 모든 플레이어 리스폰
@@ -819,7 +819,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const forceY = Math.sin(angle) * power;
 
             player.applyKnockback(forceX, forceY, 400);
-            console.log(`[${this.getSceneKey()}] Player knockback applied: angle=${angle.toFixed(2)}`);
+            // console.log(`[${this.getSceneKey()}] Player knockback applied: angle=${angle.toFixed(2)}`);
             return;
         }
     }
@@ -851,7 +851,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const forceY = Math.sin(angle) * power;
 
             player.applyKnockback(forceX, forceY, 400);
-            console.log(`[${this.getSceneKey()}] Player knockback applied via MovingBumper: angle=${angle.toFixed(2)}`);
+            // console.log(`[${this.getSceneKey()}] Player knockback applied via MovingBumper: angle=${angle.toFixed(2)}`);
         }
     }
 
@@ -888,7 +888,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (velocity.y > 1 && playerPos.y < springPos.y) {
                 player.setVelocity(velocity.x, spring.getBouncePower());
                 spring.animate();
-                console.log(`[${this.getSceneKey()}] Player stepped on spring`);
+                // console.log(`[${this.getSceneKey()}] Player stepped on spring`);
             }
         }
     }
@@ -907,7 +907,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             // 버섯을 밟은 본인에게 저주 적용
             const randomCurse = getRandomCurseId();
-            console.log(`[PoisonMushroom] Applying curse '${randomCurse}' to self (${this.myPlayerId})`);
+            // console.log(`[PoisonMushroom] Applying curse '${randomCurse}' to self (${this.myPlayerId})`);
             this.applyCurseToPlayer(this.myPlayerId, randomCurse);
 
             // 피드백 텍스트
@@ -934,7 +934,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         targetBlocks.forEach(block => {
                             block.setVisible(true);
                         });
-                        console.log(`[${this.getSceneKey()}]Block(s) activated(Prop targetBlockId: ${button.targetBlockId}) via Button: ${button.id} `);
+                        // console.log(`[${this.getSceneKey()}]Block(s) activated(Prop targetBlockId: ${button.targetBlockId}) via Button: ${button.id} `);
                     } else {
                         console.warn(`[${this.getSceneKey()}] No blocks found with targetBlockId: ${button.targetBlockId} `);
                     }
@@ -954,7 +954,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const block = new MovableBlock(this, config);
         this.movableBlocks.push(block);
 
-        console.log(`[BaseGameScene] New block spawned: ${config.id} at(${config.x}, ${config.y})`);
+        // console.log(`[BaseGameScene] New block spawned: ${config.id} at(${config.x}, ${config.y})`);
     }
 
     protected handleTriggerButtonCollision(labelA: string, labelB: string): void {
@@ -1076,7 +1076,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 본인 여부가 바뀌었는지 확인 (닉네임 설정 시점 차이 대응)
             const isLocal = storePlayer.nickname === currentNickname;
             if (existingPlayer && existingPlayer.isLocalPlayer !== isLocal) {
-                console.log(`[${this.getSceneKey()}] Player ${storePlayer.nickname} local status changed, recreating...`);
+                // console.log(`[${this.getSceneKey()}] Player ${storePlayer.nickname} local status changed, recreating...`);
                 this.removePlayer(storePlayer.nickname);
             }
 
@@ -1142,7 +1142,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     // [FIX] 색상 인덱스 동기화 (접속 초기 colorIndex 지연 대응)
                     const newColorIndex = storePlayer.colorIndex ?? index;
                     if (player.colorIndex !== newColorIndex) {
-                        console.log(`[BaseGameScene] Syncing colorIndex for ${player.nickname}: ${player.colorIndex} -> ${newColorIndex}`);
+                        // console.log(`[BaseGameScene] Syncing colorIndex for ${player.nickname}: ${player.colorIndex} -> ${newColorIndex}`);
                         player.setColor(newColorIndex);
                     }
                 } else if (!player) {
@@ -1153,7 +1153,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // 초기 배치가 끝났으므로 플래그 해제 (이후의 sync는 서버 좌표를 따름)
         if (this.isInitialPlacement && storePlayers.length > 0) {
-            console.log(`[BaseGameScene] Initial placement complete for ${storePlayers.length} players.`);
+            // console.log(`[BaseGameScene] Initial placement complete for ${storePlayers.length} players.`);
             this.isInitialPlacement = false;
         }
 
@@ -1165,7 +1165,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         currentKeys.forEach(nickname => {
             if (!activeNicknames.has(nickname)) {
-                console.log(`[Sync] Player ${nickname} not in store, removing sprite.`);
+                // console.log(`[Sync] Player ${nickname} not in store, removing sprite.`);
                 this.removePlayer(nickname);
             }
         });
@@ -1191,7 +1191,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const xPos = useSpawn ? spawn.x : (storePlayer.x ?? spawn.x);
         const yPos = useSpawn ? spawn.y : (storePlayer.y ?? spawn.y);
 
-        console.log(`[BaseGameScene] ${this.isInitialPlacement ? 'INITIAL' : 'LATE-JOIN'} spawn for ${storePlayer.nickname} (Idx: ${colorIndex}) at (${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
+        // console.log(`[BaseGameScene] ${this.isInitialPlacement ? 'INITIAL' : 'LATE-JOIN'} spawn for ${storePlayer.nickname} (Idx: ${colorIndex}) at (${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
 
         const config: PlayerConfig = {
             id: storePlayer.nickname,  // nickname을 id로 사용 (서버와 일치)
@@ -1202,7 +1202,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             isLocalPlayer
         };
 
-        console.log(`[${this.getSceneKey()}] Adding player: ${storePlayer.nickname}, isHost: ${storePlayer.isHost}, colorIndex: ${colorIndex}, isLocal: ${isLocalPlayer} `);
+        // console.log(`[${this.getSceneKey()}] Adding player: ${storePlayer.nickname}, isHost: ${storePlayer.isHost}, colorIndex: ${colorIndex}, isLocal: ${isLocalPlayer} `);
 
         try {
             const player = new Player(this, config);
@@ -1213,7 +1213,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 저장된 저주가 있다면 복구 (drain 제외)
             const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.nickname);
             if (savedCurseId) {
-                console.log(`[Curse] Restoring saved curse '${savedCurseId}' for ${storePlayer.nickname}`);
+                // console.log(`[Curse] Restoring saved curse '${savedCurseId}' for ${storePlayer.nickname}`);
                 player.applyCurse(savedCurseId);
             }
 
@@ -1223,7 +1223,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (isLocalPlayer) {
                 this.myPlayerId = storePlayer.nickname;
             }
-            console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname} at(${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
+            // console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname} at(${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
         } catch (error) {
             console.warn(`[${this.getSceneKey()}] Failed to add player: `, error);
         }
@@ -1235,7 +1235,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             player.destroy();
             this.players.delete(nickname);
             BaseGameScene.persistentCurses.delete(nickname);
-            console.log(`[${this.getSceneKey()}] Player removed: ${nickname} `);
+            // console.log(`[${this.getSceneKey()}] Player removed: ${nickname} `);
         }
     }
 
@@ -1405,9 +1405,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const queue = [startLabel];
         const visited = new Set<string>();
 
-        console.log(`[Chain] Starting from ${startLabel}, direction: ${direction} `);
-        console.log(`[Chain] blockContactLeft: `, [...this.blockContactLeft.entries()]);
-        console.log(`[Chain] blockContactRight: `, [...this.blockContactRight.entries()]);
+        // console.log(`[Chain] Starting from ${startLabel}, direction: ${direction} `);
+        // console.log(`[Chain] blockContactLeft: `, [...this.blockContactLeft.entries()]);
+        // console.log(`[Chain] blockContactRight: `, [...this.blockContactRight.entries()]);
 
         while (queue.length > 0) {
             const current = queue.shift()!;
@@ -1424,7 +1424,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 const leftNeighbor = this.blockContactLeft.get(current);
                 const rightNeighbor = this.blockContactRight.get(current);
 
-                console.log(`[Chain] ${current} -> left: ${leftNeighbor}, right: ${rightNeighbor} `);
+                // console.log(`[Chain] ${current} -> left: ${leftNeighbor}, right: ${rightNeighbor} `);
 
                 if (leftNeighbor && !visited.has(leftNeighbor)) {
                     queue.push(leftNeighbor);
@@ -1435,7 +1435,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        console.log(`[Chain] Total blocks in chain: ${chainBlocks.length} `, chainLabels);
+        // console.log(`[Chain] Total blocks in chain: ${chainBlocks.length} `, chainLabels);
 
         // 2. 체인 전체의 밀기 인원 합산 (방향별 상쇄)
         let totalLeftPushers = 0;
@@ -1814,7 +1814,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         /* [DEBUG] 입력 상태 및 속도 로깅 */
         /*
         if (this.game.loop.frame % 60 === 0) {
-            console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
+            // console.log(`[Input] Left:${leftKey.isDown}, Right:${rightKey.isDown}, Jump:${jumpKey.isDown}, Vel:(${velocity.x.toFixed(2)}, ${velocity.y.toFixed(2)}), Stun:${myPlayer.isStunned}, Dead:${this.isDead}`);
         }
         */
 
@@ -1851,14 +1851,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             let syncAnim = 'idle';
                             const match = this.getSceneKey().match(/Stage(\d+)Scene/);
                             if (match) syncAnim += `|s:${match[1]}`;
-                            console.log(`[Goal] Sending isHidden=false immediately for ${playerLabel}`);
+                            // console.log(`[Goal] Sending isHidden=false immediately for ${playerLabel}`);
                             this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses, false);
                         }
 
                         // [FIX] 골 탈출 시 서버에 알림 (완료 상태 취소)
                         const roomId = this.roomId || useGameStore.getState().roomId;
                         if (roomId && !this.isSoloMode) {
-                            console.log(`[${this.getSceneKey()}] 🔙 Player exited goal! Sending exit signal...`);
+                            // console.log(`[${this.getSceneKey()}] 🔙 Player exited goal! Sending exit signal...`);
                             gameWebSocket.sendStageExit(roomId);
                         }
                         break;
@@ -1872,7 +1872,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         // 저주 상태 체크: 저주가 있으면 입장 불가
                         if (myPlayer.hasCurse()) {
                             this.showFloatingText(myPlayer.getPosition().x, myPlayer.getPosition().y - 40, "저주를 먼저 해제하세요!", 0xff4444);
-                            console.log(`[Goal] Entry denied for ${this.myPlayerId} due to curse.`);
+                            // console.log(`[Goal] Entry denied for ${this.myPlayerId} due to curse.`);
                             enteredGoal = true; // 실제 입장은 아니나 중복 점프 방지용
                             break;
                         }
@@ -1889,17 +1889,17 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                                 let syncAnim = 'idle';
                                 const match = this.getSceneKey().match(/Stage(\d+)Scene/);
                                 if (match) syncAnim += `|s:${match[1]}`;
-                                console.log(`[Goal] Sending isHidden=true immediately for ${playerLabel}`);
+                                // console.log(`[Goal] Sending isHidden=true immediately for ${playerLabel}`);
                                 this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead || myPlayer['_isDead'], curses, true);
                             }
 
                             // [FIX] 개별 클라이언트가 도착하면 즉시 서버로 신호 전송 (서버에서 전원 도착 여부 판별)
-                            console.log(`[${this.getSceneKey()}] 🎉 Player entered goal! Sending signal...`);
+                            // console.log(`[${this.getSceneKey()}] 🎉 Player entered goal! Sending signal...`);
                             this.onStageComplete();
 
                             /*
                             if (goal.isComplete()) {
-                                console.log(`[${this.getSceneKey()}] 🎉 Stage Complete!`);
+                                // console.log(`[${this.getSceneKey()}] 🎉 Stage Complete!`);
                                 this.onStageComplete();
                             }
                             */
@@ -1928,7 +1928,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('TWO'))) {
             if (myPlayer && !myPlayer.hasCurse()) {
                 const randomCurse = getRandomCurseId();
-                console.log(`[Curse] Applying random curse: ${randomCurse} `);
+                // console.log(`[Curse] Applying random curse: ${randomCurse} `);
                 myPlayer.applyCurse(randomCurse);
 
                 // Persistence (except drain)
@@ -1954,21 +1954,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 1. 해당 인덱스에 명시적으로 할당된 스폰 포인트 검색
         const specificSpawn = this.spawnPoints.find(p => p.playerIndex === playerIndex);
         if (specificSpawn) {
-            console.log(`[BaseGameScene] Found specific spawn point for Index ${playerIndex}: (${specificSpawn.x}, ${specificSpawn.y})`);
+            // console.log(`[BaseGameScene] Found specific spawn point for Index ${playerIndex}: (${specificSpawn.x}, ${specificSpawn.y})`);
             return { x: specificSpawn.x, y: specificSpawn.y };
         }
 
         // 2. 기본(isDefault) 스폰 포인트 검색
         const defaultSpawn = this.spawnPoints.find(p => p.isDefault);
         if (defaultSpawn) {
-            console.log(`[BaseGameScene] No specific spawn for Index ${playerIndex}, using default: (${defaultSpawn.x}, ${defaultSpawn.y})`);
+            // console.log(`[BaseGameScene] No specific spawn for Index ${playerIndex}, using default: (${defaultSpawn.x}, ${defaultSpawn.y})`);
             return { x: defaultSpawn.x, y: defaultSpawn.y };
         }
 
         // 3. 아무 스폰 포인트나 첫 번째 것 반환
         if (this.spawnPoints.length > 0) {
             const first = this.spawnPoints[0];
-            console.log(`[BaseGameScene] No default spawn found, using first available point: (${first.x}, ${first.y})`);
+            // console.log(`[BaseGameScene] No default spawn found, using first available point: (${first.x}, ${first.y})`);
             return { x: first.x, y: first.y };
         }
 
@@ -1988,7 +1988,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
-        console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
+        // console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
 
         // [FIX] roomId가 설정되지 않았을 경우 Store에서 가져옴
         const roomId = this.roomId || useGameStore.getState().roomId;
@@ -2134,7 +2134,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
 
     shutdown() {
-        console.log(`[${this.getSceneKey()}] Shutdown triggered, cleaning up...`);
+        // console.log(`[${this.getSceneKey()}] Shutdown triggered, cleaning up...`);
 
         // [CRITICAL FIX] 글로벌 이벤트 리스너 제거
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);

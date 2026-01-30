@@ -61,7 +61,7 @@ export default function CameraArea() {
         }
 
         const connectLiveKit = async () => {
-            console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
+            // console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
             setIsLiveKitConnecting(true);
             try {
                 liveKitService.setLocalVideoElement(localVideoRef.current);

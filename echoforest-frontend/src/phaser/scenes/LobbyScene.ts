@@ -49,7 +49,7 @@ export default class LobbyScene extends BaseGameScene {
     }
 
     create() {
-        console.log('[LobbyScene] Initializing map from lobby_map.tmj using MapManager');
+        // console.log('[LobbyScene] Initializing map from lobby_map.tmj using MapManager');
 
         // MapManager 초기화
         this.mapManager = new MapManager(this, 'lobby_map');
@@ -64,7 +64,7 @@ export default class LobbyScene extends BaseGameScene {
         // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
         this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
             .then(() => {
-                console.log('[LobbyScene] Async map initialization complete');
+                // console.log('[LobbyScene] Async map initialization complete');
                 super.create();
             });
     }

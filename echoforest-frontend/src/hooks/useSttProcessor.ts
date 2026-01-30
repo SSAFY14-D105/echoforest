@@ -12,9 +12,6 @@ import { useSttStore } from '../store/useSttStore';
 import { useGameStore } from '../store/useGameStore';
 import { sttWorkerService, type WorkerOutMessage } from '../socket/SttWorkerService';
 
-// 로깅
-const log = (msg: string, ...args: unknown[]) => console.log(`✅[STT] ${msg}`, ...args);
-
 export interface UseSttProcessorReturn {
     isListening: boolean;
     transcript: string;
@@ -66,11 +63,9 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // Worker 결과 핸들러
     const handleWorkerResult = useCallback((message: WorkerOutMessage) => {
-        log(`📩 Worker 메시지 수신: ${message.type}`);
 
         switch (message.type) {
             case 'POSITIVE_DETECTED':
-                log(`💖 긍정어 핸들러 호출: ${message.word}, isCursed=${message.isCursed}`);
                 onPositiveDetected(message.word, message.isCursed);
                 break;
 
@@ -96,7 +91,6 @@ export function useSttProcessor(): UseSttProcessorReturn {
     useEffect(() => {
         if (workerInitializedRef.current) return;
 
-        log('🚀 Worker 초기화');
         sttWorkerService.initialize();
         workerInitializedRef.current = true;
 
@@ -107,7 +101,6 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // 결과 핸들러 등록 (handleWorkerResult 변경 시 재등록)
     useEffect(() => {
-        log('📝 Handler 등록');
         const cleanup = sttWorkerService.onResult(handleWorkerResult);
         return cleanup;
     }, [handleWorkerResult]);
@@ -123,9 +116,6 @@ export function useSttProcessor(): UseSttProcessorReturn {
         const stageChanged = currentStage !== prevStageRef.current && currentStage !== null;
 
         if (gameJustStarted || stageChanged) {
-            log(`🎮 게임 상태 변경 감지 - 음성 인식 재시작`);
-            log(`  └ isGameStarted: ${prevGameStartedRef.current} → ${isGameStarted}`);
-            log(`  └ currentStage: ${prevStageRef.current} → ${currentStage}`);
 
             // Worker 상태 초기화
             sttWorkerService.reset();
@@ -169,7 +159,6 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // 수동 재시작 함수
     const restartListening = useCallback(() => {
-        log('🔄 수동 재시작 요청');
         startListening();
     }, [startListening]);
 

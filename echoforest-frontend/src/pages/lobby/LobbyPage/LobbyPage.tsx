@@ -25,19 +25,19 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        console.log('🔌 로비: 기존 연결 정리 중...');
+        // console.log('🔌 로비: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      console.log('🔌 로비: 웹소켓 연결 시도...');
+      // console.log('🔌 로비: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          console.log('✅ 방 생성됨:', roomCode);
+          // console.log('✅ 방 생성됨:', roomCode);
           joinGame(roomCode, true);
         }
       });
@@ -64,20 +64,20 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        console.log('🔌 솔로: 기존 연결 정리 중...');
+        // console.log('🔌 솔로: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      console.log('🔌 솔로: 웹소켓 연결 시도...');
+      // console.log('🔌 솔로: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
-      console.log('✅ 솔로: WebSocket 연결 완료');
+      // console.log('✅ 솔로: WebSocket 연결 완료');
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
+          // console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
 
           useGameStore.getState().joinGame(roomCode, true);
           useGameStore.setState({
@@ -96,7 +96,7 @@ export default function LobbyPage() {
       });
 
       gameWebSocket.createRoom();
-      console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
+      // console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
 
     } catch (error) {
       console.error('솔로 모드 시작 실패:', error);

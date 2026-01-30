@@ -46,7 +46,7 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Stage1Scene] Initializing map from stage_01.tmj using MapManager');
+        // console.log('[Stage1Scene] Initializing map from stage_01.tmj using MapManager');
 
         // MapManager 초기화
         this.mapManager = new MapManager(this, 'stage_01_map');
@@ -55,7 +55,7 @@ export default class Stage1Scene extends BaseGameScene {
         // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
         this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
             .then(() => {
-                console.log('[Stage1Scene] Async map initialization complete');
+                // console.log('[Stage1Scene] Async map initialization complete');
                 super.create();
             });
     }
@@ -65,7 +65,7 @@ export default class Stage1Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Stage1Scene] 🎉 Stage 1 Complete! Requesting transition...');
+        // console.log('[Stage1Scene] 🎉 Stage 1 Complete! Requesting transition...');
 
         // 멀티플레이: 서버에 클리어 신호 전송 (부모 클래스 로직 사용)
         super.onStageComplete();

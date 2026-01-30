@@ -131,7 +131,7 @@ export class LiveKitService {
     async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
-        console.log(`[LiveKitService] 수동 연결 시도 #${myId} - Token 제공됨`);
+        // console.log(`[LiveKitService] 수동 연결 시도 #${myId} - Token 제공됨`);
 
         try {
             // 2. Room 생성 및 연결 (공통 로직 Reuse 권장되지만, 중복 방지를 위해 여기도 구현)
@@ -153,7 +153,7 @@ export class LiveKitService {
                 return;
             }
 
-            console.log('✅ LiveKit Room 연결 성공 (수동 토큰)');
+            // console.log('✅ LiveKit Room 연결 성공 (수동 토큰)');
             this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
@@ -199,7 +199,7 @@ export class LiveKitService {
         });
 
         this.room.on(RoomEvent.Disconnected, () => {
-            console.log('🔌 연결 종료');
+            // console.log('🔌 연결 종료');
             this.onDisconnectedCallback?.();
         });
     }
@@ -242,14 +242,14 @@ export class LiveKitService {
     async connect(roomName: string, userId: string, username: string): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
-        console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${roomName}, User: ${username}`);
+        // console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${roomName}, User: ${username}`);
 
         try {
             const { token } = await getLiveKitToken({ roomId: roomName, userId, username });
 
             if (myId !== this.connectionOpId) return;
 
-            console.log('✅ LiveKit 토큰 발급 성공');
+            // console.log('✅ LiveKit 토큰 발급 성공');
 
             this.room = new Room({
                 adaptiveStream: true,
@@ -268,7 +268,7 @@ export class LiveKitService {
                 return;
             }
 
-            console.log('✅ LiveKit Room 연결 성공');
+            // console.log('✅ LiveKit Room 연결 성공');
             await this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
@@ -278,7 +278,7 @@ export class LiveKitService {
                 this.onErrorCallback?.(err?.message || 'LiveKit 연결에 실패했습니다.');
                 throw err;
             } else {
-                console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
+                // console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
             }
         }
     }
@@ -287,7 +287,7 @@ export class LiveKitService {
     disconnect() {
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
-            console.log('[LiveKitService] 연결 종료');
+            // console.log('[LiveKitService] 연결 종료');
             this.room.disconnect();
             this.room = null;
         }
@@ -357,7 +357,7 @@ export class LiveKitService {
                         width: { ideal: resolution.width },
                         height: { ideal: resolution.height }
                     });
-                    console.log(`[LiveKitService] Video resolution changed to ${preset}`);
+                    // console.log(`[LiveKitService] Video resolution changed to ${preset}`);
                 }
             }
         } catch (error) {
@@ -376,7 +376,7 @@ export class LiveKitService {
             // 카메라가 꺼져있으면 강제로 켜기
             if (!this.room.localParticipant.isCameraEnabled) {
                 await this.room.localParticipant.setCameraEnabled(true);
-                console.log('[LiveKitService] Camera forced on for ending mission');
+                // console.log('[LiveKitService] Camera forced on for ending mission');
             }
             return true;
         } catch (error) {
@@ -392,7 +392,7 @@ export class LiveKitService {
         // 원래 사용자 설정대로 복원
         if (!this._cameraEnabledPreference) {
             await this.room.localParticipant.setCameraEnabled(false);
-            console.log('[LiveKitService] Camera restored to user preference (off)');
+            // console.log('[LiveKitService] Camera restored to user preference (off)');
         }
     }
 
@@ -410,7 +410,7 @@ export class LiveKitService {
         const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
         if (cameraPublication?.track) {
             cameraPublication.track.attach(videoElement);
-            console.log('[LiveKitService] Local video attached');
+            // console.log('[LiveKitService] Local video attached');
             return true;
         }
 
@@ -428,7 +428,7 @@ export class LiveKitService {
         const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
         if (cameraPublication?.track) {
             cameraPublication.track.detach(videoElement);
-            console.log('[LiveKitService] Local video detached');
+            // console.log('[LiveKitService] Local video detached');
         }
     }
 }

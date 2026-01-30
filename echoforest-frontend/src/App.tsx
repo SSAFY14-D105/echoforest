@@ -19,7 +19,7 @@ export default function App() {
       console.warn('[App] Token expired. Logging out.');
       useGameStore.getState().logout(); // 스토어의 로그아웃 액션 호출 (localStorage 정리)
     } else if (token && storedNickname && !nickname) {
-      console.log('[App] Session restored:', storedNickname);
+      // console.log('[App] Session restored:', storedNickname);
       setNickname(storedNickname);
     }
     setIsInitializing(false);
