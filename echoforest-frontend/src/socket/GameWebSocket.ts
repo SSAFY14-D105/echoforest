@@ -57,8 +57,7 @@ export type MessageType =
     // 엔딩 미션 (서버 동기화)
     | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
     | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
-    // 강제 동기화 (Race Condition 대응)
-    | 'SYNC_REQUEST';         // Client->Server: 플레이어 목록 재동기화 요청
+
 
 // ... (Interface declarations remain same) ...
 
