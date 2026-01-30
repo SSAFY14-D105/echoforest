@@ -26,6 +26,9 @@ public class PlayerState {
     // [NEW] 숨김 상태 (골인 등)
     private boolean isHidden = false;
 
+    // [NEW] 엔딩 미션 완료 여부 (각 플레이어별 추적)
+    private boolean isEndingMissionComplete = false;
+
     private String anim = "idle_down";
 
     // 슬롯 번호 (0: 초록, 1: 파랑, 2: 노랑, 3: 보라)
