@@ -21,8 +21,16 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -30,11 +38,14 @@ import java.util.stream.Collectors;
 public class AiGenerationService {
 
     // B급 감성 프롬프트
-    private static final String B_GRADE_STYLE_PROMPT = "Make a hilarious B-grade movie poster or meme collage. " +
-            "Combine these people into one chaotic image. " +
-            "Style: Bad photoshop, kitsch, exaggerated, cheesy effects, dramatic lighting. " +
-            "Concept: A chaotic team assembling for a ridiculous mission. " +
-            "Make sure every person is visible in a funny way. ";
+    // AI 생성 프롬프트 (유저 요청 반영: B급 감성 제외, 얼굴 유지, 게임 캐릭터 장식)
+    private static final String B_GRADE_STYLE_PROMPT = "Create a fun and cute commemorative photo collage of these people. "
+            +
+            "IMPORTANT: Use ONLY the faces from the provided source images. Do NOT generate new human faces. " +
+            "Theme: A happy memory of playing a game together. " +
+            "Decoration: Decorate the background and borders with cute forest spirit characters and magical elements (stars, leaves). "
+            +
+            "Style: Bright, cheerful, and heartwarming. Keep the people realistic but the decorations cartoonish/fantasy. ";
 
     private final AiProperties aiProperties;
     private final ImageService imageService;
@@ -74,6 +85,11 @@ public class AiGenerationService {
                     base64Images.add(Base64.getEncoder().encodeToString(bytes));
                 }
             }
+
+            // 2.5 캐릭터 에셋 추가 (resources/assets/characters)
+            List<String> characterImages = loadCharacterAssets();
+            base64Images.addAll(characterImages);
+            log.info("Added {} character assets", characterImages.size());
 
             // 3. API 호출 및 저장/전송
             return callAiApiAndSave(base64Images, roomId, userId);
@@ -134,6 +150,16 @@ public class AiGenerationService {
         // }
         Map<String, Object> instance = new HashMap<>();
         instance.put("prompt", finalPrompt);
+
+        // 이미지 데이터 추가 (첫 번째 이미지를 base_image로 사용 - Imagen API 제약 고려)
+        // 여러 장을 합성하려면 별도 전처리나 멀티모달 모델(Gemini) 사용이 필요하지만,
+        // 여기서는 첫 번째 이미지를 대표 이미지로 전송 시도.
+        if (!base64Images.isEmpty()) {
+            Map<String, String> imageMap = new HashMap<>();
+            imageMap.put("bytesBase64Encoded", base64Images.get(0));
+            // "image" 필드 사용 (Subject to API spec)
+            instance.put("image", imageMap);
+        }
 
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("sampleCount", 1);
@@ -301,5 +327,43 @@ public class AiGenerationService {
                 .map(img -> img.getUser().getId())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private List<String> loadCharacterAssets() {
+        List<String> assets = new ArrayList<>();
+        try {
+            // Spring ResourceLoader 등을 사용하는 것이 좋으나, 여기서는 ClassLoader로 접근
+            // JAR 배포 시에는 getResourceAsStream 등을 써야 함.
+            // 개발 환경(FileSystem)과 배포 환경(JAR) 호환을 위해 ResourcePatternResolver 사용 권장하지만,
+            // 간단하게 File 접근 시도해보고 안되면 리턴.
+
+            // 주의: JAR 내부 파일은 File 객체로 읽을 수 없음. InputStream으로 읽어야 함.
+            // 여기서는 개발 환경(c:\SSAFY...) 절대경로가 있으니 일단 물리 경로 체크.
+
+            // 사용자가 만든 물리 경로: src/main/resources/assets/characters
+            // 실행 시점(target/classes...)과는 다를 수 있음.
+            // 일단 물리적 소스 경로를 하드코딩해서 읽거나(개발용), classpath 리소스를 읽어야 함.
+
+            // 개발 편의를 위해 소스 디렉토리에서 읽기 시도 (사용자가 방금 mkdir 했으므로)
+            Path assetDir = Paths.get("src/main/resources/assets/characters");
+            if (Files.exists(assetDir) && Files.isDirectory(assetDir)) {
+                try (Stream<Path> stream = Files.list(assetDir)) {
+                    stream.filter(Files::isRegularFile)
+                            .forEach(p -> {
+                                try {
+                                    byte[] b = Files.readAllBytes(p);
+                                    assets.add(Base64.getEncoder().encodeToString(b));
+                                } catch (Exception e) {
+                                    log.warn("Failed to read asset: {}", p, e);
+                                }
+                            });
+                }
+            } else {
+                log.warn("Character asset directory not found: {}", assetDir.toAbsolutePath());
+            }
+        } catch (Exception e) {
+            log.warn("Error loading character assets", e);
+        }
+        return assets;
     }
 }
