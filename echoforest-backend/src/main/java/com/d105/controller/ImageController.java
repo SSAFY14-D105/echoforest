@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -102,5 +104,24 @@ public class ImageController {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /**
+     * 이미지 다운로드
+     */
+    @Operation(summary = "이미지 다운로드", description = "imageId로 이미지를 다운로드합니다.")
+    @GetMapping("/download/{imageId}")
+    public ResponseEntity<Resource> downloadImage(@PathVariable Long imageId) {
+        Resource resource = imageService.downloadImage(imageId);
+
+        // 파일명 추출 (URL 인코딩 처리 등은 생략, 기본 ASCII 혹은 브라우저 자동처리 의존)
+        String fileName = resource.getFilename();
+        if (fileName == null)
+            fileName = "image.png";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .body(resource);
     }
 }
