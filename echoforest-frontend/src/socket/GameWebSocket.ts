@@ -118,6 +118,7 @@ class GameWebSocket {
     private onErrorHandler: ((error: string) => void) | null = null;
     private onCloseHandler: (() => void) | null = null;
     private isLoggingOut: boolean = false; // 중복 로그아웃 방지 플래그
+    private messageQueue: GameMessage[] = []; // [FIX] 연결 중 메시지 큐
 
     private constructor() {
         // private constructor for singleton
@@ -207,6 +208,7 @@ class GameWebSocket {
 
                 this.ws.onopen = () => {
                     // console.log('✅ WebSocket 연결됨');
+                    this.flushMessageQueue(); // [FIX] 대기 중이던 메시지 전송
                     this.onConnectHandler?.();
                     resolve();
                 };
@@ -276,10 +278,27 @@ class GameWebSocket {
                 //console.log('📤 전송:', message);
             }
             this.ws.send(JSON.stringify(message));
+        } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+            // [FIX] 연결 중일 때 중요 메시지는 큐에 저장
+            if (message.type === 'JOIN' || message.type === 'CREATE' || message.type === 'READY' || message.type === 'START_GAME') {
+                console.log('[GameWebSocket] Queueing message until connected:', message.type);
+                this.messageQueue.push(message);
+            }
         } else {
             // MOVE 메시지는 빈번하므로 연결 끊김 경고를 로그에 남기지 않음 (스팸 방지)
             if (message.type !== 'MOVE') {
                 // console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+            }
+        }
+    }
+
+    // [FIX] 대기 중 메시지 전송
+    private flushMessageQueue() {
+        while (this.messageQueue.length > 0) {
+            const msg = this.messageQueue.shift();
+            if (msg) {
+                console.log('[GameWebSocket] Flushing queued message:', msg.type);
+                this.send(msg);
             }
         }
     }
