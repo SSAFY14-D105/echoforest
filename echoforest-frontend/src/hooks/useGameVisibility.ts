@@ -17,12 +17,12 @@ export function useGameVisibility() {
         const handleVisibilityChange = () => {
             if (document.hidden) {
                 // 화면 숨겨짐 (최소화/탭 이동)
-                console.log('🙈 게임 화면 숨겨짐 -> 일시정지 요청');
+                // console.log('🙈 게임 화면 숨겨짐 -> 일시정지 요청');
                 setIsBackground(true);
                 // Note: PAUSE_GAME 전송은 GamePage.tsx에서 isBackground 상태 변화 감지하여 처리
             } else {
                 // 화면 복귀
-                console.log('👀 게임 화면 복귀 -> 재개 요청');
+                // console.log('👀 게임 화면 복귀 -> 재개 요청');
                 setIsBackground(false);
                 // Note: RESUME_GAME 전송은 GamePage.tsx에서 처리
             }

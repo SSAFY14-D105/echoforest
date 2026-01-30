@@ -63,12 +63,12 @@ export default function StagePlayView({
     // 서버로부터 엔딩 미션 시작/종료 이벤트 수신
     useEffect(() => {
         const handleEndingMissionStart = () => {
-            console.log('[StagePlayView] Received ENDING_MISSION_START from server');
+            // console.log('[StagePlayView] Received ENDING_MISSION_START from server');
             setEndingMission(true);
         };
 
         const handleEndingMissionEnd = () => {
-            console.log('[StagePlayView] Received ENDING_MISSION_END from server');
+            // console.log('[StagePlayView] Received ENDING_MISSION_END from server');
             setEndingMission(false);
             onClearStage(currentStage);
         };
@@ -84,7 +84,7 @@ export default function StagePlayView({
 
     // 엔딩 미션 시 이미지 캡처 완료 핸들러
     const handleCaptureComplete = async (captures: Blob[]) => {
-        console.log('[StagePlayView] handleCaptureComplete called with', captures.length, 'captures');
+        // console.log('[StagePlayView] handleCaptureComplete called with', captures.length, 'captures');
 
         if (captures.length === 0) {
             console.warn('[StagePlayView] No captures to upload!');
@@ -98,11 +98,11 @@ export default function StagePlayView({
             const loginId = localStorage.getItem('loginId');
             const userId = loginId ? parseInt(loginId, 10) : 0;
 
-            console.log('[StagePlayView] Upload params:', { loginId, userId, stageNumber, roomId });
+            // console.log('[StagePlayView] Upload params:', { loginId, userId, stageNumber, roomId });
 
             if (!userId || isNaN(userId) || userId <= 0) {
                 console.warn('[StagePlayView] loginId not found in localStorage, skipping upload');
-                console.log('[StagePlayView] Available localStorage keys:', Object.keys(localStorage));
+                // console.log('[StagePlayView] Available localStorage keys:', Object.keys(localStorage));
                 return;
             }
 
@@ -110,16 +110,16 @@ export default function StagePlayView({
             // TODO: 백엔드와 협의하여 실제 userId를 동기화
             const participantUserIds: number[] = [];
 
-            console.log('[StagePlayView] Calling uploadAllEndingCaptures...');
-            const results = await uploadAllEndingCaptures(
+            // console.log('[StagePlayView] Calling uploadAllEndingCaptures...');
+            await uploadAllEndingCaptures(
                 captures,
                 userId,
                 stageNumber,
                 participantUserIds,
                 roomId
             );
-            console.log('[StagePlayView] Upload results:', results);
-            console.log('[StagePlayView] Ending captures uploaded successfully');
+            // console.log('[StagePlayView] Upload results:', results);
+            // console.log('[StagePlayView] Ending captures uploaded successfully');
         } catch (error) {
             console.error('[StagePlayView] Failed to upload captures:', error);
         }

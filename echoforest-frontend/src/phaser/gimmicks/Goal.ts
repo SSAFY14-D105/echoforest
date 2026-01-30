@@ -78,13 +78,13 @@ export class Goal {
     public playerNear(playerId: string): void {
         if (!this._isVisible) return;
         this.playersNearGoal.add(playerId);
-        console.log(`[Goal] Player near: ${playerId}`);
+        // console.log(`[Goal] Player near: ${playerId}`);
     }
 
     // 플레이어가 Goal 영역에서 벗어남 (충돌 종료)
     public playerAway(playerId: string): void {
         this.playersNearGoal.delete(playerId);
-        console.log(`[Goal] Player away: ${playerId}`);
+        // console.log(`[Goal] Player away: ${playerId}`);
     }
 
     // 플레이어가 Goal 근처에 있는지 확인
@@ -102,7 +102,7 @@ export class Goal {
         }
 
         this.playersEnteredGoal.add(playerId);
-        console.log(`[Goal] Player entered goal: ${playerId}, entered: ${this.playersEnteredGoal.size}/${this.requiredPlayers}`);
+        // console.log(`[Goal] Player entered goal: ${playerId}, entered: ${this.playersEnteredGoal.size}/${this.requiredPlayers}`);
         return true;
     }
 
@@ -113,7 +113,7 @@ export class Goal {
         }
 
         this.playersEnteredGoal.delete(playerId);
-        console.log(`[Goal] Player exited goal: ${playerId}, entered: ${this.playersEnteredGoal.size}/${this.requiredPlayers}`);
+        // console.log(`[Goal] Player exited goal: ${playerId}, entered: ${this.playersEnteredGoal.size}/${this.requiredPlayers}`);
         return true;
     }
 

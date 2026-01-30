@@ -14,4 +14,4 @@ if (!API_BASE_URL || !LIVEKIT_URL) {
     console.error('❌ 환경 변수가 설정되지 않았습니다! .env 파일을 확인해주세요.');
 }
 
-console.log('🔧 Frontend Config Loaded:', { API_BASE_URL, LIVEKIT_URL });
+// console.log('🔧 Frontend Config Loaded:', { API_BASE_URL, LIVEKIT_URL });

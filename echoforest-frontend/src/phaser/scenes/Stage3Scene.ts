@@ -47,7 +47,7 @@ export default class Stage3Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Stage3Scene] Initializing map from stage_03.tmj using MapManager');
+        // console.log('[Stage3Scene] Initializing map from stage_03.tmj using MapManager');
 
         // MapManager 초기화
         this.mapManager = new MapManager(this, 'stage_03_map');
@@ -56,7 +56,7 @@ export default class Stage3Scene extends BaseGameScene {
         // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
         this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
             .then(() => {
-                console.log('[Stage3Scene] Async map initialization complete');
+                // console.log('[Stage3Scene] Async map initialization complete');
                 super.create();
             });
     }
@@ -66,7 +66,7 @@ export default class Stage3Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Stage3Scene] 🎉 Stage 3 Complete! Requesting transition...');
+        // console.log('[Stage3Scene] 🎉 Stage 3 Complete! Requesting transition...');
         super.onStageComplete();
     }
 }

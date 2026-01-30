@@ -7,21 +7,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// === 로깅 헬퍼 (통일된 접두사) ===
-const LOG_PREFIX = '✅[STT]';
-const log = {
-    info: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ${msg}`, ...args),
-    success: (msg: string, ...args: any[]) => console.log(`${LOG_PREFIX} ✅ ${msg}`, ...args),
-    warn: (msg: string, ...args: any[]) => console.warn(`${LOG_PREFIX} ⚠️ ${msg}`, ...args),
-    error: (msg: string, ...args: any[]) => console.error(`${LOG_PREFIX} ❌ ${msg}`, ...args),
-    final: (text: string) => {
-        console.log(`${LOG_PREFIX} 📝 [최종 인식] "${text}"`);
-    },
-    state: (event: string) => {
-        console.log(`${LOG_PREFIX} 🔄 ${event}`);
-    }
-};
-
 // Web Speech API 타입 정의
 interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList;
@@ -137,12 +122,11 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     // 초기화
     useEffect(() => {
         if (!isSupported) {
-            log.error('브라우저가 음성 인식을 지원하지 않습니다');
+            console.error('브라우저가 음성 인식을 지원하지 않습니다');
             setError('이 브라우저는 음성 인식을 지원하지 않습니다.');
             return;
         }
 
-        log.info('음성 인식 초기화');
 
         const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognitionClass();
@@ -153,7 +137,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
-            log.success('음성 인식 시작됨 - 마이크 대기 중');
             setIsListening(true);
             setError(null);
             restartAttemptRef.current = 0;
@@ -170,7 +153,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
                 if (result.isFinal) {
                     // 최종 결과만 로깅
                     finalTranscript += text.trim();
-                    log.final(text.trim());
                 } else {
                     // 중간 결과는 로그 없이 상태만 업데이트
                     interimText += text;
@@ -194,29 +176,27 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
                     // 침묵은 정상 - 로그 안 찍음
                     break;
                 case 'aborted':
-                    log.state('음성 인식 중지됨');
                     break;
                 case 'audio-capture':
-                    log.warn('마이크 접근 불가');
                     setError('마이크에 접근할 수 없습니다.');
                     break;
                 case 'network':
-                    log.warn('네트워크 오류 - 재시작 시도');
+                    console.warn('네트워크 오류 - 재시작 시도');
                     break;
                 case 'not-allowed':
-                    log.error('마이크 권한 거부됨');
+                    console.error('마이크 권한 거부됨');
                     setError('마이크 권한이 거부되었습니다.');
                     isStoppedManuallyRef.current = true;
                     setIsListening(false);
                     return;
                 case 'service-not-allowed':
-                    log.error('음성 인식 서비스 불가');
+                    console.error('음성 인식 서비스 불가');
                     setError('음성 인식 서비스를 사용할 수 없습니다.');
                     isStoppedManuallyRef.current = true;
                     setIsListening(false);
                     return;
                 default:
-                    log.error(`오류: ${errorMsg}`);
+                    console.error(`오류: ${errorMsg}`);
                     setError(errorMsg);
             }
         };
@@ -226,7 +206,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
             setInterimTranscript('');
 
             if (!isStoppedManuallyRef.current) {
-                log.state('자동 재시작 중...');
                 attemptRestart();
             }
         };
@@ -249,7 +228,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     const startListening = useCallback(() => {
         if (!recognitionRef.current || !isSupported) return;
 
-        log.info('수동 시작');
+        console.info('수동 시작');
         cleanup();
         isStoppedManuallyRef.current = false;
         restartAttemptRef.current = 0;
@@ -266,7 +245,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     const stopListening = useCallback(() => {
         if (!recognitionRef.current) return;
 
-        log.info('수동 중지');
+        console.info('수동 중지');
         cleanup();
         isStoppedManuallyRef.current = true;
         recognitionRef.current.stop();

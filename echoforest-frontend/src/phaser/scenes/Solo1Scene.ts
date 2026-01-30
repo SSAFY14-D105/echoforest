@@ -1,4 +1,4 @@
-import BaseGameScene, { PHYSICS } from './BaseGameScene';
+import BaseGameScene from './BaseGameScene';
 import MapManager from '../utils/MapManager';
 import { useGameStore } from '../../store/useGameStore';
 
@@ -41,14 +41,14 @@ export default class Solo1Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo1Scene] Initializing map from test_map.tmj using MapManager');
+        // console.log('[Solo1Scene] Initializing map from test_map.tmj using MapManager');
 
         // MapManager 초기화
         this.mapManager = new MapManager(this, 'test_map');
         this.offsetY = this.mapManager.getOffsetY();
 
         // 맵 생성 및 초기화 (배경 이미지 포함)
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image');
 
         super.create();
     }
@@ -67,7 +67,7 @@ export default class Solo1Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo1Scene] 🎉 Solo mode stage 1 complete! Moving to Solo 2.');
+        // console.log('[Solo1Scene] 🎉 Solo mode stage 1 complete! Moving to Solo 2.');
         useGameStore.getState().selectStage('SOLO_2');
     }
 }

@@ -3,7 +3,7 @@
  * 백엔드에서 토큰을 발급받는 함수
  */
 
-import { API_BASE_URL, LIVEKIT_URL } from '../config';
+import { LIVEKIT_URL } from '../config';
 import { httpClient } from './httpClient';
 
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://i14d105.p.ssafy.io/api'; // config.ts로 이동됨
@@ -32,14 +32,14 @@ export interface LiveKitTokenResponse {
 export async function fetchLiveKitToken(
     request: LiveKitTokenRequest
 ): Promise<LiveKitTokenResponse> {
-    console.log('📡 API 호출:', `${API_BASE_URL}/livekit/token`, request);
+    // console.log('📡 API 호출:', `${API_BASE_URL}/livekit/token`, request);
 
     const response = await httpClient('/livekit/token', {
         method: 'POST',
         body: JSON.stringify(request),
     });
 
-    console.log('📡 API 응답 상태:', response.status, response.statusText);
+    // console.log('📡 API 응답 상태:', response.status, response.statusText);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -48,7 +48,7 @@ export async function fetchLiveKitToken(
     }
 
     const data = await response.json();
-    console.log('✅ 토큰 발급 성공');
+    // console.log('✅ 토큰 발급 성공');
     return data;
 }
 

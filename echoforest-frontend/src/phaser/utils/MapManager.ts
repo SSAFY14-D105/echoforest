@@ -28,7 +28,7 @@ export default class MapManager {
         const mapPixelHeightScaled = this.map.heightInPixels * this.mapScale;
         this.offsetY = Math.max(0, this.scene.scale.height - mapPixelHeightScaled);
 
-        console.log(`[MapManager] Initialized for map: ${mapKey} (Scale: ${this.mapScale}, OffsetY: ${this.offsetY})`);
+        // console.log(`[MapManager] Initialized for map: ${mapKey} (Scale: ${this.mapScale}, OffsetY: ${this.offsetY})`);
     }
 
     public getMap(): Phaser.Tilemaps.Tilemap {
@@ -74,7 +74,7 @@ export default class MapManager {
             await this.createMergedCollisionsAsync(layer);
         }
 
-        console.log(`[MapManager] Async initialization complete for map: ${this.mapKey}`);
+        // console.log(`[MapManager] Async initialization complete for map: ${this.mapKey}`);
     }
 
     /**
@@ -333,7 +333,7 @@ export default class MapManager {
                 );
                 respawn.setScale(this.mapScale);
                 this.scene.spawnPoints.push(respawn);
-                console.log(`[MapManager] Spawn registered: (${centerX}, ${centerY})`);
+                // console.log(`[MapManager] Spawn registered: (${centerX}, ${centerY})`);
                 break;
             }
             case 'Signboard': {
@@ -477,7 +477,7 @@ export default class MapManager {
                 );
                 respawn.setScale(this.mapScale);
                 this.scene.spawnPoints.push(respawn);
-                console.log(`[MapManager] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
+                // console.log(`[MapManager] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
                 break;
             }
         }

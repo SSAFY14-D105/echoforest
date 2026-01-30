@@ -118,21 +118,21 @@ export default function EndingMissionOverlay({
                 ...Object.values(remoteVideoRefs.current)
             ];
 
-            console.log('[EndingMissionOverlay] Video elements collected:', videoElements.length);
-            console.log('[EndingMissionOverlay] Video element details:', videoElements.map((el, i) => ({
-                index: i,
-                exists: !!el,
-                videoWidth: el?.videoWidth,
-                videoHeight: el?.videoHeight,
-                readyState: el?.readyState
-            })));
+            //     console.log('[EndingMissionOverlay] Video elements collected:', videoElements.length);
+            //     console.log('[EndingMissionOverlay] Video element details:', videoElements.map((el, i) => ({
+        //         index: i,
+            //         exists: !!el,
+        //         videoWidth: el?.videoWidth,
+        //         videoHeight: el?.videoHeight,
+        //         readyState: el?.readyState
+        //     })));
 
             const captures = await captureAllParticipants(videoElements);
 
-            console.log('[EndingMissionOverlay] Captures result:', captures.length, 'blobs');
-            captures.forEach((blob, i) => {
-                console.log(`[EndingMissionOverlay] Blob ${i}: size=${blob.size}, type=${blob.type}`);
-            });
+            // console.log('[EndingMissionOverlay] Captures result:', captures.length, 'blobs');
+            // captures.forEach((blob, i) => {
+            //     console.log(`[EndingMissionOverlay] Blob ${i}: size=${blob.size}, type=${blob.type}`);
+            // });
 
             onCaptureComplete?.(captures);
             setCaptureComplete(true);

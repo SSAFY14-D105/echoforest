@@ -89,7 +89,7 @@ export class Lock {
         this.sprite?.setVisible(false);
         if (this.body) this.scene.matter.world.remove(this.body);
 
-        console.log(`[Lock] Unlocked: ${this.id}`);
+        // console.log(`[Lock] Unlocked: ${this.id}`);
     }
 
     public reset(): void {
@@ -104,7 +104,7 @@ export class Lock {
         // 물리 바디 재생성
         this.createBody();
 
-        console.log(`[Lock] Reset: ${this.id}`);
+        // console.log(`[Lock] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {

@@ -44,7 +44,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo2Scene] Initializing new game map');
+        // console.log('[Solo2Scene] Initializing new game map');
 
         this.map = this.make.tilemap({ key: 'solo_2_game_map' });
         // 타일 크기를 64px로 고정 (기본 16px * 4 = 64px)
@@ -266,7 +266,7 @@ export default class Solo2Scene extends BaseGameScene {
                             texture,
                             frame
                         ));
-                        console.log(`[Solo2Scene] Spawn point registered: (${centerX}, ${centerY}) for index: ${playerIndex}`);
+                        // console.log(`[Solo2Scene] Spawn point registered: (${centerX}, ${centerY}) for index: ${playerIndex}`);
                         break;
                     }
                 }
@@ -292,7 +292,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo2Scene] 🎉 Solo mode stage 2 complete!');
+        // console.log('[Solo2Scene] 🎉 Solo mode stage 2 complete!');
         useGameStore.getState().selectStage('SOLO_3');
     }
 }
