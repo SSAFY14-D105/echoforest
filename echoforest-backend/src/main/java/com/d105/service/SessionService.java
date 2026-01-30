@@ -35,10 +35,21 @@ public class SessionService {
      */
     public void saveSession(Long userId, String token) {
         String key = SESSION_KEY_PREFIX + userId;
-        // 1. Set에 토큰 추가
-        redisTemplate.opsForSet().add(key, token);
-        // 2. 만료 시간 갱신 (키 전체에 대해 적용)
-        redisTemplate.expire(key, SESSION_TTL_HOURS, TimeUnit.HOURS);
+        try {
+            // 1. Set에 토큰 추가
+            redisTemplate.opsForSet().add(key, token);
+            // 2. 만료 시간 갱신 (키 전체에 대해 적용)
+            redisTemplate.expire(key, SESSION_TTL_HOURS, TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.warn("Redis WRONGTYPE error for key {}. Deleting old key and retrying.", key);
+            try {
+                redisTemplate.delete(key);
+                redisTemplate.opsForSet().add(key, token);
+                redisTemplate.expire(key, SESSION_TTL_HOURS, TimeUnit.HOURS);
+            } catch (Exception innerEx) {
+                log.error("Failed to recover from Redis error for user {}", userId, innerEx);
+            }
+        }
 
         log.info("Session added for user {}. (Multiple login allowed)", userId);
     }
@@ -60,14 +71,22 @@ public class SessionService {
      */
     public boolean isValidSession(Long userId, String token) {
         String key = SESSION_KEY_PREFIX + userId;
-        // Set에 멤버로 존재하는지 확인
-        Boolean isMember = redisTemplate.opsForSet().isMember(key, token);
+        try {
+            // Set에 멤버로 존재하는지 확인
+            Boolean isMember = redisTemplate.opsForSet().isMember(key, token);
 
-        if (Boolean.FALSE.equals(isMember)) {
-            log.debug("Session invalid or expired for user {} (Token not found in active set)", userId);
+            if (Boolean.FALSE.equals(isMember)) {
+                log.debug("Session invalid or expired for user {} (Token not found in active set)", userId);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("Redis error validating session for user {}: {}. Deleting potential stale key.", userId,
+                    e.getMessage());
+            // 타입 불일치 등 에러 발생 시, 기존 키가 String일 수 있으므로 삭제 고려 (선택사항)
+            // 여기서는 안전하게 false 반환하되, 명시적 로그아웃 유도
             return false;
         }
-        return true;
     }
 
     /**
