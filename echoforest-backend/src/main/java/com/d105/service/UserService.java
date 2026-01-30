@@ -23,6 +23,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final SessionService sessionService;
 
     // 회원가입
     @Transactional
@@ -57,14 +58,22 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        // 3. 토큰 생성
+        // 3. 중복 로그인 방지 (이미 로그인된 경우 차단)
+        if (sessionService.isLoggedIn(user.getUsername())) {
+            throw new IllegalStateException("이미 다른 기기에서 접속 중입니다.");
+        }
+
+        // 4. 토큰 생성
         String token = jwtUtil.createToken(user.getId(), user.getUsername());
 
-        // 4. 로그인 이벤트 발행 (실시간 중복 로그인 처리용)
+        // 5. 세션 저장 (Redis)
+        sessionService.saveSession(user.getUsername(), token);
+
+        // 6. 로그인 이벤트 발행 (실시간 중복 로그인 처리용 - 현재는 로깅용으로 유지)
         eventPublisher
                 .publishEvent(new com.d105.event.UserLoggedInEvent(this, user.getId(), user.getUsername(), token));
 
-        // 5. 토큰과 닉네임을 Map에 담아서 반환
+        // 7. 토큰과 닉네임을 Map에 담아서 반환
         return Map.of(
                 "token", token,
                 "nickname", user.getNickname());
@@ -111,5 +120,10 @@ public class UserService {
                             username, kissCount, curseCount);
                 },
                 () -> log.warn("Failed to update stats: User {} not found", username));
+    }
+
+    // 로그아웃
+    public void logout(String username) {
+        sessionService.removeSession(username);
     }
 }
