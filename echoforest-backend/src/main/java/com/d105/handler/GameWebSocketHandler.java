@@ -111,9 +111,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                     gameService.handleEndingMissionEnd(session, messageDto);
                     break;
                 // ===== 강제 동기화 요청 =====
-                case "SYNC_REQUEST": // 클라이언트 마운트 후 플레이어 목록 재동기화 요청
-                    gameService.handleSyncRequest(session, messageDto);
-                    break;
+
                 default:
                     log.warn("Unknown message type: {}", messageDto.getType());
             }
