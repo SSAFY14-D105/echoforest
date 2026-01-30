@@ -1,6 +1,5 @@
 package com.d105.config;
 
-import com.d105.service.SessionService;
 import com.d105.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,7 +19,6 @@ import java.util.Collections;
 /**
  * JWT 인증 필터
  * - 모든 요청에서 JWT 토큰 검증
- * - Redis 세션과 비교하여 중복 로그인 감지
  */
 @Slf4j
 @Component
@@ -28,7 +26,6 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final SessionService sessionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -44,21 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 // 3. 토큰 유효성 검사 (서명, 만료)
                 if (jwtUtil.validateToken(token)) {
-                    Long userId = jwtUtil.getUserId(token);
                     String username = jwtUtil.getUsername(token);
 
-                    // 4. Redis 세션 검증 (중복 로그인 체크)
-                    if (!sessionService.isValidSession(userId, token)) {
-                        // 다른 기기에서 로그인됨 → 401 반환
-                        log.warn("Session invalidated for user {} - logged in from another device. Request URI: {}",
-                                username, request.getRequestURI());
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.setContentType("application/json;charset=UTF-8");
-                        response.getWriter().write("{\"error\":\"SESSION_EXPIRED\",\"message\":\"다른 기기에서 로그인되었습니다.\"}");
-                        return;
-                    }
-
-                    // 5. 인증 성공 - SecurityContext에 등록
+                    // 4. 인증 성공 - SecurityContext에 등록
                     Authentication auth = new UsernamePasswordAuthenticationToken(username, null,
                             Collections.emptyList());
                     SecurityContextHolder.getContext().setAuthentication(auth);
