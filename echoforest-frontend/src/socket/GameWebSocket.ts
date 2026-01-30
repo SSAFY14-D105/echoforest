@@ -575,6 +575,15 @@ class GameWebSocket {
             this.ws.close();
             this.ws = null;
         }
+        // [FIX] 모든 핸들러 및 상태 초기화 (방 재입장 시 Stale 핸들러 방지)
+        this.onMessageHandler = null;
+        this.onConnectHandler = null;
+        this.onErrorHandler = null;
+        this.onCloseHandler = null;
+        this.listeners.clear();
+        this.messageQueue = [];
+        this.isLoggingOut = false;
+        console.log('[GameWebSocket] Disconnected and cleaned up all handlers.');
     }
 
     // 연결 상태 확인
