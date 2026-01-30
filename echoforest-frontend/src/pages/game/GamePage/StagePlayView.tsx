@@ -94,9 +94,9 @@ export default function StagePlayView({
         try {
             const stageNumber = parseInt(stageNum, 10);
 
-            // 실제 userId는 localStorage에서 가져옴
-            const loginId = localStorage.getItem('loginId');
-            const userId = loginId ? parseInt(loginId, 10) : 0;
+            // 실제 userId는 localStorage에서 가져옴 (LoginForm에서 'userId'로 저장)
+            const storedUserId = localStorage.getItem('userId');
+            const userId = storedUserId ? parseInt(storedUserId, 10) : 0;
 
             // console.log('[StagePlayView] Upload params:', { loginId, userId, stageNumber, roomId });
 
@@ -133,14 +133,16 @@ export default function StagePlayView({
         gameWebSocket.sendEndingMissionEnd(roomId);
     };
 
-    // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버 동기화)
+    // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버가 모든 클라이언트에 브로드캐스트)
     const handleTestEndingMission = () => {
         if (isHost) {
-            // 서버로 엔딩 미션 시작 신호 전송 (다른 클라이언트 동기화)
+            // 서버로 엔딩 미션 시작 신호 전송 → 서버가 ENDING_MISSION_START 브로드캐스트
+            // 모든 클라이언트가 handleEndingMissionStart 이벤트로 동시 시작
             gameWebSocket.sendEndingMissionStart(roomId);
+        } else {
+            // 비호스트는 서버 브로드캐스트를 기다림 (호스트에게 테스트 요청)
+            alert('호스트만 테스트를 시작할 수 있습니다.');
         }
-        // 로컬에서도 즉시 시작
-        setEndingMission(true);
     };
 
     return (
