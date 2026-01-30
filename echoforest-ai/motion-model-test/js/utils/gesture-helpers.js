@@ -1,0 +1,58 @@
+/**
+ * 제스처 인식에 필요한 도움 함수 모음
+ */
+
+// 두 점 사이의 거리 계산 (3D or 2D)
+export function distance(p1, p2) {
+    if (!p1 || !p2) return 0;
+    // 3D 좌표 (x, y, z)가 있으면 3D 거리, 없으면 2D 거리
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    const dz = (p1.z && p2.z) ? p1.z - p2.z : 0;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+// 손가락이 펴져 있는지 확인
+// tipIdx: 손가락 끝 인덱스 (4, 8, 12, 16, 20)
+// pipIdx: 손가락 중간 관절 인덱스 (3, 6, 10, 14, 18) - 엄지는 3(IP)
+export function isFingerExtended(landmarks, tipIdx, pipIdx) {
+    const tip = landmarks[tipIdx];
+    const pip = landmarks[pipIdx];
+    const wrist = landmarks[0];
+
+    // 손가락 끝이 손목보다 멀리 있으면 펴진 것으로 간주
+    // (단순화된 로직, 필요시 각도 계산 등으로 고도화 가능)
+    return distance(tip, wrist) > distance(pip, wrist);
+}
+
+// 캡처 및 분석용 손가락 거리 데이터 통합 계산
+export function calculateDistances(landmarks, palmSize) {
+    const thumb = landmarks[4];
+    const targets = [5, 8, 12, 15, 16, 19, 20];
+    const thumbDistances = {};
+
+    targets.forEach(t => {
+        thumbDistances[t] = distance(thumb, landmarks[t]) / palmSize;
+    });
+
+    // 5x5 매트릭스용 데이터 (손가락 끝 간의 모든 거리)
+    const tips = [4, 8, 12, 16, 20];
+    const matrix = {};
+    tips.forEach(a => {
+        tips.forEach(b => {
+            if (a !== b) matrix[`${a}_${b}`] = distance(landmarks[a], landmarks[b]) / palmSize;
+        });
+    });
+
+    // 손가락 상태 (펴짐/접힘)
+    // 엄지(4-3), 검지(8-7), 중지(12-11), 약지(16-15), 새끼(20-19)
+    const fingers = {
+        thumb: { extended: isFingerExtended(landmarks, 4, 3) },
+        index: { extended: isFingerExtended(landmarks, 8, 7) },
+        middle: { extended: isFingerExtended(landmarks, 12, 11) },
+        ring: { extended: isFingerExtended(landmarks, 16, 15) },
+        pinky: { extended: isFingerExtended(landmarks, 20, 19) }
+    };
+
+    return { thumbDistances, matrix, fingers };
+}

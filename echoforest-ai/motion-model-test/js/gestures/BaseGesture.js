@@ -28,4 +28,19 @@ export default class BaseGesture {
             Math.pow((p1.z || 0) - (p2.z || 0), 2)
         );
     }
+    /**
+     * 손가락 펴짐 여부 확인
+     */
+    isFingerExtended(landmarks, tipIdx, pipIdx, threshold = 1.0) {
+        const wrist = landmarks[0];
+        return this.distance(landmarks[tipIdx], wrist) > this.distance(landmarks[pipIdx], wrist) * threshold;
+    }
+
+    /**
+     * 손가락 접힘 여부 확인
+     */
+    isFingerClosed(landmarks, tipIdx, mcpIdx, threshold = 1.0) {
+        const wrist = landmarks[0];
+        return this.distance(landmarks[tipIdx], wrist) < this.distance(landmarks[mcpIdx], wrist) * threshold;
+    }
 }

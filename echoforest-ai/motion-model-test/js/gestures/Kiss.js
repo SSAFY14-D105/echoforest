@@ -2,7 +2,7 @@
  * Kiss - 뽀뽀 제스처 감지 클래스
  * MediaPipe FaceLandmarker 기반 입술 오므림 감지
  */
-import { BaseGesture } from './BaseGesture.js';
+import BaseGesture from './BaseGesture.js';
 
 // MediaPipe Face Landmark 인덱스 (입술 관련)
 const FACE_LANDMARKS = {
@@ -12,16 +12,16 @@ const FACE_LANDMARKS = {
     RIGHT_LIP: 291,    // 오른쪽 입꼬리
 };
 
-export class Kiss extends BaseGesture {
+export default class Kiss extends BaseGesture {
     constructor() {
         super('kiss', '💋');
 
         // 기본 임계값 설정
         this.thresholds = {
-            ratioHigh: 0.12,       // 높은 확신도 비율 임계값
-            ratioMedium: 0.15,     // 중간 확신도 비율 임계값
-            horizontalHigh: 0.15,  // 높은 확신도 가로 거리
-            horizontalMedium: 0.18 // 중간 확신도 가로 거리
+            ratioHigh: 0.6,        // 높은 확신도 비율 (Kiss는 입이 동그랗게 됨 -> 비율 높음)
+            ratioMedium: 0.4,      // 중간 확신도 비율
+            horizontalHigh: 0.12,  // 가로 폭 (작을수록 오므림)
+            horizontalMedium: 0.15
         };
     }
 
@@ -72,17 +72,21 @@ export class Kiss extends BaseGesture {
         const ratio = verticalDist / horizontalDist;
 
         // 뽀뽀 판정
+        // 입술이 오므려지면: 가로(Horizontal) 감소, 세로(Vertical) 유지/증가 => Ratio 증가
+        // 평소 입: 가로 김, 세로 짧음 => Ratio 낮음 (~0.2)
+        // 입 다뭄: 세로 매우 짧음 => Ratio 매우 낮음 (<0.1) -> 기존 코드가 이걸 뽀뽀로 착각함
+
         let score = 0;
         let detected = false;
 
         // 높은 확신도
-        if (ratio < this.thresholds.ratioHigh &&
+        if (ratio > this.thresholds.ratioHigh &&
             horizontalDist < this.thresholds.horizontalHigh) {
             score = 0.95;
             detected = true;
         }
         // 중간 확신도
-        else if (ratio < this.thresholds.ratioMedium &&
+        else if (ratio > this.thresholds.ratioMedium &&
             horizontalDist < this.thresholds.horizontalMedium) {
             score = 0.75;
             detected = true;
