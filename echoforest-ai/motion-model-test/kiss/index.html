@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💋 EchoForest Kiss Gesture Lab</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- 왼쪽: 카메라 -->
+    <div class="camera-section">
+        <div class="camera-wrapper">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+
+            <div class="kiss-counter">
+                💋 뽀뽀: <span class="kiss-count" id="kissCount">0</span>
+            </div>
+
+            <div class="pose-overlay" id="poseOverlay">
+                <span class="pose-icon" id="poseIcon">💋</span>
+                <span class="pose-label" id="poseLabel">뽀뽀!</span>
+            </div>
+        </div>
+
+        <div class="controls-bar">
+            <button class="btn" id="btnInit">1️⃣ 모델 로드</button>
+            <button class="btn" id="btnCamera" disabled>2️⃣ 카메라 권한</button>
+            <button class="btn" id="btnDetect" disabled>3️⃣ 감지 시작</button>
+            <button class="btn" id="btnReset">🔄 리셋</button>
+        </div>
+
+        <div class="detection-result">
+            <div class="detection-emoji" id="emoji">💋</div>
+            <div class="detection-label" id="label">대기중</div>
+            <div class="detection-score" id="score">-</div>
+            <div style="margin-top:10px; font-size:12px; color:#888" id="debugInfo"></div>
+        </div>
+    </div>
+
+    <!-- 오른쪽: 패널들 -->
+    <div class="panel-section">
+        <!-- 임계값 조정 패널 -->
+        <div class="panel">
+            <h3>🎚️ 임계값 조정</h3>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>💋 입술 비율 임계값 (세로/가로)</span>
+                    <span id="valRatio">0.15</span>
+                </div>
+                <input type="range" id="sliderRatio" min="0.08" max="0.80" step="0.01" value="0.15">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>👄 입술 가로 최대값</span>
+                    <span id="valHorizontal">0.18</span>
+                </div>
+                <input type="range" id="sliderHorizontal" min="0.10" max="0.30" step="0.01" value="0.18">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>🎯 최소 신뢰도</span>
+                    <span id="valConf">0.70</span>
+                </div>
+                <input type="range" id="sliderConf" min="0.5" max="0.95" step="0.05" value="0.7">
+            </div>
+        </div>
+
+        <!-- 실시간 수치 패널 -->
+        <div class="panel">
+            <h3>📊 실시간 입술 수치</h3>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-label">입술 세로</div>
+                    <div class="metric-value" id="metricLipV">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">입술 가로</div>
+                    <div class="metric-value" id="metricLipH">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">세로/가로 비율</div>
+                    <div class="metric-value" id="metricRatio">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">얼굴 감지</div>
+                    <div class="metric-value" id="metricFace">❌</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 상태 표시 -->
+        <div class="panel">
+            <h3>📡 상태</h3>
+            <div class="status">
+                📊 <span id="statusText">대기</span> |
+                ⏱️ <span id="fps">-</span> FPS
+            </div>
+        </div>
+
+        <!-- 로그 -->
+        <div class="panel">
+            <h3>📝 System Log</h3>
+            <div class="log" id="log"></div>
+        </div>
+
+        <!-- 가이드 -->
+        <div class="panel">
+            <h3>ℹ️ Guide</h3>
+            <p style="font-size:12px; color:#ccc;">
+                <b>뽀뽀 (Kiss)</b><br>
+                - 입술을 오므려주세요.<br>
+                - 세로가 좁아지고 가로도 살짝 줄어들어야 합니다.<br>
+                - 세로/가로 비율이 임계값 이하여야 인식됩니다.
+            </p>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
