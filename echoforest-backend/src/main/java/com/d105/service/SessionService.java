@@ -2,7 +2,7 @@ package com.d105.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -12,10 +12,10 @@ import java.time.Duration;
 @Slf4j
 public class SessionService {
 
-    private final StringRedisTemplate redisTemplate;
-    
+    private final RedisTemplate<String, String> redisTemplate;
+
     // 세션 만료 시간 (예: 30분) - JWT 만료 시간과 맞추거나 적절히 설정
-    private static final Duration SESSION_TTL = Duration.ofMinutes(30);
+    private static final Duration SESSION_TTL = Duration.ofMinutes(1440);
     private static final String SESSION_PREFIX = "login_session:";
 
     /**
