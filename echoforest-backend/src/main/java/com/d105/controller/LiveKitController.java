@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "LiveKit", description = "화상 채팅 API (토큰 발급)")
-@CrossOrigin(origins = "*")  // 테스트용, 실제 배포 시에는 지워야함
+@CrossOrigin(origins = "*") // 테스트용, 실제 배포 시에는 지워야함
 @RestController
 @RequestMapping("/api/livekit")
 @RequiredArgsConstructor
@@ -27,9 +27,8 @@ public class LiveKitController {
 
         String token = liveKitService.createToken(
                 request.getRoomId(),
-                request.getUserId(),
-                request.getUsername()
-        );
+                request.getUsername(), // userId 대신 username 사용
+                request.getUsername());
 
         // TokenResDto를 사용하여 응답 반환
         return ResponseEntity.ok(new TokenResDto(token));

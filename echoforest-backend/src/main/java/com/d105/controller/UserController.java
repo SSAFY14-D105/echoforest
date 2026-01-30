@@ -54,8 +54,9 @@ public class UserController {
 
     @Operation(summary = "닉네임 수정", description = "로그인한 유저의 닉네임을 변경합니다.")
     @PutMapping("/nickname")
-    public ResponseEntity<?> updateNickname(@Valid @RequestBody NicknameUpdateReqDto req) {
-        userService.updateNickname(req.getUserId(), req.getNewNickname());
+    public ResponseEntity<?> updateNickname(@Valid @RequestBody NicknameUpdateReqDto req,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String username) {
+        userService.updateNickname(username, req.getNewNickname());
         return ResponseEntity.ok(Map.of("message", "닉네임 변경 성공"));
     }
 }
