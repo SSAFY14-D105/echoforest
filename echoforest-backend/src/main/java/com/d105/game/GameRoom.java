@@ -350,6 +350,14 @@ public class GameRoom implements Runnable {
         return sessionManager.getServerPlayerCount();
     }
 
+    /**
+     * 강제 상태 브로드캐스트 (SYNC_REQUEST 처리용)
+     * Race condition으로 인해 클라이언트가 초기 UPDATE를 놓친 경우 호출됨.
+     */
+    public void forceBroadcastState() {
+        broadcastState();
+    }
+
     public boolean hasPlayer(String username) {
         return sessionManager.findSessionIdByUsername(username) != null;
     }
