@@ -82,9 +82,9 @@ public class UserService {
 
     // 닉네임 수정
     @Transactional
-    public void updateNickname(Long userId, String newNickname) {
+    public void updateNickname(String username, String newNickname) {
         // 1. 유저 조회
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
 
         // 2. 닉네임 중복 검사 (본인의 현재 닉네임과 같다면 통과)
