@@ -75,20 +75,28 @@ public class GameRoom implements Runnable {
         log.info("Found existing session for '{}': {}", username, existingSessionId);
 
         if (existingSessionId != null) {
-            // [재접속]
-            PlayerState existingPlayer = sessionManager.getPlayer(existingSessionId);
-            if (existingPlayer != null && existingPlayer.isDisconnected()) {
-                log.info("Player {} reconnected!", username);
+            // [재접속] 또는 [Session Hijack]
+            // 기존 세션 ID가 지금 들어온 세션 ID와 같다면 무시(이미 처리됨)
+            if (existingSessionId.equals(session.getId())) {
+                return;
+            }
 
-                // 세션 교체 + 상태 복구
-                // [FIX] 기존 세션 ID로 된 map entry를 완전히 제거해야 함 (중복 방지)
+            PlayerState existingPlayer = sessionManager.getPlayer(existingSessionId);
+            if (existingPlayer != null) {
+                log.info("Player {} reconnected/hijacked! Old Session: {}, New Session: {}", username,
+                        existingSessionId, session.getId());
+
+                // 1. 기존 세션 정보 제거 (Map에서만 제거하고 객체는 유지)
                 sessionManager.removeSessionAndPlayer(existingSessionId);
+
+                // 2. 새 세션으로 매핑 추가
                 sessionManager.addSession(session, existingPlayer);
 
+                // 3. 상태 복구
                 existingPlayer.setDisconnected(false);
                 existingPlayer.setDisconnectTime(0);
 
-                // 슬롯 갱신
+                // 4. 슬롯 갱신
                 sessionManager.assignSlot(existingPlayer.getColorIndex(), session.getId());
                 return;
             }
@@ -289,9 +297,9 @@ public class GameRoom implements Runnable {
                 continue;
 
             // [FIX] 연결 끊긴 플레이어는 브로드캐스트 제외 (Ghost 현상 방지)
-            if (p.isDisconnected()) {
-                continue;
-            }
+            // if (p.isDisconnected()) {
+            // continue;
+            // }
 
             // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
