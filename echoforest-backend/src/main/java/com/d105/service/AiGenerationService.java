@@ -51,8 +51,7 @@ public class AiGenerationService {
      * [메인 로직] DB에 저장된 방 이미지를 사용하여 AI 합성
      */
     @Transactional
-    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String userPrompt, String roomId,
-            Long userId) {
+    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String roomId, Long userId) {
         log.info("Requesting AI Image generation for user: {}, Room: {}", userId, roomId);
         try {
             // 1. 이미지 선별 (DB에서 가져오기)
@@ -77,7 +76,7 @@ public class AiGenerationService {
             }
 
             // 3. API 호출 및 저장/전송
-            return callAiApiAndSave(base64Images, userPrompt, roomId, userId);
+            return callAiApiAndSave(base64Images, roomId, userId);
 
         } catch (Exception e) {
             log.error("Failed to generate AI image", e);
@@ -89,7 +88,7 @@ public class AiGenerationService {
      * [테스트용] 사용자가 직접 업로드한 파일 4개를 사용하여 AI 합성
      */
     @Transactional
-    public ImageResponseDto generateTestImage(List<MultipartFile> files, String userPrompt, Long userId) {
+    public ImageResponseDto generateTestImage(List<MultipartFile> files, Long userId) {
         log.info("Requesting TEST AI Image generation for user: {}", userId);
         try {
             if (files == null || files.isEmpty()) {
@@ -103,7 +102,7 @@ public class AiGenerationService {
             }
 
             // 2. API 호출 및 저장/전송 (방 번호는 TEST_ROOM 고정)
-            return callAiApiAndSave(base64Images, userPrompt, "TEST_ROOM", userId);
+            return callAiApiAndSave(base64Images, "TEST_ROOM", userId);
 
         } catch (Exception e) {
             log.error("Failed to generate TEST AI image", e);
@@ -117,10 +116,9 @@ public class AiGenerationService {
     /**
      * AI API 호출 공통 로직 (Google Vertex AI - Imagen)
      */
-    private ImageResponseDto callAiApiAndSave(List<String> base64Images, String userPrompt, String roomId,
-            Long userId) {
-        // 프롬프트 결합
-        String finalPrompt = B_GRADE_STYLE_PROMPT + (userPrompt != null ? userPrompt : "");
+    private ImageResponseDto callAiApiAndSave(List<String> base64Images, String roomId, Long userId) {
+        // 프롬프트 결합 (기본 프롬프트 고정)
+        String finalPrompt = B_GRADE_STYLE_PROMPT;
         log.info("Final Prompt: {}", finalPrompt);
 
         // API 요청 헤더
@@ -223,9 +221,10 @@ public class AiGenerationService {
                             mimeType,
                             imageBytes);
 
-                    // 3. DB 및 파일 저장 (imageType = "RESULT" 지정)
+                    // 3. DB 및 파일 저장 (imageType = "RESULT" 지정, 참여자 전체 포함)
+                    List<Long> participants = getRoomUserIds(roomId);
                     Image savedImage = imageService.uploadImage(
-                            multipartFile, userId, null, null, null, roomId, "RESULT");
+                            multipartFile, userId, null, null, participants, roomId, "RESULT");
                     log.info("AI Image saved successfully: {} (Type: RESULT)", savedImage.getId());
 
                     // 4. [이메일 전송 로직]
@@ -291,5 +290,16 @@ public class AiGenerationService {
         if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF)
             return ".jpg";
         return ".png";
+    }
+
+    private List<Long> getRoomUserIds(String roomId) {
+        List<Image> roomImages = imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId);
+        if (roomImages.isEmpty())
+            return Collections.emptyList();
+
+        return roomImages.stream()
+                .map(img -> img.getUser().getId())
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

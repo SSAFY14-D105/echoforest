@@ -15,10 +15,6 @@ public class AiGenerationReqDto {
     @NotEmpty(message = "원본 이미지는 최소 1장 이상이어야 합니다.")
     private List<String> sourceImages;
 
-    @Schema(description = "사용자 입력 프롬프트 (예: 판타지 스타일로 바꿔줘)", example = "Fantasy forest background, magical atmosphere")
-    @NotBlank(message = "프롬프트는 필수입니다.")
-    private String prompt;
-
     @Schema(description = "저장될 방 코드", example = "ABC1234")
     @NotBlank(message = "방 코드는 필수입니다.")
     private String roomId;

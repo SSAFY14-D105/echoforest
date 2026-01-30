@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -42,8 +44,8 @@ public class ImageService {
      */
     @Transactional
     public Image uploadImage(MultipartFile file, Long userId, Long mapId,
-                             Integer stageNumber, List<Long> participantUserIds,
-                             String roomCode, String imageType) throws IOException {
+            Integer stageNumber, List<Long> participantUserIds,
+            String roomCode, String imageType) throws IOException {
 
         // 1. 유저 조회
         User user = userRepository.findById(userId)
@@ -198,6 +200,27 @@ public class ImageService {
             }
         } catch (IOException e) {
             log.warn("Failed to delete folder: {}", folderPath, e);
+        }
+    }
+
+    /**
+     * 이미지 파일 다운로드 (Resource 반환)
+     */
+    public Resource downloadImage(Long imageId) {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found: " + imageId));
+
+        try {
+            Path filePath = Paths.get(uploadDir, image.getFileName());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                return resource;
+            } else {
+                throw new RuntimeException("Could not read file: " + image.getFileName());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not read file: " + image.getFileName(), e);
         }
     }
 }
