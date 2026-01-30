@@ -192,14 +192,7 @@ export function useGameWebSocket() {
             });
         }
 
-        // [FIX] Race Condition 대응: 핸들러 등록 후 강제 동기화 요청
-        // JoinGameModal의 임시 핸들러가 UPDATE를 놓칠 수 있으므로,
-        // 마운트 완료 후 현재 플레이어 목록을 다시 요청함.
-        setTimeout(() => {
-            if (gameWebSocket.isConnected()) {
-                gameWebSocket.send({ type: 'SYNC_REQUEST' });
-            }
-        }, 100);
+
 
     }, [roomId, nickname, isSoloMode, isHost]);
 }

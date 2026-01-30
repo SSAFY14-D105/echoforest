@@ -1113,15 +1113,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                             // storePlayer.anim이 없으면 params.anim 사용
                             const anim = (storePlayer as any).anim || serverAnim;
 
-                            // [DEBUG] 원격 플레이어 데이터 확인
-                            if (storePlayer.nickname !== this.myPlayerId) {
-                                // 60프레임마다 한 번만 로그 출력 (너무 많음 방지)
-                                /*
-                                if (this.game.loop.frame % 60 === 0) {
-                                    console.log(`[Sync] Remote ${storePlayer.nickname}: Pos(${storePlayer.x?.toFixed(1)}, ${storePlayer.y?.toFixed(1)}), Vel(${storePlayer.vx?.toFixed(2)}, ${storePlayer.vy?.toFixed(2)}), Dead:${isDead}, Curses:${curses}`);
-                                }
-                                */
-                            }
+
 
                             existingPlayer.setRemoteState(
                                 storePlayer.x,
