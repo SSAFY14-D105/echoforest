@@ -31,18 +31,17 @@ import java.util.stream.Collectors;
 public class AiGenerationService {
 
     // B급 감성 프롬프트
-    private static final String B_GRADE_STYLE_PROMPT =
-            "Make a hilarious B-grade movie poster or meme collage. " +
-                    "Combine these people into one chaotic image. " +
-                    "Style: Bad photoshop, kitsch, exaggerated, cheesy effects, dramatic lighting. " +
-                    "Concept: A chaotic team assembling for a ridiculous mission. " +
-                    "Make sure every person is visible in a funny way. ";
+    private static final String B_GRADE_STYLE_PROMPT = "Make a hilarious B-grade movie poster or meme collage. " +
+            "Combine these people into one chaotic image. " +
+            "Style: Bad photoshop, kitsch, exaggerated, cheesy effects, dramatic lighting. " +
+            "Concept: A chaotic team assembling for a ridiculous mission. " +
+            "Make sure every person is visible in a funny way. ";
 
     private final AiProperties aiProperties;
     private final ImageService imageService;
     private final ImageRepository imageRepository;
     private final UserRepository userRepository; // 이메일 조회용
-    private final EmailService emailService;     // 이메일 발송용
+    private final EmailService emailService; // 이메일 발송용
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper;
 
@@ -53,7 +52,8 @@ public class AiGenerationService {
      * [메인 로직] DB에 저장된 방 이미지를 사용하여 AI 합성
      */
     @Transactional
-    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String userPrompt, String roomId, Long userId) {
+    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String userPrompt, String roomId,
+            Long userId) {
         log.info("Requesting AI Image generation for user: {}, Room: {}", userId, roomId);
         try {
             // 1. 이미지 선별 (DB에서 가져오기)
@@ -115,7 +115,11 @@ public class AiGenerationService {
     /**
      * AI API 호출 공통 로직
      */
-    private ImageResponseDto callAiApiAndSave(List<String> base64Images, String userPrompt, String roomId, Long userId) {
+    /**
+     * AI API 호출 공통 로직 (Google Vertex AI - Imagen)
+     */
+    private ImageResponseDto callAiApiAndSave(List<String> base64Images, String userPrompt, String roomId,
+            Long userId) {
         // 프롬프트 결합
         String finalPrompt = B_GRADE_STYLE_PROMPT + (userPrompt != null ? userPrompt : "");
         log.info("Final Prompt: {}", finalPrompt);
@@ -125,59 +129,90 @@ public class AiGenerationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + aiProperties.getApiKey());
 
-        // API 요청 바디
+        // Google Vertex AI (Imagen) 요청 바디 구성
+        // {
+        // "instances": [ { "prompt": "..." } ],
+        // "parameters": { "sampleCount": 1, "aspectRatio": "1:1" }
+        // }
+        Map<String, Object> instance = new HashMap<>();
+        instance.put("prompt", finalPrompt);
+
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("sampleCount", 1);
+        parameters.put("aspectRatio", "1:1"); // 인스타그램/포스터용 1:1 비율
+
         Map<String, Object> body = new HashMap<>();
-        body.put("model", "gpt-image-1.5");
-        body.put("prompt", finalPrompt);
-        body.put("n", 1);
-        body.put("size", "1024x1024");
-        body.put("images", base64Images);
+        body.put("instances", Collections.singletonList(instance));
+        body.put("parameters", parameters);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        // API URL 설정
+        // API URL 설정 (aiProperties.getUrl()에 GMS Vertex AI URL이 있어야 함)
         String genUrl = aiProperties.getUrl();
-        if (genUrl.contains("/edits")) {
-            genUrl = genUrl.replace("/edits", "/generations");
-        }
+        log.info("Calling AI URL: {}", genUrl);
 
         // 호출
         ResponseEntity<String> response = restTemplate.exchange(
                 URI.create(genUrl),
                 HttpMethod.POST,
                 entity,
-                String.class
-        );
+                String.class);
 
         return processResponseAndSave(response, roomId, userId);
     }
 
     /**
-     * 응답 처리 + 저장(RESULT 타입) + 이메일 전송
+     * 응답 처리 + 저장(RESULT 타입) + 이메일 전송 (Google Vertex AI Format)
      */
     private ImageResponseDto processResponseAndSave(ResponseEntity<String> response, String roomId, Long userId) {
         try {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode dataNode = root.path("data");
 
-                if (dataNode.isArray() && !dataNode.isEmpty()) {
+                // Google Vertex AI 응답: { "predictions": [ { "bytesBase64Encoded": "...",
+                // "mimeType": "..." } ] }
+                JsonNode predictions = root.path("predictions");
+
+                if (predictions.isArray() && !predictions.isEmpty()) {
                     byte[] imageBytes = null;
+                    String extension = ".png";
 
                     // 1. 이미지 데이터 추출
-                    if (dataNode.get(0).has("url")) {
-                        String imageUrl = dataNode.get(0).path("url").asText();
-                        imageBytes = restTemplate.getForObject(new URI(imageUrl), byte[].class);
-                    } else if (dataNode.get(0).has("b64_json")) {
-                        String base64Image = dataNode.get(0).path("b64_json").asText();
+                    if (predictions.get(0).has("bytesBase64Encoded")) {
+                        String base64Image = predictions.get(0).path("bytesBase64Encoded").asText();
                         imageBytes = Base64.getDecoder().decode(base64Image);
+
+                        // MimeType 확인 (선택)
+                        if (predictions.get(0).has("mimeType")) {
+                            String mime = predictions.get(0).path("mimeType").asText();
+                            if ("image/jpeg".equals(mime))
+                                extension = ".jpg";
+                        }
                     }
 
                     if (imageBytes == null) {
-                        throw new RuntimeException("이미지 데이터를 찾을 수 없습니다.");
+                        // 혹시 OpenAI 포맷으로 올 경우를 대비한 폴백 (GMS 특성 고려)
+                        // predictions가 비어있거나 bytesBase64Encoded가 없는 경우
+                        JsonNode dataNode = root.path("data");
+                        if (dataNode.isArray() && !dataNode.isEmpty()) {
+                            if (dataNode.get(0).has("url")) {
+                                String imageUrl = dataNode.get(0).path("url").asText();
+                                imageBytes = restTemplate.getForObject(new URI(imageUrl), byte[].class);
+                            } else if (dataNode.get(0).has("b64_json")) {
+                                String base64Image = dataNode.get(0).path("b64_json").asText();
+                                imageBytes = Base64.getDecoder().decode(base64Image);
+                            }
+                        }
                     }
 
-                    String extension = detectExtension(imageBytes);
+                    if (imageBytes == null) {
+                        throw new RuntimeException("이미지 데이터를 찾을 수 없습니다. (응답 포맷 불일치)");
+                    }
+
+                    // 확장자 재확인
+                    if (".png".equals(extension)) {
+                        extension = detectExtension(imageBytes);
+                    }
                     String mimeType = ".jpg".equals(extension) ? "image/jpeg" : "image/png";
 
                     // 2. MultipartFile로 변환
@@ -185,13 +220,11 @@ public class AiGenerationService {
                             "ai_result" + extension,
                             "ai_result" + extension,
                             mimeType,
-                            imageBytes
-                    );
+                            imageBytes);
 
                     // 3. DB 및 파일 저장 (imageType = "RESULT" 지정)
                     Image savedImage = imageService.uploadImage(
-                            multipartFile, userId, null, null, null, roomId, "RESULT"
-                    );
+                            multipartFile, userId, null, null, null, roomId, "RESULT");
                     log.info("AI Image saved successfully: {} (Type: RESULT)", savedImage.getId());
 
                     // 4. [이메일 전송 로직]
@@ -233,7 +266,8 @@ public class AiGenerationService {
 
     private List<String> selectOneImagePerUser(String roomId) {
         List<Image> roomImages = imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId);
-        if (roomImages.isEmpty()) return Collections.emptyList();
+        if (roomImages.isEmpty())
+            return Collections.emptyList();
 
         Map<Long, List<Image>> imagesByUser = roomImages.stream()
                 .collect(Collectors.groupingBy(img -> img.getUser().getId()));
@@ -251,8 +285,10 @@ public class AiGenerationService {
     }
 
     private String detectExtension(byte[] data) {
-        if (data == null || data.length < 4) return ".png";
-        if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF) return ".jpg";
+        if (data == null || data.length < 4)
+            return ".png";
+        if (data[0] == (byte) 0xFF && data[1] == (byte) 0xD8 && data[2] == (byte) 0xFF)
+            return ".jpg";
         return ".png";
     }
 }
