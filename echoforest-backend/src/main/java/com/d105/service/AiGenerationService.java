@@ -37,15 +37,16 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class AiGenerationService {
 
-    // B급 감성 프롬프트
-    // AI 생성 프롬프트 (유저 요청 반영: B급 감성 제외, 얼굴 유지, 게임 캐릭터 장식)
-    private static final String B_GRADE_STYLE_PROMPT = "Create a fun and cute commemorative photo collage of these people. "
+    // AI 생성 프롬프트 (그리드 레이아웃 + 제공된 캐릭터 이미지 활용)
+    private static final String B_GRADE_STYLE_PROMPT = "Create a cute commemorative photo frame with photos arranged in a grid layout. "
             +
-            "IMPORTANT: Use ONLY the faces from the provided source images. Do NOT generate new human faces. " +
-            "Theme: A happy memory of playing a game together. " +
-            "Decoration: Decorate the background and borders with cute forest spirit characters and magical elements (stars, leaves). "
+            "IMPORTANT: Place each person's photo in their own separate grid cell. Do NOT merge or combine faces. " +
+            "Layout: Arrange the provided photos in a neat grid (2x2 or similar). Each photo should be clearly visible in its own box. "
             +
-            "Style: Bright, cheerful, and heartwarming. Keep the people realistic but the decorations cartoonish/fantasy. ";
+            "Decoration: I am also providing character images (our game mascots). Use these provided character images to decorate around the photo grid. "
+            +
+            "Add simple pixel art forest elements (trees, leaves, stars) as additional decoration. " +
+            "Style: The photos stay realistic. The character mascots should be placed cutely around the frame. Bright and cheerful colors. ";
 
     private final AiProperties aiProperties;
     private final ImageService imageService;
@@ -136,6 +137,13 @@ public class AiGenerationService {
         // 프롬프트 결합 (기본 프롬프트 고정)
         String finalPrompt = B_GRADE_STYLE_PROMPT;
         log.info("Final Prompt: {}", finalPrompt);
+
+        // 이미지 전송 확인 로그
+        log.info("=== IMAGE TRANSMISSION DEBUG ===");
+        log.info("Total images to send: {}", base64Images.size());
+        if (!base64Images.isEmpty()) {
+            log.info("First image base64 length: {} chars", base64Images.get(0).length());
+        }
 
         // API 요청 헤더
         HttpHeaders headers = new HttpHeaders();
@@ -353,6 +361,7 @@ public class AiGenerationService {
                                 try {
                                     byte[] b = Files.readAllBytes(p);
                                     assets.add(Base64.getEncoder().encodeToString(b));
+                                    log.info("Loaded character asset: {}", p.getFileName());
                                 } catch (Exception e) {
                                     log.warn("Failed to read asset: {}", p, e);
                                 }
