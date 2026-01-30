@@ -1,3 +1,7 @@
+/**
+ * 제스처 관리자
+ * 등록된 제스처들을 순회하며 감지 수행
+ */
 export default class GestureManager {
     constructor() {
         this.gestures = [];
@@ -7,39 +11,29 @@ export default class GestureManager {
         this.gestures.push(gestureInstance);
     }
 
-    // multiHandLandmarks: Array of 21-landmark arrays
-    detectAll(multiHandLandmarks) {
-        if (!multiHandLandmarks || multiHandLandmarks.length === 0) {
-            return { type: 'none', score: 0, emoji: '🤚', label: '대기' };
-        }
+    detectAll(landmarks) {
+        // 메타데이터 계산 (한 번만 해서 공유)
+        const wrist = landmarks[0];
+        const middleMcp = landmarks[9]; // 중지 뿌리
+        const palmSize = Math.sqrt(
+            Math.pow(wrist.x - middleMcp.x, 2) +
+            Math.pow(wrist.y - middleMcp.y, 2)
+        );
 
-        // Shared metadata calculation (using the first hand for reference if single-hand needed)
-        const firstHand = multiHandLandmarks[0];
-        const metadata = {
-            palmSize: this.calculatePalmSize(firstHand),
-            handCount: multiHandLandmarks.length
-        };
-
+        const metadata = { palmSize };
         let bestResult = { type: 'none', score: 0, emoji: '🤚', label: '대기' };
 
         for (const gesture of this.gestures) {
-            const result = gesture.check(multiHandLandmarks, metadata);
+            const result = gesture.check(landmarks, metadata);
+
             if (result.detected && result.score > bestResult.score) {
-                bestResult = { type: gesture.constructor.name, ...result };
+                bestResult = {
+                    type: gesture.constructor.name, // 클래스 이름
+                    ...result
+                };
             }
         }
 
         return bestResult;
-    }
-
-    calculatePalmSize(landmarks) {
-        // Wrist(0) to Middle-MCP(9)
-        const p1 = landmarks[0];
-        const p2 = landmarks[9];
-        return Math.sqrt(
-            Math.pow(p1.x - p2.x, 2) +
-            Math.pow(p1.y - p2.y, 2) +
-            Math.pow(p1.z - p2.z, 2)
-        );
     }
 }
