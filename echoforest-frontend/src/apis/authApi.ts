@@ -51,7 +51,6 @@ export interface AuthResponse {
     success: boolean;
     message: string;
     data?: {
-        userId: string;
         nickname: string;
         token?: string;
     };
@@ -60,7 +59,6 @@ export interface AuthResponse {
 export interface LoginResponse {
     token: string;
     nickname: string;  // 백엔드에서 반환하는 닉네임
-    userId: string;    // 백엔드 PK (String으로 반환됨)
 }
 
 export interface SignupResponse {
