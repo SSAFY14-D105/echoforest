@@ -33,13 +33,6 @@ public class JwtUtil {
                 .getSubject();
     }
 
-    // 2. 토큰에서 userId(PK) 꺼내기
-    public Long getUserId(String token) {
-        return JWT.require(Algorithm.HMAC256(secretKey))
-                .build().verify(token)
-                .getClaim("userId").asLong();
-    }
-
     // 2. 토큰이 유효한지 검사하기 (위조 여부, 만료 여부)
     public boolean validateToken(String token) {
         try {
