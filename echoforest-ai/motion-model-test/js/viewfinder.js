@@ -1,81 +1,53 @@
+/**
+ * 뷰파인더 (캔버스 그리기 유틸리티)
+ */
 export default class Viewfinder {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+    constructor(canvasElement) {
+        this.canvas = canvasElement;
+        this.ctx = this.canvas.getContext('2d');
     }
 
-    clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    draw(multiHandLandmarks, faceLandmarks) {
-        this.clear();
-
-        // 얼굴 그리기
-        if (faceLandmarks && faceLandmarks.length > 0) {
-            this.drawFace(faceLandmarks[0]);
+    draw(landmarks) {
+        if (!landmarks) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            return;
         }
 
-        // 손 그리기
-        if (multiHandLandmarks) {
-            multiHandLandmarks.forEach((landmarks, index) => {
-                const color = index === 0 ? '#00FF00' : '#FF00FF';
-                this.drawHand(landmarks, color);
-            });
-        }
-    }
-
-    drawFace(face) {
-        // [복구] gesture-tuner와 동일하게 '오른볼 콕'은 화면상 오른쪽(데이터상 왼쪽 187...)을 의미함
-        // 187, 147... -> 노란색 (타겟)
-        const targetCheekIndices = [187, 147, 116, 123, 50];
-
-        this.ctx.fillStyle = "yellow"; // 여기가 타겟!
-        targetCheekIndices.forEach(idx => {
-            const p = face[idx];
-            this.ctx.beginPath();
-            this.ctx.arc(p.x * this.canvas.width, p.y * this.canvas.height, 5, 0, 2 * Math.PI);
-            this.ctx.fill();
-        });
-
-        // 반대쪽 (데이터상 오른쪽 411...) -> 빨간색 (아님)
-        const otherCheekIndices = [411, 376, 345, 352, 280];
-        this.ctx.fillStyle = "rgba(255, 0, 0, 0.3)"; // 흐릿한 빨강
-        otherCheekIndices.forEach(idx => {
-            const p = face[idx];
-            this.ctx.beginPath();
-            this.ctx.arc(p.x * this.canvas.width, p.y * this.canvas.height, 3, 0, 2 * Math.PI);
-            this.ctx.fill();
-        });
-    }
-
-    drawHand(landmarks, color) {
-        const ctx = this.ctx;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.fillStyle = color;
-
+        // 연결선 정의 (손)
         const connections = [
-            [0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [5, 9, 10, 11, 12],
-            [9, 13, 14, 15, 16], [13, 17, 18, 19, 20], [0, 17]
+            [0, 1], [1, 2], [2, 3], [3, 4], // 엄지
+            [0, 5], [5, 6], [6, 7], [7, 8], // 검지
+            [0, 9], [9, 10], [10, 11], [11, 12], // 중지
+            [0, 13], [13, 14], [14, 15], [15, 16], // 약지
+            [0, 17], [17, 18], [18, 19], [19, 20], // 새끼
+            [5, 9], [9, 13], [13, 17] // 손바닥
         ];
 
-        connections.forEach(path => {
-            ctx.beginPath();
-            path.forEach((idx, i) => {
-                const p = landmarks[idx];
-                const x = p.x * this.canvas.width;
-                const y = p.y * this.canvas.height;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
+        // 그리기
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 선 그리기
+        this.ctx.strokeStyle = '#667eea';
+        this.ctx.lineWidth = 3;
+        connections.forEach(([a, b]) => {
+            const p1 = landmarks[a];
+            const p2 = landmarks[b];
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x * this.canvas.width, p1.y * this.canvas.height);
+            this.ctx.lineTo(p2.x * this.canvas.width, p2.y * this.canvas.height);
+            this.ctx.stroke();
         });
 
-        landmarks.forEach(p => {
-            ctx.beginPath();
-            ctx.arc(p.x * this.canvas.width, p.y * this.canvas.height, 3, 0, 2 * Math.PI);
-            ctx.fill();
+        // 점 그리기
+        landmarks.forEach((lm, i) => {
+            const x = lm.x * this.canvas.width;
+            const y = lm.y * this.canvas.height;
+
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, i % 4 === 0 ? 6 : 4, 0, 2 * Math.PI);
+            // 손끝(4,8,12,16,20)은 핑크색, 나머지는 초록색
+            this.ctx.fillStyle = [4, 8, 12, 16, 20].includes(i) ? '#ff6b9d' : '#4ade80';
+            this.ctx.fill();
         });
     }
 }
