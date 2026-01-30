@@ -69,8 +69,8 @@ export default function StagePlayView({
 
         const handleEndingMissionEnd = () => {
             // console.log('[StagePlayView] Received ENDING_MISSION_END from server');
+            // 오버레이만 닫음 - 실제 스테이지 전환은 STAGE_TRANSITION 메시지에서 처리
             setEndingMission(false);
-            onClearStage(currentStage);
         };
 
         gameWebSocket.on('ENDING_MISSION_START', handleEndingMissionStart);
