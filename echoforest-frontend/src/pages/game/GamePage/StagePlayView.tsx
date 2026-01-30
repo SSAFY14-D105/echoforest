@@ -125,15 +125,12 @@ export default function StagePlayView({
         }
     };
 
-    // 엔딩 미션 종료 핸들러 (로컬에서 닫기 버튼 클릭 시)
+    // 엔딩 미션 종료 핸들러 (오버레이 닫기/캡처 완료 시)
     const handleEndingMissionClose = () => {
-        // 호스트인 경우 서버로 종료 신호 전송 (다른 클라이언트 동기화)
-        if (isHost) {
-            gameWebSocket.sendEndingMissionEnd(roomId);
-        }
-        setEndingMission(false);
-        // 스테이지 클리어 처리
-        onClearStage(currentStage);
+        // 모든 플레이어가 개별적으로 완료 신호 전송
+        // 서버가 전원 완료 확인 후 ENDING_MISSION_END를 브로드캐스트하면
+        // handleEndingMissionEnd 이벤트 핸들러에서 상태 변경 처리됨
+        gameWebSocket.sendEndingMissionEnd(roomId);
     };
 
     // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버 동기화)
