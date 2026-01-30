@@ -3,7 +3,6 @@ package com.d105.service;
 import com.d105.config.AiProperties;
 import com.d105.dto.image.ImageResponseDto;
 import com.d105.entity.Image;
-import com.d105.entity.User;
 import com.d105.repository.ImageRepository;
 import com.d105.repository.UserRepository;
 import com.d105.util.ByteArrayMultipartFile;
@@ -127,7 +126,8 @@ public class AiGenerationService {
         // API 요청 헤더
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + aiProperties.getApiKey());
+        // Google AI Studio API는 Authorization: Bearer 대신 x-goog-api-key 헤더 사용
+        headers.set("x-goog-api-key", aiProperties.getApiKey());
 
         // Google Vertex AI (Imagen) 요청 바디 구성
         // {
