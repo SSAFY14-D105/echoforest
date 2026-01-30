@@ -35,7 +35,7 @@ class SttWorkerService {
      */
     initialize(): void {
         if (this.worker) {
-            console.log('[SttWorkerService] Worker already initialized');
+            // console.log('[SttWorkerService] Worker already initialized');
             return;
         }
 
@@ -47,7 +47,7 @@ class SttWorkerService {
             );
 
             this.worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
-                console.log(`[SttWorkerService] 📩 Worker 메시지:`, event.data.type, `(핸들러 ${this.resultHandlers.length}개)`);
+                // console.log(`[SttWorkerService] 📩 Worker 메시지:`, event.data.type, `(핸들러 ${this.resultHandlers.length}개)`);
                 this.resultHandlers.forEach(handler => handler(event.data));
             };
 
@@ -55,7 +55,7 @@ class SttWorkerService {
                 console.error('[SttWorkerService] Worker error:', error);
             };
 
-            console.log('[SttWorkerService] ✅ Worker initialized');
+            // console.log('[SttWorkerService] ✅ Worker initialized');
         } catch (error) {
             console.error('[SttWorkerService] Failed to initialize worker:', error);
         }
@@ -78,7 +78,7 @@ class SttWorkerService {
      */
     send(message: WorkerInMessage): void {
         if (!this.worker) {
-            console.warn('[SttWorkerService] Worker not initialized, initializing now...');
+            // console.warn('[SttWorkerService] Worker not initialized, initializing now...');
             this.initialize();
         }
 
@@ -119,7 +119,7 @@ class SttWorkerService {
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
-            console.log('[SttWorkerService] Worker terminated');
+            // console.log('[SttWorkerService] Worker terminated');
         }
     }
 

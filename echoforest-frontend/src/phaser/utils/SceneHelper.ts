@@ -67,5 +67,5 @@ export function setupTiledBackground(
         }
     }
 
-    console.log(`[SceneHelper] Tiled background setup: ${numTiles} tiles, scale ${scale.toFixed(2)}`);
+    // console.log(`[SceneHelper] Tiled background setup: ${numTiles} tiles, scale ${scale.toFixed(2)}`);
 }

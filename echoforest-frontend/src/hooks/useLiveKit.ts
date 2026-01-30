@@ -32,7 +32,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
 
     const connect = useCallback(async () => {
         if (!roomId || !username || !userId) {
-            console.log('⚠️ 필수값 누락:', { roomId, username, userId });
+            // console.log('⚠️ 필수값 누락:', { roomId, username, userId });
             return;
         }
 

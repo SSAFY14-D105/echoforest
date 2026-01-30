@@ -91,7 +91,7 @@ export class BlockButton {
         const height = (this.body as any).height || 10;
         this.drawButton(width, height);
 
-        console.log(`[BlockButton] Pressed: ${this.id}`);
+        // console.log(`[BlockButton] Pressed: ${this.id}`);
         return true;
     }
 

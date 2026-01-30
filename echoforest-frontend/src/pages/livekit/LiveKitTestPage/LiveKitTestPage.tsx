@@ -22,9 +22,9 @@ export default function LiveKitTestPage() {
     useEffect(() => {
         async function getToken() {
             try {
-                console.log('🚀 토큰 발급 시작...');
+                // console.log('🚀 토큰 발급 시작...');
                 const response = await fetchLiveKitToken({ roomId, userId, username });
-                console.log('✅ 토큰 발급 성공!');
+                // console.log('✅ 토큰 발급 성공!');
                 setToken(response.token);
             } catch (err) {
                 console.error('❌ 토큰 발급 실패:', err);
@@ -78,8 +78,8 @@ export default function LiveKitTestPage() {
                 audio={true}
                 connect={true}
                 className={styles.room}
-                onConnected={() => console.log('✅ LiveKit 연결됨!')}
-                onDisconnected={() => console.log('📴 LiveKit 연결 해제')}
+                onConnected={() => { }}
+                onDisconnected={() => { }}
             >
                 <TestVideo />
             </LiveKitRoom>

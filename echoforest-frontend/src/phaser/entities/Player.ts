@@ -415,7 +415,7 @@ export class Player {
             return;
         }
 
-        console.log(`[Player] Applying curse '${curse.name}' to ${this.id}`);
+        // console.log(`[Player] Applying curse '${curse.name}' to ${this.id}`);
 
         this.currentCurseId = curseId;
         this.sizeMultiplier = curse.sizeMultiplier;
@@ -480,7 +480,7 @@ export class Player {
     public removeCurse(): void {
         if (!this.currentCurseId) return;
 
-        console.log(`[Player] Removing curse from ${this.id}`);
+        // console.log(`[Player] Removing curse from ${this.id}`);
         this.currentCurseId = null;
         this.sizeMultiplier = 1;
         this.speedMultiplier = 1;
@@ -616,7 +616,7 @@ export class Player {
         this.body.isSensor = true;
         this.scene.matter.body.setStatic(this.body, true);
         this.setVelocity(0, 0);
-        console.log(`[Player] Hidden: ${this.id}`);
+        // console.log(`[Player] Hidden: ${this.id}`);
     }
 
     public show(): void {
@@ -626,7 +626,7 @@ export class Player {
         // 센서 해제 (다시 충돌 블로킹)
         this.body.isSensor = false;
         this.scene.matter.body.setStatic(this.body, false);
-        console.log(`[Player] Shown: ${this.id}`);
+        // console.log(`[Player] Shown: ${this.id}`);
     }
 
     public get isHidden(): boolean {
@@ -652,7 +652,7 @@ export class Player {
      * 플레이어 리스폰 (위치 이동 및 상태 초기화)
      */
     public respawn(x: number, y: number): void {
-        console.log(`[Player] Respawning ${this.nickname} at (${x}, ${y})`);
+        // console.log(`[Player] Respawning ${this.nickname} at (${x}, ${y})`);
 
         this._isDead = false;
         this.curseHP = 100; // HP 초기화
@@ -668,7 +668,7 @@ export class Player {
     }
 
     public hardResetVisuals(): void {
-        console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
+        // console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
 
         // 1. 기존 스프라이트 제거
         if (this.sprite) {
@@ -705,7 +705,7 @@ export class Player {
     public forceRefreshVisuals(): void {
         if (!this.sprite) return;
 
-        console.log(`[Player] Forcing visual refresh for ${this.nickname}`);
+        // console.log(`[Player] Forcing visual refresh for ${this.nickname}`);
 
         // 1. 투명도 및 활성 상태 강제 복구
         this.sprite.setVisible(true);
@@ -756,6 +756,6 @@ export class Player {
             this.sprite?.destroy();
         }
 
-        console.log(`[Player] ${this.nickname} destroyed`);
+        // console.log(`[Player] ${this.nickname} destroyed`);
     }
 }

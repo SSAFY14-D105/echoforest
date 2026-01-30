@@ -193,7 +193,7 @@ class GameWebSocket {
     connect(): Promise<void> {
         // 이미 연결되어 있으면 바로 resolve
         if (this.isConnected()) {
-            console.log('✅ WebSocket 이미 연결됨');
+            // console.log('✅ WebSocket 이미 연결됨');
             return Promise.resolve();
         }
 
@@ -206,7 +206,7 @@ class GameWebSocket {
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {
-                    console.log('✅ WebSocket 연결됨');
+                    // console.log('✅ WebSocket 연결됨');
                     this.onConnectHandler?.();
                     resolve();
                 };
@@ -257,7 +257,7 @@ class GameWebSocket {
                 };
 
                 this.ws.onclose = () => {
-                    console.log('WebSocket 연결 종료');
+                    // console.log('WebSocket 연결 종료');
                     this.ws = null;
                     this.onCloseHandler?.();
                 };
@@ -279,7 +279,7 @@ class GameWebSocket {
         } else {
             // MOVE 메시지는 빈번하므로 연결 끊김 경고를 로그에 남기지 않음 (스팸 방지)
             if (message.type !== 'MOVE') {
-                console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+                // console.warn('WebSocket이 연결되지 않음. Message:', message.type);
             }
         }
     }
