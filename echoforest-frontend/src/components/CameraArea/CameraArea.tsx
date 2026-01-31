@@ -13,14 +13,11 @@ export default function CameraArea() {
     const nickname = useGameStore(state => state.nickname);
     const roomId = useGameStore(state => state.roomId);
     const isSoloMode = useGameStore(state => state.isSoloMode);
-    // 2. Optimized Subscription: Subscribe to nicknames AND isDisconnected status
-    // Split into primitives to allow useShallow to work correctly (avoid object reference comparison issues)
-    const playerNicknames = useGameStore(
-        useShallow(state => state.players.map(p => p.nickname))
-    );
-    const playerDisconnects = useGameStore(
-        useShallow(state => state.players.map(p => p.isDisconnected))
-    );
+    // 2. Optimized Subscription: Subscribe to whole players array
+    // We need more fields (colorIndex, isLocal) now, so extracting primitives is less viable unless we extract everything.
+    // But useShallow should work fine on the array of objects if we are careful.
+    // However, to keep it efficient, let's select the players array directly.
+    const players = useGameStore(useShallow(state => state.players));
     const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
     const [isMicEnabled, setIsMicEnabled] = useState(true);
     const [isCameraEnabled, setIsCameraEnabled] = useState(true);
@@ -122,11 +119,13 @@ export default function CameraArea() {
         <div className={styles.cameraArea}>
 
 
-            {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
-                const playerNickname = playerNicknames[index];
-                const isDisconnected = playerDisconnects[index];
+            {Array.from({ length: MAX_PLAYERS }).map((_, slotIndex) => {
+                // [FIX] Use the slot index to find the player who belongs to this slot (by colorIndex)
+                const player = players.find(p => p.colorIndex === slotIndex);
+                const playerNickname = player?.nickname;
+                const isDisconnected = player?.isDisconnected;
                 const isEmpty = !playerNickname;
-                const isMe = playerNickname === nickname;
+                const isMe = player?.isLocal;
 
                 // 해당 슬롯 플레이어의 LiveKit 정보 찾기
                 const participantInfo = !isEmpty
@@ -136,11 +135,11 @@ export default function CameraArea() {
                 if (isEmpty) {
                     return (
                         <div
-                            key={index}
+                            key={slotIndex}
                             className={`${styles.cameraBox} ${styles.waiting}`}
-                            style={{ borderColor: PLAYER_COLORS[index] }}
+                            style={{ borderColor: PLAYER_COLORS[slotIndex] }}
                         >
-                            P{index + 1} (대기중...)
+                            P{slotIndex + 1} (대기중...)
                         </div>
                     );
                 }
@@ -148,7 +147,7 @@ export default function CameraArea() {
                 if (isDisconnected) {
                     return (
                         <div
-                            key={index}
+                            key={slotIndex}
                             className={`${styles.cameraBox} ${styles.disconnected}`}
                             style={{ borderColor: '#808080', opacity: 0.7 }}
                         >
@@ -160,9 +159,9 @@ export default function CameraArea() {
 
                 return (
                     <div
-                        key={index}
+                        key={slotIndex}
                         className={`${styles.cameraBox} ${styles.active}`}
-                        style={{ borderColor: PLAYER_COLORS[index] }}
+                        style={{ borderColor: PLAYER_COLORS[slotIndex] }}
                     >
                         {/* Video Area */}
                         {isMe ? (
@@ -199,7 +198,7 @@ export default function CameraArea() {
                                 )}
 
                                 <div className={styles.remoteLabel}>
-                                    P{index + 1}: {playerNickname}
+                                    P{slotIndex + 1}: {playerNickname}
                                 </div>
                             </div>
                         )}
@@ -227,18 +226,18 @@ export default function CameraArea() {
                                 <div className={styles.controlBtn}>
                                     <button
                                         className={styles.btn}
-                                        onClick={() => setShowVolumeSlider(showVolumeSlider === index ? null : index)}
+                                        onClick={() => setShowVolumeSlider(showVolumeSlider === slotIndex ? null : slotIndex)}
                                     >
                                         <div className={styles.speakerIcon}></div>
                                     </button>
-                                    {showVolumeSlider === index && (
+                                    {showVolumeSlider === slotIndex && (
                                         <div className={styles.volumeSliderContainer} onClick={(e) => e.stopPropagation()}>
                                             <input
-                                                type="range" min="0" max="100" value={playerVolumes[index - 1] ?? 70}
-                                                onChange={(e) => handlePlayerVolumeChange(index - 1, Number(e.target.value))}
+                                                type="range" min="0" max="100" value={playerVolumes[slotIndex - 1] ?? 70}
+                                                onChange={(e) => handlePlayerVolumeChange(slotIndex - 1, Number(e.target.value))}
                                                 className={styles.verticalSlider}
                                             />
-                                            <span className={styles.volumeText}>{playerVolumes[index - 1] ?? 70}%</span>
+                                            <span className={styles.volumeText}>{playerVolumes[slotIndex - 1] ?? 70}%</span>
                                         </div>
                                     )}
                                 </div>
