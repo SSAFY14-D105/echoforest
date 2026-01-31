@@ -1,3 +1,5 @@
+import { distanceAR, distance } from '../utils/gesture-helpers.js';
+
 export default class DistanceMeasurementPanel {
     constructor(containerId) {
         this.containerId = containerId;
@@ -141,7 +143,7 @@ export default class DistanceMeasurementPanel {
         }
     }
 
-    update(landmarks) {
+    update(landmarks, aspectRatio = 1.0) {
         if (!landmarks || landmarks.length === 0) {
             this.clear();
             return;
@@ -153,11 +155,11 @@ export default class DistanceMeasurementPanel {
         const p1 = landmarks[aIdx];
         const p2 = landmarks[bIdx];
 
-        // Distance
-        const dist = this.calculateDistance(p1, p2);
+        // Distance (Aspect Ratio Adjusted) - 2D Only for stability
+        const dist = this.calculateDistance(p1, p2, aspectRatio);
 
         // Normalize (using Palm size 0-9)
-        const palmSize = this.calculateDistance(landmarks[0], landmarks[9]);
+        const palmSize = this.calculateDistance(landmarks[0], landmarks[9], aspectRatio);
         const normDist = dist / palmSize;
 
         // Update UI
@@ -187,8 +189,8 @@ export default class DistanceMeasurementPanel {
         }
     }
 
-    calculateDistance(p1, p2) {
-        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + ((p1.z || 0) - (p2.z || 0)) ** 2);
+    calculateDistance(p1, p2, aspectRatio = 1.0) {
+        return distanceAR(p1, p2, aspectRatio);
     }
 
     drawSkeletonPreview(landmarks, aIdx, bIdx, isClose) {

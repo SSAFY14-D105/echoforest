@@ -1,3 +1,5 @@
+import { distanceAR } from '../utils/gesture-helpers.js';
+
 export default class DualHandPanel {
     constructor(containerId) {
         this.containerId = containerId;
@@ -106,7 +108,7 @@ export default class DualHandPanel {
         });
     }
 
-    update(allHands, overrideMessage = null) {
+    update(allHands, overrideMessage = null, aspectRatio = 1.0) {
         if (!allHands || allHands.length < 2) {
             this.clear();
             return;
@@ -126,11 +128,11 @@ export default class DualHandPanel {
         const p1 = hand1[idxA];
         const p2 = hand2[idxB];
 
-        const rawDist = this.calculateDistance(p1, p2);
+        const rawDist = this.calculateDistance(p1, p2, aspectRatio);
 
         // Normalize using average palm size
-        const palm1 = this.calculateDistance(hand1[0], hand1[9]);
-        const palm2 = this.calculateDistance(hand2[0], hand2[9]);
+        const palm1 = this.calculateDistance(hand1[0], hand1[9], aspectRatio);
+        const palm2 = this.calculateDistance(hand2[0], hand2[9], aspectRatio);
         const avgPalm = (palm1 + palm2) / 2;
         const normDist = rawDist / avgPalm;
 
@@ -158,7 +160,7 @@ export default class DualHandPanel {
         if (this.els.result) this.els.result.innerHTML = '🤝 양손 필요';
     }
 
-    calculateDistance(p1, p2) {
-        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + ((p1.z || 0) - (p2.z || 0)) ** 2);
+    calculateDistance(p1, p2, aspectRatio = 1.0) {
+        return distanceAR(p1, p2, aspectRatio);
     }
 }

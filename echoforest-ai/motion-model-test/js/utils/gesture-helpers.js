@@ -12,6 +12,16 @@ export function distance(p1, p2) {
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+// 종횡비(Aspect Ratio)를 고려한 거리 계산 (2D Only)
+// aspectRatio = width / height (예: 16/9 = 1.777)
+// Z축(깊이)은 카메라 거리에 따른 스케일 오차가 커서 정규화 수치가 흔들리는 원인이 되므로 제외합니다.
+export function distanceAR(p1, p2, aspectRatio = 1.0) {
+    if (!p1 || !p2) return 0;
+    const dx = (p1.x - p2.x) * aspectRatio;
+    const dy = (p1.y - p2.y);
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 // 손가락이 펴져 있는지 확인
 // tipIdx: 손가락 끝 인덱스 (4, 8, 12, 16, 20)
 // pipIdx: 손가락 중간 관절 인덱스 (3, 6, 10, 14, 18) - 엄지는 3(IP)

@@ -23,7 +23,7 @@ import FingertipMatrixPanel from './ui/FingertipMatrixPanel.js';
 import CapturePanel from './ui/CapturePanel.js';
 import LogPanel from './ui/LogPanel.js';
 
-import { distance, isFingerExtended, calculateDistances } from './utils/gesture-helpers.js';
+import { distance, distanceAR, isFingerExtended, calculateDistances } from './utils/gesture-helpers.js';
 
 // 제스처 인스턴스
 const heartGesture = new HeartGesture();
@@ -395,28 +395,42 @@ function detectFrame() {
         }
 
         // 거리 패널
-        distancePanel.update(handResults.landmarks[0]);
+        const ar = video.videoWidth / video.videoHeight;
+        const worldLandmarks = handResults.worldLandmarks ? handResults.worldLandmarks[0] : null;
+        distancePanel.update(handResults.landmarks[0], ar, worldLandmarks);
 
         // 양손 제스처 (탈모빔 등)
         if (handResults.landmarks.length >= 2) {
-            const panelRes = dualHandPanel.update(handResults.landmarks);
+            // 양손 정보 그리기 (엄지-엄지 거리)
+            try {
+                drawDualHandInfo(handResults.landmarks[0], handResults.landmarks[1], ar);
+            } catch (e) {
+                // 에러 발생 시 로그 출력 후 계속 진행
+                // console.error(e);
+            }
+
+            const panelRes = dualHandPanel.update(handResults.landmarks, null, ar);
             const avgPalm = panelRes.avgPalm;
             const hand1 = handResults.landmarks[0];
             const hand2 = handResults.landmarks[1];
 
             // 1. 탈모빔 체크 (양손 제스처 - 최우선)
-            const talmoResult = talmoBeamGesture.check(handResults.landmarks, { allHands: handResults.landmarks, palmSize: avgPalm });
+            const talmoResult = talmoBeamGesture.check(handResults.landmarks, {
+                allHands: handResults.landmarks,
+                palmSize: avgPalm,
+                aspectRatio: ar
+            });
 
             if (talmoResult.detected) {
                 // 탈모빔 감지 시
-                dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">⚡ 탈모빔! ⚡</span>');
+                dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">⚡ 탈모빔! ⚡</span>', ar);
                 gesture = talmoResult;
                 window.talmoBeamActive = true;
             } else {
                 // 2. 손하트 체크
                 const heartResult = heartGesture.check(handResults.landmarks, { palmSize: avgPalm });
                 if (heartResult.detected) {
-                    dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">💕 손하트! 💕</span>');
+                    dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">💕 손하트! 💕</span>', ar);
                     gesture = { type: 'handHeart', score: 0.95, emoji: '💕', label: '손하트!' };
                 }
             }
@@ -467,9 +481,6 @@ function detectFrame() {
 
             const { isLeft, isRight, isBoth } = cheekPokePanel.update(lRes, rRes, faceSize);
             landmarkRawPanel.update(handLandmarks);
-
-            // ★ 중요: 여기서도 matrixPanel을 업데이트 하던 코드가 있었으나,
-            // 이미 detectGesture -> matrixPanel.update()가 실행되었으므로 생략합니다.
 
             if (isBoth) {
                 gesture = { type: 'bothCheekPoke', score: 0.95, emoji: '💕', label: '양볼콕!' };
@@ -550,6 +561,58 @@ function drawCheekPokePoints(face, indexTip, isLeft, isRight, isBoth) {
 
     drawPoint(leftCheek, isLeft);
     drawPoint(rightCheek, isRight);
+}
+
+function drawDualHandInfo(hand1, hand2, ar) {
+    if (!hand1 || !hand2 || !hand1[4] || !hand2[4]) return;
+
+    const t1 = hand1[4]; // 엄지
+    const t2 = hand2[4]; // 엄지
+
+    // 거리 계산 (Normalized)
+    const palm1 = distanceAR(hand1[0], hand1[9], ar);
+    const palm2 = distanceAR(hand2[0], hand2[9], ar);
+    const avgPalm = (palm1 + palm2) / 2 || 1; // 0 방지
+    const dist = distanceAR(t1, t2, ar);
+    const normDist = dist / avgPalm;
+
+    if (isNaN(normDist)) return;
+
+    // 선 그리기
+    const x1 = t1.x * canvas.width;
+    const y1 = t1.y * canvas.height;
+    const x2 = t2.x * canvas.width;
+    const y2 = t2.y * canvas.height;
+
+    if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.setLineDash([10, 5]);
+    ctx.strokeStyle = '#00ffff'; // 시안색 (눈에 잘 띄게)
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 텍스트 표시
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+
+    ctx.translate(mx, my);
+    ctx.scale(-1, 1); // 거울모드 해제 대응
+
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(-25, -12, 50, 24);
+
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(normDist.toFixed(2), 0, 0);
+
+    ctx.restore();
 }
 
 function updateGestureUI(gesture) {
