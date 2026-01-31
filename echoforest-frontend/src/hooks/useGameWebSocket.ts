@@ -148,6 +148,12 @@ export function useGameWebSocket() {
                     alert('방장에 의해 강제 퇴장되었습니다.');
                     break;
 
+                case 'DUPLICATE_LOGIN':
+                    alert(msg.content || '다른 기기에서 로그인하여 접속이 종료됩니다.');
+                    leaveGame();
+                    useGameStore.getState().logout();
+                    break;
+
                 case 'GAME_PAUSED':
                     setGamePaused(msg.content || 'Unknown Player');
                     break;
