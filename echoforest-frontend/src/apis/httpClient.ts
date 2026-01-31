@@ -22,6 +22,12 @@ export async function httpClient(endpoint: string, options: RequestInit = {}): P
         headers.set('Content-Type', 'application/json');
     }
 
+    // 옵션 타입 확장
+    interface CustomRequestInit extends RequestInit {
+        skipInterceptor?: boolean;
+    }
+    const customOptions = options as CustomRequestInit;
+
     const config: RequestInit = {
         ...options,
         headers
@@ -31,7 +37,7 @@ export async function httpClient(endpoint: string, options: RequestInit = {}): P
         const response = await fetch(url, config);
 
         // 2. 인터셉터: 인증 에러 감지 (401 Unauthorized, 419 Authentication Timeout)
-        if (response.status === 401 || response.status === 419) {
+        if (!customOptions.skipInterceptor && (response.status === 401 || response.status === 419)) {
 
             // Zustand Store를 통해 로그아웃 액션 호출 (localStorage 정리 포함)
             useGameStore.getState().logout();
