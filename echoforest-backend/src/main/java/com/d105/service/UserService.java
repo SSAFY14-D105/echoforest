@@ -66,13 +66,15 @@ public class UserService {
                     .getSession(user.getUsername());
 
             if (activeSession != null && activeSession.isOpen()) {
-                // 진짜 접속 중임 -> 차단
-                throw new IllegalStateException("이미 다른 기기에서 접속 중입니다.");
+                // 진짜 접속 중임 -> 기존 세션 강제 종료 (Kick)
+                log.info("Duplicate login: Kicking active session for {}", user.getUsername());
+                webSocketSessionManager.kickSession(user.getUsername(), "DUPLICATE_LOGIN");
             } else {
-                // 세션 정보는 있는데 연결은 없음 (비정상 종료 등) -> 정리하고 로그인 허용
+                // 세션 정보는 있는데 연결은 없음 (비정상 종료 등)
                 log.info("Ghost session detected for {}. Cleaning up.", user.getUsername());
-                sessionService.removeSession(user.getUsername());
             }
+            // 공통: 기존 세션 삭제 후 진행
+            sessionService.removeSession(user.getUsername());
         }
 
         // 4. 토큰 생성
