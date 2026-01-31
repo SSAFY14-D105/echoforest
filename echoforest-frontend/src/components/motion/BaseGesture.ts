@@ -1,4 +1,5 @@
-import { Landmark, distance } from '../../utils/gesture-helpers';
+import { distance } from '../../utils/gesture-helpers';
+import type { Landmark } from '../../utils/gesture-helpers';
 
 export interface GestureResult {
     detected: boolean;

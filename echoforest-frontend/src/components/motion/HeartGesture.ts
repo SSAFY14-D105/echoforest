@@ -1,5 +1,5 @@
-import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distance, Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class HeartGesture extends BaseGesture {
     private thresholds: any;

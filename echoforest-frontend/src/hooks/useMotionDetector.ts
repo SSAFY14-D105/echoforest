@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
-import BaseGesture, { GestureResult, GestureMetadata } from '../components/motion/BaseGesture';
+import BaseGesture, { type GestureResult, type GestureMetadata } from '../components/motion/BaseGesture';
 
 // Custom Gestures
 import BigHeartGesture from '../components/motion/BigHeartGesture';
@@ -18,10 +18,10 @@ import VSignGesture from '../components/motion/VSignGesture';
 interface MotionDetectorHook {
     isLoaded: boolean;
     detectedGesture: GestureResult | null;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
+    canvasRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
-export function useMotionDetector(videoRef: React.RefObject<HTMLVideoElement>): MotionDetectorHook {
+export function useMotionDetector(videoRef: React.RefObject<HTMLVideoElement | null>): MotionDetectorHook {
     const [isLoaded, setIsLoaded] = useState(false);
     const [detectedGesture, setDetectedGesture] = useState<GestureResult | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);

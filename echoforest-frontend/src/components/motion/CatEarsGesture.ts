@@ -1,5 +1,5 @@
-import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distance, distanceAR, Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { distance, distanceAR, type Landmark } from '../../utils/gesture-helpers';
 
 export default class CatEarsGesture extends BaseGesture {
     constructor() {

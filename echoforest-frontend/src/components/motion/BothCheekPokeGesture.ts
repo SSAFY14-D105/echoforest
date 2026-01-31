@@ -1,5 +1,5 @@
-import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { type Landmark } from '../../utils/gesture-helpers';
 import CheekHeartGesture from './CheekHeartGesture';
 
 // BothCheekPokeGesture는 사실 CheekHeartGesture가 양손 감지를 지원하므로
