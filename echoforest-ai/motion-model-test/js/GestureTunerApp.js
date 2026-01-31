@@ -1,8 +1,6 @@
 import { FilesetResolver, HandLandmarker, FaceLandmarker } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest';
 import HeartGesture from './gestures/HeartGesture.js';
 import Kiss from './gestures/Kiss.js';
-import LeftPokeGesture from './gestures/LeftPokeGesture.js';
-import RightPokeGesture from './gestures/RightPokeGesture.js';
 import VSign from './gestures/VSign.js';
 import LGesture from './gestures/LGesture.js';
 import OKGesture from './gestures/OKGesture.js';
@@ -30,8 +28,6 @@ import { distance, distanceAR, isFingerExtended, calculateDistances } from './ut
 // 제스처 인스턴스
 const heartGesture = new HeartGesture();
 const kissGesture = new Kiss();
-const leftPokeGesture = new LeftPokeGesture();
-const rightPokeGesture = new RightPokeGesture();
 const vSign = new VSign();
 const lGesture = new LGesture();
 const okGesture = new OKGesture();
