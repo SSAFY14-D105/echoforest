@@ -35,6 +35,8 @@ public class PlayerUpdateDto {
     private boolean isHidden; // [NEW] 숨김 상태 (골인 등)
     @JsonProperty("isAfk")
     private boolean isAfk;
+    @JsonProperty("isDisconnected")
+    private boolean isDisconnected;
 
     // Active Curses
     private Set<String> curses;

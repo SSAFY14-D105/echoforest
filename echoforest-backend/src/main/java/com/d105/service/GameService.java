@@ -2,6 +2,7 @@ package com.d105.service;
 
 import com.d105.dto.GameMessageDto;
 import com.d105.game.GameRoom;
+import com.d105.game.PlayerState;
 import com.d105.manager.WebSocketSessionManager;
 import com.d105.repository.GameRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -207,9 +208,23 @@ public class GameService {
     }
 
     /**
-     * 핑퐁
+     * 핑퐁 (Heartbeat) - PlayerState touch() 호출하여 Disconnect 방지
      */
     public void handlePing(WebSocketSession session, GameMessageDto message) throws IOException {
+        String username = (String) session.getAttributes().get("username");
+        String roomId = (String) session.getAttributes().get("roomId"); // Get roomId from session attributes
+
+        if (roomId != null && username != null) {
+            GameRoom room = gameRepository.getRoom(roomId); // Use gameRepository
+            if (room != null) {
+                // Find the player state by session ID to update its timestamp
+                PlayerState player = room.getPlayerBySessionId(session.getId());
+                if (player != null) {
+                    player.touch(); // Update Last Update Time
+                }
+            }
+        }
+
         GameMessageDto pong = new GameMessageDto();
         pong.setType("PONG");
         pong.setContent(message.getContent());
