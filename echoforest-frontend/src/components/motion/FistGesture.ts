@@ -1,5 +1,5 @@
 import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distance, calculateDistances, Landmark } from '../../../utils/gesture-helpers';
+import { distance, calculateDistances, Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
     constructor() {

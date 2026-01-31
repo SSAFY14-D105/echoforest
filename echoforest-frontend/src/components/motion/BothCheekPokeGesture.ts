@@ -1,5 +1,5 @@
 import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { Landmark } from '../../../utils/gesture-helpers';
+import { Landmark } from '../../utils/gesture-helpers';
 import CheekHeartGesture from './CheekHeartGesture';
 
 // BothCheekPokeGesture는 사실 CheekHeartGesture가 양손 감지를 지원하므로
@@ -21,7 +21,7 @@ export default class BothCheekPokeGesture extends BaseGesture {
         const result = this.cheekHeartGesture.check(landmarks, metadata);
 
         // 양손이 다 감지되었을 때만 True 리턴 (Strict Mode)
-        if (result.detection && result.left?.detected && result.right?.detected) {
+        if (result.detected && result.left?.detected && result.right?.detected) {
             return {
                 detected: true,
                 score: result.score,

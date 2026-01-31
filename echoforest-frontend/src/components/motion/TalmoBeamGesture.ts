@@ -1,5 +1,5 @@
 import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distanceAR, Landmark } from '../../../utils/gesture-helpers';
+import { distanceAR, Landmark } from '../../utils/gesture-helpers';
 
 export default class TalmoBeamGesture extends BaseGesture {
     private beamCount: number = 0;

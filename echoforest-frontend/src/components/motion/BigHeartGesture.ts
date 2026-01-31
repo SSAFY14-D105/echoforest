@@ -1,5 +1,5 @@
 import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distanceAR, calculateAngle, Landmark } from '../../../utils/gesture-helpers';
+import { distanceAR, calculateAngle, Landmark } from '../../utils/gesture-helpers';
 
 export default class BigHeartGesture extends BaseGesture {
     constructor() {

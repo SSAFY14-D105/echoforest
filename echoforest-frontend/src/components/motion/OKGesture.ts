@@ -1,5 +1,5 @@
 import BaseGesture, { GestureResult, GestureMetadata } from './BaseGesture';
-import { distance, Landmark } from '../../../utils/gesture-helpers';
+import { distance, Landmark } from '../../utils/gesture-helpers';
 
 export default class OKGesture extends BaseGesture {
     constructor() {
