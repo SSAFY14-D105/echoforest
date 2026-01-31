@@ -26,6 +26,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final com.d105.service.SessionService sessionService; // Inject
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -43,10 +44,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtUtil.validateToken(token)) {
                     String username = jwtUtil.getUsername(token);
 
-                    // 4. 인증 성공 - SecurityContext에 등록
-                    Authentication auth = new UsernamePasswordAuthenticationToken(username, null,
-                            Collections.emptyList());
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    // [추가] Redis에 저장된 최신 토큰과 일치하는지 확인 (중복 로그인 방지)
+                    String storedToken = sessionService.getSessionToken(username);
+                    if (storedToken != null && storedToken.equals(token)) {
+                        // 4. 인증 성공 - SecurityContext에 등록
+                        Authentication auth = new UsernamePasswordAuthenticationToken(username, null,
+                                Collections.emptyList());
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    } else {
+                        log.warn("Token mismatch or session expired for user: {}", username);
+                        // 토큰은 유효하지만 Redis 세션과 다르면(오래된 토큰) 인증 안 해줌 -> 401/403
+                    }
                 }
             } catch (Exception e) {
                 log.debug("Token validation failed: {}", e.getMessage());
