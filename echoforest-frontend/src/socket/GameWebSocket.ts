@@ -32,6 +32,7 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
+    | 'DUPLICATE_LOGIN' // Server→Client: 중복 로그인으로 인한 강제 종료
 
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
