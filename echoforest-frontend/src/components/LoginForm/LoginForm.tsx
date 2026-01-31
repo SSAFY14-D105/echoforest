@@ -40,6 +40,7 @@ export default function LoginForm({ onLoginSuccess, onSwitchMode }: LoginFormPro
                 localStorage.setItem('token', res.token);
                 localStorage.setItem('loginId', id);
                 localStorage.setItem('nickname', res.nickname);
+                localStorage.setItem('userId', res.userId);
                 onLoginSuccess(res.nickname);
             } else {
                 setError('로그인에 실패했습니다.');

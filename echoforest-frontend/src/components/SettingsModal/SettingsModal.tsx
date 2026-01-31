@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
-import { checkNickname } from '../../apis/authApi';
+import { checkNickname, updateNickname } from '../../apis/authApi';
 import styles from './SettingsModal.module.css';
 
 interface SettingsModalProps {
@@ -43,16 +43,29 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         return () => clearTimeout(timer);
     }, [tempNickname, nickname]);
 
-    const handleNicknameChange = () => {
+    const handleNicknameChange = async () => {
+        const userId = Number(localStorage.getItem('userId'));
+        if (!userId) {
+            alert('인증 정보가 부족합니다. 다시 로그인해주세요.');
+            return;
+        }
+
         if (tempNickname.trim() && tempNickname.trim() !== nickname && nicknameCheckStatus === 'available') {
             setIsSaving(true);
-            setNickname(tempNickname.trim());
-            localStorage.setItem('nickname', tempNickname.trim());
-            setSaveMessage('✅ 저장됨!');
-            setTimeout(() => {
-                setIsSaving(false);
-                setSaveMessage('');
-            }, 2000);
+            try {
+                await updateNickname(userId, tempNickname.trim());
+                setNickname(tempNickname.trim());
+                localStorage.setItem('nickname', tempNickname.trim());
+                setSaveMessage('✅ 저장됨!');
+            } catch (error) {
+                console.error('닉네임 변경 실패:', error);
+                setSaveMessage('❌ 변경 실패');
+            } finally {
+                setTimeout(() => {
+                    setIsSaving(false);
+                    setSaveMessage('');
+                }, 2000);
+            }
         }
     };
 

@@ -4,6 +4,7 @@ import MainPage from './pages/auth/MainPage/MainPage';
 import LobbyPage from './pages/lobby/LobbyPage/LobbyPage.tsx';
 import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
+import ToastContainer from './components/ToastContainer/ToastContainer';
 
 export default function App() {
   const { nickname, roomId, setNickname } = useGameStore();
@@ -19,7 +20,7 @@ export default function App() {
       console.warn('[App] Token expired. Logging out.');
       useGameStore.getState().logout(); // 스토어의 로그아웃 액션 호출 (localStorage 정리)
     } else if (token && storedNickname && !nickname) {
-      console.log('[App] Session restored:', storedNickname);
+      // console.log('[App] Session restored:', storedNickname);
       setNickname(storedNickname);
     }
     setIsInitializing(false);
@@ -27,17 +28,37 @@ export default function App() {
 
   // 초기화 중이면 아무것도 렌더링하지 않음 (또는 로딩 스피너)
   if (isInitializing) {
-    return <div style={{ width: '100vw', height: '100vh', backgroundColor: '#2d2d2d' }} />;
+    return (
+      <>
+        <ToastContainer />
+        <div style={{ width: '100vw', height: '100vh', backgroundColor: '#2d2d2d' }} />
+      </>
+    );
   }
 
   // 1. 닉네임이 없으면 -> 메인 페이지 (로그인/회원가입 선택)
   if (!nickname) {
-    return <MainPage onLogin={(id) => setNickname(id)} />;
+    return (
+      <>
+        <ToastContainer />
+        <MainPage onLogin={(id) => setNickname(id)} />
+      </>
+    );
   }
 
   if (!roomId) {
-    return <LobbyPage />;
+    return (
+      <>
+        <ToastContainer />
+        <LobbyPage />
+      </>
+    );
   }
 
-  return <GamePage />;
+  return (
+    <>
+      <ToastContainer />
+      <GamePage />
+    </>
+  );
 }

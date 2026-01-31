@@ -46,7 +46,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo2Scene] Initializing new game map with MapManager');
+        // console.log('[Solo2Scene] Initializing new game map with MapManager');
 
         // MapManager 인스턴스 생성 (getWorldWidth/Height 등에서 사용 위함)
         this.mapManager = new MapManager(this, 'stage_03_solo');
@@ -55,7 +55,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     protected createGimmicks(): void {
-        console.log('[Solo2Scene] Creating gimmicks via MapManager');
+        // console.log('[Solo2Scene] Creating gimmicks via MapManager');
 
         // 타일 및 레이어 초기화
         this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
@@ -89,7 +89,7 @@ export default class Solo2Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo2Scene] 🎉 Solo mode stage 2 complete!');
+        // console.log('[Solo2Scene] 🎉 Solo mode stage 2 complete!');
         useGameStore.getState().selectStage('SOLO_3');
     }
 }

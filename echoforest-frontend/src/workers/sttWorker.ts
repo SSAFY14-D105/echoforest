@@ -28,12 +28,6 @@ const BATCH_INTERVAL_MS = 5000;
 let speechQueue: string[] = [];
 let batchTimerId: ReturnType<typeof setTimeout> | null = null;
 let countdownIntervalId: ReturnType<typeof setInterval> | null = null;
-let isBoosterMode = false;
-
-// === 로깅 ===
-const log = (msg: string, ...args: unknown[]) => {
-    console.log(`🔧[STT Worker] ${msg}`, ...args);
-};
 
 // === 헬퍼 함수 ===
 function findPositiveWord(text: string): string | null {
@@ -55,7 +49,6 @@ function startBatchTimer() {
     clearBatchTimer();
 
     const countdown = BATCH_INTERVAL_MS / 1000;
-    log(`⏱️ 타이머 시작: ${countdown}초`);
 
     let remaining = countdown;
 
@@ -74,7 +67,6 @@ function startBatchTimer() {
         batchTimerId = null;
 
         if (speechQueue.length > 0) {
-            log(`📤 배치 전송: ${speechQueue.length}개`, speechQueue);
             self.postMessage({ type: 'BATCH_READY', texts: [...speechQueue] } as WorkerOutMessage);
             speechQueue = [];
             self.postMessage({ type: 'QUEUE_UPDATE', count: 0, texts: [] } as WorkerOutMessage);
@@ -88,10 +80,8 @@ function startBatchTimer() {
 }
 
 function resetState() {
-    log('🔄 상태 초기화');
     clearBatchTimer();
     speechQueue = [];
-    isBoosterMode = false;
     self.postMessage({ type: 'QUEUE_UPDATE', count: 0, texts: [] } as WorkerOutMessage);
     self.postMessage({ type: 'COUNTDOWN_UPDATE', countdown: 0 } as WorkerOutMessage);
 }
@@ -103,34 +93,32 @@ function processTranscript(text: string, isFinal: boolean, isCursed: boolean) {
     // 트랜스크립트 업데이트 알림
     self.postMessage({ type: 'TRANSCRIPT_UPDATE', text: cleanText } as WorkerOutMessage);
 
-    // 부스터 모드에서 긍정어 체크
-    if (isBoosterMode) {
+    // 저주 상태일 때만 긍정어 체크
+    if (isCursed) {
         const foundPositive = findPositiveWord(cleanText);
         if (foundPositive) {
-            log(`💖 긍정어 감지: "${foundPositive}"`, { isCursed });
             self.postMessage({
                 type: 'POSITIVE_DETECTED',
                 word: foundPositive,
-                isCursed
+                isCursed: true
             } as WorkerOutMessage);
             return; // 긍정어 발견 시 배치 큐에 추가하지 않음
         }
-    }
 
-    // 최종 결과만 배치 큐에 추가
-    if (isFinal) {
-        speechQueue.push(cleanText);
-        log(`📥 큐 추가: "${cleanText}" (총 ${speechQueue.length}개)`);
+        // 최종 결과만 배치 큐에 추가
+        if (isFinal) {
+            speechQueue.push(cleanText);
 
-        self.postMessage({
-            type: 'QUEUE_UPDATE',
-            count: speechQueue.length,
-            texts: [...speechQueue]
-        } as WorkerOutMessage);
+            self.postMessage({
+                type: 'QUEUE_UPDATE',
+                count: speechQueue.length,
+                texts: [...speechQueue]
+            } as WorkerOutMessage);
 
-        // 타이머가 없으면 시작
-        if (!batchTimerId) {
-            startBatchTimer();
+            // 타이머가 없으면 시작
+            if (!batchTimerId) {
+                startBatchTimer();
+            }
         }
     }
 }
@@ -144,18 +132,8 @@ self.onmessage = (event: MessageEvent<WorkerInMessage>) => {
             processTranscript(message.text, message.isFinal, message.isCursed);
             break;
 
-        case 'SET_BOOSTER_MODE':
-            isBoosterMode = message.active;
-            log(`부스터 모드: ${isBoosterMode ? 'ON 🟢' : 'OFF 🔴'}`);
-            break;
-
         case 'RESET':
             resetState();
             break;
-
-        default:
-            log('⚠️ 알 수 없는 메시지 타입:', message);
     }
 };
-
-log('✅ Worker 초기화 완료');

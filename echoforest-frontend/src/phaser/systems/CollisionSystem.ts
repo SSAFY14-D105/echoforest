@@ -311,7 +311,7 @@ export class CollisionSystem {
                     if (targetGoals.length > 0) {
                         targetGoals.forEach(targetGoal => {
                             targetGoal.setVisible(true);
-                            console.log(`[${this.context.getSceneKey()}] Goal activated via Lock: ${lock.id}`);
+                            // console.log(`[${this.context.getSceneKey()}] Goal activated via Lock: ${lock.id}`);
                         });
                     }
                 } else if (this.context.shouldSpawnGoalOnUnlock()) {
@@ -320,7 +320,7 @@ export class CollisionSystem {
 
                     if (!existingGoal) {
                         // Goal 생성은 씬에서 처리해야 함 - 로그만 남김
-                        console.log(`[${this.context.getSceneKey()}] Goal should spawn at Lock position: ${lock.id}`);
+                        // console.log(`[${this.context.getSceneKey()}] Goal should spawn at Lock position: ${lock.id}`);
                     }
                 }
 
@@ -335,7 +335,7 @@ export class CollisionSystem {
         const player = this.context.players.get(playerLabel);
 
         if (player) {
-            console.log(`[${this.context.getSceneKey()}] Player hit spike!`);
+            // console.log(`[${this.context.getSceneKey()}] Player hit spike!`);
             this.context.triggerDeath('spike');
         }
     }

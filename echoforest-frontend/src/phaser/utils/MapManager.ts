@@ -31,7 +31,7 @@ export default class MapManager {
         const mapPixelHeightScaled = this.map.heightInPixels * this.mapScale;
         this.offsetY = Math.max(0, this.scene.scale.height - mapPixelHeightScaled);
 
-        console.log(`[MapManager] Initialized for map: ${mapKey} (Scale: ${this.mapScale}, OffsetY: ${this.offsetY})`);
+        // console.log(`[MapManager] Initialized for map: ${mapKey} (Scale: ${this.mapScale}, OffsetY: ${this.offsetY})`);
     }
 
     public getMap(): Phaser.Tilemaps.Tilemap {
@@ -72,6 +72,8 @@ export default class MapManager {
         // Render Skip 대상 레이어 식별 (Group Layer 상속 포함)
         const skippedLayerNames = this.getSkippedLayerNames();
 
+
+
         // 모든 타일 레이어 순회 및 생성
         this.map.layers.forEach(layerData => {
             const layerClass = TiledHelper.getLayerProperty(layerData, 'class') || (layerData as any).class;
@@ -79,12 +81,10 @@ export default class MapManager {
             // 1. 렌더링 스킵 조건 (로직 전용 레이어)
             if (layerClass === 'GhostPlatform' || skippedLayerNames.has(layerData.name)) return;
 
-            // 2. 레이어 생성
+            // 레이어 생성
             const layer = this.map.createLayer(layerData.name, ts, 0, this.offsetY);
             if (layer) {
                 layer.setScale(this.mapScale);
-
-                // 깊이 설정: 배경과 오브젝트 사이 적절한 depth 필요
                 layer.setDepth(-10 + this.map.layers.indexOf(layerData) * 0.1);
 
                 // 3. 충돌체 생성 (CollisionBuilder 위임)
@@ -101,6 +101,19 @@ export default class MapManager {
         if (backgroundKey) {
             this.scene.setupTiledBackground(backgroundKey, 0.2);
         }
+    }
+
+    /**
+     * 비동기적으로 맵을 초기화합니다. (대형 맵 로딩 시 프레임 드롭 방지)
+     */
+    public initializeAsync(tilesetName: string, tilesetKey: string, backgroundKey?: string): Promise<void> {
+        return new Promise((resolve) => {
+            // 메인 스레드 차단을 막기 위해 setTimeout으로 지연 실행
+            setTimeout(() => {
+                this.initialize(tilesetName, tilesetKey, backgroundKey);
+                resolve();
+            }, 0);
+        });
     }
 
     /**

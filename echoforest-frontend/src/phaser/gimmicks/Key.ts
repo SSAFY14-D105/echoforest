@@ -75,7 +75,7 @@ export class Key {
         this.sprite?.setVisible(false);
         if (this.body) this.scene.matter.world.remove(this.body);
 
-        console.log(`[Key] Collected: ${this.id}, unlocks Lock: ${this.linkedLockId}`);
+        // console.log(`[Key] Collected: ${this.id}, unlocks Lock: ${this.linkedLockId}`);
     }
 
     public reset(): void {
@@ -90,7 +90,7 @@ export class Key {
         // 물리 바디 재생성 (기존 바디는 이미 제거되었음)
         this.createBody();
 
-        console.log(`[Key] Reset: ${this.id}`);
+        // console.log(`[Key] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {

@@ -147,7 +147,7 @@ export class PoisonMushroom {
         this.graphics?.setVisible(false);
         if (this.body) this.scene.matter.world.remove(this.body);
 
-        console.log(`[PoisonMushroom] Triggered and removed: ${this.id}`);
+        // console.log(`[PoisonMushroom] Triggered and removed: ${this.id}`);
     }
 
     public reset(): void {
@@ -162,7 +162,7 @@ export class PoisonMushroom {
         // 물리 바디 재생성
         this.createBody();
 
-        console.log(`[PoisonMushroom] Reset: ${this.id}`);
+        // console.log(`[PoisonMushroom] Reset: ${this.id}`);
     }
 
     public getBody(): MatterJS.BodyType {

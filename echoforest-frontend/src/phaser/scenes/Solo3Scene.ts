@@ -48,17 +48,18 @@ export default class Solo3Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo3Scene] Initializing tutorial map');
+        // console.log('[Solo3Scene] Initializing tutorial map');
 
         // MapManager 초기화 (맵 로드)
         this.mapManager = new MapManager(this, 'tutorial_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 타일셋 연결
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        // 기믹 생성 (BaseGameScene의 create()에서 자동으로 호출됨)
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                // console.log('[Solo3Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
@@ -75,7 +76,7 @@ export default class Solo3Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo3Scene] 🎉 Tutorial Stage Complete! Moving to Forest Stage...');
+        // console.log('[Solo3Scene] 🎉 Tutorial Stage Complete! Moving to Forest Stage...');
 
         // 1초 뒤에 스테이지 선택 상태를 SOLO_4로 변경 (React 및 Phaser 전환 유도)
         this.time.delayedCall(1000, () => {

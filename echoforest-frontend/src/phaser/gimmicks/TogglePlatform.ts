@@ -61,7 +61,7 @@ export class TogglePlatform {
 
         this.graphics.setVisible(false);
         this.scene.matter.world.remove(this.body);
-        console.log(`[TogglePlatform] Hidden: ${this.id}`);
+        // console.log(`[TogglePlatform] Hidden: ${this.id}`);
     }
 
     public show(): void {
@@ -76,7 +76,7 @@ export class TogglePlatform {
             friction: 0,
             frictionStatic: 0
         });
-        console.log(`[TogglePlatform] Shown: ${this.id}`);
+        // console.log(`[TogglePlatform] Shown: ${this.id}`);
     }
 
     public toggle(): void {

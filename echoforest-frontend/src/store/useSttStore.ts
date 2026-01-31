@@ -12,31 +12,6 @@ import { create } from 'zustand';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import { useGameStore } from './useGameStore';
 
-// === 로깅 헬퍼 ===
-const LOG_PREFIX = '✅[STT]';
-const log = {
-    info: (msg: string, ...args: unknown[]) => console.log(`${LOG_PREFIX} ${msg}`, ...args),
-    success: (msg: string, ...args: unknown[]) => console.log(`${LOG_PREFIX} ✅ ${msg}`, ...args),
-    warn: (msg: string, ...args: unknown[]) => console.warn(`${LOG_PREFIX} ⚠️ ${msg}`, ...args),
-    error: (msg: string, ...args: unknown[]) => console.error(`${LOG_PREFIX} ❌ ${msg}`, ...args),
-    serverSend: (type: string, data: unknown) => {
-        console.log(`${LOG_PREFIX} 🌐 [→ 게임서버] ${type}`, data);
-    },
-    serverReceive: (type: string, data: unknown) => {
-        console.log(`${LOG_PREFIX} 🌐 [← 게임서버] ${type}`, data);
-    },
-    curse: (action: string, data: unknown) => {
-        console.log(`${LOG_PREFIX} 💀 [저주] ${action}`, data);
-    },
-    positive: (word: string, isCursed: boolean) => {
-        if (isCursed) {
-            console.log(`${LOG_PREFIX} 💖 [긍정어] "${word}" → 저주 해제 시도`);
-        } else {
-            console.log(`${LOG_PREFIX} 💖 [긍정어] "${word}" (저주 없음)`);
-        }
-    }
-};
-
 export interface WarningModal {
     isVisible: boolean;
     level: number;
@@ -113,7 +88,6 @@ export const useSttStore = create<SttState>((set, get) => ({
 
     // === 기본 액션 ===
     setBoosterMode: (active: boolean) => {
-        log.info(`부스터 모드: ${active ? 'ON 🟢' : 'OFF 🔴'}`);
         set({ isBoosterMode: active });
     },
 
@@ -123,8 +97,6 @@ export const useSttStore = create<SttState>((set, get) => ({
 
     // === Worker 결과 핸들러 ===
     onPositiveDetected: (word: string, isCursed: boolean) => {
-        log.positive(word, isCursed);
-
         if (isCursed) {
             set({
                 lastDetectedWord: word,
@@ -142,7 +114,8 @@ export const useSttStore = create<SttState>((set, get) => ({
 
             // 서버로 저주 해제 요청
             const { roomId } = useGameStoreCompat();
-            if (roomId && gameWebSocket.isConnected()) {
+            const isConnected = gameWebSocket.isConnected();
+            if (roomId && isConnected) {
                 sendCurseRelease(roomId, word);
             }
         } else {
@@ -191,26 +164,16 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     onBatchReady: (texts: string[]) => {
-        log.info(`📤 [배치 전송] ${texts.length}개 문장`, texts);
-
         const { roomId } = useGameStoreCompat();
         if (roomId && gameWebSocket.isConnected()) {
             sendSpeechBatch(roomId, texts);
         } else {
-            log.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
+            console.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
         }
     },
 
     // === 서버 이벤트 핸들러 ===
-    onStackUpdated: (stack: number, delta: number, reason?: string) => {
-        const prevStack = get().curseState.stack;
-        log.serverReceive('STACK_UPDATED', {
-            이전: prevStack,
-            현재: stack,
-            변화: delta > 0 ? `+${delta}` : delta,
-            사유: reason || 'negative_word'
-        });
-
+    onStackUpdated: (stack: number, delta: number, _reason?: string) => {
         set({
             curseState: {
                 ...get().curseState,
@@ -221,7 +184,6 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => {
-        log.curse('발동! 💀💀💀', { 대상: cursedPlayerId, 맵ID: mapId });
 
         set({
             curseState: {
@@ -238,13 +200,17 @@ export const useSttStore = create<SttState>((set, get) => ({
             },
         });
 
+        // Phaser 씬에 저주 적용 이벤트 전달
+        window.dispatchEvent(new CustomEvent('curse-triggered', {
+            detail: { playerId: cursedPlayerId, mapId }
+        }));
+
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
         }, 5000);
     },
 
     onCurseReleased: (releasedPlayerId: string, word: string) => {
-        log.curse('해제됨 ✨', { 대상: releasedPlayerId, 긍정어: word });
 
         set({
             curseState: {
@@ -260,6 +226,11 @@ export const useSttStore = create<SttState>((set, get) => ({
             },
         });
 
+        // Phaser 씬에 저주 해제 이벤트 전달
+        window.dispatchEvent(new CustomEvent('curse-released', {
+            detail: { playerId: releasedPlayerId, word }
+        }));
+
         setTimeout(() => {
             set({ warningModal: { ...get().warningModal, isVisible: false } });
         }, 3000);
@@ -270,7 +241,6 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     reset: () => {
-        log.info('STT 상태 초기화');
         set({
             isListening: false,
             transcript: '',
@@ -310,9 +280,6 @@ function useGameStoreCompat(): { roomId: string; isSoloMode: boolean; nickname: 
 }
 
 function sendSpeechBatch(roomId: string, texts: string[]) {
-    log.serverSend('SPEECH_BATCH', { roomId, texts, 문장수: texts.length });
-    log.info('→ 게임서버가 AI서버(/api/v1/analyze/batch)에 분석 요청 예정');
-
     gameWebSocket.send({
         type: 'SPEECH_BATCH' as never,
         roomId,
@@ -321,7 +288,6 @@ function sendSpeechBatch(roomId: string, texts: string[]) {
 }
 
 function sendCurseRelease(roomId: string, word: string) {
-    log.serverSend('CURSE_RELEASE', { roomId, word });
     gameWebSocket.send({
         type: 'CURSE_RELEASE' as never,
         roomId,

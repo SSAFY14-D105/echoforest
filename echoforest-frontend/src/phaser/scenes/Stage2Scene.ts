@@ -48,16 +48,18 @@ export default class Stage2Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Stage2Scene] Initializing stage_02.tmj');
+        // console.log('[Stage2Scene] Initializing stage_02.tmj');
 
         // 4. MapManager 초기화
         this.mapManager = new MapManager(this, 'stage_02_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 5. 맵 생성 (Tileset Name, Phaser Cache Key, Background Key)
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                // console.log('[Stage2Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
@@ -76,7 +78,7 @@ export default class Stage2Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Stage2Scene] 🎉 Stage 2 Complete! Requesting transition...');
+        // console.log('[Stage2Scene] 🎉 Stage 2 Complete! Requesting transition...');
 
         // 멀티플레이: 서버에 클리어 신호 전송 (부모 클래스 로직 사용)
         super.onStageComplete();

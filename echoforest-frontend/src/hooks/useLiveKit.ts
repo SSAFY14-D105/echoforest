@@ -8,7 +8,7 @@ import { fetchLiveKitToken, LIVEKIT_SERVER_URL } from '../apis/livekitApi';
 export interface UseLiveKitOptions {
     roomId: string;
     username: string;
-    userId: string;  // 필수
+
     autoConnect?: boolean;
 }
 
@@ -24,15 +24,15 @@ export interface UseLiveKitResult {
  * LiveKit 연결 관리 훅
  */
 export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
-    const { roomId, username, userId, autoConnect = true } = options;
+    const { roomId, username, autoConnect = true } = options;
 
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
     const connect = useCallback(async () => {
-        if (!roomId || !username || !userId) {
-            console.log('⚠️ 필수값 누락:', { roomId, username, userId });
+        if (!roomId || !username) {
+            // console.log('⚠️ 필수값 누락:', { roomId, username });
             return;
         }
 
@@ -40,7 +40,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
         setError(null);
 
         try {
-            const response = await fetchLiveKitToken({ roomId, userId, username });
+            const response = await fetchLiveKitToken({ roomId, username });
             setToken(response.token);
         } catch (err) {
             const error = err instanceof Error ? err : new Error('토큰 발급 실패');
@@ -49,13 +49,13 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitResult {
         } finally {
             setIsLoading(false);
         }
-    }, [roomId, username, userId]);
+    }, [roomId, username]);
 
     useEffect(() => {
-        if (autoConnect && roomId && username && userId) {
+        if (autoConnect && roomId && username) {
             connect();
         }
-    }, [autoConnect, roomId, username, userId, connect]);
+    }, [autoConnect, roomId, username, connect]);
 
     return {
         token,

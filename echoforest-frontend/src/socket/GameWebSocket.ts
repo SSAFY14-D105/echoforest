@@ -8,6 +8,7 @@
  */
 import { API_BASE_URL } from '../config.ts';
 
+
 // 백엔드와 동일한 메시지 타입 (GameWebSocketHandler 기준)
 export type MessageType =
     | 'CREATE'        // Client→Server: 방 생성
@@ -31,9 +32,11 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
+
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
     | 'STAGE_EXIT'    // [NEW] 골 탈출 신호 (Client -> Server)
+    | 'PLAYER_DISCONNECTED' // Server→Others: 플레이어 연결 끊김 (Ghost 방지)
     // STT 저주 시스템 (추가)
     | 'SPEECH_BATCH'      // Client→Server: 발화 배치 전송 (content: texts JSON)
     | 'STACK_UPDATED'     // Server→All: 스택 변경 (stack, delta, reason)
@@ -50,7 +53,11 @@ export type MessageType =
     | 'PAUSE_GAME'    // Client->Server: 일시정지 요청
     | 'RESUME_GAME'   // Client->Server: 재개 요청
     | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
-    | 'GAME_RESUMED'; // Server->All: 게임 재개 알림 (content: username)
+    | 'GAME_RESUMED'  // Server->All: 게임 재개 알림 (content: username)
+    // 엔딩 미션 (서버 동기화)
+    | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
+    | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
+
 
 // ... (Interface declarations remain same) ...
 
@@ -111,6 +118,8 @@ class GameWebSocket {
     private onConnectHandler: (() => void) | null = null;
     private onErrorHandler: ((error: string) => void) | null = null;
     private onCloseHandler: (() => void) | null = null;
+
+    private messageQueue: GameMessage[] = []; // [FIX] 연결 중 메시지 큐
 
     private constructor() {
         // private constructor for singleton
@@ -186,7 +195,7 @@ class GameWebSocket {
     connect(): Promise<void> {
         // 이미 연결되어 있으면 바로 resolve
         if (this.isConnected()) {
-            console.log('✅ WebSocket 이미 연결됨');
+            // console.log('✅ WebSocket 이미 연결됨');
             return Promise.resolve();
         }
 
@@ -199,7 +208,8 @@ class GameWebSocket {
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {
-                    console.log('✅ WebSocket 연결됨');
+                    // console.log('✅ WebSocket 연결됨');
+                    this.flushMessageQueue(); // [FIX] 대기 중이던 메시지 전송
                     this.onConnectHandler?.();
                     resolve();
                 };
@@ -216,6 +226,8 @@ class GameWebSocket {
                         if (message.type === 'ERROR') {
                             this.onErrorHandler?.(message.content || '알 수 없는 오류');
                         }
+
+
 
                         // 1. 레거시 핸들러 실행
                         this.onMessageHandler?.(message);
@@ -237,7 +249,7 @@ class GameWebSocket {
                 };
 
                 this.ws.onclose = () => {
-                    console.log('WebSocket 연결 종료');
+                    // console.log('WebSocket 연결 종료');
                     this.ws = null;
                     this.onCloseHandler?.();
                 };
@@ -256,10 +268,27 @@ class GameWebSocket {
                 //console.log('📤 전송:', message);
             }
             this.ws.send(JSON.stringify(message));
+        } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+            // [FIX] 연결 중일 때 중요 메시지는 큐에 저장
+            if (message.type === 'JOIN' || message.type === 'CREATE' || message.type === 'READY' || message.type === 'START_GAME') {
+                console.log('[GameWebSocket] Queueing message until connected:', message.type);
+                this.messageQueue.push(message);
+            }
         } else {
             // MOVE 메시지는 빈번하므로 연결 끊김 경고를 로그에 남기지 않음 (스팸 방지)
             if (message.type !== 'MOVE') {
-                console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+                // console.warn('WebSocket이 연결되지 않음. Message:', message.type);
+            }
+        }
+    }
+
+    // [FIX] 대기 중 메시지 전송
+    private flushMessageQueue() {
+        while (this.messageQueue.length > 0) {
+            const msg = this.messageQueue.shift();
+            if (msg) {
+                console.log('[GameWebSocket] Flushing queued message:', msg.type);
+                this.send(msg);
             }
         }
     }
@@ -494,6 +523,34 @@ class GameWebSocket {
         this.send(message);
     }
 
+    /**
+     * 엔딩 미션 시작 요청 (호스트가 모든 플레이어 골 도달 감지 시)
+     */
+    sendEndingMissionStart(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_START',
+            roomId: roomId,
+            username: this.username,
+            content: ''
+        };
+        this.send(message);
+    }
+
+    /**
+     * 엔딩 미션 종료 요청 (캡처 완료 후)
+     */
+    sendEndingMissionEnd(roomId: string) {
+        if (!this.isConnected()) return;
+        const message: GameMessage = {
+            type: 'ENDING_MISSION_END',
+            roomId: roomId,
+            username: this.username,
+            content: ''
+        };
+        this.send(message);
+    }
+
     // PING 전송 (Keep-alive)
     ping() {
         this.send({
@@ -508,6 +565,14 @@ class GameWebSocket {
             this.ws.close();
             this.ws = null;
         }
+        // [FIX] 리스너와 큐만 초기화, 핸들러는 유지
+        // 핸들러(onMessageHandler 등)는 useGameWebSocket에서 설정되며,
+        // roomId/nickname이 변경되지 않으면 useEffect가 다시 실행되지 않음.
+        // 따라서 핸들러를 유지해야 재연결 시 정상 작동함.
+        this.listeners.clear();
+        this.messageQueue = [];
+
+        console.log('[GameWebSocket] Disconnected. Handlers preserved, listeners/queue cleared.');
     }
 
     // 연결 상태 확인

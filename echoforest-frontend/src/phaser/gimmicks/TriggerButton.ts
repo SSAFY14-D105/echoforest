@@ -71,7 +71,7 @@ export class TriggerButton {
         const height = (this.body as any).height || 12;
         this.drawButton(width, height);
 
-        console.log(`[TriggerButton] Pressed: ${this.id} -> Target: ${this.targetId}`);
+        // console.log(`[TriggerButton] Pressed: ${this.id} -> Target: ${this.targetId}`);
         return true;
     }
 

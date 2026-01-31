@@ -46,20 +46,18 @@ export default class Solo4Scene extends BaseGameScene {
     }
 
     create() {
-        console.log('[Solo4Scene] Initializing forest map');
+        // console.log('[Solo4Scene] Initializing forest map');
 
         // MapManager 초기화 (맵 로드)
         this.mapManager = new MapManager(this, 'forest_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 타일셋 연결
-        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        // 기믹 생성 (MapManager 위임)
-        // BaseGameScene.create() 내부에서 createGimmicks()가 호출되므로 거기서 처리하도록 변경하거나
-        // 여기서 명시적으로 호출할 수도 있지만, BaseGameScene 구조를 유지하기 위해 오버라이딩된 createGimmicks 이용
-
-        super.create();
+        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
+        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+            .then(() => {
+                // console.log('[Solo4Scene] Async map initialization complete');
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
@@ -76,7 +74,7 @@ export default class Solo4Scene extends BaseGameScene {
     }
 
     protected onStageComplete(): void {
-        console.log('[Solo4Scene] 🎉 Forest Stage Complete! Moving to Test Stage...');
+        // console.log('[Solo4Scene] 🎉 Forest Stage Complete! Moving to Test Stage...');
         // 1초 뒤에 스테이지 선택 상태를 SOLO_5로 변경
         this.time.delayedCall(1000, () => {
             useGameStore.getState().selectStage('SOLO_5');

@@ -152,7 +152,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
     // 언마운트 시 게임 완전 제거
     useEffect(() => {
         return () => {
-            console.log('[PhaserGame] Component Unmounted - Destroying Game Instance');
+            // console.log('[PhaserGame] Component Unmounted - Destroying Game Instance');
             if (gameRef.current) {
                 gameRef.current.destroy(true);
                 gameRef.current = null;

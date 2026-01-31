@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { liveKitService } from '../../socket/LiveKitService';
 import type { ParticipantInfo } from '../../socket/LiveKitService';
 import styles from './CameraArea.module.css';
@@ -8,12 +9,16 @@ const PLAYER_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'];
 const MAX_PLAYERS = 4;
 
 export default function CameraArea() {
-    const {
-        nickname,
-        roomId,
-        players,
-        isSoloMode
-    } = useGameStore();
+    // 1. Stable State (Primitive values)
+    const nickname = useGameStore(state => state.nickname);
+    const roomId = useGameStore(state => state.roomId);
+    const isSoloMode = useGameStore(state => state.isSoloMode);
+
+    // 2. Optimized Subscription: Only subscribe to the list of nicknames
+    // This prevents re-renders when x, y, anim coordinates change (30fps)
+    const playerNicknames = useGameStore(
+        useShallow(state => state.players.map(p => p.nickname))
+    );
 
     // LiveKit State
     const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
@@ -27,14 +32,9 @@ export default function CameraArea() {
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
 
-
-
     // Derived Players for Rendering
     // Remote Video Refs map (key: identity or index)
     const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
-
-    // Derived Players for Rendering
-    const displayPlayers = players;
 
     // Mock Participants Info
     const displayParticipantInfos = participantInfos;
@@ -44,7 +44,7 @@ export default function CameraArea() {
         if (isSoloMode) return;
         if (!roomId || !nickname) return;
 
-        liveKitService.onParticipantsChange((infos) => {
+        const unsubscribe = liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
         });
 
@@ -53,15 +53,20 @@ export default function CameraArea() {
             setIsCameraEnabled(liveKitService.isCameraEnabled);
         }
 
-        if (isLiveKitConnecting || liveKitService.isConnected) return;
+        // 이미 연결 중이거나 연결됨 -> 연결 로직 스킵하지만 cleanup은 유지
+        if (isLiveKitConnecting || liveKitService.isConnected) {
+            return () => {
+                unsubscribe();
+            };
+        }
 
         const connectLiveKit = async () => {
-            console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
+            // console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
             setIsLiveKitConnecting(true);
             try {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
                 // [FIX] nickname을 identity로 사용하여 다른 플레이어와 매칭
-                await liveKitService.connect(roomId, nickname, nickname);
+                await liveKitService.connect(roomId, nickname);
                 setIsMicEnabled(liveKitService.isMicEnabled);
                 setIsCameraEnabled(liveKitService.isCameraEnabled);
             } catch (error) {
@@ -74,6 +79,7 @@ export default function CameraArea() {
         connectLiveKit();
 
         return () => {
+            unsubscribe();
             liveKitService.disconnect();
         };
     }, [roomId, nickname, isSoloMode]);
@@ -117,13 +123,13 @@ export default function CameraArea() {
 
 
             {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
-                const player = displayPlayers[index];
-                const isEmpty = !player;
-                const isMe = player?.nickname === nickname; // In Mock mode, nickname might be 'Me' or 'UserA'
+                const playerNickname = playerNicknames[index];
+                const isEmpty = !playerNickname;
+                const isMe = playerNickname === nickname;
 
                 // 해당 슬롯 플레이어의 LiveKit 정보 찾기
                 const participantInfo = !isEmpty
-                    ? displayParticipantInfos.find(p => p.identity === player.nickname)
+                    ? displayParticipantInfos.find(p => p.identity === playerNickname)
                     : null;
 
                 if (isEmpty) {
@@ -165,7 +171,7 @@ export default function CameraArea() {
                             <div className={styles.cameraContent}>
                                 {/* Remote Video */}
                                 <video
-                                    ref={el => { if (el && player) remoteVideoRefs.current[player.nickname] = el; }}
+                                    ref={el => { if (el && playerNickname) remoteVideoRefs.current[playerNickname] = el; }}
                                     autoPlay
                                     playsInline
                                     className={styles.remoteVideo}
@@ -179,7 +185,7 @@ export default function CameraArea() {
                                 )}
 
                                 <div className={styles.remoteLabel}>
-                                    P{index + 1}: {player.nickname}
+                                    P{index + 1}: {playerNickname}
                                 </div>
                             </div>
                         )}

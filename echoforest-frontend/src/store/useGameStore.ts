@@ -36,9 +36,13 @@ interface GameState {
     // 일시정지 상태 (멀티플레이용)
     pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
 
+    // 엔딩 미션 상태
+    isEndingMission: boolean; // 엔딩 미션 중인지 여부
+
     // 액션(함수)들
     setNickname: (name: string) => void;
     setGamePaused: (username: string | null) => void; // 일시정지/재개 설정 (null=재개)
+    setEndingMission: (active: boolean) => void; // 엔딩 미션 상태 설정
     joinGame: (roomId: string, isHost: boolean, initialStage?: number) => void;
     leaveGame: () => void;
     addPlayer: (player: Player) => void;
@@ -74,8 +78,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     clearedStages: [],
     onMoveCallback: null,
     pausedBy: null,
+    isEndingMission: false,
 
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
+    setEndingMission: (active) => set({ isEndingMission: active }),
 
     setNickname: (name) => {
         localStorage.setItem('nickname', name); // [FIX] 닉네임 영구 저장
@@ -243,13 +249,31 @@ export const useGameStore = create<GameState>((set, get) => ({
             onMoveCallback(x, y);
         }
     },
-    logout: () => {
+    logout: async () => {
+        // [FIX] 서버 세션 제거 요청 (실패해도 로컬 로그아웃은 진행)
+        try {
+            const { logout } = await import('../apis/authApi');
+            await logout();
+        } catch (e) {
+            console.warn("로그아웃 API 호출 실패:", e);
+        }
+
         // 1. localStorage 정리
         localStorage.removeItem('token');
         localStorage.removeItem('loginId');
         localStorage.removeItem('nickname');
 
-        // 2. 상태 초기화 (nickname이 null이 되면 App.tsx에서 LoginPage로 전환됨)
+        // 2. WebSocket 연결 종료 및 싱글톤 초기화
+        // 순환 참조 방지를 위해 동적 import 사용 가능하지만, GameWebSocket은 이미 싱글톤 export 중
+        // 여기서는 GameWebSocket 클래스의 static 메서드 호출
+        try {
+            const { GameWebSocket } = await import('../socket/GameWebSocket');
+            GameWebSocket.resetInstance();
+        } catch (e) {
+            console.warn("WebSocket 초기화 실패:", e);
+        }
+
+        // 3. 상태 초기화
         set({
             nickname: '',
             roomId: '',

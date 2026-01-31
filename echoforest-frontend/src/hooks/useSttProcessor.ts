@@ -12,9 +12,6 @@ import { useSttStore } from '../store/useSttStore';
 import { useGameStore } from '../store/useGameStore';
 import { sttWorkerService, type WorkerOutMessage } from '../socket/SttWorkerService';
 
-// 로깅
-const log = (msg: string, ...args: unknown[]) => console.log(`✅[STT] ${msg}`, ...args);
-
 export interface UseSttProcessorReturn {
     isListening: boolean;
     transcript: string;
@@ -52,7 +49,12 @@ export function useSttProcessor(): UseSttProcessorReturn {
         reset,
     } = useSttStore();
 
-    const { isGameStarted, currentStage } = useGameStore();
+    const { isGameStarted, currentStage, players, nickname } = useGameStore();
+
+    // 로컬 플레이어의 저주 상태 확인 (버섯 저주 포함)
+    const localPlayer = players.find(p => p.nickname === nickname);
+    const hasIndividualCurse = (localPlayer?.curses?.length ?? 0) > 0;
+    const isCursed = curseState.cursedPlayer !== null || hasIndividualCurse;
 
     const lastProcessedRef = useRef('');
     const prevGameStartedRef = useRef(false);
@@ -61,6 +63,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // Worker 결과 핸들러
     const handleWorkerResult = useCallback((message: WorkerOutMessage) => {
+
         switch (message.type) {
             case 'POSITIVE_DETECTED':
                 onPositiveDetected(message.word, message.isCursed);
@@ -84,19 +87,22 @@ export function useSttProcessor(): UseSttProcessorReturn {
         }
     }, [onPositiveDetected, onQueueUpdate, onCountdownUpdate, onBatchReady, setTranscript]);
 
-    // Worker 초기화 및 결과 핸들러 등록
+    // Worker 초기화 (한 번만)
     useEffect(() => {
         if (workerInitializedRef.current) return;
 
-        log('🚀 Worker 초기화');
         sttWorkerService.initialize();
-        const cleanup = sttWorkerService.onResult(handleWorkerResult);
         workerInitializedRef.current = true;
 
         return () => {
-            cleanup();
             sttWorkerService.reset();
         };
+    }, []);
+
+    // 결과 핸들러 등록 (handleWorkerResult 변경 시 재등록)
+    useEffect(() => {
+        const cleanup = sttWorkerService.onResult(handleWorkerResult);
+        return cleanup;
     }, [handleWorkerResult]);
 
     // 부스터 모드 변경 시 Worker에 알림
@@ -110,9 +116,6 @@ export function useSttProcessor(): UseSttProcessorReturn {
         const stageChanged = currentStage !== prevStageRef.current && currentStage !== null;
 
         if (gameJustStarted || stageChanged) {
-            log(`🎮 게임 상태 변경 감지 - 음성 인식 재시작`);
-            log(`  └ isGameStarted: ${prevGameStartedRef.current} → ${isGameStarted}`);
-            log(`  └ currentStage: ${prevStageRef.current} → ${currentStage}`);
 
             // Worker 상태 초기화
             sttWorkerService.reset();
@@ -137,10 +140,10 @@ export function useSttProcessor(): UseSttProcessorReturn {
                 transcript,
                 true, // isFinal
                 isBoosterMode,
-                curseState.cursedPlayer !== null
+                isCursed
             );
         }
-    }, [transcript, isBoosterMode, curseState.cursedPlayer]);
+    }, [transcript, isBoosterMode, isCursed]);
 
     // 중간 결과 처리 → Worker로 전송 (부스터 모드에서 긍정어 감지용)
     useEffect(() => {
@@ -149,14 +152,13 @@ export function useSttProcessor(): UseSttProcessorReturn {
                 interimTranscript,
                 false, // isFinal
                 isBoosterMode,
-                curseState.cursedPlayer !== null
+                isCursed
             );
         }
-    }, [interimTranscript, isBoosterMode, curseState.cursedPlayer]);
+    }, [interimTranscript, isBoosterMode, isCursed]);
 
     // 수동 재시작 함수
     const restartListening = useCallback(() => {
-        log('🔄 수동 재시작 요청');
         startListening();
     }, [startListening]);
 
