@@ -9,6 +9,7 @@ import OKGesture from './gestures/OKGesture.js';
 import FistGesture from './gestures/FistGesture.js';
 import TalmoBeamGesture from './gestures/TalmoBeamGesture.js';
 import BothCheekPokeGesture from './gestures/BothCheekPokeGesture.js';
+import CheekHeartGesture from './gestures/CheekHeartGesture.js';
 import CameraSection from './ui/CameraSection.js';
 
 import ThresholdPanel from './ui/ThresholdPanel.js';
@@ -37,6 +38,7 @@ const okGesture = new OKGesture();
 const fistGesture = new FistGesture();
 const talmoBeamGesture = new TalmoBeamGesture();
 const bothCheekPokeGesture = new BothCheekPokeGesture();
+const cheekHeartGesture = new CheekHeartGesture();
 
 // 설정값
 // 설정값은 ThresholdPanel에서 관리됨
@@ -484,9 +486,15 @@ function detectFrame() {
             const rRes = bothRes.right;
 
             const { isLeft, isRight, isBoth } = cheekPokePanel.update(lRes, rRes, faceSize);
+
+            // 볼하트 체크 (우선순위 높음)
+            const cheekHeartRes = cheekHeartGesture.check(handResults.landmarks, { faceSize, palmSize }, face);
+
             landmarkRawPanel.update(handLandmarks);
 
-            if (bothRes.detected) {
+            if (cheekHeartRes.detected) {
+                gesture = cheekHeartRes; // 볼하트가 최우선
+            } else if (bothRes.detected) {
                 gesture = bothRes; // 양볼콕
             } else if (isRight && gesture.score < rRes.score) {
                 gesture = { type: 'cheekPoke', score: rRes.score, emoji: rRes.emoji, label: rRes.label };
