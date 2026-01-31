@@ -49,11 +49,11 @@ public class GameService {
         GameRoom newRoom = new GameRoom(roomId, objectMapper, null);
         gameRepository.addRoom(roomId, newRoom);
 
-        // 3. 별도의 가상 스레드에서 게임 루프 실행
-        executor.submit(newRoom);
-
         // 4. 플레이어 입장 처리
         joinProcess(session, newRoom, username);
+
+        // 3. 별도의 가상 스레드에서 게임 루프 실행 (플레이어 입장 후 실행해야 종료되지 않음)
+        executor.submit(newRoom);
 
         // 5. 방 생성 완료 알림 (방 코드 전송)
         sendSystemMessage(session, "ROOM_CREATED", roomId);
