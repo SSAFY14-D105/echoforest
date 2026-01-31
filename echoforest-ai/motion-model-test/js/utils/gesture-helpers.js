@@ -66,3 +66,14 @@ export function calculateDistances(landmarks, palmSize) {
 
     return { thumbDistances, matrix, fingers };
 }
+
+// 세 점(A, B, C) 사이의 각도 계산 (B가 중심)
+export function calculateAngle(a, b, c) {
+    if (!a || !b || !c) return 0;
+    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    let angle = Math.abs(radians * 180.0 / Math.PI);
+    if (angle > 180.0) {
+        angle = 360.0 - angle;
+    }
+    return angle;
+}

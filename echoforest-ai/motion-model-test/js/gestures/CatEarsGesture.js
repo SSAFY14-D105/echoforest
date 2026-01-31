@@ -1,0 +1,77 @@
+import BaseGesture from './BaseGesture.js';
+import { distanceAR, distance } from '../utils/gesture-helpers.js';
+
+export default class CatEarsGesture extends BaseGesture {
+    constructor() {
+        super();
+        this.label = '고양이 귀! 🐱';
+        this.emoji = '🐱';
+    }
+
+    check(landmarks, metadata) {
+        const hands = metadata.allHands;
+        const aspectRatio = metadata.aspectRatio || 1.0;
+        const face = metadata.faceLandmarks;
+
+        if (!hands || hands.length < 2 || !face || face.length === 0) {
+            return { detected: false, score: 0 };
+        }
+
+        const hand1 = hands[0];
+        const hand2 = hands[1];
+        const forehead = face[10];
+
+        // 1. **위치 체크 (BigHeartGesture와 동일)**
+        // 머리(이마) 위에 있어야 함.
+        const isAbove = (hand1[9].y < forehead.y * 1.25) && (hand2[9].y < forehead.y * 1.25);
+        if (!isAbove) return { detected: false, score: 0 };
+
+        // 2. **거리 체크 (하트와 구분)**
+        // **고양이 귀**: 두 손이 머리 양옆에 있으므로 떨어져 있어야 함.
+        // **하트**: 두 손끝이 붙어있어야 함.
+
+        const tipsGap = distanceAR(hand1[12], hand2[12], aspectRatio);
+
+        // 갭이 0.2 미만이면 붙은 걸로 간주 (하트 영역).
+        // 갭이 0.2 이상이어야 고양이 귀.
+        if (tipsGap < 0.16) {
+            return { detected: false, score: 0 }; // 붙어있으면 하트일 확률 높음
+        }
+
+        // 3. **손가락 체크 (약지/소지 무시)**
+        // 약지/소지 굽힘 판별이 어려우면 아예 빼는 게 나을 수도 있음.
+        // 하지만 V모양을 확인하기 위해, 검지/중지는 펴져 있는지 정도는 체크.
+        const isIndex1 = this._isFingerStraight(hand1, 8, 5);
+        const isMiddle1 = this._isFingerStraight(hand1, 12, 9);
+        const isIndex2 = this._isFingerStraight(hand2, 8, 5);
+        const isMiddle2 = this._isFingerStraight(hand2, 12, 9);
+
+        // 검지와 중지는 펴져 있어야 함.
+        if (isIndex1 && isMiddle1 && isIndex2 && isMiddle2) {
+            return {
+                detected: true,
+                score: 0.98,
+                label: this.label,
+                emoji: this.emoji
+            };
+        }
+
+        return { detected: false, score: 0 };
+    }
+
+    _isFingerStraight(hand, idxTip, idxMcp) {
+        const tip = hand[idxTip];
+        const mcp = hand[idxMcp];
+        const pip = hand[idxMcp + 1];
+        const dip = hand[idxMcp + 2];
+
+        const len1 = distance(mcp, pip);
+        const len2 = distance(pip, dip);
+        const len3 = distance(dip, tip);
+        const totalLen = len1 + len2 + len3;
+        const directDist = distance(mcp, tip);
+
+        // 0.85 -> 0.8로 약간 완화
+        return (directDist / totalLen) > 0.8;
+    }
+}

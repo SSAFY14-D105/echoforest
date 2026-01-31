@@ -8,6 +8,8 @@ import FistGesture from './gestures/FistGesture.js';
 import TalmoBeamGesture from './gestures/TalmoBeamGesture.js';
 import BothCheekPokeGesture from './gestures/BothCheekPokeGesture.js';
 import CheekHeartGesture from './gestures/CheekHeartGesture.js';
+import CatEarsGesture from './gestures/CatEarsGesture.js';
+import BigHeartGesture from './gestures/BigHeartGesture.js';
 import CameraSection from './ui/CameraSection.js';
 
 import ThresholdPanel from './ui/ThresholdPanel.js';
@@ -35,6 +37,8 @@ const fistGesture = new FistGesture();
 const talmoBeamGesture = new TalmoBeamGesture();
 const bothCheekPokeGesture = new BothCheekPokeGesture();
 const cheekHeartGesture = new CheekHeartGesture();
+const catEarsGesture = new CatEarsGesture();
+const bigHeartGesture = new BigHeartGesture();
 
 // 설정값
 // 설정값은 ThresholdPanel에서 관리됨
@@ -414,24 +418,50 @@ function detectFrame() {
             const hand1 = handResults.landmarks[0];
             const hand2 = handResults.landmarks[1];
 
-            // 1. 탈모빔 체크 (양손 제스처 - 최우선)
-            const talmoResult = talmoBeamGesture.check(handResults.landmarks, {
+            // 0. 고양이 귀 체크
+            const catRes = catEarsGesture.check(handResults.landmarks, {
                 allHands: handResults.landmarks,
                 palmSize: avgPalm,
-                aspectRatio: ar
+                aspectRatio: ar,
+                faceLandmarks: face // 얼굴 정보 전달
             });
 
-            if (talmoResult.detected) {
-                // 탈모빔 감지 시
-                dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">⚡ 탈모빔! ⚡</span>', ar);
-                gesture = talmoResult;
-                window.talmoBeamActive = true;
+            if (catRes.detected) {
+                dualHandPanel.update(handResults.landmarks, `<span style="color:#ff6b9d;font-size:22px">${catRes.emoji} ${catRes.label}</span>`, ar);
+                gesture = catRes;
             } else {
-                // 2. 손하트 체크
-                const heartResult = heartGesture.check(handResults.landmarks, { palmSize: avgPalm });
-                if (heartResult.detected) {
-                    dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">💕 손하트! 💕</span>', ar);
-                    gesture = { type: 'handHeart', score: 0.95, emoji: '💕', label: '손하트!' };
+                // 0.5 머리 위 하트 체크
+                const bigHeartRes = bigHeartGesture.check(handResults.landmarks, {
+                    allHands: handResults.landmarks,
+                    palmSize: avgPalm,
+                    aspectRatio: ar,
+                    faceLandmarks: face
+                });
+
+                if (bigHeartRes.detected) {
+                    dualHandPanel.update(handResults.landmarks, `<span style="color:#ff6b9d;font-size:22px">${bigHeartRes.emoji} ${bigHeartRes.label}</span>`, ar);
+                    gesture = bigHeartRes;
+                } else {
+                    // 1. 탈모빔 체크 (양손 제스처 - 최우선)
+                    const talmoResult = talmoBeamGesture.check(handResults.landmarks, {
+                        allHands: handResults.landmarks,
+                        palmSize: avgPalm,
+                        aspectRatio: ar
+                    });
+
+                    if (talmoResult.detected) {
+                        // 탈모빔 감지 시
+                        dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">⚡ 탈모빔! ⚡</span>', ar);
+                        gesture = talmoResult;
+                        window.talmoBeamActive = true;
+                    } else {
+                        // 2. 손하트 체크
+                        const heartResult = heartGesture.check(handResults.landmarks, { palmSize: avgPalm });
+                        if (heartResult.detected) {
+                            dualHandPanel.update(handResults.landmarks, '<span style="color:#ff6b9d;font-size:22px">💕 손하트! 💕</span>', ar);
+                            gesture = { type: 'handHeart', score: 0.95, emoji: '💕', label: '손하트!' };
+                        }
+                    }
                 }
             }
         } else {

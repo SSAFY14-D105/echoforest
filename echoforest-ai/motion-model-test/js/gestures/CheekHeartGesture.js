@@ -36,16 +36,34 @@ export default class CheekHeartGesture extends BaseGesture {
         }
 
         try {
+            // **양손 볼하트 오인식 방지 로직 추가**
+            // 만약 손이 2개라면, 두 엄지 사이의 거리를 계산.
+            // 손하트(엄지끼리 붙음)와 구분하기 위해, 엄지끼리 멀리 떨어져 있어야 함.
+            if (multiHandLandmarks.length >= 2) {
+                const hand1 = multiHandLandmarks[0];
+                const hand2 = multiHandLandmarks[1];
+                const palmRef = metadata.palmSize || distance(hand1[0], hand1[9]);
+
+                // 엄지 끝 거리 계산
+                const thumbDist = distance(hand1[4], hand2[4]);
+                const normThumbDist = thumbDist / palmRef;
+
+                // 엄지가 너무 가까우면(0.5 미만) 손하트일 확률이 높으므로 볼하트 패스
+                // 단, 한손 볼하트는 통과해야 함.
+                // 그러나 check()는 전체 루프이므로 여기서 리턴하면 안되고,
+                // 양손 감지 결과가 나왔을 때 최종 판정에서 걸러야 함.
+                // 일단 여기서는 저장을 해둠.
+                this._tempThumbDist = normThumbDist;
+            } else {
+                this._tempThumbDist = 100; // 한손이면 거리 무한대 취급
+            }
+
             let faceSize = metadata.faceSize || 0.1;
             if (!metadata.faceSize) {
                 faceSize = distance(faceLandmarks[10], faceLandmarks[152]);
             }
 
             for (const hand of multiHandLandmarks) {
-                // 볼하트 조건:
-                // 1. 볼(광대)에 닿은 손가락 끝(검지~소지) 개수가 2개 이상이어야 함.
-                // 2. 엄지가 턱 근처에 있어야 함 (엄지까지 포함하면 총 3개 이상 접촉)
-
                 const fingers = [8, 12, 16, 20]; // 검지~소지
 
                 let lCheekTouchCount = 0;
@@ -53,32 +71,17 @@ export default class CheekHeartGesture extends BaseGesture {
                 let lAvgScore = 0;
                 let rAvgScore = 0;
 
-                // Fingers Touch Check
                 for (const tipIdx of fingers) {
                     const tip = hand[tipIdx];
-
-                    // Left Cheek Check
                     const lCalc = this._checkProximity(tip, faceLandmarks, this.leftCheekZone, faceSize);
-                    if (lCalc > 0) {
-                        lCheekTouchCount++;
-                        lAvgScore += lCalc;
-                    }
+                    if (lCalc > 0) { lCheekTouchCount++; lAvgScore += lCalc; }
 
-                    // Right Cheek Check
                     const rCalc = this._checkProximity(tip, faceLandmarks, this.rightCheekZone, faceSize);
-                    if (rCalc > 0) {
-                        rCheekTouchCount++;
-                        rAvgScore += rCalc;
-                    }
+                    if (rCalc > 0) { rCheekTouchCount++; rAvgScore += rCalc; }
                 }
 
-                // Thumb Touch Check
                 const lThumbScore = this._checkProximity(hand[4], faceLandmarks, this.leftJawZone, faceSize);
                 const rThumbScore = this._checkProximity(hand[4], faceLandmarks, this.rightJawZone, faceSize);
-
-                // 판정: 
-                // 손가락 2개 이상이 볼에 닿고 + 엄지가 턱에 닿으면 볼하트 인정.
-                // (엄지 조건이 너무 빡빡하면 '손가락 3개 이상 접촉' 만으로도 인정 가능)
 
                 // --- 왼쪽 볼하트 ---
                 if (lCheekTouchCount >= 2 && lThumbScore > 0) {
@@ -87,7 +90,6 @@ export default class CheekHeartGesture extends BaseGesture {
                         result.left = { detected: true, score: finalScore, label: '왼쪽 볼하트! 🫶', emoji: '🫶' };
                     }
                 } else if (lCheekTouchCount >= 3) {
-                    // 엄지가 안 닿아도 손가락 3개가 닿으면 볼하트로 인정 (관대하게)
                     const finalScore = lAvgScore / lCheekTouchCount;
                     if (finalScore > result.left.score) {
                         result.left = { detected: true, score: finalScore, label: '왼쪽 볼하트! 🫶', emoji: '🫶' };
@@ -108,17 +110,28 @@ export default class CheekHeartGesture extends BaseGesture {
                 }
             }
 
+            // 양쪽 감지 시 -> 엄지 거리 조건 체크!
             if (result.left.detected && result.right.detected) {
-                result.detected = true;
-                result.score = (result.left.score + result.right.score) / 2;
-                result.label = '양쪽 볼하트! 🫶🫶';
+                // 두 손이 모두 감지되었는데, 엄지가 너무 가까우면(손하트 모양) 볼하트 취소.
+                // 볼하트는 양쪽 볼에 대니까 엄지가 떨어져 있어야 정상이지만,
+                // 손하트는 가슴/얼굴 앞에서 모으니까 가까움.
+                if (this._tempThumbDist < 0.5) {
+                    // 거리 너무 가까움 -> 볼하트 아님 (손하트 등일 가능성)
+                    // 둘 중 점수 높은 하나만 살릴까? 아니면 둘 다 취소?
+                    // 보통 손하트는 얼굴 중앙에 있으므로 둘 다 취소가 맞음.
+                    result.detected = false;
+                    result.score = 0;
+                    result.left.detected = false;
+                    result.right.detected = false;
+                } else {
+                    result.detected = true;
+                    result.score = (result.left.score + result.right.score) / 2;
+                    result.label = '양쪽 볼하트! 🫶🫶';
+                }
             } else if (result.left.detected) {
                 result = { ...result, ...result.left, detected: true };
             } else if (result.right.detected) {
                 result = { ...result, ...result.right, detected: true };
-            } else {
-                // 감지 실패 시
-                result.score = 0;
             }
 
         } catch (e) {
