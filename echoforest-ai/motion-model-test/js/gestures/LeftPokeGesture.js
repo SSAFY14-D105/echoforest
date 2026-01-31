@@ -12,7 +12,7 @@ export default class LeftPokeGesture extends BaseGesture {
             ...config
         };
 
-        this.cheekPoints = [411, 376, 345, 352, 280];
+        this.cheekPoints = [411, 376, 352, 280, 425, 361, 288, 397];
     }
 
     check(multiHandLandmarks, metadata, faceLandmarks) {

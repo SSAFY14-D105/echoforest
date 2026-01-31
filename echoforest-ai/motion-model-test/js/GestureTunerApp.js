@@ -8,6 +8,7 @@ import LGesture from './gestures/LGesture.js';
 import OKGesture from './gestures/OKGesture.js';
 import FistGesture from './gestures/FistGesture.js';
 import TalmoBeamGesture from './gestures/TalmoBeamGesture.js';
+import BothCheekPokeGesture from './gestures/BothCheekPokeGesture.js';
 import CameraSection from './ui/CameraSection.js';
 
 import ThresholdPanel from './ui/ThresholdPanel.js';
@@ -35,6 +36,7 @@ const lGesture = new LGesture();
 const okGesture = new OKGesture();
 const fistGesture = new FistGesture();
 const talmoBeamGesture = new TalmoBeamGesture();
+const bothCheekPokeGesture = new BothCheekPokeGesture();
 
 // 설정값
 // 설정값은 ThresholdPanel에서 관리됨
@@ -476,14 +478,16 @@ function detectFrame() {
             const faceSize = distance(faceTop, faceBottom);
             const palmSize = distance(handLandmarks[0], handLandmarks[9]);
 
-            const lRes = leftPokeGesture.check(handResults.landmarks, { faceSize, palmSize }, face);
-            const rRes = rightPokeGesture.check(handResults.landmarks, { faceSize, palmSize }, face);
+            // 통합된 양볼콕 제스처 사용
+            const bothRes = bothCheekPokeGesture.check(handResults.landmarks, { faceSize, palmSize }, face);
+            const lRes = bothRes.left;
+            const rRes = bothRes.right;
 
             const { isLeft, isRight, isBoth } = cheekPokePanel.update(lRes, rRes, faceSize);
             landmarkRawPanel.update(handLandmarks);
 
-            if (isBoth) {
-                gesture = { type: 'bothCheekPoke', score: 0.95, emoji: '💕', label: '양볼콕!' };
+            if (bothRes.detected) {
+                gesture = bothRes; // 양볼콕
             } else if (isRight && gesture.score < rRes.score) {
                 gesture = { type: 'cheekPoke', score: rRes.score, emoji: rRes.emoji, label: rRes.label };
             } else if (isLeft && gesture.score < lRes.score) {
@@ -538,19 +542,24 @@ function drawTalmoBeamEffect(face) {
 }
 
 function drawCheekPokePoints(face, indexTip, isLeft, isRight, isBoth) {
-    // 좌표 계산 및 그리기
-    // Left/Right Swap applied as requested
-    const leftCheekPoints = [411, 376, 345, 352, 280].map(i => face[i]);
-    const rightCheekPoints = [187, 147, 116, 123, 50].map(i => face[i]);
+    if (!face || !indexTip) return;
 
-    const findClosest = (points) => points.reduce((closest, p) =>
-        distance(indexTip, p) < distance(indexTip, closest) ? p : closest
-    );
+    // 좌표 계산 및 그리기 (안전하게 필터링)
+    const leftCheekPoints = [411, 376, 352, 280, 425, 361, 288, 397].map(i => face[i]).filter(p => p);
+    const rightCheekPoints = [187, 147, 123, 50, 205, 132, 58, 172].map(i => face[i]).filter(p => p);
+
+    const findClosest = (points) => {
+        if (!points || points.length === 0) return null;
+        return points.reduce((closest, p) =>
+            distance(indexTip, p) < distance(indexTip, closest) ? p : closest
+        );
+    };
 
     const leftCheek = findClosest(leftCheekPoints);
     const rightCheek = findClosest(rightCheekPoints);
 
     const drawPoint = (pt, active) => {
+        if (!pt) return;
         const x = pt.x * canvas.width;
         const y = pt.y * canvas.height;
         ctx.beginPath();
@@ -559,8 +568,8 @@ function drawCheekPokePoints(face, indexTip, isLeft, isRight, isBoth) {
         ctx.fill();
     };
 
-    drawPoint(leftCheek, isLeft);
-    drawPoint(rightCheek, isRight);
+    if (leftCheek) drawPoint(leftCheek, isLeft);
+    if (rightCheek) drawPoint(rightCheek, isRight);
 }
 
 function drawDualHandInfo(hand1, hand2, ar) {

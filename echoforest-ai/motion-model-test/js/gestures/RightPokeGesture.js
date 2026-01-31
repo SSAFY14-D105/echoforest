@@ -12,7 +12,7 @@ export default class RightPokeGesture extends BaseGesture {
         // 화면에서 사용자의 '오른쪽 볼'을 터치하려면 
         // 랜드마크 인덱스는 반대쪽(왼쪽 볼) 좌표를 써야 할 수 있음.
         // 기존 411(오른쪽) -> 187(왼쪽) 계열로 변경하여 테스트
-        this.cheekPoints = [187, 147, 116, 123, 50];
+        this.cheekPoints = [187, 147, 123, 50, 205, 132, 58, 172];
     }
 
     check(multiHandLandmarks, metadata, faceLandmarks) {
