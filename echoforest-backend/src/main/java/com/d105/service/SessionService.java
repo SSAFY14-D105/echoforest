@@ -36,6 +36,14 @@ public class SessionService {
     }
 
     /**
+     * 저장된 토큰 조회
+     */
+    public String getSessionToken(String username) {
+        String key = SESSION_PREFIX + username;
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    /**
      * 세션 삭제 (로그아웃)
      */
     public void removeSession(String username) {
