@@ -298,6 +298,12 @@ public class GameRoom implements Runnable {
             // [FIX] Disconnected player also broadcasted (Ghost prevention)
             // if (p.isDisconnected()) { continue; }
 
+            // [DEBUG] Check detailed player state
+            if (updates.isEmpty() && Math.random() < 0.01) {
+                // log.info("[Broadcast Debug] Processing player: {}, Disconnected: {}",
+                // p.getUsername(), p.isDisconnected());
+            }
+
             // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
             Set<String> activeCurses = p.getVisibleCurses();
@@ -335,6 +341,16 @@ public class GameRoom implements Runnable {
         msg.setRoomId(roomId);
         try {
             msg.setContent(objectMapper.writeValueAsString(updates));
+
+            // [DEBUG] Log packet size periodically
+            if (Math.random() < 0.05) { // 5% chance
+                log.info("[Broadcast] Room {} sending UPDATE to {} players. Packet size: {} players", roomId,
+                        sessionManager.getServerPlayerCount(), updates.size());
+                if (updates.size() < sessionManager.getServerPlayerCount()) {
+                    log.warn("[Broadcast Warning] Discrepancy! Server Count: {}, Update Count: {}",
+                            sessionManager.getServerPlayerCount(), updates.size());
+                }
+            }
             // Note: broadcasting list of objects as content string
         } catch (Exception e) {
             log.error("Error error", e);
