@@ -17,6 +17,13 @@ export async function httpClient(endpoint: string, options: RequestInit = {}): P
         headers.set('Authorization', `Bearer ${token}`);
     }
 
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+        console.log('[httpClient] Token attached:', token.substring(0, 10) + '...');
+    } else {
+        console.warn('[httpClient] No token found in localStorage');
+    }
+
     // Content-Type 기본값 설정 (없으면 JSON)
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
         headers.set('Content-Type', 'application/json');
