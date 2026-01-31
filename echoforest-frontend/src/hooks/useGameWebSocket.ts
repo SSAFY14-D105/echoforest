@@ -198,6 +198,17 @@ export function useGameWebSocket() {
             });
         }
 
+        // [FIX] Heartbeat (Ping) Loop - Prevent Soft Disconnect in idle screens
+        const intervalId = setInterval(() => {
+            if (gameWebSocket.isConnected()) {
+                gameWebSocket.ping();
+            }
+        }, 30000); // 30초마다 핑 전송
+
+        return () => {
+            clearInterval(intervalId);
+        };
+
 
 
     }, [roomId, nickname, isSoloMode, isHost]);

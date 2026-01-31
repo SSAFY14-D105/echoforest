@@ -78,6 +78,7 @@ export interface ServerPlayerState {
     isDead: boolean;
     isHidden?: boolean;  // [NEW] 골인 등 숨김 상태
     isAfk?: boolean;     // AFK 상태
+    isDisconnected?: boolean; // [NEW] 연결 끊김 상태
     curses: string[];
     serverTick?: number;
 }

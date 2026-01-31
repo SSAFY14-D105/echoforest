@@ -13,6 +13,7 @@ export interface Player {
     hp?: number;     // 체력
     isDead?: boolean; // 사망 여부
     isHidden?: boolean; // 숨김 상태 (골인 등)
+    isDisconnected?: boolean; // [NEW] 연결 끊김 상태
 
     curses?: string[]; // 적용된 저주 목록
     colorIndex?: number; // 색상 인덱스 (서버 순서 기반 고정, 0=Green, 1=Blue...)
@@ -48,7 +49,7 @@ interface GameState {
     addPlayer: (player: Player) => void;
     setPlayers: (players: Player[]) => void;  // 전체 플레이어 설정
     // syncPlayersFromServer: 서버로부터 받은 플레이어 목록을 동기화 (정렬 후 색상 할당)
-    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; isHidden?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
+    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; isHidden?: boolean; isDisconnected?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
     updatePlayerPosition: (nickname: string, x: number, y: number) => void;  // 위치 업데이트용
     // Ready 상태 관리
@@ -113,9 +114,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
-        // 서버에서 받은 플레이어 상태를 기존 목록과 병합
+        // [DEBUG] Check what we receive
+        if (Math.random() < 0.05) { // Log 5% of updates to avoid spam
+            console.log('[Sync] Received players:', serverPlayers.length, serverPlayers);
+        }
 
-        // Debug: 첫 번째 플레이어 데이터 샘플링 (너무 빈번하므로 가끔만)
+        // 서버에서 받은 플레이어 상태를 기존 목록과 병합
 
 
         // [FIX] 서버 순서 신뢰 (Host=0 보장)
@@ -145,6 +149,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
                     isHidden: serverPlayer.isHidden,
+                    isDisconnected: serverPlayer.isDisconnected, // [NEW]
                     curses: serverPlayer.curses,
                     params: serverPlayer,
                     colorIndex: colorIndex,
@@ -163,6 +168,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
                     isHidden: serverPlayer.isHidden,
+                    isDisconnected: serverPlayer.isDisconnected, // [NEW]
                     curses: serverPlayer.curses,
                     isHost: isHost,
                     isLocal: false,
