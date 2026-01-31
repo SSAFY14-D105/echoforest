@@ -13,14 +13,14 @@ export default function CameraArea() {
     const nickname = useGameStore(state => state.nickname);
     const roomId = useGameStore(state => state.roomId);
     const isSoloMode = useGameStore(state => state.isSoloMode);
-
-    // 2. Optimized Subscription: Only subscribe to the list of nicknames
-    // This prevents re-renders when x, y, anim coordinates change (30fps)
+    // 2. Optimized Subscription: Subscribe to nicknames AND isDisconnected status
+    // Split into primitives to allow useShallow to work correctly (avoid object reference comparison issues)
     const playerNicknames = useGameStore(
         useShallow(state => state.players.map(p => p.nickname))
     );
-
-    // LiveKit State
+    const playerDisconnects = useGameStore(
+        useShallow(state => state.players.map(p => p.isDisconnected))
+    );
     const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
     const [isMicEnabled, setIsMicEnabled] = useState(true);
     const [isCameraEnabled, setIsCameraEnabled] = useState(true);
@@ -124,6 +124,7 @@ export default function CameraArea() {
 
             {Array.from({ length: MAX_PLAYERS }).map((_, index) => {
                 const playerNickname = playerNicknames[index];
+                const isDisconnected = playerDisconnects[index];
                 const isEmpty = !playerNickname;
                 const isMe = playerNickname === nickname;
 
@@ -140,6 +141,19 @@ export default function CameraArea() {
                             style={{ borderColor: PLAYER_COLORS[index] }}
                         >
                             P{index + 1} (대기중...)
+                        </div>
+                    );
+                }
+
+                if (isDisconnected) {
+                    return (
+                        <div
+                            key={index}
+                            className={`${styles.cameraBox} ${styles.disconnected}`}
+                            style={{ borderColor: '#808080', opacity: 0.7 }}
+                        >
+                            <div className={styles.cameraOff}>🚫</div>
+                            <span className={styles.playerLabel} style={{ color: '#aaa' }}>Disconnected</span>
                         </div>
                     );
                 }
