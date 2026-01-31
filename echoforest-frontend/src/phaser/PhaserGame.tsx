@@ -71,7 +71,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     matter: {
                         autoUpdate: false, // [CRITICAL] 수동 업데이트로 전환하여 탭 복귀 시 물리 폭주(Physics Explosion) 방지
                         gravity: { x: 0, y: 1 },
-                        debug: false
+                        debug: true
                     }
                 },
                 scene: [], // 씬은 수동으로 추가

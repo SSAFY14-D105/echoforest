@@ -8,8 +8,10 @@ export interface ElevatorConfig {
     width: number;
     height: number;
     requiredPlayers: number;
+    speed?: number; // 이동 속도
     texture?: string;
     frame?: string | number;
+    collisionData?: any[];
 }
 
 export class Elevator {
@@ -39,15 +41,70 @@ export class Elevator {
         this.width = config.width;
         this.height = config.height;
         this.requiredPlayers = config.requiredPlayers;
+        this.speed = config.speed || 2;
 
-        // 물리 바디 생성 (Static으로 설정하여 플레이어가 밀지 못하게 함)
-        this.body = this.scene.matter.add.rectangle(this.x, this.initialY, this.width, this.height, {
-            isStatic: true,
-            label: `elevator-${this.id}`,
-            friction: 0,
-            frictionStatic: 0,
-            restitution: 0
-        });
+        if (config.collisionData && config.collisionData.length > 0) {
+            const bodies: MatterJS.BodyType[] = [];
+            const scale = 4;
+
+            // 0. Calculate Original Collision Width (to determine scale factor)
+            // 타일셋 데이터 상의 최대 x+width를 구합니다.
+            const rawWidth = Math.max(...config.collisionData.map((o: any) => o.x + o.width));
+            const originalWidthPixel = rawWidth * scale;
+
+            // 1. Create Parts (relative to *Original* Tile Center)
+            config.collisionData.forEach((obj: any) => {
+                const w = obj.width * scale;
+                const h = obj.height * scale;
+                // Center parts relative to the ORIGINAL tile dimensions
+                const cx = (obj.x * scale) + (w / 2) - (originalWidthPixel / 2);
+                const cy = (obj.y * scale) + (h / 2) - (originalWidthPixel / 2); // Height usually follows width/square aspect in calculation or simple centering
+
+                if (obj.ellipse) {
+                    bodies.push(this.scene.matter.bodies.circle(cx, cy, w / 2));
+                } else {
+                    bodies.push(this.scene.matter.bodies.rectangle(cx, cy, w, h));
+                }
+            });
+
+            // 2. Create Body
+            this.body = this.scene.matter.body.create({
+                parts: bodies,
+                isStatic: true,
+                label: `elevator-${this.id}`,
+                friction: 0,
+                frictionStatic: 0,
+                restitution: 0
+            });
+
+            // 3. Scale Body if Target Width is different
+            if (this.width > 0 && originalWidthPixel > 0) {
+                const scaleX = this.width / originalWidthPixel;
+                // ScaleX만 적용 (높이는 유지하거나 필요시 scaleY 적용)
+                // 엘리베이터는 주로 가로로 늘어나므로 X만 스케일링
+                this.scene.matter.body.scale(this.body, scaleX, 1);
+            }
+
+            // 4. Align Position (CoM)
+            const coMOffsetX = this.body.position.x;
+            const coMOffsetY = this.body.position.y;
+
+            this.scene.matter.body.setPosition(this.body, {
+                x: this.x + coMOffsetX,
+                y: this.initialY + coMOffsetY
+            });
+
+            this.scene.matter.world.add(this.body);
+        } else {
+            // 물리 바디 생성 (Static으로 설정하여 플레이어가 밀지 못하게 함)
+            this.body = this.scene.matter.add.rectangle(this.x, this.initialY, this.width, this.height, {
+                isStatic: true,
+                label: `elevator-${this.id}`,
+                friction: 0,
+                frictionStatic: 0,
+                restitution: 0
+            });
+        }
 
         // 그래픽 또는 스프라이트 생성
         if (config.texture) {

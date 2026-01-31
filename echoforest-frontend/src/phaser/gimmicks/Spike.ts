@@ -12,29 +12,85 @@ export class Spike {
 
     public readonly id: string;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 16, texture?: string, frame?: string | number, angle: number = 0) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 16, texture?: string, frame?: string | number, angle: number = 0, collisionData?: any[]) {
         this.scene = scene;
         this.id = id;
 
-        // 가시 물리 바디 (센서로 설정 - 닿으면 사망)
-        // 사용자의 요청에 따라 판정 범위를 아래쪽 절반으로 설정
-        const bodyHeight = height * 0.5;
-        const bodyYOffset = height * 0.25; // 아래로 이동 (센터 기준)
+        // Custom Collision Handling
+        if (collisionData && collisionData.length > 0) {
+            const bodies: MatterJS.BodyType[] = [];
+            const scale = 4;
 
-        this.body = this.scene.matter.add.rectangle(x, y + bodyYOffset, width, bodyHeight, {
-            isSensor: true,
-            isStatic: true,
-            label: `spike-${id}`,
-            angle: Phaser.Math.DegToRad(angle)
-        });
+            // 0. Calculate Original Dimensions
+            const rawWidth = Math.max(...collisionData.map((o: any) => o.x + o.width));
+            const rawHeight = Math.max(...collisionData.map((o: any) => o.y + o.height));
+            const originalWidthPixel = rawWidth * scale;
+            const originalHeightPixel = rawHeight * scale;
+
+            // 1. Create Parts relative to Original Tile Center
+            collisionData.forEach((obj: any) => {
+                const w = obj.width * scale;
+                const h = obj.height * scale;
+
+                const cx = (obj.x * scale) + (w / 2) - (originalWidthPixel / 2);
+                const cy = (obj.y * scale) + (h / 2) - (originalHeightPixel / 2);
+
+                if (obj.ellipse) {
+                    bodies.push(this.scene.matter.bodies.circle(cx, cy, w / 2));
+                } else {
+                    bodies.push(this.scene.matter.bodies.rectangle(cx, cy, w, h));
+                }
+            });
+
+            // 2. Create Body
+            this.body = this.scene.matter.body.create({
+                parts: bodies,
+                isSensor: true, // Spike is sensor
+                isStatic: true,
+                label: `spike-${id}`
+            });
+
+            // 3. Scale Body
+            if (width > 0 && height > 0 && originalWidthPixel > 0 && originalHeightPixel > 0) {
+                const scaleX = width / originalWidthPixel;
+                const scaleY = height / originalHeightPixel;
+                if (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) {
+                    this.scene.matter.body.scale(this.body, scaleX, scaleY);
+                }
+            }
+
+            // 4. Calculate CoM Offset
+            const coMOffsetX = this.body.position.x;
+            const coMOffsetY = this.body.position.y;
+
+            // 5. Set Body Position accounting for CoM offset and Rotation
+            const rad = Phaser.Math.DegToRad(angle);
+            const rotatedCoMX = coMOffsetX * Math.cos(rad) - coMOffsetY * Math.sin(rad);
+            const rotatedCoMY = coMOffsetX * Math.sin(rad) + coMOffsetY * Math.cos(rad);
+
+            this.scene.matter.body.setPosition(this.body, {
+                x: x + rotatedCoMX,
+                y: y + rotatedCoMY
+            });
+
+            this.scene.matter.body.setAngle(this.body, rad);
+            this.scene.matter.world.add(this.body);
+
+        } else {
+            // Default Collision (Full Box, no hardcoding hacks)
+            this.body = this.scene.matter.add.rectangle(x, y, width, height, {
+                isSensor: true,
+                isStatic: true,
+                label: `spike-${id}`,
+                angle: Phaser.Math.DegToRad(angle)
+            });
+        }
 
         if (texture) {
-            // 타일셋 이미지를 사용하는 경우
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
             this.sprite.setDisplaySize(width, height);
             this.sprite.setAngle(angle);
         } else {
-            // 기본 그래픽 (삼각형 모양)
             this.graphics = this.scene.add.graphics();
             this.drawSpike(width, height);
             this.graphics.setPosition(x, y);

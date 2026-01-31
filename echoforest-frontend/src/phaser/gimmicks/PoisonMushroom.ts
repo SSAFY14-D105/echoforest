@@ -16,36 +16,106 @@ export class PoisonMushroom {
     private initialY: number;
     private width: number;
     private height: number;
+    private angle: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 32, texture?: string, frame?: string | number) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, width: number = 32, height: number = 32, texture?: string, frame?: string | number, angle: number = 0, collisionData?: any[]) {
         this.scene = scene;
         this.id = id;
         this.initialX = x;
         this.initialY = y;
         this.width = width;
         this.height = height;
+        this.angle = angle;
 
-        this.createBody();
+        this.createBody(collisionData);
 
         if (texture) {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
             this.sprite.setDisplaySize(width, height);
+            this.sprite.setAngle(angle); // 회전 적용
             this.sprite.setDepth(5);
         } else {
             // 기본 그래픽 (보라색 원형 갓 + 흰색 기둥)
             this.graphics = this.scene.add.graphics();
             this.drawMushroom(width, height);
             this.graphics.setPosition(x, y);
+            this.graphics.setAngle(angle); // 회전 적용
             this.graphics.setDepth(5);
         }
     }
 
-    private createBody(): void {
+    private createBody(collisionData?: any[]): void {
+        // 기존 바디 제거 (리셋 시)
+        if (this.body) {
+            this.scene.matter.world.remove(this.body);
+        }
+
+        if (collisionData && collisionData.length > 0) {
+            const bodies: MatterJS.BodyType[] = [];
+            const scale = 4;
+
+            // 0. Calculate Original Dimensions
+            const rawWidth = Math.max(...collisionData.map((o: any) => o.x + o.width));
+            const rawHeight = Math.max(...collisionData.map((o: any) => o.y + o.height));
+            const originalWidthPixel = rawWidth * scale;
+            const originalHeightPixel = rawHeight * scale;
+
+            // 1. Create Parts relative to Original Tile Center
+            collisionData.forEach((obj: any) => {
+                const w = obj.width * scale;
+                const h = obj.height * scale;
+                const cx = (obj.x * scale) + (w / 2) - (originalWidthPixel / 2);
+                const cy = (obj.y * scale) + (h / 2) - (originalHeightPixel / 2);
+
+                if (obj.ellipse) {
+                    bodies.push(this.scene.matter.bodies.circle(cx, cy, w / 2));
+                } else {
+                    bodies.push(this.scene.matter.bodies.rectangle(cx, cy, w, h));
+                }
+            });
+
+            // 2. Create Body
+            this.body = this.scene.matter.body.create({
+                parts: bodies,
+                isSensor: true,
+                isStatic: true,
+                label: `mushroom-${this.id}`
+            });
+
+            // 3. Scale Body
+            if (this.width > 0 && this.height > 0 && originalWidthPixel > 0 && originalHeightPixel > 0) {
+                const scaleX = this.width / originalWidthPixel;
+                const scaleY = this.height / originalHeightPixel;
+                if (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) {
+                    this.scene.matter.body.scale(this.body, scaleX, scaleY);
+                }
+            }
+
+            // 4. CoM Offset
+            const coMOffsetX = this.body.position.x;
+            const coMOffsetY = this.body.position.y;
+
+            // 5. Set Body Position
+            const rad = Phaser.Math.DegToRad(this.angle);
+            const rotatedCoMX = coMOffsetX * Math.cos(rad) - coMOffsetY * Math.sin(rad);
+            const rotatedCoMY = coMOffsetX * Math.sin(rad) + coMOffsetY * Math.cos(rad);
+
+            this.scene.matter.body.setPosition(this.body, {
+                x: this.initialX + rotatedCoMX,
+                y: this.initialY + rotatedCoMY
+            });
+
+            this.scene.matter.body.setAngle(this.body, rad);
+            this.scene.matter.world.add(this.body);
+            return;
+        }
+
         // 독버섯 물리 바디 (센서로 설정)
         this.body = this.scene.matter.add.rectangle(this.initialX, this.initialY, this.width, this.height, {
             isSensor: true,
             isStatic: true,
-            label: `mushroom-${this.id}`
+            label: `mushroom-${this.id}`,
+            angle: Phaser.Math.DegToRad(this.angle) // 물리 바디 회전 적용
         });
     }
 
