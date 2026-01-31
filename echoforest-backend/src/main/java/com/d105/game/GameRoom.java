@@ -342,15 +342,10 @@ public class GameRoom implements Runnable {
         try {
             msg.setContent(objectMapper.writeValueAsString(updates));
 
-            // [DEBUG] Log packet size periodically
-            if (Math.random() < 0.05) { // 5% chance
-                log.info("[Broadcast] Room {} sending UPDATE to {} players. Packet size: {} players", roomId,
-                        sessionManager.getServerPlayerCount(), updates.size());
-                if (updates.size() < sessionManager.getServerPlayerCount()) {
-                    log.warn("[Broadcast Warning] Discrepancy! Server Count: {}, Update Count: {}",
-                            sessionManager.getServerPlayerCount(), updates.size());
-                }
-            }
+            // [DEBUG] Always log packet content for debugging
+            List<String> userList = updates.stream().map(PlayerUpdateDto::getId).toList();
+            log.info("[Broadcast] Room {} UPDATE. Players: {}. Count: {}", roomId, userList, updates.size());
+
             // Note: broadcasting list of objects as content string
         } catch (Exception e) {
             log.error("Error error", e);
