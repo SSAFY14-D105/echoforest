@@ -20,6 +20,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final com.d105.service.SessionService sessionService;
 
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
@@ -90,9 +91,19 @@ public class UserController {
             }
         }
 
-        if (targetUser != null) {
-            userService.logout(targetUser);
-        }
-        return ResponseEntity.ok(Map.of("message", "로그아웃 성공"));
+        return ResponseEntity.ok(Map.of(
+                "message", "로그아웃 성공 (Fixed)",
+                "debug_targetUser", targetUser != null ? targetUser : "null",
+                "debug_authHeader", request.getHeader("Authorization") != null ? "Present" : "Missing"));
+    }
+
+    @Operation(summary = "세션 디버깅 (개발용)", description = "특정 유저의 세션 존재 여부를 확인합니다.")
+    @GetMapping("/check-session")
+    public ResponseEntity<?> checkSession(@RequestParam String username) {
+        boolean loggedIn = sessionService.isLoggedIn(username);
+        return ResponseEntity.ok(Map.of(
+                "username", username,
+                "isLoggedIn", loggedIn,
+                "serverTime", java.time.LocalDateTime.now().toString()));
     }
 }
