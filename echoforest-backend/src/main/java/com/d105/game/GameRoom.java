@@ -295,10 +295,8 @@ public class GameRoom implements Runnable {
             if (p == null)
                 continue;
 
-            // [FIX] 연결 끊긴 플레이어는 브로드캐스트 제외 (Ghost 현상 방지)
-            if (p.isDisconnected()) {
-                continue;
-            }
+            // [FIX] Disconnected player also broadcasted (Ghost prevention)
+            // if (p.isDisconnected()) { continue; }
 
             // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
@@ -326,6 +324,7 @@ public class GameRoom implements Runnable {
                     .isDead(p.isDead())
                     .isHidden(p.isHidden()) // [NEW] 필드 추가
                     .isAfk(p.isAfk())
+                    .isDisconnected(p.isDisconnected()) // [NEW] 연결 끊김 상태 전송
                     .curses(activeCurses)
                     .build();
             updates.add(dto);
@@ -483,6 +482,10 @@ public class GameRoom implements Runnable {
 
     public String findSessionIdByUsername(String username) {
         return sessionManager.findSessionIdByUsername(username);
+    }
+
+    public PlayerState getPlayerBySessionId(String sessionId) {
+        return sessionManager.getPlayer(sessionId);
     }
 
     public String getRandomPlayerUsername() {
