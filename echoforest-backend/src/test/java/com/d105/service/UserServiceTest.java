@@ -38,7 +38,7 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    @DisplayName("로그인 성공 시 토큰, 닉네임, userId가 반환되어야 한다")
+    @DisplayName("로그인 성공 시 토큰, 닉네임이 반환되어야 한다")
     void login_Success() {
         // given
         String username = "testuser";
@@ -87,28 +87,30 @@ class UserServiceTest {
         // then
         assertThat(result).containsEntry("token", token);
         assertThat(result).containsEntry("nickname", nickname);
-        assertThat(result).containsEntry("userId", String.valueOf(userId));
+        // userId는 반환 Map에 없음 (프론트엔드 요구사항 변경 가능성)
 
-        verify(sessionService).saveSession(userId, token);
+        // sessionService.saveSession(username, token) 호출 검증
+        verify(sessionService).saveSession(username, token);
     }
 
     @Test
     @DisplayName("닉네임 변경 성공")
     void updateNickname_Success() {
         // given
-        Long userId = 1L;
+        String username = "testuser";
         String currentNickname = "oldNick";
         String newNickname = "newNick";
 
         User user = User.builder()
+                .username(username)
                 .nickname(currentNickname)
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByUsername(username)).willReturn(Optional.of(user));
         given(userRepository.existsByNickname(newNickname)).willReturn(false);
 
         // when
-        userService.updateNickname(userId, newNickname);
+        userService.updateNickname(username, newNickname);
 
         // then
         assertThat(user.getNickname()).isEqualTo(newNickname);
@@ -118,21 +120,22 @@ class UserServiceTest {
     @DisplayName("닉네임 변경 실패 - 중복된 닉네임")
     void updateNickname_Duplicate() {
         // given
-        Long userId = 1L;
+        String username = "testuser";
         String currentNickname = "oldNick";
         String newNickname = "duplicateNick";
 
         User user = User.builder()
+                .username(username)
                 .nickname(currentNickname)
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByUsername(username)).willReturn(Optional.of(user));
         // 내 닉네임이 아닌데 이미 존재하면 중복
         given(userRepository.existsByNickname(newNickname)).willReturn(true);
 
         // when & then
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            userService.updateNickname(userId, newNickname);
+            userService.updateNickname(username, newNickname);
         });
     }
 
@@ -140,12 +143,12 @@ class UserServiceTest {
     @DisplayName("닉네임 변경 실패 - 존재하지 않는 유저")
     void updateNickname_UserNotFound() {
         // given
-        Long userId = 999L;
-        given(userRepository.findById(userId)).willReturn(Optional.empty());
+        String username = "unknownUser";
+        given(userRepository.findByUsername(username)).willReturn(Optional.empty());
 
         // when & then
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            userService.updateNickname(userId, "anyNick");
+            userService.updateNickname(username, "anyNick");
         });
     }
 }
