@@ -24,6 +24,7 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final SessionService sessionService;
+    private final com.d105.manager.WebSocketSessionManager webSocketSessionManager;
 
     // 회원가입
     @Transactional
@@ -58,9 +59,20 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        // 3. 중복 로그인 방지 (이미 로그인된 경우 차단)
+        // 3. 중복 로그인 방지 (실제 접속 중인 경우에만 차단)
         if (sessionService.isLoggedIn(user.getUsername())) {
-            throw new IllegalStateException("이미 다른 기기에서 접속 중입니다.");
+            // Redis에는 있지만, 실제 웹소켓 연결이 살아있는지 확인
+            org.springframework.web.socket.WebSocketSession activeSession = webSocketSessionManager
+                    .getSession(user.getUsername());
+
+            if (activeSession != null && activeSession.isOpen()) {
+                // 진짜 접속 중임 -> 차단
+                throw new IllegalStateException("이미 다른 기기에서 접속 중입니다.");
+            } else {
+                // 세션 정보는 있는데 연결은 없음 (비정상 종료 등) -> 정리하고 로그인 허용
+                log.info("Ghost session detected for {}. Cleaning up.", user.getUsername());
+                sessionService.removeSession(user.getUsername());
+            }
         }
 
         // 4. 토큰 생성

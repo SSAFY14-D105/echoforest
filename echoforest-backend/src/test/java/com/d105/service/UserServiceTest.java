@@ -34,6 +34,9 @@ class UserServiceTest {
     @Mock
     private SessionService sessionService;
 
+    @Mock
+    private com.d105.manager.WebSocketSessionManager webSocketSessionManager;
+
     @InjectMocks
     private UserService userService;
 
