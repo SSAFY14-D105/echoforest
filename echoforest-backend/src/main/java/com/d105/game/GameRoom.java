@@ -285,7 +285,11 @@ public class GameRoom implements Runnable {
     }
 
     private void broadcastState() {
-        List<PlayerUpdateDto> updates = new ArrayList<>();
+        // [PERFORMANCE] Protocol Optimization: Use Array instead of DTO to reduce
+        // payload size
+        // Format: [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected,
+        // colorIndex, curses, hp, isAfk]
+        List<Object[]> updates = new ArrayList<>();
         String[] slots = sessionManager.getSlots();
 
         for (String sid : slots) {
@@ -298,42 +302,26 @@ public class GameRoom implements Runnable {
             // [FIX] Disconnected player also broadcasted (Ghost prevention)
             // if (p.isDisconnected()) { continue; }
 
-            // [DEBUG] Check detailed player state
-            if (updates.isEmpty() && Math.random() < 0.01) {
-                // log.info("[Broadcast Debug] Processing player: {}, Disconnected: {}",
-                // p.getUsername(), p.isDisconnected());
-            }
-
-            // DTO Mapping
             // Use Client-Reported Visual Curses for synchronization
             Set<String> activeCurses = p.getVisibleCurses();
-            // If empty, maybe fallback to server state?
-            // For now, trust client. If client sends empty list, it means no curses.
-            if (activeCurses.isEmpty() && !p.getActiveCurses().isEmpty()) {
-                // Fallback to server state if client hasn't sent anything yet?
-                // But client sends every few ms. Let's stick to visibleCurses.
-            }
 
-            PlayerUpdateDto dto = PlayerUpdateDto.builder()
-                    .serverTick(System.currentTimeMillis())
-                    .id(p.getUsername())
-                    .x(Math.round(p.getX() * 100) / 100.0)
-                    .y(Math.round(p.getY() * 100) / 100.0)
-                    .vx(p.getVx())
-                    .vy(p.getVy())
-                    .anim(p.getAnim())
-                    .colorIndex(p.getColorIndex())
-                    .isHost(p.getUsername().equals(this.hostUsername))
-                    .width(p.getWidth())
-                    .height(p.getHeight())
-                    .hp(p.getHp())
-                    .isDead(p.isDead())
-                    .isHidden(p.isHidden()) // [NEW] 필드 추가
-                    .isAfk(p.isAfk())
-                    .isDisconnected(p.isDisconnected()) // [NEW] 연결 끊김 상태 전송
-                    .curses(activeCurses)
-                    .build();
-            updates.add(dto);
+            // Array Mapping
+            Object[] data = new Object[] {
+                    p.getUsername(), // 0: id
+                    Math.round(p.getX() * 100) / 100.0, // 1: x
+                    Math.round(p.getY() * 100) / 100.0, // 2: y
+                    p.getVx(), // 3: vx
+                    p.getVy(), // 4: vy
+                    p.getAnim(), // 5: anim
+                    p.isDead(), // 6: isDead
+                    p.isHidden(), // 7: isHidden
+                    p.isDisconnected(), // 8: isDisconnected
+                    p.getColorIndex(), // 9: colorIndex
+                    activeCurses, // 10: curses
+                    p.getHp(), // 11: hp
+                    p.isAfk() // 12: isAfk
+            };
+            updates.add(data);
         }
 
         GameMessageDto msg = new GameMessageDto();
@@ -343,12 +331,10 @@ public class GameRoom implements Runnable {
             msg.setContent(objectMapper.writeValueAsString(updates));
 
             // [DEBUG] Always log packet content for debugging
-            List<String> userList = updates.stream().map(PlayerUpdateDto::getId).toList();
-            log.info("[Broadcast] Room {} UPDATE. Players: {}. Count: {}", roomId, userList, updates.size());
+            // log.info("[Broadcast] Room {} UPDATE. Count: {}", roomId, updates.size());
 
-            // Note: broadcasting list of objects as content string
         } catch (Exception e) {
-            log.error("Error error", e);
+            log.error("Error broadcasting state", e);
         }
 
         broadcaster.broadcast(sessionManager.getAllSessions(), msg, null);
