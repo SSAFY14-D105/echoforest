@@ -1,47 +1,43 @@
 import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
-import { distance, calculateDistances, Landmark } from '../../utils/gesture-helpers';
+import { distance, isFingerExtended, Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
     label: string;
     emoji: string;
+    thresholds: any;
 
-    constructor() {
-        super();
+    constructor(config: any = {}) {
+        super(config);
         this.label = '주먹';
         this.emoji = '✊';
+        this.thresholds = {
+            // 특별한 threshold 필요 없음 (isFingerExtended 로직 사용)
+            ...config
+        };
     }
 
     check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
-        const palmSize = metadata.palmSize || distance(landmarks[0], landmarks[9]);
-        const threshold = this.config.thresholds?.fist || 0.8;
+        // 손가락이 접혀있는지 확인 (펴져있지 않으면 접힌 것)
+        // 인자: (landmarks, tipIdx, pipIdx)
+        const isIndexClosed = !isFingerExtended(landmarks, 8, 6);
+        const isMiddleClosed = !isFingerExtended(landmarks, 12, 10);
+        const isRingClosed = !isFingerExtended(landmarks, 16, 14);
+        const isPinkyClosed = !isFingerExtended(landmarks, 20, 18);
+        const isThumbClosed = !isFingerExtended(landmarks, 4, 3);
 
-        // fingers 데이터 재활용
-        // @ts-ignore
-        let fingers = metadata.fingers;
+        const closedList = [isIndexClosed, isMiddleClosed, isRingClosed, isPinkyClosed];
+        const closedCount = closedList.filter(Boolean).length;
 
-        if (!fingers) {
-            const calcRes = calculateDistances(landmarks, palmSize);
-            fingers = calcRes.fingers;
-        }
+        // 검지, 중지, 약지, 소지 중 3개 이상 접혀있으면 주먹으로 인정
+        // (엄지는 사람마다 쥐는 방식이 다양해서 제외하거나 가산점으로만 사용)
+        if (closedCount >= 3) {
+            let score = 0.85;
+            if (closedCount === 4) score += 0.1; // 4개 다 접히면 가산
+            if (isThumbClosed) score += 0.05; // 엄지까지 접히면 가산
 
-        const isFingerClosed = (tipIdx: number, mcpIdx: number) => {
-            const wrist = landmarks[0];
-            return distance(landmarks[tipIdx], wrist) < distance(landmarks[mcpIdx], wrist) * threshold;
-        };
-
-        const closedCount = [
-            isFingerClosed(4, 2),   // Thumb
-            isFingerClosed(8, 5),   // Index
-            isFingerClosed(12, 9),  // Middle
-            isFingerClosed(16, 13), // Ring
-            isFingerClosed(20, 17)  // Pinky
-        ].filter(Boolean).length;
-
-        if (closedCount >= 4) {
-            const score = closedCount >= 5 ? 0.95 : 0.8;
             return {
                 detected: true,
-                score: score,
+                score: Math.min(0.99, score),
                 label: this.label
             };
         }
