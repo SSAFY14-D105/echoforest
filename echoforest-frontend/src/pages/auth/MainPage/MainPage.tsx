@@ -40,6 +40,12 @@ export default function MainPage({ onLogin }: Props) {
                 alt="메아리의 숲"
             />
 
+            {/* 타이틀 래퍼 (절대 위치 고정) */}
+            <div className={styles.titleWrapper}>
+                <h1 className={styles.mainTitle}>메아리의 숲</h1>
+                <h2 className={styles.subTitle}>Echo Forest</h2>
+            </div>
+
             {/* 로그인/회원가입 메뉴 (배경의 검은 부분 중앙) */}
             <div className={styles.menuWrapper}>
                 <div className={styles.menuItems}>
