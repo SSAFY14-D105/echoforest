@@ -148,7 +148,11 @@ export default function StagePlayView({
     return (
         <div className={styles.gameContainer}>
             <PauseOverlay pausedBy={pausedBy} />
-            <CameraArea />
+            {/* [FIX] participantInfos 전달하여 원격 비디오 표시 */}
+            <CameraArea
+                participantInfos={participantInfos}
+                isLiveKitConnected={liveKitService.isConnected}
+            />
             <div className={`pixel-box ${styles.canvasWrapper}`}>
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
@@ -183,6 +187,7 @@ export default function StagePlayView({
                 <EndingMissionOverlay
                     participantInfos={participantInfos}
                     nickname={nickname}
+                    roomId={roomId}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
                 />

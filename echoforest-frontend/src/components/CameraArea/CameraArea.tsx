@@ -109,13 +109,20 @@ export default function CameraArea({
         return () => clearInterval(interval);
     }, [isConnected]);
 
-    // Remote Video Track Attachment
+    // Remote Video Track Attachment (트랙 변경 시 재연결)
     useEffect(() => {
         displayParticipantInfos.forEach(info => {
             if (info.identity === nickname) return;
             const videoEl = remoteVideoRefs.current[info.identity];
-            if (videoEl && info.videoTrack) {
-                info.videoTrack.attach(videoEl);
+
+            if (info.videoTrack) {
+                if (videoEl) {
+                    // [FIX] 트랙 attach
+                    info.videoTrack.attach(videoEl);
+                } else {
+                    // [FIX] 비디오 엘리먼트가 아직 마운트되지 않은 경우 잠시 후 재시도
+                    console.log(`[CameraArea] Video element not ready for ${info.identity}, will retry on ref mount`);
+                }
             }
         });
     }, [displayParticipantInfos, nickname]);
@@ -222,7 +229,21 @@ export default function CameraArea({
                             <div className={styles.cameraContent}>
                                 {/* Remote Video */}
                                 <video
-                                    ref={el => { if (el && playerNickname) remoteVideoRefs.current[playerNickname] = el; }}
+                                    ref={el => {
+                                        // [FIX] ref 정리 로직 개선
+                                        if (playerNickname) {
+                                            if (el) {
+                                                remoteVideoRefs.current[playerNickname] = el;
+                                                // 즉시 attach 시도
+                                                const info = displayParticipantInfos.find(p => p.identity === playerNickname);
+                                                if (info?.videoTrack) {
+                                                    info.videoTrack.attach(el);
+                                                }
+                                            } else {
+                                                delete remoteVideoRefs.current[playerNickname];
+                                            }
+                                        }
+                                    }}
                                     autoPlay
                                     playsInline
                                     className={styles.remoteVideo}
@@ -284,6 +305,6 @@ export default function CameraArea({
                     </div>
                 );
             })}
-        </div>
+        </div >
     );
 }
