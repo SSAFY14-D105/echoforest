@@ -22,7 +22,7 @@ export default function CameraArea({
 }: CameraAreaProps) {
     // 1. Stable State (Primitive values)
     const nickname = useGameStore(state => state.nickname);
-    const roomId = useGameStore(state => state.roomId);
+    // const roomId = useGameStore(state => state.roomId);
     const isSoloMode = useGameStore(state => state.isSoloMode);
     // [FIX] 게임 시작 여부 확인
     const isGameStarted = useGameStore(state => state.isGameStarted);
