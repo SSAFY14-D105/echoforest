@@ -10,9 +10,9 @@ from kiwipiepy import Kiwi
 # 설정
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "02_merged_cleaned", "merged_stt_cleaned.tsv")
-OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_anonymized", "final_dataset.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "03_anonymized_history")
+INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
+OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
+ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "04_anonymized_history")
 
 def clean_basic(text):
     """기본 전처리: 숫자, 기호, 자음 제거"""
@@ -79,7 +79,9 @@ def main():
         
     # 1. 사용자 사전 추가 (유튜버 닉네임 등) - NNP(고유명사)로 강제 등록
         # 중의적인 단어들도 일단 NNP로 등록해두고, 뒤에 조사를 보고 판단
-        custom_users = ['후추', '악어', '남봉', '멋사', '핑맨', '리타', '만득', '너불', '수닝', '중력', '옥냥이', '천수', '아우니', '영태', '영태형'] 
+        custom_users = ['후추', '악어', '남봉', '멋사', '핑맨', '리타', '만득', '너불', '수닝', '중력', '옥냥이', '천수', '아우니', '영태', '영태형', 
+                        '침착맨', '김도', '철면수심', '풍월량', '풍월야', '단군', '당군',
+                        '옹냥이', '승바', '강군'] 
         for word in custom_users:
             kiwi.add_user_word(word, tag='NNP', score=10)
 

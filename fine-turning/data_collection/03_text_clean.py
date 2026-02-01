@@ -9,8 +9,8 @@ from datetime import datetime
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")
-OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "02_merged_cleaned", "merged_stt_cleaned.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "02_cleaned_history")
+OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
+ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "03_cleaned_history")
 
 def clean_text(text):
     """

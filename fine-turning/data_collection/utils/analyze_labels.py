@@ -10,8 +10,8 @@ except ImportError:
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "06_final_training", "final_train_monitor.tsv")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "07_final", "final_train.tsv")
 OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "05_analysis")
 SAMPLE_FILE = os.path.join(OUTPUT_DIR, "final_samples.txt")
 KEYWORD_FILE = os.path.join(OUTPUT_DIR, "final_keywords.txt")
@@ -39,7 +39,7 @@ def main():
     print(" [0] Label Distribution Analysis")
     print("="*40)
     
-    label_cols = ['악플/욕설', '기타_혐오', 'clean', '남탓', '감정표출', '좌절', '칭찬']
+    label_cols = ['악플/욕설', '기타_혐오', 'clean', '남탓', '감정표출', '좌절', '칭찬', '게임오더']
     
     # 전체 분포
     print("\n1. Overall Distribution:")

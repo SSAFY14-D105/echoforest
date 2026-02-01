@@ -15,10 +15,10 @@ except ImportError:
     use_kiwi = False
 
 # Paths
-base_dir = r"C:\Users\SSAFY\Desktop\SSAFY\02_second_semester\05_Project\01_공통프로젝트\03_S14P11D105_ai\fine-turning\data_collection"
-input_path = os.path.join(base_dir, "raw_data_preprocessing2", "dataset.tsv")
-output_dir = os.path.join(base_dir, "raw_data_preprocessing3")
-output_path = os.path.join(output_dir, "dataset.tsv")
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+input_path = os.path.join(base_dir, "processed_data", "07_final", "final_train.tsv")
+output_dir = os.path.join(base_dir, "processed_data", "archive", "split_test")
+output_path = os.path.join(output_dir, "split_result.tsv")
 
 # Ensure output directory exists
 os.makedirs(output_dir, exist_ok=True)

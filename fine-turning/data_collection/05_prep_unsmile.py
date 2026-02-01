@@ -1,11 +1,11 @@
-```python
+
 import csv
 import os
 
 # 파일 경로 설정 (절대 경로 복구)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "00_Unsmile", "unsmile_train_clean_hybrid_11k.tsv")
-OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "00_Unsmile", "unsmile_converted_8label.tsv")
+INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_train_clean_hybrid_11k.tsv")
+OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_converted_8label.tsv")
 
 # -------------------------------------------------------------------------
 # 키워드 정의 (자동 마킹용)

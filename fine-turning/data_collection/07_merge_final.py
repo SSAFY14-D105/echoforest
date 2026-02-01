@@ -6,12 +6,12 @@ from datetime import datetime
 
 # 파일 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE_UNSMILE = os.path.join(BASE_DIR, "processed_data", "00_Unsmile", "unsmile_converted_8label.tsv")
-FILE_AUTO = os.path.join(BASE_DIR, "processed_data", "05_auto_labeled", "gemini_labeled_17k.tsv")
+FILE_UNSMILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_converted_8label.tsv")
+FILE_AUTO = os.path.join(BASE_DIR, "processed_data", "06_ai_labeled", "gemini_labeled_17k.tsv")
 
-OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "06_final_training")
-OUTPUT_FILE = os.path.join(OUTPUT_DIR, "final_train_monitor.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "06_final_history")
+OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "07_final")
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "final_train.tsv")
+ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "07_final_history")
 
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)

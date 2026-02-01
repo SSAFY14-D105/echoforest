@@ -19,10 +19,10 @@ except ImportError:
 # 설정
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_anonymized", "final_dataset.tsv")
-OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "05_auto_labeled")
+INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
+OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "06_ai_labeled")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "gemini_labeled_17k.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "05_auto_labeled_history")
+ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "06_ai_labeled_history")
 
 BATCH_SIZE = 20  # 한 번에 20문장씩 처리 (속도/토큰 최적화)
 MODEL_NAME = "gemini-1.5-flash" # 가성비/속도 최강 모델
@@ -59,12 +59,20 @@ Categories:
 
 **Output Format**: 
 Return a STRICT JSON list of objects. No markdown formatting.
-Example:
+**Few-shot Examples (Reference)**:
+1. "야 개새끼야 오른쪽으로 가라고" -> ["abuse", "order", "anger"] (Profinity + Command)
+2. "아 니 때문에 죽었잖아 진짜" -> ["blame", "anger"] (Blaming teammate)
+3. "나이스 그대로 밀어버려" -> ["praise", "order"] (Praise + Strategy, No '!')
+4. "하 진짜 게임 못해먹겠네" -> ["frustration", "anger"] (Giving up, No '...')
+5. "저 밥 먹고 올게요" -> ["clean"] (Chat)
+6. "야 힐 안 주냐" -> ["blame", "order"] (Complain + Request, No '?')
+
+**Output Format**: 
+Return a STRICT JSON list of objects. No markdown formatting.
+JSON Example:
 [
   {"id": 0, "labels": ["clean"]},
-  {"id": 1, "labels": ["blame", "abuse"]},
-  {"id": 2, "labels": ["order"]},
-  {"id": 3, "labels": ["order", "praise"]}
+  {"id": 1, "labels": ["blame", "abuse", "anger"]}
 ]
 
 Sentences to analyze:

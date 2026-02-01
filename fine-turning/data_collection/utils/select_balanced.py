@@ -6,8 +6,8 @@ import re
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_anonymized", "final_dataset.tsv")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "07_final", "final_train.tsv")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_candidates", "test_set_candidates_1000.tsv")
 
 
