@@ -5,25 +5,26 @@ export default class BothCheekPokeGesture extends BaseGesture {
     label: string;
     emoji: string;
     thresholds: any;
-    leftCheekPoints: number[];
-    rightCheekPoints: number[];
+
+    // 검사할 포인트들 (볼 중앙, 입꼬리, 광대)
+    // 왼쪽 영역: 50(볼), 205(광대), 61(입꼬리), 187(귀쪽 볼)
+    leftCheekPoints: number[] = [50, 205, 61, 187];
+    // 오른쪽 영역: 280(볼), 425(광대), 291(입꼬리), 411(귀쪽 볼)
+    rightCheekPoints: number[] = [280, 425, 291, 411];
 
     constructor(config: any = {}) {
         super(config);
         this.label = '양볼콕! 💕';
         this.emoji = '💕';
         this.thresholds = {
-            pokeDistance: 0.2, // 인식 거리 임계값 (조금 관대하게)
+            pokeDistance: 0.2, // 조금 더 여유있게 (0.15 -> 0.2)
             ...config
         };
-
-        // 볼 인식 좌표
-        this.leftCheekPoints = [411, 376, 352, 280, 425, 361, 288, 397];
-        this.rightCheekPoints = [187, 147, 123, 50, 205, 132, 58, 172];
     }
 
-    check(multiHandLandmarks: any[], metadata: GestureMetadata): any {
-        const faceLandmarks = metadata.faceLandmarks; // [FIX] Extract from metadata
+    check(landmarks: Landmark[], metadata: GestureMetadata): any {
+        const faceLandmarks = metadata.faceLandmarks;
+        const allHands = metadata.allHands;
 
         let result: any = {
             detected: false,
@@ -34,111 +35,66 @@ export default class BothCheekPokeGesture extends BaseGesture {
             right: { detected: false, score: 0 }
         };
 
-        if (!faceLandmarks || !faceLandmarks.length || !multiHandLandmarks || !multiHandLandmarks.length) {
+        if (!faceLandmarks || !faceLandmarks.length || !allHands || !allHands.length) {
             return result;
         }
 
         try {
-            let faceSize = metadata.faceSize || 0.1;
-            if (!metadata.faceSize) {
+            let faceSize = metadata.faceSize;
+            if (!faceSize) {
                 faceSize = distance(faceLandmarks[10], faceLandmarks[152]);
             }
+            if (!faceSize || faceSize === 0) faceSize = 0.1;
 
-            for (const hand of multiHandLandmarks) {
-                // 볼콕 조건:
-                // 1. 얼굴(볼)에 닿은 손가락 끝 개수가 정확히 1개여야 함. (검지, 중지, 약지, 소지 중 하나)
-                // 2. 그 중에서도 '검지'가 닿았다면 가산점
+            // 각 손 검사
+            for (const hand of allHands) {
+                const indexTip = hand[8]; // 검지 끝
 
-                const fingers = [8, 12, 16, 20]; // 검지, 중지, 약지, 소지
+                // 1. 왼쪽 볼 영역 검사 (가장 가까운 포인트 찾기)
+                let minL = Infinity;
+                for (const pid of this.leftCheekPoints) {
+                    const d = distance(indexTip, faceLandmarks[pid]);
+                    if (d < minL) minL = d;
+                }
+                const normLeft = minL / faceSize;
 
-                // 각 손가락이 왼쪽/오른쪽 볼에 닿았는지 체크
-                let lTouchCount = 0;
-                let rTouchCount = 0;
-                let maxLScore = 0;
-                let maxRScore = 0;
-
-                for (const tipIdx of fingers) {
-                    const tip = hand[tipIdx];
-
-                    // 왼쪽 볼 체크
-                    const lCalc = this._checkDistance(tip, faceLandmarks, this.leftCheekPoints, faceSize);
-                    if (lCalc.score > 0) {
-                        lTouchCount++;
-                        if (lCalc.score > maxLScore) maxLScore = lCalc.score;
-                    }
-
-                    // 오른쪽 볼 체크
-                    const rCalc = this._checkDistance(tip, faceLandmarks, this.rightCheekPoints, faceSize);
-                    if (rCalc.score > 0) {
-                        rTouchCount++;
-                        if (rCalc.score > maxRScore) maxRScore = rCalc.score;
+                if (normLeft < this.thresholds.pokeDistance) {
+                    const score = Math.max(0, 1 - (normLeft / this.thresholds.pokeDistance));
+                    // 점수 갱신 (가장 높은 점수)
+                    if (score > result.left.score) {
+                        result.left = { detected: true, score: score, label: '왼볼콕' };
                     }
                 }
 
-                // 판정: 볼에 닿은 손가락이 1개 이하여야 함 (볼콕 특성)
-
-                // 왼쪽 판정
-                if (lTouchCount === 1) {
-                    const isIndexTouchingLeft = this._checkDistance(hand[8], faceLandmarks, this.leftCheekPoints, faceSize).score > 0;
-
-                    if (isIndexTouchingLeft || lTouchCount === 1) {
-                        if (maxLScore > result.left.score) {
-                            result.left = {
-                                detected: true, score: maxLScore, label: '왼볼콕! 👈', emoji: '👈',
-                                details: { minDist: 0.1 }
-                            };
-                        }
-                    }
+                // 2. 오른쪽 볼 영역 검사
+                let minR = Infinity;
+                for (const pid of this.rightCheekPoints) {
+                    const d = distance(indexTip, faceLandmarks[pid]);
+                    if (d < minR) minR = d;
                 }
+                const normRight = minR / faceSize;
 
-                // 오른쪽 판정
-                if (rTouchCount === 1) {
-                    const isIndexTouchingRight = this._checkDistance(hand[8], faceLandmarks, this.rightCheekPoints, faceSize).score > 0;
-
-                    if (isIndexTouchingRight || rTouchCount === 1) {
-                        if (maxRScore > result.right.score) {
-                            result.right = {
-                                detected: true, score: maxRScore, label: '오른볼콕! 👉', emoji: '👉',
-                                details: { minDist: 0.1 }
-                            };
-                        }
+                if (normRight < this.thresholds.pokeDistance) {
+                    const score = Math.max(0, 1 - (normRight / this.thresholds.pokeDistance));
+                    if (score > result.right.score) {
+                        result.right = { detected: true, score: score, label: '오른볼콕' };
                     }
                 }
             }
 
+            // 양쪽 감지 시 최종 성공
             if (result.left.detected && result.right.detected) {
                 result.detected = true;
                 result.score = (result.left.score + result.right.score) / 2;
+                if (result.score > 0.5) result.score = 0.9 + (result.score * 0.1);
             } else {
-                result.score = Math.max(result.left.score, result.right.score);
+                result.score = 0;
             }
+
         } catch (e) {
             console.error("BothCheekPoke Logic Error:", e);
         }
 
         return result;
-    }
-
-    // 거리 계산 로직 (score 반환)
-    _checkDistance(tip: Landmark, faceLandmarks: any[], points: number[], faceSize: number): { score: number, minDist: number } {
-        try {
-            let minDist = Infinity;
-            for (const idx of points) {
-                const pt = faceLandmarks[idx];
-                if (!pt) continue;
-                const d = Math.sqrt(Math.pow(tip.x - pt.x, 2) + Math.pow(tip.y - pt.y, 2));
-                const norm = d / faceSize;
-                if (norm < minDist) minDist = norm;
-            }
-
-            if (minDist < this.thresholds.pokeDistance) {
-                return {
-                    score: Math.max(0.1, 1 - (minDist / this.thresholds.pokeDistance)),
-                    minDist: minDist
-                };
-            }
-        } catch (e) { }
-
-        return { score: 0, minDist: Infinity };
     }
 }

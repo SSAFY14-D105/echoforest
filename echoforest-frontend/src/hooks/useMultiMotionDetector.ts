@@ -55,15 +55,8 @@ export default function useMultiMotionDetector() {
             const faceResults = faceLandmarkerRef.current.detectForVideo(video, timestamp);
 
             if (results.landmarks && results.landmarks.length > 0) {
-                // MediaPipe 결과를 PoseManager에 전달하기 위한 메타데이터 구성
-                // 주요 랜드마크 0번째 손 기준 (싱글 제스처) 또는 양손
-                // BaseGesture.ts에서 정의한 인터페이스에 맞춤
-
                 const landmarks = results.landmarks[0] as any[]; // 첫 번째 손
                 const allHands = results.landmarks; // 전체 손
-
-                // 손바닥 크기 계산 (손목 0 ~ 중지뿌리 9)
-                // 타입 변환 필요 (x, y, z)
 
                 // 얼굴 랜드마크 추출
                 const faceLandmarks = faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0
@@ -73,13 +66,11 @@ export default function useMultiMotionDetector() {
                 // 얼굴 크기 계산 (이마-턱)
                 let faceSize = undefined;
                 if (faceLandmarks) {
-                    // 10: 이마 상단, 152: 턱 끝
-                    // distance 함수는 {x,y,z} 객체를 받음. MediaPipe 결과는 객체 배열임.
                     faceSize = distance(faceLandmarks[10], faceLandmarks[152]);
                 }
 
                 const metadata = {
-                    palmSize: 0, // 내부 계산 또는 생략 가능
+                    palmSize: 0,
                     allHands: allHands,
                     aspectRatio: video.videoWidth / video.videoHeight,
                     faceLandmarks: faceLandmarks,
@@ -94,12 +85,32 @@ export default function useMultiMotionDetector() {
                         newMap.set(userId, pose);
                         return newMap;
                     });
+                } else {
+                    // 감지된 제스처가 없음 -> 해당 유저 삭제
+                    setDetectedPoses(prev => {
+                        const newMap = new Map(prev);
+                        if (newMap.has(userId)) {
+                            newMap.delete(userId);
+                            return newMap;
+                        }
+                        return prev;
+                    });
                 }
+            } else {
+                // 손이 감지되지 않음 -> 해당 유저 삭제
+                setDetectedPoses(prev => {
+                    const newMap = new Map(prev);
+                    if (newMap.has(userId)) {
+                        newMap.delete(userId);
+                        return newMap;
+                    }
+                    return prev;
+                });
             }
         } catch (e) {
             console.error("Pose detection error:", e);
         }
     }, [isLoaded]);
 
-    return { isLoaded, detectPose, detectedPoses };
+    return { isLoaded, detectPose, detectedPoses, poseManager: poseManagerRef.current };
 }

@@ -43,6 +43,10 @@ export default class PoseManager {
         ];
     }
 
+    public getGestures() {
+        return this.gestures;
+    }
+
     /**
      * 모든 제스처 감지 후 가장 높은 점수의 제스처 반환
      */
