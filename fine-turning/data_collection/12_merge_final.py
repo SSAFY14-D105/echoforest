@@ -1,3 +1,20 @@
+"""
+12_merge_final.py
+=================
+모든 데이터셋을 최종 학습용으로 병합
+
+[목적]
+- UnSmile + STT + AI 라벨링 데이터를 하나로 병합
+- 셔플하여 학습 효율 향상
+- 최종 학습 데이터 생성
+
+[입력]
+- processed_data/05_external/unsmile_converted_8label.tsv
+- processed_data/06_ai_labeled/gemini_labeled_17k.tsv
+
+[출력] processed_data/07_final/final_train.tsv
+"""
+
 import csv
 import os
 import random

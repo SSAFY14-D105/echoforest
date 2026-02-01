@@ -1,3 +1,19 @@
+"""
+04_text_anonymize.py
+====================
+사용자 닉네임/유저ID 익명화
+
+[목적]
+- 유튜버 닉네임, 고유명사를 [유저]로 치환
+- Kiwi 형태소 분석기 사용
+- 개인정보 보호 및 데이터 일반화
+
+[입력] processed_data/03_cleaned/merged_stt_cleaned.tsv
+[출력] processed_data/04_anonymized/final_dataset.tsv
+
+[의존성] pip install kiwipiepy
+"""
+
 import os
 import glob
 import re

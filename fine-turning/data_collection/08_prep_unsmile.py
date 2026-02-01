@@ -1,13 +1,18 @@
-# =============================================================================
-# Phase 1: UnSmile 10라벨 → 3라벨 축소
-# 
-# 목적: 기존 UnSmile 데이터셋(10개 라벨)을 3개 라벨로 축소
-#   - 악플/욕설 → 욕설/악플 = 1
-#   - 여성/가족, 남성, 성소수자, 인종/국적, 연령, 지역, 종교, 기타 혐오 → 기타혐오 = 1
-#   - clean → clean = 1
-#
-# 이후 06_ai_labeling.py에서 Gemini를 통해 8라벨로 확장됨
-# =============================================================================
+"""
+08_prep_unsmile.py
+==================
+UnSmile 데이터셋 10라벨 → 3라벨 축소
+
+[목적]
+- 기존 UnSmile (10개 라벨) → 3개 라벨로 축소
+  - 악플/욕설 → abuse
+  - 성별/지역/인종/종교/기타 혐오 → hate
+  - clean → clean
+- 이후 09_relabel_unsmile.py에서 8라벨로 재분류
+
+[입력] ../UnSmile/UnSmile_Clean/unsmile_train_clean_hybrid_11k.tsv
+[출력] processed_data/05_external/unsmile_3label.tsv
+"""
 import csv
 import os
 import shutil

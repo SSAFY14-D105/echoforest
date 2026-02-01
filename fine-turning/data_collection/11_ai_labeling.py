@@ -1,3 +1,23 @@
+"""
+11_ai_labeling.py
+=================
+Gemini/GPT API를 사용한 AI 라벨링 (선택적 사용)
+
+[목적]
+- GMS API (GPT-4o-mini)를 사용하여 문장을 8라벨로 분류
+- UnSmile 3라벨 힌트를 참고하여 더 정확한 분류
+- 비용이 발생하므로 TEST_LIMIT로 제한
+
+[입력]
+- processed_data/05_external/unsmile_3label.tsv (힌트 있음)
+- processed_data/04_anonymized/final_dataset.tsv (힌트 없음)
+
+[출력] processed_data/06_ai_labeled/gemini_labeled_17k.tsv
+
+[의존성] pip install requests tqdm
+[비용 주의] GMS 크레딧 소모됨
+"""
+
 import os
 import csv
 import time

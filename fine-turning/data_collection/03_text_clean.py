@@ -1,3 +1,18 @@
+"""
+03_text_clean.py
+================
+기본 텍스트 정제 및 병합
+
+[목적]
+- 여러 STT 결과 파일을 하나로 병합
+- 숫자/기호/자모음 제거
+- 마스킹된 욕설 복구 (X → 실제 단어)
+- 중복 문장 제거
+
+[입력] raw_data/01_faster_whisper/*.tsv
+[출력] processed_data/03_cleaned/merged_stt_cleaned.tsv
+"""
+
 import os
 import glob
 import re

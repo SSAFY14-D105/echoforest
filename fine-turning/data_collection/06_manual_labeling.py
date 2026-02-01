@@ -1,11 +1,13 @@
 """
-04_6_manual_labeling.py
-========================
-수동 한국어 키워드 기반 라벨링 스크립트
-- Gemini 사용하지 않음
-- 한국어 게임 음성 채팅에 맞춘 패턴 매칭
+06_manual_labeling.py
+=====================
+키워드 기반 수동 라벨링
 
-8가지 라벨:
+[목적]
+- 한국어 게임 음성 채팅에 맞춘 패턴 매칭
+- Gemini 사용하지 않음 (오프라인 처리)
+
+[8가지 라벨]
 - abuse: 욕설/비속어
 - hate: 혐오 표현
 - clean: 일반 대화
@@ -15,8 +17,8 @@
 - praise: 칭찬
 - order: 지시/명령
 
-입력: processed_data/04_anonymized_clean/final_dataset_clean.tsv
-출력: processed_data/04_anonymized_clean/final_dataset_labeled.tsv
+[입력] processed_data/04_anonymized_clean/final_dataset_clean.tsv
+[출력] processed_data/04_anonymized_clean/final_dataset_labeled.tsv
 """
 
 import os

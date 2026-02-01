@@ -1,14 +1,16 @@
 """
-04_5_text_clean_advanced.py
-============================
-STT 데이터셋 고급 클리닝 스크립트 (표준 라이브러리 only)
-- 노이즈 필터링 (짧은 문장, 숫자만 있는 문장 등)
-- 영어 혼합/STT 오류 제거
+05_text_clean_advanced.py
+=========================
+STT 데이터셋 고급 클리닝
+
+[목적]
+- 노이즈 필터링 (짧은 문장, 숫자만 있는 문장)
+- 영어 혼합/STT 환각 오류 제거
 - 반복 표현 정리
 - 중복 문장 제거
 
-입력: processed_data/04_anonymized/final_dataset.tsv
-출력: processed_data/04_anonymized_clean/final_dataset_clean.tsv
+[입력] processed_data/04_anonymized/final_dataset.tsv
+[출력] processed_data/04_anonymized_clean/final_dataset_clean.tsv
 """
 
 import os

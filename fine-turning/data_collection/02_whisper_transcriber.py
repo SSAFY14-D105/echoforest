@@ -1,3 +1,18 @@
+"""
+02_whisper_transcriber.py
+=========================
+Whisper 모델로 오디오를 텍스트로 변환 (STT)
+
+[목적]
+- raw_audio/*.wav 오디오 파일을 텍스트로 변환
+- faster-whisper (large-v3) 모델 사용
+- GPU 가속 지원 (CUDA)
+
+[입력] raw_audio/*.wav
+[출력] raw_data/01_faster_whisper/*.tsv
+
+[의존성] pip install faster-whisper kiwipiepy torch
+"""
 
 import os
 import glob

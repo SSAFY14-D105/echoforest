@@ -1,3 +1,17 @@
+"""
+01_youtube_downloader.py
+========================
+유튜브 영상에서 오디오만 추출하여 다운로드
+
+[목적]
+- 00_url_list.txt에 있는 유튜브 URL에서 오디오(wav)만 추출
+- 게임 음성채팅 데이터 수집을 위한 첫 번째 단계
+
+[입력] 00_url_list.txt (유튜브 URL 목록)
+[출력] raw_audio/*.wav (오디오 파일)
+
+[의존성] pip install yt-dlp
+"""
 
 import os
 import yt_dlp

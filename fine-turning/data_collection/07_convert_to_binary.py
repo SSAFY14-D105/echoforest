@@ -1,14 +1,18 @@
 """
-04_7_convert_to_binary_labels.py
-=================================
-라벨을 다중 컬럼 이진 형식으로 변환 (학습 데이터용)
+07_convert_to_binary.py
+=======================
+라벨을 다중 컬럼 이진 형식으로 변환
 
-출력 형식:
-  sentence	abuse	hate	clean	blame	anger	frustration	praise	order
-  문장내용	0	0	1	0	0	0	0	0
+[목적]
+- 단일 라벨 → 8개 컬럼 이진(0/1) 형식 변환
+- 모델 학습용 데이터 포맷
 
-입력: processed_data/04_anonymized_clean/final_dataset_labeled.tsv
-출력: processed_data/04_anonymized_clean/final_dataset_binary.tsv
+[출력 형식]
+sentence  abuse  hate  clean  blame  anger  frustration  praise  order
+문장내용  0      0     1      0      0      0            0       0
+
+[입력] processed_data/04_anonymized_clean/final_dataset_labeled.tsv
+[출력] processed_data/04_anonymized_clean/final_dataset_binary.tsv
 """
 
 import os
