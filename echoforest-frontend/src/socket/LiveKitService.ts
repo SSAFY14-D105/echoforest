@@ -43,7 +43,8 @@ export class LiveKitService {
     private onConnectedCallback: ConnectionCallback | null = null;
     private onDisconnectedCallback: ConnectionCallback | null = null;
     private onErrorCallback: ErrorCallback | null = null;
-    private onDataReceivedCallback: ((payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void) | null = null;
+    // [FIX] DataReceived 콜백도 다중 구독 지원 (Set)
+    private dataReceivedCallbacks: Set<(payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void> = new Set();
 
     // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
     onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
@@ -51,7 +52,11 @@ export class LiveKitService {
 
         // [FIX] 구독 즉시 현재 참가자 상태 전달 (이미 연결된 경우 대비)
         if (this.room) {
-            callback(this.getParticipants());
+            try {
+                callback(this.getParticipants());
+            } catch (error) {
+                console.warn('[LiveKitService] Initial participant callback failed:', error);
+            }
         }
 
         // 언마운트 시 콜백 제거를 위한 unsubscribe 함수 반환
@@ -75,9 +80,12 @@ export class LiveKitService {
         return this;
     }
 
-    onDataReceived(callback: (payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void) {
-        this.onDataReceivedCallback = callback;
-        return this;
+    // [FIX] DataReceived 구독 패턴으로 변경 및 unsubscribe 반환
+    onDataReceived(callback: (payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void): () => void {
+        this.dataReceivedCallbacks.add(callback);
+        return () => {
+            this.dataReceivedCallbacks.delete(callback);
+        };
     }
 
     // 데이터 전송 (DataChannel)
@@ -253,7 +261,13 @@ export class LiveKitService {
 
         this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind, topic?: string) => {
             // console.log(`[LiveKitService] Data received from ${participant?.identity}: ${new TextDecoder().decode(payload)}`);
-            this.onDataReceivedCallback?.(payload, participant, kind || DataPacket_Kind.RELIABLE);
+            this.dataReceivedCallbacks.forEach(callback => {
+                try {
+                    callback(payload, participant, kind || DataPacket_Kind.RELIABLE);
+                } catch (e) {
+                    console.error('[LiveKitService] DataReceived callback error:', e);
+                }
+            });
         });
     }
 
