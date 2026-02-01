@@ -109,12 +109,14 @@ export default function CameraArea({
         return () => clearInterval(interval);
     }, [isConnected]);
 
-    // Remote Video Track Attachment
+    // Remote Video Track Attachment (트랙 변경 시 재연결)
     useEffect(() => {
         displayParticipantInfos.forEach(info => {
             if (info.identity === nickname) return;
             const videoEl = remoteVideoRefs.current[info.identity];
             if (videoEl && info.videoTrack) {
+                // [FIX] 이미 attach된 경우에도 다시 attach (트랙이 변경되었을 수 있음)
+                // LiveKit SDK는 중복 attach를 안전하게 처리함
                 info.videoTrack.attach(videoEl);
             }
         });
@@ -222,7 +224,21 @@ export default function CameraArea({
                             <div className={styles.cameraContent}>
                                 {/* Remote Video */}
                                 <video
-                                    ref={el => { if (el && playerNickname) remoteVideoRefs.current[playerNickname] = el; }}
+                                    ref={el => {
+                                        // [FIX] ref 정리 로직 개선
+                                        if (playerNickname) {
+                                            if (el) {
+                                                remoteVideoRefs.current[playerNickname] = el;
+                                                // 즉시 attach 시도
+                                                const info = displayParticipantInfos.find(p => p.identity === playerNickname);
+                                                if (info?.videoTrack) {
+                                                    info.videoTrack.attach(el);
+                                                }
+                                            } else {
+                                                delete remoteVideoRefs.current[playerNickname];
+                                            }
+                                        }
+                                    }}
                                     autoPlay
                                     playsInline
                                     className={styles.remoteVideo}
@@ -284,6 +300,6 @@ export default function CameraArea({
                     </div>
                 );
             })}
-        </div>
+        </div >
     );
 }

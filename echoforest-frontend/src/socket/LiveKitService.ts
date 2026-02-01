@@ -254,12 +254,26 @@ export class LiveKitService {
             this.notifyParticipantUpdate();
         });
 
+        // [FIX] 트랙 Mute/Unmute 이벤트 추가 (상대방 카메라 ON/OFF 시 UI 업데이트)
+        this.room.on(RoomEvent.TrackMuted, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        this.room.on(RoomEvent.TrackUnmuted, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        // [FIX] 트랙 발행 이벤트 추가 (새 트랙이 publish되면 UI 업데이트)
+        this.room.on(RoomEvent.TrackPublished, () => {
+            this.notifyParticipantUpdate();
+        });
+
         this.room.on(RoomEvent.Disconnected, () => {
             // console.log('🔌 연결 종료');
             this.onDisconnectedCallback?.();
         });
 
-        this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind, topic?: string) => {
+        this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind) => {
             // console.log(`[LiveKitService] Data received from ${participant?.identity}: ${new TextDecoder().decode(payload)}`);
             this.dataReceivedCallbacks.forEach(callback => {
                 try {
