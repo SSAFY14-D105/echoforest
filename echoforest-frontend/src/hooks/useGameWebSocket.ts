@@ -148,6 +148,12 @@ export function useGameWebSocket() {
                     alert('방장에 의해 강제 퇴장되었습니다.');
                     break;
 
+                case 'DUPLICATE_LOGIN':
+                    alert(msg.content || '다른 기기에서 로그인하여 접속이 종료됩니다.');
+                    leaveGame();
+                    useGameStore.getState().logout();
+                    break;
+
                 case 'GAME_PAUSED':
                     setGamePaused(msg.content || 'Unknown Player');
                     break;
@@ -191,6 +197,17 @@ export function useGameWebSocket() {
                 console.error('WebSocket 재연결 실패:', err);
             });
         }
+
+        // [FIX] Heartbeat (Ping) Loop - Prevent Soft Disconnect in idle screens
+        const intervalId = setInterval(() => {
+            if (gameWebSocket.isConnected()) {
+                gameWebSocket.ping();
+            }
+        }, 30000); // 30초마다 핑 전송
+
+        return () => {
+            clearInterval(intervalId);
+        };
 
 
 

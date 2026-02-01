@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distance, distanceAR, type Landmark } from '../../utils/gesture-helpers';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class CheekHeartGesture extends BaseGesture {
     private leftCheekZone: number[];
@@ -27,7 +27,7 @@ export default class CheekHeartGesture extends BaseGesture {
         this.rightJawZone = [136, 150, 149, 176];
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         let result: GestureResult = {
             detected: false,
             score: 0,

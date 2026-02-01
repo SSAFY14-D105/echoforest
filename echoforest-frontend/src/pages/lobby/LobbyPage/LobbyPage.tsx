@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
@@ -9,11 +10,26 @@ import styles from './LobbyPage.module.css';
 export default function LobbyPage() {
   const {
     nickname,
-    joinGame
+    roomId,
+    joinGame,
+    leaveGame
   } = useGameStore();
 
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // [NEW] URL 쿼리 파라미터로 모달 상태 제어
+  const showSettings = searchParams.get('settings') === 'true';
+
+  // [NEW] 뒤로가기로 로비 진입 시 게임 상태 정리
+  useEffect(() => {
+    if (roomId) {
+      leaveGame();
+      gameWebSocket.disconnect();
+    }
+  }, []);
+
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -25,20 +41,18 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        // console.log('🔌 로비: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // console.log('🔌 로비: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          // console.log('✅ 방 생성됨:', roomCode);
           joinGame(roomCode, true);
+          navigate('/game');
         }
       });
 
@@ -64,20 +78,16 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        // console.log('🔌 솔로: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // console.log('🔌 솔로: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
-      // console.log('✅ 솔로: WebSocket 연결 완료');
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          // console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
 
           useGameStore.getState().joinGame(roomCode, true);
           useGameStore.setState({
@@ -86,6 +96,7 @@ export default function LobbyPage() {
             currentStage: 'SOLO_1',
           });
 
+          navigate('/game');
           setIsConnecting(false);
         }
       });
@@ -96,7 +107,6 @@ export default function LobbyPage() {
       });
 
       gameWebSocket.createRoom();
-      // console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
 
     } catch (error) {
       console.error('솔로 모드 시작 실패:', error);
@@ -106,12 +116,18 @@ export default function LobbyPage() {
     }
   };
 
+  // 설정 열기/닫기 핸들러
+  const openSettings = () => setSearchParams({ settings: 'true' });
+  const closeSettings = () => {
+    setSearchParams({}); // 쿼리 파라미터 제거 -> 모달 닫힘
+  };
+
   return (
     <div className={styles.container}>
       {/* 배경 이미지 */}
       <img
         className={styles.bgImage}
-        src="/assets/backgrounds/main_page.png"
+        src="/assets/backgrounds/main_page.jpg"
         alt="메아리의 숲"
       />
 
@@ -127,33 +143,35 @@ export default function LobbyPage() {
       </div>
 
       {/* 메뉴 (검정 보드 위치) */}
-      <div className={styles.menuWrapper}>
-        <div className={styles.menuItems}>
-          <button
-            className={styles.menuButton}
-            onClick={handleHost}
-            disabled={isConnecting}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            방 만들기
-          </button>
-          <button
-            className={styles.menuButton}
-            onClick={() => setShowJoinModal(true)}
-            disabled={isConnecting}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            방 참여하기
-          </button>
-          <button
-            className={styles.menuButton}
-            onClick={() => setShowSettings(true)}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            설정
-          </button>
+      {!showSettings && !showJoinModal && (
+        <div className={styles.menuWrapper}>
+          <div className={styles.menuItems}>
+            <button
+              className={styles.menuButton}
+              onClick={handleHost}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 만들기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowJoinModal(true)}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 참여하기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={openSettings}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              설정
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 에러 메시지 */}
       {joinError && <div className={styles.errorToast}>{joinError}</div>}
@@ -168,7 +186,7 @@ export default function LobbyPage() {
 
       {showSettings && (
         <SettingsModal
-          onClose={() => setShowSettings(false)}
+          onClose={closeSettings}
         />
       )}
     </div>

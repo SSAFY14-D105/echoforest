@@ -6,8 +6,9 @@
  * - View 컴포넌트: SoloPlayView, StagePlayView, WaitingRoom
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../../store/useGameStore';
+import { useToastStore } from '../../../store/useToastStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
@@ -80,7 +81,7 @@ export default function GamePage() {
   }, [isSoloMode]);
 
   // Player state 전송 (Phaser -> React -> Socket)
-  const handleSendState = (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) => {
+  const handleSendState = useCallback((x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) => {
     if (isHost && roomId) {
       // Host는 바로 전송
       gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
@@ -88,7 +89,7 @@ export default function GamePage() {
       // Client도 바로 전송 (서버 중계)
       gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
     }
-  };
+  }, [isHost, roomId]);
 
   const handleToggleReady = () => {
     if (!roomId || isSoloMode) return;
@@ -130,15 +131,18 @@ export default function GamePage() {
     }
   };
 
-  const handleCopyRoomId = async () => {
+  const { showToast } = useToastStore();
+
+  const handleCopyRoomId = useCallback(async () => {
     if (!roomId) return;
     try {
       await navigator.clipboard.writeText(roomId);
-      alert(`방 코드(${roomId})가 복사되었습니다!`);
+      showToast(`방 코드(${roomId})가 복사되었습니다!`, 'success');
     } catch (err) {
       console.error('복사 실패:', err);
+      showToast('복사 실패', 'error');
     }
-  };
+  }, [roomId, showToast]);
 
   const addTestPlayer = () => {
     if (players.length < MAX_PLAYERS) {
@@ -195,6 +199,7 @@ export default function GamePage() {
     return (
       <div className={styles.gameContainer}>
         <PauseOverlay pausedBy={pausedBy} />
+        <CameraArea />
         <StageSelectScreen
           roomId={roomId}
           clearedStages={clearedStages}
@@ -202,7 +207,6 @@ export default function GamePage() {
           onSelectStage={handleSelectStage}
           onClearStage={handleClearStage}
         />
-        <CameraArea />
       </div>
     );
   }

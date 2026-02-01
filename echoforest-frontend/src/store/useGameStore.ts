@@ -13,6 +13,7 @@ export interface Player {
     hp?: number;     // 체력
     isDead?: boolean; // 사망 여부
     isHidden?: boolean; // 숨김 상태 (골인 등)
+    isDisconnected?: boolean; // [NEW] 연결 끊김 상태
 
     curses?: string[]; // 적용된 저주 목록
     colorIndex?: number; // 색상 인덱스 (서버 순서 기반 고정, 0=Green, 1=Blue...)
@@ -48,7 +49,8 @@ interface GameState {
     addPlayer: (player: Player) => void;
     setPlayers: (players: Player[]) => void;  // 전체 플레이어 설정
     // syncPlayersFromServer: 서버로부터 받은 플레이어 목록을 동기화 (정렬 후 색상 할당)
-    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; isHidden?: boolean; curses?: string[]; isHost?: boolean }[]) => void;
+    // syncPlayersFromServer: 서버로부터 받은 플레이어 목록을 동기화 (정렬 후 색상 할당)
+    syncPlayersFromServer: (serverPlayers: { id?: string; username?: string; x: number; y: number; vx?: number; vy?: number; width?: number; height?: number; hp?: number; isDead?: boolean; isHidden?: boolean; isDisconnected?: boolean; curses?: string[]; isHost?: boolean; colorIndex?: number }[]) => void;
     removePlayerByNickname: (nickname: string) => void;  // WebSocket LEAVE 처리용
     updatePlayerPosition: (nickname: string, x: number, y: number) => void;  // 위치 업데이트용
     // Ready 상태 관리
@@ -113,29 +115,25 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
+
         // 서버에서 받은 플레이어 상태를 기존 목록과 병합
 
-        // Debug: 첫 번째 플레이어 데이터 샘플링 (너무 빈번하므로 가끔만)
 
-
-        // [FIX] 서버 순서 신뢰 (Host=0 보장)
-        // 클라이언트 정렬(알파벳) 제거 -> 방장 색상 탈취 버그 해결
-        const sortedServerPlayers = [...serverPlayers];
-
-        // 2. 플레이어 리스트 업데이트
-        const nextPlayers: Player[] = sortedServerPlayers.map((serverPlayer, index) => {
+        // [FIX] 서버 데이터를 전적으로 신뢰하여 동기화
+        // 클라이언트 임의 정렬이 아닌, 서버가 보낸 colorIndex(Slot Index)를 기준/정렬 키로 사용
+        const nextPlayers: Player[] = serverPlayers.map((serverPlayer) => {
             const serverId = serverPlayer.id || serverPlayer.username || "unknown";
             const existingPlayer = state.players.find(p => p.nickname === serverId);
 
-            // colorIndex는 정렬된 순서(index)를 그대로 따름 (0: 초록, 1: 파랑...)
-            // 0번 인덱스는 무조건 방장(호스트)으로 간주
-            const colorIndex = index;
-            const isHost = (index === 0);
+            // [CRITICAL] 서버에서 할당된 colorIndex와 isHost 정보를 사용
+            // 기존에는 배열 인덱스(index)를 사용했으나, 네트워크 순서 보장이 안 될 경우를 대비해 명시적 필드 사용
+            const colorIndex = serverPlayer.colorIndex ?? 0; // fallback 0
+            const isHost = serverPlayer.isHost ?? (colorIndex === 0);
 
             if (existingPlayer) {
                 return {
                     ...existingPlayer,
-                    id: existingPlayer.id || existingPlayer.nickname, // id 보장
+                    id: existingPlayer.id || existingPlayer.nickname,
                     x: serverPlayer.x,
                     y: serverPlayer.y,
                     vx: serverPlayer.vx,
@@ -145,6 +143,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
                     isHidden: serverPlayer.isHidden,
+                    isDisconnected: serverPlayer.isDisconnected,
                     curses: serverPlayer.curses,
                     params: serverPlayer,
                     colorIndex: colorIndex,
@@ -152,7 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 };
             } else {
                 return {
-                    id: serverId, // 필수 필드 추가
+                    id: serverId,
                     nickname: serverId,
                     x: serverPlayer.x,
                     y: serverPlayer.y,
@@ -163,6 +162,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     hp: serverPlayer.hp,
                     isDead: serverPlayer.isDead,
                     isHidden: serverPlayer.isHidden,
+                    isDisconnected: serverPlayer.isDisconnected,
                     curses: serverPlayer.curses,
                     isHost: isHost,
                     isLocal: false,
@@ -172,26 +172,20 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         });
 
-        // 3. 로컬 플레이어(내 캐릭터) 식별
-        // 검증: nickname 일치 여부를 강력하게 확인
+        // 3. 로컬 플레이어 식별
         const myNickname = state.nickname;
         if (myNickname) {
             const me = nextPlayers.find(p => p.nickname === myNickname);
             if (me) {
                 me.isLocal = true;
-            } else {
-                // 내 닉네임이 서버 리스트에 없는 경우
-                // if (Math.random() < 0.01) console.warn(`[Store] My player '${myNickname}' not found in server update!`);
             }
         }
 
-        // 4. colorIndex 재계산 및 확정 (배열 인덱스 기준)
-        const finalPlayers = nextPlayers.map((p, index) => ({
-            ...p,
-            colorIndex: index // 접속 순서(배열 순서)대로 색상 고정
-        }));
+        // 4. ColorIndex 기준으로 오름차순 정렬 (Slot 0, 1, 2, 3 순서 보장)
+        // CameraArea 등에서 index를 사용하여 렌더링하므로 순서가 매우 중요함
+        nextPlayers.sort((a, b) => (a.colorIndex || 0) - (b.colorIndex || 0));
 
-        return { players: finalPlayers };
+        return { players: nextPlayers };
     }),
     removePlayerByNickname: (nickname) => set((state) => ({
         players: state.players.filter(p => p.nickname !== nickname),

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
 import type { GameMessage } from '../../socket/GameWebSocket';
@@ -12,6 +13,7 @@ interface JoinGameModalProps {
 
 export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps) {
     const { joinGame } = useGameStore();
+    const navigate = useNavigate();
 
     const [roomCodeInput, setRoomCodeInput] = useState('');
     const [joinError, setJoinError] = useState('');
@@ -91,6 +93,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
                     // API에서 받아온 현재 스테이지 정보를 store에 전달
                     joinGame(roomCode, amIHost, roomInfo.currentStage || 0);
                     onClose(); // 모달 닫기
+                    navigate('/game'); // [NEW] 명시적 이동
                 }
             }, 300);
 

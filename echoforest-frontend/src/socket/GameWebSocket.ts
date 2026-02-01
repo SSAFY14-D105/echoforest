@@ -32,6 +32,7 @@ export type MessageType =
     | 'PLAYER_LEFT'   // Server→Others: 플레이어 퇴장
     | 'ROOM_CLOSED'   // Server→All: 방 폭파 (방장 퇴장)
     | 'KICKED'        // Server→Client: 강제 퇴장됨
+    | 'DUPLICATE_LOGIN' // Server→Client: 중복 로그인으로 인한 강제 종료
 
     | 'CURSE_TRIGGERED' // 저주 발동 (알림용)
     | 'STAGE_TRANSITION' // 다음 스테이지로 일괄 이동 (Server -> Client)
@@ -77,6 +78,7 @@ export interface ServerPlayerState {
     isDead: boolean;
     isHidden?: boolean;  // [NEW] 골인 등 숨김 상태
     isAfk?: boolean;     // AFK 상태
+    isDisconnected?: boolean; // [NEW] 연결 끊김 상태
     curses: string[];
     serverTick?: number;
 }
@@ -271,7 +273,7 @@ class GameWebSocket {
         } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
             // [FIX] 연결 중일 때 중요 메시지는 큐에 저장
             if (message.type === 'JOIN' || message.type === 'CREATE' || message.type === 'READY' || message.type === 'START_GAME') {
-                console.log('[GameWebSocket] Queueing message until connected:', message.type);
+
                 this.messageQueue.push(message);
             }
         } else {
@@ -287,7 +289,7 @@ class GameWebSocket {
         while (this.messageQueue.length > 0) {
             const msg = this.messageQueue.shift();
             if (msg) {
-                console.log('[GameWebSocket] Flushing queued message:', msg.type);
+
                 this.send(msg);
             }
         }
@@ -572,7 +574,7 @@ class GameWebSocket {
         this.listeners.clear();
         this.messageQueue = [];
 
-        console.log('[GameWebSocket] Disconnected. Handlers preserved, listeners/queue cleared.');
+
     }
 
     // 연결 상태 확인

@@ -33,7 +33,7 @@ export default class BaseGesture {
     /**
      * 제스처 감지 메서드 (오버라이딩 필요)
      */
-    check(landmarks: Landmark[], metadata: GestureMetadata = {}): GestureResult {
+    check(_landmarks: Landmark[], _metadata: GestureMetadata = {}): GestureResult {
         return { detected: false, score: 0 };
     }
 
