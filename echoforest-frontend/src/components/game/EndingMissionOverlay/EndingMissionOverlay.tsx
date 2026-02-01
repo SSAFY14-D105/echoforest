@@ -83,7 +83,7 @@ export default function EndingMissionOverlay({
             videoRefs.current.set(identity, el);
 
             if (isLocal) {
-                // 로컬 비디오 (나 또는 더미) - LiveKitService의 attachLocalVideo 활용
+                // 로컬 비디오 (나) - LiveKitService의 attachLocalVideo 활용
                 liveKitService.attachLocalVideo(el);
             } else {
                 // 리모트 비디오
@@ -95,15 +95,19 @@ export default function EndingMissionOverlay({
         } else {
             // 언마운트 시 정리
             videoRefs.current.delete(identity);
-
-            // cleanup (선택적)
-            if (isLocal) {
-                // detach 로직이 필요하다면 liveKitService에 추가 필요하지만, 
-                // 보통 엘리먼트가 사라지면 브라우저가 알아서 처리하거나 
-                // liveKitService.detachLocalVideo(el) 호출 가능
-            }
         }
     }, [participantInfos]);
+
+    // 리모트 비디오 트랙 연결 (participantInfos 업데이트 시 재연결)
+    useEffect(() => {
+        participantInfos.forEach(info => {
+            if (info.identity === nickname) return; // 로컬은 스킵
+            const videoEl = videoRefs.current.get(info.identity);
+            if (videoEl && info.videoTrack) {
+                info.videoTrack.attach(videoEl);
+            }
+        });
+    }, [participantInfos, nickname]);
 
     // 모든 참가자 포즈 인식 완료 시 자동 진행
     useEffect(() => {
