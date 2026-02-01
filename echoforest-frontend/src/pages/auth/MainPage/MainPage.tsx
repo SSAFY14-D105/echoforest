@@ -36,7 +36,7 @@ export default function MainPage({ onLogin }: Props) {
             {/* 배경 이미지 */}
             <img
                 className={styles.bgImage}
-                src="/assets/backgrounds/main_page.png"
+                src="/assets/backgrounds/main_page.jpg"
                 alt="메아리의 숲"
             />
 

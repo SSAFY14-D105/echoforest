@@ -111,7 +111,7 @@ export default function LobbyPage() {
       {/* 배경 이미지 */}
       <img
         className={styles.bgImage}
-        src="/assets/backgrounds/main_page.png"
+        src="/assets/backgrounds/main_page.jpg"
         alt="메아리의 숲"
       />
 
@@ -126,34 +126,42 @@ export default function LobbyPage() {
         </button>
       </div>
 
-      {/* 메뉴 (검정 보드 위치) */}
-      <div className={styles.menuWrapper}>
-        <div className={styles.menuItems}>
-          <button
-            className={styles.menuButton}
-            onClick={handleHost}
-            disabled={isConnecting}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            방 만들기
-          </button>
-          <button
-            className={styles.menuButton}
-            onClick={() => setShowJoinModal(true)}
-            disabled={isConnecting}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            방 참여하기
-          </button>
-          <button
-            className={styles.menuButton}
-            onClick={() => setShowSettings(true)}
-          >
-            <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
-            설정
-          </button>
-        </div>
+      {/* 타이틀 래퍼 (절대 위치 고정) */}
+      <div className={styles.titleWrapper}>
+        <h1 className={styles.mainTitle}>메아리의 숲</h1>
+        <h2 className={styles.subTitle}>Echo Forest</h2>
       </div>
+
+      {/* 메뉴 (검정 보드 위치) */}
+      {!showSettings && !showJoinModal && (
+        <div className={styles.menuWrapper}>
+          <div className={styles.menuItems}>
+            <button
+              className={styles.menuButton}
+              onClick={handleHost}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 만들기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowJoinModal(true)}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 참여하기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowSettings(true)}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              설정
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 에러 메시지 */}
       {joinError && <div className={styles.errorToast}>{joinError}</div>}
