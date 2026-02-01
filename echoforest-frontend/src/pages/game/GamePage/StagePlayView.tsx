@@ -148,6 +148,7 @@ export default function StagePlayView({
     return (
         <div className={styles.gameContainer}>
             <PauseOverlay pausedBy={pausedBy} />
+            <CameraArea />
             <div className={`pixel-box ${styles.canvasWrapper}`}>
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
@@ -170,7 +171,7 @@ export default function StagePlayView({
                     isListening={isListening}
                 />
             </div>
-            <CameraArea />
+            {/* CameraArea moved to top */}
             <FloatingButton
                 onPress={() => setBoosterMode(true)}
                 onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}

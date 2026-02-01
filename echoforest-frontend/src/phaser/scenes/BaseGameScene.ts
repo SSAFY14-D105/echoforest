@@ -168,6 +168,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             document.removeEventListener('visibilitychange', this.handleVisibilityChange);
             document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
+            // [FIX] 리사이즈 이벤트 리스너 등록 (Fixed Height 전략)
+            this.scale.off('resize', this.handleResize, this);
+            this.scale.on('resize', this.handleResize, this);
+            this.handleResize({ width: this.scale.width, height: this.scale.height }); // 초기 실행
+
             // 저주 해제 이벤트 리스너 등록
             window.removeEventListener('curse-released', this.handleCurseReleased);
             window.addEventListener('curse-released', this.handleCurseReleased);
@@ -192,6 +197,20 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     }
 
 
+
+    // [FIX] 리사이즈 핸들러: 세로 높이(720px) 기준 배율 유지
+    private handleResize = (gameSize: { width: number; height: number }) => {
+        if (!this.cameras || !this.cameras.main) return;
+
+        const baseHeight = 720; // 기준 높이
+        const zoom = gameSize.height / baseHeight;
+
+        this.cameras.main.setZoom(zoom);
+        // console.log(`[BaseGameScene] Resized to ${gameSize.width}x${gameSize.height}, Zoom: ${zoom}`);
+
+        // 줌 변경 후 카메라 경계나 팔로우 재조정 필요 시 여기 추가
+        // this.setupCamera(); // (옵션)
+    };
 
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
     // [CRITICAL FIX] Visibility Change 핸들러 분리 w/ Null Check
@@ -238,6 +257,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 1. 카메라 좌표 복구
             this.updateCamera();
             cam.dirty = true;
+
+            // [FIX] 복귀 시 리사이즈 로직 재실행 (줌 풀림 방지)
+            this.handleResize({ width: this.scale.width, height: this.scale.height });
 
             // 2. 모든 플레이어 스프라이트 완전 재생성 (Hard Reset)
             this.players.forEach((player) => {

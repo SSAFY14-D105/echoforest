@@ -115,10 +115,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
-        // [DEBUG] Check what we receive
-        if (Math.random() < 0.05) { // Log 5% of updates to avoid spam
-            console.log('[Sync] Received players:', serverPlayers.length, serverPlayers);
-        }
 
         // 서버에서 받은 플레이어 상태를 기존 목록과 병합
 
