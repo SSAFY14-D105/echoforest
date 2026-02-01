@@ -5,10 +5,14 @@ import { liveKitService } from '../../socket/LiveKitService';
 import type { ParticipantInfo } from '../../socket/LiveKitService';
 import styles from './CameraArea.module.css';
 
-const PLAYER_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'];
 const MAX_PLAYERS = 4;
 
-export default function CameraArea() {
+interface CameraAreaProps {
+    startSlot?: number;
+    endSlot?: number;
+}
+
+export default function CameraArea({ startSlot = 0, endSlot = MAX_PLAYERS }: CameraAreaProps) {
     // 1. Stable State (Primitive values)
     const nickname = useGameStore(state => state.nickname);
     const roomId = useGameStore(state => state.roomId);
@@ -119,9 +123,8 @@ export default function CameraArea() {
 
     return (
         <div className={styles.cameraArea}>
-
-
-            {Array.from({ length: MAX_PLAYERS }).map((_, slotIndex) => {
+            {Array.from({ length: endSlot - startSlot }).map((_, i) => {
+                const slotIndex = startSlot + i;
                 // [FIX] Use the slot index to find the player who belongs to this slot (by colorIndex)
                 const player = players.find(p => p.colorIndex === slotIndex);
                 const playerNickname = player?.nickname;
@@ -146,7 +149,6 @@ export default function CameraArea() {
                         <div
                             key={slotIndex}
                             className={`${styles.cameraBox} ${styles.waiting}`}
-                            style={{ borderColor: PLAYER_COLORS[slotIndex] }}
                         >
                             P{slotIndex + 1} (대기중...)
                         </div>
@@ -158,7 +160,6 @@ export default function CameraArea() {
                         <div
                             key={slotIndex}
                             className={`${styles.cameraBox} ${styles.disconnected}`}
-                            style={{ borderColor: '#808080', opacity: 0.7 }}
                         >
                             <div className={styles.cameraOff}>🚫</div>
                             <span className={styles.playerLabel} style={{ color: '#aaa' }}>Disconnected</span>
@@ -170,7 +171,6 @@ export default function CameraArea() {
                     <div
                         key={slotIndex}
                         className={`${styles.cameraBox} ${styles.active}`}
-                        style={{ borderColor: PLAYER_COLORS[slotIndex] }}
                     >
                         {/* Video Area */}
                         {isMe ? (
