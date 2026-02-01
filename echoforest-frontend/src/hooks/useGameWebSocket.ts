@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import type { Player } from '../store/useGameStore';
 import { useSttStore } from '../store/useSttStore';
+import { useToastStore } from '../store/useToastStore';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import type { GameMessage, ServerPlayerState } from '../socket/GameWebSocket';
 
@@ -33,6 +34,8 @@ export function useGameWebSocket() {
         onCurseTriggered,
         onCurseReleased,
     } = useSttStore();
+
+    const { showToast } = useToastStore();
 
     const parseStageNum = (stageId: string | null): number => {
         if (!stageId) return 1;
@@ -207,7 +210,7 @@ export function useGameWebSocket() {
                     break;
 
                 case 'GAME_PAUSED':
-                    setGamePaused(msg.content || 'Unknown Player');
+                    setGamePaused(msg.content || msg.username || 'Unknown Player');
                     break;
 
                 case 'GAME_RESUMED':
@@ -228,12 +231,14 @@ export function useGameWebSocket() {
                 case 'CURSE_TRIGGERED':
                     if (msg.cursedPlayerId) {
                         onCurseTriggered(msg.cursedPlayerId, msg.mapId ?? 1);
+                        showToast(`${msg.cursedPlayerId}님이 저주에 걸렸습니다!`, 'warning');
                     }
                     break;
 
                 case 'CURSE_RELEASED':
                     if (msg.releasedPlayerId) {
                         onCurseReleased(msg.releasedPlayerId, msg.word ?? '');
+                        showToast(`${msg.releasedPlayerId}님이 저주에서 해제되었습니다!`, 'success');
                     }
                     break;
             }
