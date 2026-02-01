@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
@@ -9,13 +10,25 @@ import styles from './LobbyPage.module.css';
 export default function LobbyPage() {
   const {
     nickname,
-    joinGame
+    roomId,
+    joinGame,
+    leaveGame
   } = useGameStore();
+
+  // [NEW] 뒤로가기로 로비 진입 시 게임 상태 정리
+  useEffect(() => {
+    if (roomId) {
+      leaveGame();
+      gameWebSocket.disconnect();
+    }
+  }, []);
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+
+  const navigate = useNavigate(); // [NEW]
 
   // 방 만들기 (WebSocket CREATE 메시지 전송)
   const handleHost = async () => {
@@ -39,6 +52,7 @@ export default function LobbyPage() {
           const roomCode = message.content || '';
           // console.log('✅ 방 생성됨:', roomCode);
           joinGame(roomCode, true);
+          navigate('/game'); // [NEW] 명시적 이동
         }
       });
 
@@ -86,6 +100,7 @@ export default function LobbyPage() {
             currentStage: 'SOLO_1',
           });
 
+          navigate('/game'); // [NEW] 명시적 이동
           setIsConnecting(false);
         }
       });
@@ -126,11 +141,7 @@ export default function LobbyPage() {
         </button>
       </div>
 
-      {/* 타이틀 래퍼 (절대 위치 고정) */}
-      <div className={styles.titleWrapper}>
-        <h1 className={styles.mainTitle}>메아리의 숲</h1>
-        <h2 className={styles.subTitle}>Echo Forest</h2>
-      </div>
+
 
       {/* 메뉴 (검정 보드 위치) */}
       {!showSettings && !showJoinModal && (
