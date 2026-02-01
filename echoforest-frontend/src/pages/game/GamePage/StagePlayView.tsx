@@ -183,6 +183,7 @@ export default function StagePlayView({
                 <EndingMissionOverlay
                     participantInfos={participantInfos}
                     nickname={nickname}
+                    roomId={roomId}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
                 />
