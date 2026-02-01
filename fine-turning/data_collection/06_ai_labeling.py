@@ -1,3 +1,4 @@
+# GMS 이용하여 우리가 3가지 라벨로 분류한 UnSmile 데이터셋과 우리 데이터셋 전부 8개 라벨로 재라벨링
 import os
 import csv
 import time

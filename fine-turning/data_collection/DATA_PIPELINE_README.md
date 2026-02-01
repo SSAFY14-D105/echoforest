@@ -50,8 +50,8 @@ data_collection/
 │   ├── 01_audio_stt/          # (Step 2 결과) STT 원본
 │   ├── 03_cleaned/            # (Step 3 결과) 1차 정제됨
 │   ├── 04_anonymized/         # (Step 4 결과) 익명화됨
-│   ├── 05_external/           # (Step 5 결과) Unsmile 변환 데이터
-│   ├── 06_ai_labeled/         # (Step 6 결과) Gemini 라벨링 데이터
+│   ├── 05_external/           # (Step 5 결과) Unsmile 변환 데이터 (기존 UnSmile모델 데이터셋을 욕설/악플|기타혐오|clean 3가지 라벨로 분류)
+│   ├── 06_ai_labeled/         # (Step 6 결과) Gemini 라벨링 데이터 (GMS이용해서 우리가 3가지 라벨로 분류한 UnSmile 데이터셋과 우리 데이터 전부 8개 라벨로 재라벨링)
 │   ├── 07_final/              # (Step 7 결과) ★최종 학습 데이터★
 │   └── archive/               # [백업] 실행할 때마다 날짜별로 기록 저장 (Backup)
 └── DATA_PIPELINE_README.md    # (현재 문서)

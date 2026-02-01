@@ -1,4 +1,4 @@
-
+# 원본 unsmile모델 데이터셋의 재라벨링 (기존 UnSmile모델 데이터셋을 욕설/악플|기타혐오|clean 3가지 라벨로 분류)
 import csv
 import os
 
