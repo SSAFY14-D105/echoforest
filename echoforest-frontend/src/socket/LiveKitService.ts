@@ -69,6 +69,22 @@ export class LiveKitService {
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
     setLocalVideoElement(element: HTMLVideoElement | null) {
+
+
+        // [FIX] 같은 엘리먼트로 중복 호출 시 무시 (깜빡임 방지)
+        if (element === this.localVideoElement) {
+            // 같은 엘리먼트지만 트랙이 새로 준비되었을 수 있으므로 attach 시도
+            if (element && this.room?.localParticipant) {
+                const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+
+                if (cameraPublication?.track) {
+                    cameraPublication.track.attach(element);
+
+                }
+            }
+            return;
+        }
+
         // 이전 엘리먼트에서 detach
         if (this.localVideoElement && this.room?.localParticipant) {
             const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
@@ -82,10 +98,19 @@ export class LiveKitService {
         // 새 엘리먼트에 현재 트랙 attach
         if (element && this.room?.localParticipant) {
             const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+
             if (cameraPublication?.track) {
                 cameraPublication.track.attach(element);
+
             }
         }
+    }
+
+    // [NEW] 로컬 트랙 준비 완료 여부
+    get isLocalTrackReady(): boolean {
+        if (!this.room?.localParticipant) return false;
+        const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+        return !!cameraPublication?.track;
     }
 
     // 참가자 정보 수집
@@ -205,31 +230,46 @@ export class LiveKitService {
     }
 
     private async setupLocalTracks(opId: number) {
+
         try {
+
             const tracks = await createLocalTracks({
                 audio: true,
                 video: true
             });
 
+
             if (opId !== this.connectionOpId || !this.room) {
+
                 tracks.forEach(t => t.stop());
                 return;
             }
 
             for (const track of tracks) {
+
                 if (this.room && this.room.state === 'connected') {
                     await this.room.localParticipant.publishTrack(track);
+
 
                     // 로컬 비디오 표시
                     if (track.kind === Track.Kind.Video && this.localVideoElement) {
                         track.attach(this.localVideoElement);
+
                     }
                 }
             }
 
             // 저장된 카메라 상태 적용 (대기실에서 꺼둔 경우 유지)
-            if (!this._cameraEnabledPreference && this.room?.localParticipant) {
-                await this.room.localParticipant.setCameraEnabled(false);
+            // _cameraEnabledPreference가 false인 경우에만 끔 (default: true)
+            if (this.room?.localParticipant) {
+                if (!this._cameraEnabledPreference) {
+                    await this.room.localParticipant.setCameraEnabled(false);
+                } else {
+                    // 확실하게 켜짐 상태 동기화
+                    if (!this.room.localParticipant.isCameraEnabled) {
+                        await this.room.localParticipant.setCameraEnabled(true);
+                    }
+                }
             }
         } catch (publishErr) {
             console.warn('트랙 발행 중 오류 (연결 해제됨?):', publishErr);
@@ -242,14 +282,14 @@ export class LiveKitService {
     async connect(roomName: string, username: string): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
-        // console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${roomName}, User: ${username}`);
+
 
         try {
             const { token } = await getLiveKitToken({ roomId: roomName, username });
 
             if (myId !== this.connectionOpId) return;
 
-            // console.log('✅ LiveKit 토큰 발급 성공');
+
 
             this.room = new Room({
                 adaptiveStream: true,
@@ -268,7 +308,7 @@ export class LiveKitService {
                 return;
             }
 
-            // console.log('✅ LiveKit Room 연결 성공');
+
             await this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
@@ -316,8 +356,13 @@ export class LiveKitService {
     }
 
     // 카메라 상태
+    // [FIX] 트랙이 아직 발행되지 않은 경우 사용자 preference 반환
     get isCameraEnabled(): boolean {
-        return this.room?.localParticipant.isCameraEnabled ?? false;
+        // 트랙이 발행되지 않았으면 preference 반환 (default: true)
+        if (!this.isLocalTrackReady) {
+            return this._cameraEnabledPreference;
+        }
+        return this.room?.localParticipant.isCameraEnabled ?? this._cameraEnabledPreference;
     }
 
     // 연결 상태
