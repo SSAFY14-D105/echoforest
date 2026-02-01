@@ -44,23 +44,13 @@ export default function EndingMissionOverlay({
     // 비디오 refs를 Map으로 관리
     const videoRefs = useRef<Map<string, HTMLVideoElement | null>>(new Map());
 
-    // 참가자 목록 (로컬 + 리모트) - 4명이 부족하면 테스트용 더미로 채움
+    // 참가자 목록 (로컬 + 리모트) - 실제 참가자만 표시 (최대 4명)
     const allParticipants = useMemo(() => {
-        const real = [
+        const participants = [
             { identity: nickname, isLocal: true },
             ...participantInfos.filter(p => p.identity !== nickname).map(p => ({ ...p, isLocal: false }))
         ];
-
-        // 4명 미만일 경우 더미(Bot) 추가 (테스트용, 로컬 비디오 공유)
-        if (real.length < 4) {
-            const dummies = Array(4 - real.length).fill(null).map((_, i) => ({
-                identity: `Dev_Bot_${i + 1}`,
-                isLocal: true, // 로컬 비디오 공유
-                isDummy: true // 더미 표시용
-            }));
-            return [...real, ...dummies];
-        }
-        return real.slice(0, 4);
+        return participants.slice(0, 4);
     }, [participantInfos, nickname]);
 
     // roomId 기반으로 각 참가자에게 포즈 할당
@@ -238,7 +228,7 @@ export default function EndingMissionOverlay({
 
                                 {/* 플레이어 라벨 */}
                                 <span className={styles.playerLabel}>
-                                    P{index + 1}: {participant.isLocal ? (participant.identity.startsWith('Dev_Bot') ? 'Bot (Test)' : '나') : participant.identity}
+                                    P{index + 1}: {participant.isLocal ? '나' : participant.identity}
                                 </span>
                             </div>
                         );
