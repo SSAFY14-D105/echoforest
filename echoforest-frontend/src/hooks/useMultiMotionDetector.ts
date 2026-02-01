@@ -180,10 +180,14 @@ export function useMultiMotionDetector({
                 faceSize: 0.1
             };
 
-            // 해당 참가자의 타겟 제스처 체크
             const gestureInstance = gestureInstancesRef.current.get(identity);
             if (gestureInstance && handResult.landmarks.length > 0) {
                 const result: GestureResult = gestureInstance.check(handResult.landmarks[0], metadata);
+
+                // [DEBUG] 인식 상태 로그 (개발 중 확인용)
+                if (result.detected) {
+                    console.log(`[MultiMotionDetector] ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
+                }
 
                 setParticipantStates(prev => {
                     const updated = [...prev];
@@ -195,7 +199,8 @@ export function useMultiMotionDetector({
                                 ...updated[idx],
                                 currentGesture: result.detected ? result.label || null : null,
                                 score: result.score,
-                                isCleared: result.detected && result.score > 0.7
+                                // [FIX] 임계값 0.7 → 0.5로 낮춤 (인식률 향상)
+                                isCleared: result.detected && result.score > 0.5
                             };
                         }
                     }
@@ -206,8 +211,8 @@ export function useMultiMotionDetector({
             console.error('[MultiMotionDetector] Detection error:', e);
         }
 
-        // 다음 프레임 (약 10fps로 제한하여 성능 최적화)
-        setTimeout(() => requestAnimationFrame(detect), 100);
+        // [FIX] 감지 주기 100ms → 50ms로 빠르게 (약 20fps)
+        setTimeout(() => requestAnimationFrame(detect), 50);
     }, [videoRefs]);
 
     // 감지 루프 시작/중지
