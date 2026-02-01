@@ -12,8 +12,8 @@ from tqdm import tqdm
 # 🔑 GMS 설정 (사용자 입력 필요)
 # ==========================================
 GMS_API_KEY = os.getenv("GMS_KEY") or "YOUR_GMS_KEY_HERE"
-GMS_ENDPOINT = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/responses"
-MODEL_NAME = "gpt-5.2-pro"  # High reasoning model
+GMS_ENDPOINT = "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions"
+MODEL_NAME = "gpt-4o-mini"  # Best Balance (Smart & Cheap)
 
 # ==========================================
 # 📂 경로 설정
@@ -30,8 +30,8 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "06_ai_labeled")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "gemini_labeled_17k.tsv")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "06_ai_labeled_history")
 
-# 배치 설정 (Pro 모델은 느리므로 배치 사이즈를 적절히 유지)
-BATCH_SIZE = 10 
+# 배치 설정
+BATCH_SIZE = 50
 
 # ==========================================
 # 🧠 Prompts
@@ -41,37 +41,47 @@ You are an expert data labeler for a 'Cooperative Game Voice Chat Analysis Syste
 Your task is to classify sentences into 8 categories (Multi-label).
 
 **Input Format**:
-You will receive a list of sentences. Some may have 'HINT' provided.
-- If 'HINT' exists (e.g., abuse=1), MUST respect it as Ground Truth.
-- Analyze context to fill in missing labels (blame, order, anger, etc.).
+You will receive a JSON list of sentences. Some objects have a 'hint' (existing labels).
+- **HINT Rule**: If 'hint' is provided (e.g., abuse=1), you MUST start with these labels.
+- **Context Rule**: Analyze the korean text to add missing labels (blame, order, anger, etc.).
+- **Clean Rule**: 'clean' means "Neutral/Chat". If the sentence is 'praise' or 'order' or 'blame', then 'clean' must be removed (turn off).
 
 **Target Labels (8 Classes)**:
-1. abuse (욕설/패드립): Profanity, strong insults (Hint overrides this).
-2. hate (기타혐오): Discrimination (Gender/Race/Region) (Hint overrides this).
-3. clean (일반대화): Casual chat, unrelated to game strategy/negativity.
+1. abuse (욕설/패드립): Profanity, strong insults.
+2. hate (기타혐오): Discrimination (Gender/Race/Region).
+3. clean (일반대화): Neutral chat only. (NOT order, NOT praise).
 4. blame (남탓/정치): Blaming teammates, aggressive criticism.
 5. anger (감정표출): Expressing annoyance/anger without specific target.
 6. frustration (좌절/한숨): Giving up, self-blame ("하...", "망했네").
 7. praise (칭찬): Encouragement ("Nice", "Carry").
 8. order (게임오더/전략): Tactical instructions ("Go mid", "Back").
 
-**Example**:
-Input: {"text": "야 개새끼야 오른쪽 가라고", "hint": {"abuse": 1}}
-Output: ["abuse", "order", "anger"] (Respects abuse=1, detects order & anger)
+**Few-Shot Examples (Batch)**:
+Input:
+[
+  {"text": "야 개새끼야 오른쪽 가라고", "hint": {"abuse": 1}},
+  {"text": "하 진짜 게임 못해먹겠네", "hint": {}},
+  {"text": "나이스 캐리요", "hint": {"clean": 1}},
+  {"text": "밥 먹고 올게", "hint": {"clean": 1}}
+]
 
-Input: {"text": "하 진짜 게임 못해먹겠네", "hint": {}}
-Output: ["frustration", "anger"]
+Output:
+[
+  {"labels": ["abuse", "order", "anger"]}, 
+  {"labels": ["frustration", "anger"]},
+  {"labels": ["praise"]},
+  {"labels": ["clean"]}
+]
+(Explanation:
+ 1. Hint 'abuse' kept. added 'order' & 'anger'.
+ 2. No hint. Detected 'frustration' & 'anger'.
+ 3. Hint 'clean' REMOVED because 'praise' is detected.
+ 4. Pure chat -> 'clean' kept.)
 
-Input: {"text": "나이스 캐리요", "hint": {"clean": 1}}
-Output: ["praise"] (Hint says clean, but praise is specific positive nuance. If context is strictly praise, remove clean or keep neutral. For this system, Praise is NOT clean. So override clean if needed, BUT respect abuse/hate hints strictly.)
-
-**Strict Rule**:
-- Output ONLY a JSON list of objects.
+**Strict Output Rule**:
+- Return ONLY a valid JSON List of Objects.
+- Each object must have a "labels" key.
 """
-
-# ==========================================
-# 🛠️ Helper Functions
-# ==========================================
 
 def call_gms_api(prompt_messages):
     headers = {
@@ -79,41 +89,37 @@ def call_gms_api(prompt_messages):
         "Authorization": f"Bearer {GMS_API_KEY}"
     }
     
-    # Construct input for GMS (It assumes Chat Completion structure or similar)
-    # The user provided example uses 'input' field for simple prompt, 
-    # but GMS likely supports messages for chat models. 
-    # Let's try the standard chat format if possible, or fallback to simple string.
-    # Given the example: "input": "Tell me..."
-    
-    # We will combine system + user into one big string for the 'input' field 
-    # because the example shows a simple "input" field.
-    
-    full_prompt = f"{SYSTEM_PROMPT}\n\nTask:\n{prompt_messages}"
-    
+    # GMS 'v1/chat/completions' format
     payload = {
         "model": MODEL_NAME,
-        "input": full_prompt
+        "messages": [
+            {"role": "developer", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Task:\n{prompt_messages}"}
+        ]
     }
     
     try:
-        response = requests.post(GMS_ENDPOINT, headers=headers, json=payload, timeout=120)
+        response = requests.post(GMS_ENDPOINT, headers=headers, json=payload, timeout=60)
         response.raise_for_status()
         result = response.json()
         
-        # Parse output (Assuming OpenAI-like response structure or specific GMS structure)
-        # Standard OpenAI: choices[0].message.content
-        # GMS Example output not shown, but usually follows OpenAI or is direct text.
-        # Let's assume it returns text in 'choices' or direct 'output'
-        
-        # *Critial*: GMS responses endpoint might differ. 
-        # Debugging: let's print keys if unknown.
+        content = None
         if 'choices' in result:
-             return result['choices'][0]['message']['content']
-        elif 'output' in result: # Some custom wrappers
-             return result['output']
+             content = result['choices'][0]['message']['content']
+        elif 'output' in result: 
+             content = result['output']
         else:
-             # Fallback: try to find any text field
-             return str(result)
+             content = str(result)
+             
+        # [Fix] Handle List response
+        if isinstance(content, list):
+            # If it's a list of strings, join them
+            if content and isinstance(content[0], str):
+                content = "\n".join(content)
+            else:
+                content = json.dumps(content, ensure_ascii=False)
+                
+        return str(content)
              
     except Exception as e:
         print(f"API Error: {e}")
@@ -182,8 +188,8 @@ def main():
     # CSV Writer 준비
     f_mode = 'a' if os.path.exists(OUTPUT_FILE) else 'w'
     
-    # [COST SAFETY] 테스트용 제한 (비용 확인 후 제거하세요!)
-    TEST_LIMIT = 20
+    # [COST SAFETY] 테스트용 제한 (비용 확인용: 50개만 실행)
+    TEST_LIMIT = 50 # 배치 1회분
     total_processed_session = 0
     
     with open(OUTPUT_FILE, f_mode, encoding='utf-8', newline='') as f:
@@ -215,6 +221,12 @@ def main():
             
             # Call API
             response_text = call_gms_api(prompt_text)
+            
+            # [DEBUG] 첫 번째 응답만 화면에 출력 (문제 확인용)
+            if total_processed_session == 0 and response_text:
+                print("\n[DEBUG] API Response (first 500 chars):")
+                print(response_text[:500])
+                print("=" * 50)
             
             if not response_text:
                 print("API failed, skipping batch...")
