@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distanceAR, calculateAngle, type Landmark } from '../../utils/gesture-helpers';
+import { distanceAR, type Landmark } from '../../utils/gesture-helpers';
 
 export default class BigHeartGesture extends BaseGesture {
     constructor() {
@@ -8,7 +8,7 @@ export default class BigHeartGesture extends BaseGesture {
         this.emoji = '🙆‍♂️';
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const hands = metadata.allHands;
         const aspectRatio = metadata.aspectRatio || 1.0;
         const face = metadata.faceLandmarks;

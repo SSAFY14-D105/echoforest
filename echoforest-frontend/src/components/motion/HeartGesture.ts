@@ -14,7 +14,7 @@ export default class HeartGesture extends BaseGesture {
         this.emoji = '❤️';
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const hands = metadata.allHands;
 
         if (!hands || hands.length < 2) {

@@ -36,7 +36,7 @@ export default class VSignGesture extends BaseGesture {
         return angle * (180 / Math.PI);
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
         const t = this.thresholds;
         const wrist = landmarks[0];
 

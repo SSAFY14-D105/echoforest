@@ -27,7 +27,7 @@ export default class KissGesture extends BaseGesture {
 
     // BaseGesture check 메서드 오버라이드
     // 원래 detect(faceLandmarks)였지만, check(landmarks, metadata)로 통일
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const face = metadata.faceLandmarks; // 단일 얼굴
 
         if (!face || face.length < 300) {

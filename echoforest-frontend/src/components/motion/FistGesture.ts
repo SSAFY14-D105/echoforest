@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distance, calculateDistances, type Landmark } from '../../utils/gesture-helpers';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
     constructor() {
@@ -8,16 +8,11 @@ export default class FistGesture extends BaseGesture {
         this.emoji = '✊';
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
-        const palmSize = metadata.palmSize || distance(landmarks[0], landmarks[9]);
+    check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
         const threshold = 0.8; // Default threshold
 
         // 만약 Helper가 fingers 객체를 제공하지 않는다면 계산
-        let fingers = (metadata as any).fingers;
-
-        if (!fingers) {
-            // 여기서는 fingers 객체가 아니라 직접 closedCount를 계산
-        }
+        // let fingers = (_metadata as any).fingers;
 
         const isFingerClosed = (tipIdx: number, mcpIdx: number) => {
             const wrist = landmarks[0];
