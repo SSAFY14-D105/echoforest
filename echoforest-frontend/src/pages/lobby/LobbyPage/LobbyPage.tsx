@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
@@ -15,6 +15,12 @@ export default function LobbyPage() {
     leaveGame
   } = useGameStore();
 
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // [NEW] URL 쿼리 파라미터로 모달 상태 제어
+  const showSettings = searchParams.get('settings') === 'true';
+
   // [NEW] 뒤로가기로 로비 진입 시 게임 상태 정리
   useEffect(() => {
     if (roomId) {
@@ -24,11 +30,8 @@ export default function LobbyPage() {
   }, []);
 
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
-
-  const navigate = useNavigate(); // [NEW]
 
   // 방 만들기 (WebSocket CREATE 메시지 전송)
   const handleHost = async () => {
@@ -38,21 +41,18 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        // console.log('🔌 로비: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // console.log('🔌 로비: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          // console.log('✅ 방 생성됨:', roomCode);
           joinGame(roomCode, true);
-          navigate('/game'); // [NEW] 명시적 이동
+          navigate('/game');
         }
       });
 
@@ -78,20 +78,16 @@ export default function LobbyPage() {
 
     try {
       if (gameWebSocket.isConnected()) {
-        // console.log('🔌 솔로: 기존 연결 정리 중...');
         gameWebSocket.disconnect();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      // console.log('🔌 솔로: 웹소켓 연결 시도...');
       gameWebSocket.setUser(nickname);
       await gameWebSocket.connect();
-      // console.log('✅ 솔로: WebSocket 연결 완료');
 
       gameWebSocket.onMessage((message: GameMessage) => {
         if (message.type === 'ROOM_CREATED') {
           const roomCode = message.content || '';
-          // console.log('✅ 솔로 테스트 방 생성됨:', roomCode);
 
           useGameStore.getState().joinGame(roomCode, true);
           useGameStore.setState({
@@ -100,7 +96,7 @@ export default function LobbyPage() {
             currentStage: 'SOLO_1',
           });
 
-          navigate('/game'); // [NEW] 명시적 이동
+          navigate('/game');
           setIsConnecting(false);
         }
       });
@@ -111,7 +107,6 @@ export default function LobbyPage() {
       });
 
       gameWebSocket.createRoom();
-      // console.log('🧪 솔로 모드: 테스트용 멀티플레이 방 생성 중...');
 
     } catch (error) {
       console.error('솔로 모드 시작 실패:', error);
@@ -119,6 +114,12 @@ export default function LobbyPage() {
       gameWebSocket.disconnect();
       setIsConnecting(false);
     }
+  };
+
+  // 설정 열기/닫기 핸들러
+  const openSettings = () => setSearchParams({ settings: 'true' });
+  const closeSettings = () => {
+    setSearchParams({}); // 쿼리 파라미터 제거 -> 모달 닫힘
   };
 
   return (
@@ -140,8 +141,6 @@ export default function LobbyPage() {
           🧪 혼자하기
         </button>
       </div>
-
-
 
       {/* 메뉴 (검정 보드 위치) */}
       {!showSettings && !showJoinModal && (
@@ -165,7 +164,7 @@ export default function LobbyPage() {
             </button>
             <button
               className={styles.menuButton}
-              onClick={() => setShowSettings(true)}
+              onClick={openSettings}
             >
               <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
               설정
@@ -187,7 +186,7 @@ export default function LobbyPage() {
 
       {showSettings && (
         <SettingsModal
-          onClose={() => setShowSettings(false)}
+          onClose={closeSettings}
         />
       )}
     </div>
