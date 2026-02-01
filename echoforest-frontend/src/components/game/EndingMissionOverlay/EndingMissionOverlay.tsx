@@ -260,16 +260,19 @@ export default function EndingMissionOverlay({
         }
     }, [allParticipants, onCaptureComplete, onClose, isCapturing]);
 
-    // 카운트다운 처리
+    // 카운트다운 처리 (타이머)
     useEffect(() => {
-        if (countdown === null) return;
+        if (countdown === null || countdown <= 0) return;
 
-        if (countdown > 0) {
-            const timer = setTimeout(() => {
-                setCountdown(prev => (prev || 0) - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0 && !isCapturing) {
+        const timer = setTimeout(() => {
+            setCountdown(prev => (prev || 0) - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [countdown]); // handleCapture 의존성 제거됨
+
+    // 카운트다운 완료 시 캡처 트리거
+    useEffect(() => {
+        if (countdown === 0 && !isCapturing) {
             handleCapture();
         }
     }, [countdown, isCapturing, handleCapture]);
