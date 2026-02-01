@@ -7,7 +7,7 @@ import { gameWebSocket } from '../../../socket/GameWebSocket';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
-import styles from './GamePage.module.css';
+import styles from './WaitingRoom.module.css';
 
 const MAX_PLAYERS = 4;
 
@@ -44,83 +44,62 @@ export default function WaitingRoom({
     onStartGame,
     onAddTestPlayer,
 }: WaitingRoomProps) {
-    const handleLeaveClick = () => {
-        if (window.confirm('정말 대기방을 나가시겠습니까?')) {
-            if (roomId && gameWebSocket.isConnected()) {
-                gameWebSocket.sendLeave(roomId);
-                gameWebSocket.disconnect();
-            }
-            onLeave();
-        }
-    };
+
 
     return (
-        <div className={styles.gameContainer}>
+        <div className={styles.waitingRoomContainer}>
             <PauseOverlay pausedBy={pausedBy} />
-            <div className={`pixel-box ${styles.canvasWrapper}`}>
+
+            {/* 상단 영역: 카메라 2개 + 정보 패널 + 카메라 2개 */}
+            <div className={styles.topSection}>
+                {/* 왼쪽 카메라 2개 */}
+                <CameraArea startSlot={0} endSlot={2} />
+
+                {/* 정보 패널 */}
+                <div className={styles.infoPanel}>
+                    <div className={styles.roomInfo}>
+                        🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span>
+                        <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
+                    </div>
+
+
+
+                    {isHost ? (
+                        <button
+                            className={`${styles.actionBtn} ${(!isSoloMode && players.length > 1 && !allReady) ? '' : styles.readyActive}`}
+                            onClick={onStartGame}
+                            disabled={!isSoloMode && players.length > 1 && !allReady}
+                        >
+                            {!isSoloMode && players.length > 1 && !allReady ? '준비 대기중...' : '게임 시작'}
+                        </button>
+                    ) : (
+                        <button
+                            className={`${styles.actionBtn} ${myReady ? styles.readyActive : ''}`}
+                            onClick={onToggleReady}
+                        >
+                            {myReady ? '준비 완료!' : '준비'}
+                        </button>
+                    )}
+
+                    {!isSoloMode && players.length > 1 && (
+                        <div className={styles.readyStatus}>
+                            Ready: {readyPlayers.length}/{players.filter(p => !p.isHost).length}
+                            {allReady && <span className={styles.allReadyText}>✓ 전원 준비완료!</span>}
+                        </div>
+                    )}
+                </div>
+
+                {/* 오른쪽 카메라 2개 */}
+                <CameraArea startSlot={2} endSlot={4} />
+            </div>
+
+            {/* 하단 게임 영역 */}
+            <div className={styles.gameSection}>
                 <PhaserGame
                     startScene="LobbyScene"
                     onSendState={onSendState}
                     isSoloMode={isSoloMode}
                 />
-                <div className={styles.gameInfo}>
-                    🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span>
-                    <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
-                    | 👥 {players.length}/{MAX_PLAYERS}
-                </div>
-                <button className={styles.backToLobbyBtn} onClick={handleLeaveClick}>
-                    ← 나가기
-                </button>
-            </div>
-
-            <CameraArea />
-
-            <div className={styles.bottomActions}>
-                <button
-                    className={styles.testBtn}
-                    onClick={onAddTestPlayer}
-                    disabled={players.length >= MAX_PLAYERS}
-                >
-                    🧪 테스트: 플레이어 추가 ({players.length}/{MAX_PLAYERS})
-                </button>
-
-                {!isSoloMode && !isHost && (
-                    <button
-                        className={`${styles.readyBtn} ${myReady ? styles.readyActive : ''}`}
-                        onClick={onToggleReady}
-                    >
-                        {myReady ? '✅ Ready!' : '⏳ Ready'}
-                    </button>
-                )}
-
-                {!isSoloMode && players.length > 1 && (
-                    <div className={styles.readyStatus}>
-                        Ready: {readyPlayers.length}/{players.filter(p => !p.isHost).length}
-                        {allReady && <span style={{ marginLeft: 8, color: '#4CAF50' }}>✓ 전원 준비완료!</span>}
-                    </div>
-                )}
-
-                {isHost && (
-                    <button
-                        className={styles.startGameBtn}
-                        onClick={onStartGame}
-                        disabled={!isSoloMode && players.length > 1 && !allReady}
-                    >
-                        🚀 게임 시작!
-                    </button>
-                )}
-
-                {players.length < 2 && !isSoloMode && (
-                    <span className={styles.waitingMessage}>
-                        다른 플레이어를 기다리는 중...
-                    </span>
-                )}
-
-                {!isHost && players.length >= 2 && (
-                    <span className={styles.waitingMessage}>
-                        호스트가 게임을 시작하길 기다리는 중...
-                    </span>
-                )}
             </div>
         </div>
     );
