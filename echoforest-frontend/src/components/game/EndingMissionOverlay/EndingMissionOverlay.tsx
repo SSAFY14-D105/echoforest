@@ -72,6 +72,8 @@ export default function EndingMissionOverlay({
                 ...(participantInfos || []).filter(p => p.identity !== nickname).map(p => ({ ...p, isLocal: false, isDummy: false }))
             ];
 
+            console.log('[EndingMissionOverlay] Real participants:', real.length, real.map(p => p.identity));
+
             // 4명 미만일 경우 더미 추가
             if (real.length < 4) {
                 const dummies = Array(4 - real.length).fill(null).map((_, i) => ({
@@ -79,7 +81,9 @@ export default function EndingMissionOverlay({
                     isLocal: true,
                     isDummy: true
                 }));
-                return [...real, ...dummies];
+                const result = [...real, ...dummies];
+                console.log('[EndingMissionOverlay] With dummies:', result.length, result.map(p => p.identity));
+                return result;
             }
             return real.slice(0, 4);
         } catch (e) {
