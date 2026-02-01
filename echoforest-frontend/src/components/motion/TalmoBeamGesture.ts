@@ -1,9 +1,7 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distanceAR, type Landmark } from '../../utils/gesture-helpers';
+import { type Landmark } from '../../utils/gesture-helpers';
 
 export default class TalmoBeamGesture extends BaseGesture {
-    private beamCount: number = 0;
-    private lastBeamTime: number = 0;
 
     constructor() {
         super();
@@ -11,9 +9,8 @@ export default class TalmoBeamGesture extends BaseGesture {
         this.emoji = '☀️';
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const hands = metadata.allHands;
-        const aspectRatio = metadata.aspectRatio || 1.0;
         const face = metadata.faceLandmarks;
 
         if (!hands || !hands.length) return { detected: false, score: 0 };
@@ -28,14 +25,9 @@ export default class TalmoBeamGesture extends BaseGesture {
                 // 얼굴이 있으면 얼굴 좌표 참조, 없으면 그냥 화면 높이 기준
                 let isNearHead = false;
                 if (face && face.length > 0) {
-                    const forehead = face[10];
                     const handY = hand[0].y;
 
                     // 손이 이마 근처(위아래 오차 허용)여야 함.
-                    // 너무 몸쪽으로 붙으면 안 됨 (거리 체크)
-                    // 손목-이마 거리: 너무 가까우면(0.2 미만) 얼굴 가리는 걸 수 있음
-                    const distToHead = distanceAR(hand[0], forehead, aspectRatio);
-
                     // 머리 근처에 있으면서(0.4 이내) + 얼굴 너무 가리지 않는(0.15 이상)?
                     // 탈모빔은 보통 이마에 갖다대거나 머리 위로 쏘니까...
                     // "머리 위" 조건: Hand Y < Face Nose Y

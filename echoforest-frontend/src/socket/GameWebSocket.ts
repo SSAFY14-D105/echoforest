@@ -273,7 +273,7 @@ class GameWebSocket {
         } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
             // [FIX] 연결 중일 때 중요 메시지는 큐에 저장
             if (message.type === 'JOIN' || message.type === 'CREATE' || message.type === 'READY' || message.type === 'START_GAME') {
-                console.log('[GameWebSocket] Queueing message until connected:', message.type);
+
                 this.messageQueue.push(message);
             }
         } else {
@@ -289,7 +289,7 @@ class GameWebSocket {
         while (this.messageQueue.length > 0) {
             const msg = this.messageQueue.shift();
             if (msg) {
-                console.log('[GameWebSocket] Flushing queued message:', msg.type);
+
                 this.send(msg);
             }
         }
@@ -574,7 +574,7 @@ class GameWebSocket {
         this.listeners.clear();
         this.messageQueue = [];
 
-        console.log('[GameWebSocket] Disconnected. Handlers preserved, listeners/queue cleared.');
+
     }
 
     // 연결 상태 확인

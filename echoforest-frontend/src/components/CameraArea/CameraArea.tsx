@@ -10,9 +10,16 @@ const MAX_PLAYERS = 4;
 interface CameraAreaProps {
     startSlot?: number;
     endSlot?: number;
+    participantInfos?: ParticipantInfo[];
+    isLiveKitConnected?: boolean;
 }
 
-export default function CameraArea({ startSlot = 0, endSlot = MAX_PLAYERS }: CameraAreaProps) {
+export default function CameraArea({
+    startSlot = 0,
+    endSlot = MAX_PLAYERS,
+    participantInfos: externalParticipantInfos,
+    isLiveKitConnected: externalIsConnected
+}: CameraAreaProps) {
     // 1. Stable State (Primitive values)
     const nickname = useGameStore(state => state.nickname);
     const roomId = useGameStore(state => state.roomId);
@@ -20,79 +27,87 @@ export default function CameraArea({ startSlot = 0, endSlot = MAX_PLAYERS }: Cam
     // [FIX] 게임 시작 여부 확인
     const isGameStarted = useGameStore(state => state.isGameStarted);
     // 2. Optimized Subscription: Subscribe to whole players array
-    // We need more fields (colorIndex, isLocal) now, so extracting primitives is less viable unless we extract everything.
-    // But useShallow should work fine on the array of objects if we are careful.
-    // However, to keep it efficient, let's select the players array directly.
     const players = useGameStore(useShallow(state => state.players));
-    const [isLiveKitConnecting, setIsLiveKitConnecting] = useState(false);
+
     const [isMicEnabled, setIsMicEnabled] = useState(true);
     const [isCameraEnabled, setIsCameraEnabled] = useState(true);
-    const localVideoRef = useRef<HTMLVideoElement>(null);
 
-    // Remote Participants State
-    const [participantInfos, setParticipantInfos] = useState<ParticipantInfo[]>([]);
+    // [FIX] callback ref - 비디오 엘리먼트가 DOM에 마운트되는 즉시 LiveKit에 등록
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const localVideoCallbackRef = (element: HTMLVideoElement | null) => {
+        // ref 업데이트
+        (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+
+        // DOM에 마운트되면 즉시 LiveKit에 등록
+        if (element) {
+            liveKitService.setLocalVideoElement(element);
+        }
+    };
+
+    // Remote Participants State (fallback for standalone usage, e.g., in game)
+    const [internalParticipantInfos, setInternalParticipantInfos] = useState<ParticipantInfo[]>([]);
 
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
 
-    // Derived Players for Rendering
     // Remote Video Refs map (key: identity or index)
     const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
-    // Mock Participants Info
-    const displayParticipantInfos = participantInfos;
+    // Use external participantInfos if provided (from WaitingRoom), otherwise use internal
+    const displayParticipantInfos = externalParticipantInfos ?? internalParticipantInfos;
+    const isConnected = externalIsConnected ?? liveKitService.isConnected;
 
-    // LiveKit Connection
+    // [Fallback] 내부 참가자 구독 - 외부에서 제공되지 않을 때만 사용 (예: 게임 중)
     useEffect(() => {
+        // 외부에서 참가자 정보를 이미 제공받으면 내부 구독 불필요
+        if (externalParticipantInfos !== undefined) return;
         if (isSoloMode) return;
-        if (!roomId || !nickname) return;
 
         const unsubscribe = liveKitService.onParticipantsChange((infos) => {
-            setParticipantInfos(infos);
-        });
-
-        if (liveKitService.isConnected) {
-            setIsMicEnabled(liveKitService.isMicEnabled);
-            setIsCameraEnabled(liveKitService.isCameraEnabled);
-        }
-
-        // 이미 연결 중이거나 연결됨 -> 연결 로직 스킵하지만 cleanup은 유지
-        if (isLiveKitConnecting || liveKitService.isConnected) {
-            return () => {
-                unsubscribe();
-            };
-        }
-
-        const connectLiveKit = async () => {
-            // console.log(`[CameraArea] Connecting to LiveKit. Room: ${roomId}, Nick: ${nickname}`);
-            setIsLiveKitConnecting(true);
-            try {
+            setInternalParticipantInfos(infos);
+            // [FIX] 참가자 업데이트 시 로컬 비디오도 다시 attach 시도
+            if (localVideoRef.current && liveKitService.isLocalTrackReady) {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
-                // [FIX] nickname을 identity로 사용하여 다른 플레이어와 매칭
-                await liveKitService.connect(roomId, nickname);
-                setIsMicEnabled(liveKitService.isMicEnabled);
-                setIsCameraEnabled(liveKitService.isCameraEnabled);
-            } catch (error) {
-                console.error('LiveKit connection failed:', error);
-            } finally {
-                setIsLiveKitConnecting(false);
             }
-        };
-
-        connectLiveKit();
+        });
 
         return () => {
             unsubscribe();
-            liveKitService.disconnect();
         };
-    }, [roomId, nickname, isSoloMode]);
+    }, [isSoloMode, externalParticipantInfos]);
 
-    // [FIX] localVideoRef가 DOM에 attach된 후 LiveKit에 설정
+    // 마이크/카메라 상태 동기화
     useEffect(() => {
-        if (localVideoRef.current && liveKitService.isConnected) {
+        if (isConnected) {
+            setIsMicEnabled(liveKitService.isMicEnabled);
+            setIsCameraEnabled(liveKitService.isCameraEnabled);
+        }
+    }, [isConnected]);
+
+    // [FIX] 연결 상태 변경 시 비디오 attach + 트랙 준비될 때까지 폴링
+    useEffect(() => {
+        if (!isConnected) return;
+
+        // 즉시 시도
+        if (localVideoRef.current) {
             liveKitService.setLocalVideoElement(localVideoRef.current);
         }
-    }, [localVideoRef.current, liveKitService.isConnected]);
+
+        // 트랙이 준비될 때까지 폴링 (최대 3초)
+        let attempts = 0;
+        const maxAttempts = 6;
+        const interval = setInterval(() => {
+            attempts++;
+            if (localVideoRef.current && liveKitService.isLocalTrackReady) {
+                liveKitService.setLocalVideoElement(localVideoRef.current);
+                clearInterval(interval);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+            }
+        }, 500);
+
+        return () => clearInterval(interval);
+    }, [isConnected]);
 
     // Remote Video Track Attachment
     useEffect(() => {
@@ -125,8 +140,22 @@ export default function CameraArea({ startSlot = 0, endSlot = MAX_PLAYERS }: Cam
         <div className={styles.cameraArea}>
             {Array.from({ length: endSlot - startSlot }).map((_, i) => {
                 const slotIndex = startSlot + i;
-                // [FIX] Use the slot index to find the player who belongs to this slot (by colorIndex)
-                const player = players.find(p => p.colorIndex === slotIndex);
+
+                // [FIX] colorIndex로 플레이어 찾기, 없으면 fallback 로직 사용
+                let player = players.find(p => p.colorIndex === slotIndex);
+
+                // [FIX] 만약 colorIndex로 못 찾고, 이 슬롯이 startSlot(첫 슬롯)이면서
+                // 아직 colorIndex가 할당 안 된 로컬 플레이어가 있으면 해당 슬롯에 표시
+                // (서버 동기화 전에 내 카메라를 보여주기 위함)
+                if (!player && slotIndex === 0) {
+                    const localPlayerWithoutColorIndex = players.find(
+                        p => p.isLocal && (p.colorIndex === undefined || p.colorIndex === null)
+                    );
+                    if (localPlayerWithoutColorIndex) {
+                        player = localPlayerWithoutColorIndex;
+                    }
+                }
+
                 const playerNickname = player?.nickname;
                 const isDisconnectedRaw = player?.isDisconnected;
 
@@ -177,7 +206,7 @@ export default function CameraArea({ startSlot = 0, endSlot = MAX_PLAYERS }: Cam
                             <div className={styles.cameraContent}>
                                 {/* Always render video element, hide with CSS when camera off */}
                                 <video
-                                    ref={localVideoRef}
+                                    ref={localVideoCallbackRef}
                                     autoPlay
                                     muted
                                     playsInline
