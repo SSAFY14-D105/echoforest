@@ -52,13 +52,42 @@ export function useGameWebSocket() {
                     if (msg.content) {
                         try {
                             const serverPlayers: ServerPlayerState[] = JSON.parse(msg.content);
-                            // [DEBUG]
-                            if (Math.random() < 0.05) {
-                                // console.log(`[UDPATE] Received ${serverPlayers.length} players. Names: ${serverPlayers.map(p => p.id).join(', ')}`);
+                            const currentPlayers = useGameStore.getState().players;
+
+                            let shouldUpdate = false;
+
+                            // 1. Check for length mismatch
+                            if (serverPlayers.length !== currentPlayers.length) {
+                                shouldUpdate = true;
+                            } else {
+                                // 2. Create a map for current players for efficient lookup
+                                const currentPlayerMap = new Map<string, Player>();
+                                currentPlayers.forEach(p => currentPlayerMap.set(p.id, p));
+
+                                // 3. Check for changes in critical status (isDead, isDisconnected)
+                                for (const serverPlayer of serverPlayers) {
+                                    const currentPlayer = currentPlayerMap.get(serverPlayer.id);
+
+                                    if (!currentPlayer) {
+                                        // Player exists on server but not in local store
+                                        shouldUpdate = true;
+                                        break;
+                                    }
+
+                                    // Compare critical states
+                                    if (currentPlayer.isDead !== serverPlayer.isDead ||
+                                        currentPlayer.isDisconnected !== serverPlayer.isDisconnected) {
+                                        shouldUpdate = true;
+                                        break;
+                                    }
+                                }
                             }
-                            syncPlayersFromServer(serverPlayers);
+
+                            if (shouldUpdate) {
+                                syncPlayersFromServer(serverPlayers);
+                            }
                         } catch (e) {
-                            // 파싱 에러만 로그
+                            console.error("Error parsing UPDATE message content:", e);
                         }
                     }
                     break;
