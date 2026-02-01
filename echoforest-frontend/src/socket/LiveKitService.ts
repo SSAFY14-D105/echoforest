@@ -11,7 +11,8 @@ import {
     RemoteTrack,
     RemoteTrackPublication,
     VideoPresets,
-    createLocalTracks
+    createLocalTracks,
+    DataPacket_Kind
 } from 'livekit-client';
 import { LIVEKIT_SERVER_URL as API_LIVEKIT_SERVER_URL, getLiveKitToken } from '../apis/livekitApi';
 import { LIVEKIT_URL as CONFIG_LIVEKIT_URL } from '../config';
@@ -42,10 +43,22 @@ export class LiveKitService {
     private onConnectedCallback: ConnectionCallback | null = null;
     private onDisconnectedCallback: ConnectionCallback | null = null;
     private onErrorCallback: ErrorCallback | null = null;
+    // [FIX] DataReceived 콜백도 다중 구독 지원 (Set)
+    private dataReceivedCallbacks: Set<(payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void> = new Set();
 
     // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
     onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
         this.participantCallbacks.add(callback);
+
+        // [FIX] 구독 즉시 현재 참가자 상태 전달 (이미 연결된 경우 대비)
+        if (this.room) {
+            try {
+                callback(this.getParticipants());
+            } catch (error) {
+                console.warn('[LiveKitService] Initial participant callback failed:', error);
+            }
+        }
+
         // 언마운트 시 콜백 제거를 위한 unsubscribe 함수 반환
         return () => {
             this.participantCallbacks.delete(callback);
@@ -65,6 +78,24 @@ export class LiveKitService {
     onError(callback: ErrorCallback) {
         this.onErrorCallback = callback;
         return this;
+    }
+
+    // [FIX] DataReceived 구독 패턴으로 변경 및 unsubscribe 반환
+    onDataReceived(callback: (payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void): () => void {
+        this.dataReceivedCallbacks.add(callback);
+        return () => {
+            this.dataReceivedCallbacks.delete(callback);
+        };
+    }
+
+    // 데이터 전송 (DataChannel)
+    async sendData(data: string | Uint8Array, reliable: boolean = true) {
+        if (!this.room || !this.room.localParticipant) {
+            console.warn('[LiveKitService] Cannot send data: not connected');
+            return;
+        }
+        const payload = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+        await this.room.localParticipant.publishData(payload, { reliable });
     }
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
@@ -124,7 +155,8 @@ export class LiveKitService {
             let audioTrack: RemoteTrack | null = null;
 
             participant.trackPublications.forEach((pub: RemoteTrackPublication) => {
-                if (pub.track) {
+                // [FIX] 트랙이 구독 완료된 경우에만 사용
+                if (pub.isSubscribed && pub.track) {
                     if (pub.track.kind === Track.Kind.Video) {
                         videoTrack = pub.track;
                     } else if (pub.track.kind === Track.Kind.Audio) {
@@ -223,9 +255,39 @@ export class LiveKitService {
             this.notifyParticipantUpdate();
         });
 
+        // [FIX] 트랙 Mute/Unmute 이벤트 추가 (상대방 카메라 ON/OFF 시 UI 업데이트)
+        this.room.on(RoomEvent.TrackMuted, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        this.room.on(RoomEvent.TrackUnmuted, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        // [FIX] 트랙 발행 이벤트 추가 (새 트랙이 publish되면 UI 업데이트)
+        this.room.on(RoomEvent.TrackPublished, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        // [FIX] 트랙 구독 상태 변경 이벤트 (구독 완료 시 UI 업데이트)
+        this.room.on(RoomEvent.TrackSubscriptionStatusChanged, () => {
+            this.notifyParticipantUpdate();
+        });
+
         this.room.on(RoomEvent.Disconnected, () => {
             // console.log('🔌 연결 종료');
             this.onDisconnectedCallback?.();
+        });
+
+        this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind) => {
+            // console.log(`[LiveKitService] Data received from ${participant?.identity}: ${new TextDecoder().decode(payload)}`);
+            this.dataReceivedCallbacks.forEach(callback => {
+                try {
+                    callback(payload, participant, kind || DataPacket_Kind.RELIABLE);
+                } catch (e) {
+                    console.error('[LiveKitService] DataReceived callback error:', e);
+                }
+            });
         });
     }
 
