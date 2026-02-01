@@ -58,8 +58,6 @@ export class Player {
     // private readonly LERP_FACTOR = 0.15; // Velocity 기반 이동으로 변경되어 더 이상 사용되지 않음
 
     // [PERFORMANCE] Rendering Optimization Cache
-    private lastWidth: number = 0;
-    private lastHeight: number = 0;
     private lastTinted: boolean = false;
 
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
@@ -139,10 +137,10 @@ export class Player {
         }
 
         // [PERFORMANCE] Dirty Check: Display Size
-        if (Math.abs(this.lastWidth - width) > 0.1 || Math.abs(this.lastHeight - height) > 0.1) {
+        // Sprite의 프레임이 바뀌면(애니메이션 등) displayWidth가 변할 수 있으므로,
+        // 캐시된 값이 아닌 실제 현재 displayWith와 목표 width를 비교해야 함
+        if (Math.abs(this.sprite.displayWidth - width) > 1 || Math.abs(this.sprite.displayHeight - height) > 1) {
             this.sprite.setDisplaySize(width, height);
-            this.lastWidth = width;
-            this.lastHeight = height;
         }
 
         // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
