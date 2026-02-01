@@ -155,7 +155,8 @@ export class LiveKitService {
             let audioTrack: RemoteTrack | null = null;
 
             participant.trackPublications.forEach((pub: RemoteTrackPublication) => {
-                if (pub.track) {
+                // [FIX] 트랙이 구독 완료된 경우에만 사용
+                if (pub.isSubscribed && pub.track) {
                     if (pub.track.kind === Track.Kind.Video) {
                         videoTrack = pub.track;
                     } else if (pub.track.kind === Track.Kind.Audio) {
@@ -265,6 +266,11 @@ export class LiveKitService {
 
         // [FIX] 트랙 발행 이벤트 추가 (새 트랙이 publish되면 UI 업데이트)
         this.room.on(RoomEvent.TrackPublished, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        // [FIX] 트랙 구독 상태 변경 이벤트 (구독 완료 시 UI 업데이트)
+        this.room.on(RoomEvent.TrackSubscriptionStatusChanged, () => {
             this.notifyParticipantUpdate();
         });
 

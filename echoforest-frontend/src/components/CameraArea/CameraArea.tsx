@@ -114,10 +114,15 @@ export default function CameraArea({
         displayParticipantInfos.forEach(info => {
             if (info.identity === nickname) return;
             const videoEl = remoteVideoRefs.current[info.identity];
-            if (videoEl && info.videoTrack) {
-                // [FIX] 이미 attach된 경우에도 다시 attach (트랙이 변경되었을 수 있음)
-                // LiveKit SDK는 중복 attach를 안전하게 처리함
-                info.videoTrack.attach(videoEl);
+
+            if (info.videoTrack) {
+                if (videoEl) {
+                    // [FIX] 트랙 attach
+                    info.videoTrack.attach(videoEl);
+                } else {
+                    // [FIX] 비디오 엘리먼트가 아직 마운트되지 않은 경우 잠시 후 재시도
+                    console.log(`[CameraArea] Video element not ready for ${info.identity}, will retry on ref mount`);
+                }
             }
         });
     }, [displayParticipantInfos, nickname]);
