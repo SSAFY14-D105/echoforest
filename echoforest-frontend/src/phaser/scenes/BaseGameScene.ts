@@ -1619,31 +1619,38 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (!msg.content) return;
 
         try {
-            // JSON 파싱 부하가 있지만 React 렌더링보다는 훨씬 가벼움
+            // [PROTOCOL v2] Array Based Protocol
+            // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
             const serverPlayers: any[] = JSON.parse(msg.content);
 
             serverPlayers.forEach((pData) => {
-                const id = pData.id || pData.username;
+                // Array Index Mapping
+                const id = pData[0];
                 const player = this.players.get(id);
 
                 if (player) {
                     // 로컬 플레이어는 서버 위치 무시 (Client Authoritative)
-                    // 단, 사망 상태 등 중요한 상태는 동기화 고려 가능하나 여기선 위치/애니메이션 위주
                     if (player.isLocalPlayer) {
                         return;
                     }
 
                     // 원격 플레이어 동기화
-                    const anim = pData.anim;
-                    const isDead = pData.isDead ?? false;
-                    const isHidden = pData.isHidden ?? false;
-                    const curses = pData.curses ?? [];
+                    const x = pData[1];
+                    const y = pData[2];
+                    const vx = pData[3] ?? 0;
+                    const vy = pData[4] ?? 0;
+                    const anim = pData[5];
+                    const isDead = pData[6] ?? false;
+                    const isHidden = pData[7] ?? false;
+                    // const isDisconnected = pData[8] ?? false; // 필요 시 사용
+                    const colorIndex = pData[9];
+                    const curses = pData[10] ?? [];
 
                     player.setRemoteState(
-                        pData.x,
-                        pData.y,
-                        pData.vx ?? 0,
-                        pData.vy ?? 0,
+                        x,
+                        y,
+                        vx,
+                        vy,
                         anim,
                         isDead,
                         curses,
@@ -1654,8 +1661,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     player.applyRemoteAnimation();
 
                     // 만약 colorIndex가 바뀌었거나 초기화되지 않았다면 동기화
-                    if (pData.colorIndex !== undefined && player.colorIndex !== pData.colorIndex) {
-                        player.setColor(pData.colorIndex);
+                    if (colorIndex !== undefined && player.colorIndex !== colorIndex) {
+                        player.setColor(colorIndex);
                     }
                 }
             });

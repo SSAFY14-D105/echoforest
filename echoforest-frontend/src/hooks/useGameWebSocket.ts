@@ -51,7 +51,9 @@ export function useGameWebSocket() {
                 case 'UPDATE':
                     if (msg.content) {
                         try {
-                            const serverPlayers: ServerPlayerState[] = JSON.parse(msg.content);
+                            // [PROTOCOL v2] Array Based Protocol
+                            // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
+                            const serverPlayers: any[] = JSON.parse(msg.content);
                             const currentPlayers = useGameStore.getState().players;
 
                             let shouldUpdate = false;
@@ -64,19 +66,22 @@ export function useGameWebSocket() {
                                 const currentPlayerMap = new Map<string, Player>();
                                 currentPlayers.forEach(p => currentPlayerMap.set(p.id, p));
 
-                                // 3. Check for changes in critical status (isDead, isDisconnected)
+                                // 3. Check for changes in critical status
                                 for (const serverPlayer of serverPlayers) {
-                                    const currentPlayer = currentPlayerMap.get(serverPlayer.id);
+                                    // serverPlayer[0]: id
+                                    const currentPlayer = currentPlayerMap.get(serverPlayer[0]);
 
                                     if (!currentPlayer) {
-                                        // Player exists on server but not in local store
                                         shouldUpdate = true;
                                         break;
                                     }
 
-                                    // Compare critical states
-                                    if (currentPlayer.isDead !== serverPlayer.isDead ||
-                                        currentPlayer.isDisconnected !== serverPlayer.isDisconnected) {
+                                    // serverPlayer[6]: isDead, [8]: isDisconnected
+                                    const sIsDead = serverPlayer[6] ?? false;
+                                    const sIsDisconnected = serverPlayer[8] ?? false;
+
+                                    if (currentPlayer.isDead !== sIsDead ||
+                                        currentPlayer.isDisconnected !== sIsDisconnected) {
                                         shouldUpdate = true;
                                         break;
                                     }
@@ -84,7 +89,25 @@ export function useGameWebSocket() {
                             }
 
                             if (shouldUpdate) {
-                                syncPlayersFromServer(serverPlayers);
+                                // Convert Array back to Object for Store
+                                const convertedPlayers = serverPlayers.map(p => ({
+                                    id: p[0],
+                                    x: p[1],
+                                    y: p[2],
+                                    vx: p[3],
+                                    vy: p[4],
+                                    anim: p[5],
+                                    isDead: p[6],
+                                    isHidden: p[7],
+                                    isDisconnected: p[8],
+                                    colorIndex: p[9],
+                                    curses: p[10],
+                                    hp: p[11],
+                                    isAfk: p[12],
+                                    nickname: p[0], // nickname fallback to id
+                                    isHost: false // Host info usually separate or derived
+                                }));
+                                syncPlayersFromServer(convertedPlayers as any);
                             }
                         } catch (e) {
                             console.error("Error parsing UPDATE message content:", e);
