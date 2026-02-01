@@ -13,6 +13,8 @@ export default function CameraArea() {
     const nickname = useGameStore(state => state.nickname);
     const roomId = useGameStore(state => state.roomId);
     const isSoloMode = useGameStore(state => state.isSoloMode);
+    // [FIX] 게임 시작 여부 확인
+    const isGameStarted = useGameStore(state => state.isGameStarted);
     // 2. Optimized Subscription: Subscribe to whole players array
     // We need more fields (colorIndex, isLocal) now, so extracting primitives is less viable unless we extract everything.
     // But useShallow should work fine on the array of objects if we are careful.
@@ -123,8 +125,15 @@ export default function CameraArea() {
                 // [FIX] Use the slot index to find the player who belongs to this slot (by colorIndex)
                 const player = players.find(p => p.colorIndex === slotIndex);
                 const playerNickname = player?.nickname;
-                const isDisconnected = player?.isDisconnected;
-                const isEmpty = !playerNickname;
+                const isDisconnectedRaw = player?.isDisconnected;
+
+                // [FIX] 로비 화면(게임 시작 전)에서는 연결 끊김을 빈 슬롯으로 처리
+                // 게임 중일 때만 Disconnected UI 표시
+                const isDisconnected = isDisconnectedRaw && isGameStarted;
+
+                // 플레이어가 없거나, 로비에서 끊겼으면 빈 슬롯 처리
+                const isEmpty = !playerNickname || (isDisconnectedRaw && !isGameStarted);
+
                 const isMe = player?.isLocal;
 
                 // 해당 슬롯 플레이어의 LiveKit 정보 찾기
