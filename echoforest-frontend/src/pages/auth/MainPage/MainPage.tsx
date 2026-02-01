@@ -1,34 +1,8 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './MainPage.module.css';
-import LoginPage from '../LoginPage/LoginPage';
-import SignupPage from '../SignupPage/SignupPage';
 
-type AuthMode = 'main' | 'login' | 'signup';
-
-interface Props {
-    onLogin: (nickname: string) => void;
-}
-
-export default function MainPage({ onLogin }: Props) {
-    const [mode, setMode] = useState<AuthMode>('main');
-
-    if (mode === 'login') {
-        return (
-            <LoginPage
-                onLoginSuccess={onLogin}
-                onBack={() => setMode('main')}
-            />
-        );
-    }
-
-    if (mode === 'signup') {
-        return (
-            <SignupPage
-                onSignupSuccess={() => setMode('login')}
-                onBack={() => setMode('main')}
-            />
-        );
-    }
+export default function MainPage() {
+    const navigate = useNavigate();
 
     // 메인 랜딩 페이지
     return (
@@ -51,14 +25,14 @@ export default function MainPage({ onLogin }: Props) {
                 <div className={styles.menuItems}>
                     <button
                         className={styles.menuButton}
-                        onClick={() => setMode('login')}
+                        onClick={() => navigate('/login')}
                     >
                         <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
                         로그인
                     </button>
                     <button
                         className={styles.menuButton}
-                        onClick={() => setMode('signup')}
+                        onClick={() => navigate('/signup')}
                     >
                         <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
                         회원가입
