@@ -1,23 +1,24 @@
 import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
-import { distance, Landmark } from '../../utils/gesture-helpers';
+import { distance, isFingerExtended, Landmark } from '../../utils/gesture-helpers';
 
 export default class BothCheekPokeGesture extends BaseGesture {
     label: string;
     emoji: string;
     thresholds: any;
 
-    // 검사할 포인트들 (볼 중앙, 입꼬리, 광대)
-    // 왼쪽 영역: 50(볼), 205(광대), 61(입꼬리), 187(귀쪽 볼)
-    leftCheekPoints: number[] = [50, 205, 61, 187];
-    // 오른쪽 영역: 280(볼), 425(광대), 291(입꼬리), 411(귀쪽 볼)
-    rightCheekPoints: number[] = [280, 425, 291, 411];
+    // 왼쪽/오른쪽 볼 포인트 (싱글 볼콕 제스처와 동일하게 맞춤)
+    // 거울모드 기준:
+    // 사용자의 왼쪽 볼(화면 왼쪽) -> 280, 291 등 (Right Indices)
+    // 사용자의 오른쪽 볼(화면 오른쪽) -> 50, 61 등 (Left Indices)
+    leftTargetPoints: number[] = [280, 425, 291, 411];
+    rightTargetPoints: number[] = [50, 205, 61, 187];
 
     constructor(config: any = {}) {
         super(config);
         this.label = '양볼콕! 💕';
         this.emoji = '💕';
         this.thresholds = {
-            pokeDistance: 0.2, // 조금 더 여유있게 (0.15 -> 0.2)
+            pokeDistance: 0.25,
             ...config
         };
     }
@@ -31,8 +32,8 @@ export default class BothCheekPokeGesture extends BaseGesture {
             score: 0,
             label: this.label,
             emoji: this.emoji,
-            left: { detected: false, score: 0 },
-            right: { detected: false, score: 0 }
+            left: { detected: false, score: 0 }, // 진짜 왼쪽 볼 결과
+            right: { detected: false, score: 0 } // 진짜 오른쪽 볼 결과
         };
 
         if (!faceLandmarks || !faceLandmarks.length || !allHands || !allHands.length) {
@@ -40,44 +41,42 @@ export default class BothCheekPokeGesture extends BaseGesture {
         }
 
         try {
-            let faceSize = metadata.faceSize;
-            if (!faceSize) {
-                faceSize = distance(faceLandmarks[10], faceLandmarks[152]);
-            }
-            if (!faceSize || faceSize === 0) faceSize = 0.1;
+            let faceSize = metadata.faceSize || 0.1;
 
-            // 각 손 검사
+            // 각 손에 대해 양쪽 볼 중 어디에 가까운지 체크
             for (const hand of allHands) {
-                const indexTip = hand[8]; // 검지 끝
+                // 검지 펴짐 체크 (필수는 아니지만 권장)
+                if (!isFingerExtended(hand, 8, 6)) continue;
 
-                // 1. 왼쪽 볼 영역 검사 (가장 가까운 포인트 찾기)
+                const indexTip = hand[8];
+
+                // 1. 왼쪽 볼(Left Target)과의 거리 체크
                 let minL = Infinity;
-                for (const pid of this.leftCheekPoints) {
+                for (const pid of this.leftTargetPoints) {
                     const d = distance(indexTip, faceLandmarks[pid]);
                     if (d < minL) minL = d;
                 }
                 const normLeft = minL / faceSize;
 
                 if (normLeft < this.thresholds.pokeDistance) {
-                    const score = Math.max(0, 1 - (normLeft / this.thresholds.pokeDistance));
-                    // 점수 갱신 (가장 높은 점수)
+                    const score = Math.max(0.1, 1 - (normLeft / this.thresholds.pokeDistance));
                     if (score > result.left.score) {
-                        result.left = { detected: true, score: score, label: '왼볼콕' };
+                        result.left = { detected: true, score: score };
                     }
                 }
 
-                // 2. 오른쪽 볼 영역 검사
+                // 2. 오른쪽 볼(Right Target)과의 거리 체크
                 let minR = Infinity;
-                for (const pid of this.rightCheekPoints) {
+                for (const pid of this.rightTargetPoints) {
                     const d = distance(indexTip, faceLandmarks[pid]);
                     if (d < minR) minR = d;
                 }
                 const normRight = minR / faceSize;
 
                 if (normRight < this.thresholds.pokeDistance) {
-                    const score = Math.max(0, 1 - (normRight / this.thresholds.pokeDistance));
+                    const score = Math.max(0.1, 1 - (normRight / this.thresholds.pokeDistance));
                     if (score > result.right.score) {
-                        result.right = { detected: true, score: score, label: '오른볼콕' };
+                        result.right = { detected: true, score: score };
                     }
                 }
             }
@@ -85,8 +84,10 @@ export default class BothCheekPokeGesture extends BaseGesture {
             // 양쪽 감지 시 최종 성공
             if (result.left.detected && result.right.detected) {
                 result.detected = true;
-                result.score = (result.left.score + result.right.score) / 2;
-                if (result.score > 0.5) result.score = 0.9 + (result.score * 0.1);
+                // 양쪽 다 감지되면 점수를 1.0에 가깝게 부스팅하여 싱글 볼콕을 이기게 함
+                // 평균 점수 + 보너스
+                const avgScore = (result.left.score + result.right.score) / 2;
+                result.score = Math.min(0.99, avgScore + 0.4);
             } else {
                 result.score = 0;
             }
