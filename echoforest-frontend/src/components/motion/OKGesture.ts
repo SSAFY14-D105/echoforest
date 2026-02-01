@@ -11,7 +11,7 @@ export default class OKGesture extends BaseGesture {
         this.label = 'OK';
         this.emoji = '👌';
         this.thresholds = {
-            pinchDistance: 0.2, // 인식 범위 0.2로 확대 (매우 관대함)
+            pinchDistance: 0.25, // 0.2 -> 0.25 더 완화
             ...config
         };
     }
