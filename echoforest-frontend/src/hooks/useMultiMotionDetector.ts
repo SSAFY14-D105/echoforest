@@ -185,8 +185,14 @@ export function useMultiMotionDetector({
             };
 
             const gestureInstance = gestureInstancesRef.current.get(identity);
-            if (gestureInstance && handResult.landmarks.length > 0) {
-                const result: GestureResult = gestureInstance.check(handResult.landmarks[0], metadata);
+            // [FIX] 손 OR 얼굴이 감지되면 제스처 체크 (KissGesture 등 얼굴 기반 제스처 지원)
+            const hasHands = handResult.landmarks.length > 0;
+            const hasFace = faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0;
+
+            if (gestureInstance && (hasHands || hasFace)) {
+                // 손 랜드마크가 없으면 빈 배열 전달 (제스처 클래스에서 처리)
+                const handLandmarks = hasHands ? handResult.landmarks[0] : [];
+                const result: GestureResult = gestureInstance.check(handLandmarks, metadata);
 
                 // [DEBUG] 인식 상태 로그 (개발 중 확인용)
                 if (result.detected) {
