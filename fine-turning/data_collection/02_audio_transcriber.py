@@ -19,9 +19,9 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 # (Min Silence, Thresh Offset, Keep Silence)
 # ==========================================
 EXPERIMENTS = [
-    {"min": 125, "thresh": -14, "keep": 200},  # 민감
-    {"min": 150, "thresh": -14, "keep": 200},  # 적당
-    {"min": 175, "thresh": -14, "keep": 200},  # 둔감
+    # {"min": 125, "thresh": -14, "keep": 200}, 
+    # {"min": 150, "thresh": -14, "keep": 200},
+    {"min": 250, "thresh": -14, "keep": 200},  # 타겟 설정: 250ms
 ]
 # ==========================================
 
@@ -78,9 +78,9 @@ def transcribe_with_google_web_api(audio_path, settings, exp_file_suffix):
     return header + "\n".join(full_text)
 
 def run_all():
-    audio_files = glob.glob(os.path.join(AUDIO_DIR, "*.mp3"))
+    audio_files = glob.glob(os.path.join(AUDIO_DIR, "*.wav"))
     if not audio_files:
-        print("No .mp3 files found.")
+        print("No .wav files found.")
         return
 
     print(f"Found {len(audio_files)} files.")

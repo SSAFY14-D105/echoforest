@@ -1,0 +1,21 @@
+Python executable: C:\Users\SSAFY\miniforge3\python.exe
+Conda prefix: C:\Users\SSAFY\miniforge3
+
+--- Package Locations ---
+nvidia.cublas.lib import failed: No module named 'nvidia'
+nvidia.cudnn.lib import failed: No module named 'nvidia'
+
+--- Site Packages Scan ---
+Scanning: C:\Users\SSAFY\miniforge3
+Scanning: C:\Users\SSAFY\miniforge3\Lib\site-packages
+
+--- Torch Libs ---
+Torch lib: C:\Users\SSAFY\miniforge3\Lib\site-packages\torch\lib
+  (Exists)
+
+--- Test CTranslate2 ---
+CTranslate2 CUDA devices: 1
+
+--- Test Faster Whisper Load ---
+Attempting to load 'tiny' model on CUDA...
+Success loading model!

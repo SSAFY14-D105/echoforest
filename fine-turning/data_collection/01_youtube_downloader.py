@@ -5,7 +5,7 @@ import yt_dlp
 # 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 AUDIO_DIR = os.path.join(BASE_DIR, "raw_audio")   # 오디오 저장소
-URL_LIST_FILE = os.path.join(BASE_DIR, "url_list.txt")
+URL_LIST_FILE = os.path.join(BASE_DIR, "00_url_list.txt")
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -18,8 +18,7 @@ def download_audio_only(url, idx):
         'noplaylist': True, # [중요] 플레이리스트에 있는 영상이라도 딱 그 영상 하나만 다운로드
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredcodec': 'wav',
         }],
         # 403 Error Bypass (Android Client) - 초기 성공 설정
         'http_headers': {
@@ -55,6 +54,24 @@ if __name__ == "__main__":
     print(f"Found {len(urls)} URLs. Starting download...")
     
     for idx, url in enumerate(urls, 1):
+        filename_base = f"audio_{idx}"
+        expected_wav = f"{filename_base}.wav"
+        wav_path = os.path.join(AUDIO_DIR, expected_wav)
+        
+        # .part 파일이 있는지 확인 (파일명에 .part가 포함된 파일 검색)
+        # yt-dlp는 보통 filename.extension.part 형태를 씀
+        has_part_file = False
+        for fname in os.listdir(AUDIO_DIR):
+            if fname.startswith(filename_base) and ".part" in fname:
+                has_part_file = True
+                break
+        
+        # wav가 있고, part 파일(미완성본)이 없으면 건너뛰기
+        if os.path.exists(wav_path) and not has_part_file:
+            print(f"[{idx}] Skip (Already exists): {expected_wav}")
+            continue
+            
+        print(f"[{idx}] Downloading/Resuming...")
         download_audio_only(url, idx)
         
     print("\nAll downloads finished! Check 'raw_audio' folder.")

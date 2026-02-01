@@ -63,6 +63,9 @@ fine-turning/data_collection/raw_audio/*.mp3
 fine-turning/data_collection/raw_audio/*.m4a
 fine-turning/data_collection/raw_audio/*.wav
 
+# STT Raw Data (Exclude large TSV files from faster-whisper)
+fine-turning/data_collection/raw_data/01_faster_whisper/
+
 # 텍스트 데이터나 결과물은 공유 (주석 처리됨 = Git에 올라감)
 # fine-turning/data_collection/raw_data/
 # fine-turning/data_collection/stt_data/
