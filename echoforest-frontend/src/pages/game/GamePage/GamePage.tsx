@@ -195,6 +195,7 @@ export default function GamePage() {
     return (
       <div className={styles.gameContainer}>
         <PauseOverlay pausedBy={pausedBy} />
+        <CameraArea />
         <StageSelectScreen
           roomId={roomId}
           clearedStages={clearedStages}
@@ -202,7 +203,6 @@ export default function GamePage() {
           onSelectStage={handleSelectStage}
           onClearStage={handleClearStage}
         />
-        <CameraArea />
       </div>
     );
   }
