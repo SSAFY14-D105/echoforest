@@ -46,6 +46,12 @@ export class LiveKitService {
     // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
     onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
         this.participantCallbacks.add(callback);
+
+        // [FIX] 구독 즉시 현재 참가자 상태 전달 (이미 연결된 경우 대비)
+        if (this.room) {
+            callback(this.getParticipants());
+        }
+
         // 언마운트 시 콜백 제거를 위한 unsubscribe 함수 반환
         return () => {
             this.participantCallbacks.delete(callback);

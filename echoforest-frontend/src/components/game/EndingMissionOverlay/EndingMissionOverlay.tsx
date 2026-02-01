@@ -44,13 +44,23 @@ export default function EndingMissionOverlay({
     // 비디오 refs를 Map으로 관리
     const videoRefs = useRef<Map<string, HTMLVideoElement | null>>(new Map());
 
-    // 참가자 목록 (로컬 + 리모트) - 실제 참가자만 표시 (최대 4명)
+    // 참가자 목록 (로컬 + 리모트) - 항상 4명 채우기 (빈 자리는 더미/봇으로)
     const allParticipants = useMemo(() => {
-        const participants = [
+        const real = [
             { identity: nickname, isLocal: true },
             ...participantInfos.filter(p => p.identity !== nickname).map(p => ({ ...p, isLocal: false }))
         ];
-        return participants.slice(0, 4);
+
+        // 4명 미만일 경우 더미(Bot) 추가하여 4분할 유지
+        if (real.length < 4) {
+            const dummies = Array(4 - real.length).fill(null).map((_, i) => ({
+                identity: `Waiting Player ${real.length + i + 1}`, // Bot 대신 Player 이름 사용
+                isLocal: true, // 로컬 비디오 공유 (테스트용)
+                isDummy: true
+            }));
+            return [...real, ...dummies];
+        }
+        return real.slice(0, 4);
     }, [participantInfos, nickname]);
 
     // roomId 기반으로 각 참가자에게 포즈 할당
@@ -83,7 +93,7 @@ export default function EndingMissionOverlay({
             videoRefs.current.set(identity, el);
 
             if (isLocal) {
-                // 로컬 비디오 (나) - LiveKitService의 attachLocalVideo 활용
+                // 로컬 비디오 (나 또는 더미) - LiveKitService의 attachLocalVideo 활용
                 liveKitService.attachLocalVideo(el);
             } else {
                 // 리모트 비디오
@@ -95,6 +105,8 @@ export default function EndingMissionOverlay({
         } else {
             // 언마운트 시 정리
             videoRefs.current.delete(identity);
+
+            // cleanup: 로컬 비디오는 liveKitService가 관리하므로 별도 detach 필요 없음 (필요 시 추가)
         }
     }, [participantInfos]);
 
@@ -188,6 +200,7 @@ export default function EndingMissionOverlay({
                             : null;
                         const poseState = getParticipantState(participant.identity);
                         const targetPose = poseAssignments.get(participant.identity);
+                        const isDummy = (participant as any).isDummy;
 
                         return (
                             <div
@@ -232,7 +245,7 @@ export default function EndingMissionOverlay({
 
                                 {/* 플레이어 라벨 */}
                                 <span className={styles.playerLabel}>
-                                    P{index + 1}: {participant.isLocal ? '나' : participant.identity}
+                                    P{index + 1}: {participant.identity === nickname ? '나' : participant.identity}{isDummy ? ' (Test)' : ''}
                                 </span>
                             </div>
                         );
