@@ -17,6 +17,8 @@ import HeartGesture from '../components/motion/HeartGesture';
 import LGesture from '../components/motion/LGesture';
 import OKGesture from '../components/motion/OKGesture';
 import VSignGesture from '../components/motion/VSignGesture';
+import KissGesture from '../components/motion/KissGesture';
+import BothCheekPokeGesture from '../components/motion/BothCheekPokeGesture';
 
 // 제스처 클래스 매핑
 const GESTURE_CLASS_MAP: Record<string, new () => any> = {
@@ -28,6 +30,8 @@ const GESTURE_CLASS_MAP: Record<string, new () => any> = {
     'BigHeartGesture': BigHeartGesture,
     'CatEarsGesture': CatEarsGesture,
     'CheekHeartGesture': CheekHeartGesture,
+    'KissGesture': KissGesture,
+    'BothCheekPokeGesture': BothCheekPokeGesture,
 };
 
 export interface ParticipantPoseState {

@@ -15,7 +15,9 @@ export interface PoseInfo {
 export const AVAILABLE_POSES: PoseInfo[] = [
     { id: 'vsign', name: 'V 사인', emoji: '✌️', difficulty: 1, gestureClass: 'VSignGesture' },
     { id: 'fist', name: '주먹', emoji: '✊', difficulty: 1, gestureClass: 'FistGesture' },
-    { id: 'ok', name: 'OK', emoji: '👌', difficulty: 1, gestureClass: 'OKGesture' },
+    // { id: 'ok', name: 'OK', emoji: '👌', difficulty: 1, gestureClass: 'OKGesture' }, // [REMOVED]
+    { id: 'kiss', name: '츄~💋', emoji: '💋', difficulty: 2, gestureClass: 'KissGesture' },
+    { id: 'cheekpoke', name: '볼 콕!', emoji: '👉👈', difficulty: 2, gestureClass: 'BothCheekPokeGesture' },
     { id: 'l', name: 'L 사인', emoji: '🤙', difficulty: 1, gestureClass: 'LGesture' },
     { id: 'heart', name: '하트', emoji: '❤️', difficulty: 2, gestureClass: 'HeartGesture' },
     { id: 'bigheart', name: '큰 하트', emoji: '💕', difficulty: 2, gestureClass: 'BigHeartGesture' },
