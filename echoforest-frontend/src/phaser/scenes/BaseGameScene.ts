@@ -98,6 +98,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private heavyLogicTimer: number = 0;
     private readonly HEAVY_LOGIC_INTERVAL: number = 50; // 3 frames (60fps)
     private cachedElevatorWeights: Map<string, number> = new Map();
+    // [PERFORMANCE] GC 최적화를 위한 재사용 Set
+    private processedBlocks: Set<string> = new Set();
 
     // 초기 배치 여부 (씬 시작/재시작 시 스폰 지점 강제 적용용)
     private isInitialPlacement: boolean = true;
@@ -1282,34 +1284,23 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 여기서는 안전하게 화면 밖(100px)으로 나가면 복구
         const mapBottomY = this.gameHeight > 0 ? this.gameHeight : 720;
 
-        this.players.forEach(player => {
-            const pos = player.getPosition();
+        // 참고: mapBottomY는 루프 밖에서 미리 계산됨
 
-            // 바닥(화면 끝)에 닿는 즉시 낙사 처리 (여유 공간 0)
+        // [PERFORMANCE] Loop Combination: Bounds Check + Update
+        // 두 개의 루프를 하나로 합쳐 순회 비용 절감
+        this.movingBumpers.forEach(bumper => bumper.update(time));
+
+        this.players.forEach((player, label) => {
+            // 1. Bounds Check (낙사)
+            const pos = player.getPosition();
             if (pos.y > mapBottomY) {
                 if (player.isLocalPlayer && !this.isDead) {
                     console.warn(`[Physics] Player ${player.nickname} fell out of bounds (${pos.y.toFixed(0)}), triggering death.`);
                     this.triggerDeath('fall');
                 }
             }
-        });
 
-        // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
-        /*
-        if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
-            const p = this.players.get(this.myPlayerId);
-            if (p) {
-                const s = p.getSprite();
-                console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
-            }
-        }
-        */
-
-
-        // 이동형 범퍼 업데이트
-        this.movingBumpers.forEach(bumper => bumper.update(time));
-
-        this.players.forEach((player, label) => {
+            // 2. Player Update (Interpolation & Input)
             // 코요테 타임(groundedFrames)이 남아있으면 땅에 닿은 것으로 간주
             const isGrounded = (this.groundedFrames.get(label) || 0) > 0;
             // [PERFORMANCE] Delta time 전달하여 프레임 독립적 보간 수행
@@ -1338,10 +1329,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.detectBlockContacts();
 
         // 블록 체인 평가 및 이동
-        const processedBlocks = new Set<string>();
+        this.processedBlocks.clear();
         this.movableBlocks.forEach(block => {
             const label = block.getBody().label;
-            if (processedBlocks.has(label)) return;
+            if (this.processedBlocks.has(label)) return;
 
             const pushLeft = this.pushMapLeft.get(label)?.size || 0;
             const pushRight = this.pushMapRight.get(label)?.size || 0;
@@ -1349,9 +1340,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 밀기 방향 결정 및 체인 처리 (체인 내 모든 블록 업데이트는 tryMoveBlockChain에서 처리)
             const netPush = pushLeft - pushRight;
             if (netPush > 0) {
-                this.tryMoveBlockChain(label, 'right', pushLeft, processedBlocks);
+                this.tryMoveBlockChain(label, 'right', pushLeft, this.processedBlocks);
             } else if (netPush < 0) {
-                this.tryMoveBlockChain(label, 'left', pushRight, processedBlocks);
+                this.tryMoveBlockChain(label, 'left', pushRight, this.processedBlocks);
             } else {
                 // 밀기 인원이 없으면 기본 표시
                 block.update(0, 0);
