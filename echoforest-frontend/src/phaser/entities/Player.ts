@@ -57,6 +57,11 @@ export class Player {
     private targetPos: { x: number, y: number } | null = null;
     // private readonly LERP_FACTOR = 0.15; // Velocity 기반 이동으로 변경되어 더 이상 사용되지 않음
 
+    // [PERFORMANCE] Rendering Optimization Cache
+    private lastWidth: number = 0;
+    private lastHeight: number = 0;
+    private lastTinted: boolean = false;
+
     constructor(scene: Phaser.Scene, config: PlayerConfig) {
         this.scene = scene;
         this.id = config.id;
@@ -109,11 +114,17 @@ export class Player {
     }
 
     private updateVisualEffects(): void {
-        // 스턴 상태 시 시각적 효과 (빨간색)
+        // [PERFORMANCE] Dirty Check: Tint (Stun Status)
         if (this._isStunned) {
-            this.sprite.setTint(0xff5555);
+            if (!this.lastTinted) {
+                this.sprite.setTint(0xff5555);
+                this.lastTinted = true;
+            }
         } else {
-            this.sprite.clearTint();
+            if (this.lastTinted) {
+                this.sprite.clearTint();
+                this.lastTinted = false;
+            }
         }
 
         // 상태에 따른 크기 결정 (원본 픽셀 배율 2배 유지)
@@ -127,7 +138,12 @@ export class Player {
             height = 65 * this.sizeMultiplier;
         }
 
-        this.sprite.setDisplaySize(width, height);
+        // [PERFORMANCE] Dirty Check: Display Size
+        if (Math.abs(this.lastWidth - width) > 0.1 || Math.abs(this.lastHeight - height) > 0.1) {
+            this.sprite.setDisplaySize(width, height);
+            this.lastWidth = width;
+            this.lastHeight = height;
+        }
 
         // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
         // if (this.visualProxy) {
@@ -142,7 +158,7 @@ export class Player {
         // }
     }
 
-    public update(isGrounded: boolean): void {
+    public update(isGrounded: boolean, delta: number = 16.6): void {
         // 원격 플레이어 보간 이동
         if (!this.isLocalPlayer && this.targetPos) {
             const currentX = this.body.position.x;
@@ -155,14 +171,18 @@ export class Player {
 
             // 아주 작은 움직임은 무시하여 떨림 방지
             if (distSq > 0.01) {
-                // 텔레포트 임계값 (100px)
-                if (distSq > 10000) {
+                // 텔레포트 임계값 (Relaxed to 150px to prevent snap on lag spikes)
+                if (distSq > 22500) {
                     this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
                 } else {
-                    // 선형 보간 (Lerp)
-                    // LERP_FACTOR를 0.2 -> 0.15로 낮추어 더 부드럽게 이동 (지연은 약간 늘어남)
-                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, 0.15); // LERP_FACTOR 직접 사용
-                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, 0.15);
+                    // [PERFORMANCE] Time-based Interpolation for smoother high-refresh rate movement
+                    // Frame-rate independent smoothing using exponential decay
+                    // t = 1 - 0.5 ^ (dt / half-life)
+                    // Half-life of 50ms means error is halved every 50ms
+                    const t = 1.0 - Math.pow(0.5, delta / 50);
+
+                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, t);
+                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, t);
 
                     // 위치 변경
                     this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });

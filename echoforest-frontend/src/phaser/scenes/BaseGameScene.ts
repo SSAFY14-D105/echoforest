@@ -94,6 +94,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private lastBlockUpdateTime: number = 0;
     private readonly SYNC_INTERVAL: number = 50; // 20 TPS
 
+    // [PERFORMANCE] 무거운 로직(재귀 계산 등) 쓰로틀링
+    private heavyLogicTimer: number = 0;
+    private readonly HEAVY_LOGIC_INTERVAL: number = 50; // 3 frames (60fps)
+    private cachedElevatorWeights: Map<string, number> = new Map();
+
     // 초기 배치 여부 (씬 시작/재시작 시 스폰 지점 강제 적용용)
     private isInitialPlacement: boolean = true;
     // 솔로 모드 여부 (로컬 물리 사용)
@@ -1307,16 +1312,29 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.players.forEach((player, label) => {
             // 코요테 타임(groundedFrames)이 남아있으면 땅에 닿은 것으로 간주
             const isGrounded = (this.groundedFrames.get(label) || 0) > 0;
-            player.update(isGrounded);
+            // [PERFORMANCE] Delta time 전달하여 프레임 독립적 보간 수행
+            player.update(isGrounded, delta);
         });
 
-        // 엘리베이터 무게 계산 및 업데이트
+        // [PERFORMANCE] Elevators Weight Calculation Throttling
+        this.heavyLogicTimer += delta;
+        if (this.heavyLogicTimer > this.HEAVY_LOGIC_INTERVAL) {
+            this.elevators.forEach(elevator => {
+                const label = elevator.getBody().label;
+                const weight = this.calculateTotalWeight(label);
+                this.cachedElevatorWeights.set(label, weight);
+            });
+            this.heavyLogicTimer = 0;
+        }
+
+        // 엘리베이터 무게 적용 (매 프레임 호출하되, 계산된 캐시값 사용)
         this.elevators.forEach(elevator => {
-            const weight = this.calculateTotalWeight(elevator.getBody().label);
+            const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
             elevator.update(weight);
         });
 
         // 블록-블록 접촉 수동 감지 (Static 바디끼리는 물리 충돌 안 함)
+        // [NOTE] 블록 관련 로직은 물리 안정성을 위해 매 프레임 수행
         this.detectBlockContacts();
 
         // 블록 체인 평가 및 이동
@@ -1593,6 +1611,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.on('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.on('BLOCK_UPDATE', this.onBlockUpdate);
         gameWebSocket.on('GAME_RESET', this.onGameReset);
+        // [PERFORMANCE] Phaser 직접 수신으로 스토어 거치지 않고 위치 동기화
+        gameWebSocket.on('UPDATE', this.onPlayerUpdate);
     }
 
     private cleanupSocketListeners(): void {
@@ -1600,7 +1620,58 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.off('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.off('BLOCK_UPDATE', this.onBlockUpdate);
         gameWebSocket.off('GAME_RESET', this.onGameReset);
+        gameWebSocket.off('UPDATE', this.onPlayerUpdate);
     }
+
+    // [PERFORMANCE] 고빈도 위치/상태 업데이트 직접 처리
+    private onPlayerUpdate = (msg: GameMessage): void => {
+        if (!msg.content) return;
+
+        try {
+            // JSON 파싱 부하가 있지만 React 렌더링보다는 훨씬 가벼움
+            const serverPlayers: any[] = JSON.parse(msg.content);
+
+            serverPlayers.forEach((pData) => {
+                const id = pData.id || pData.username;
+                const player = this.players.get(id);
+
+                if (player) {
+                    // 로컬 플레이어는 서버 위치 무시 (Client Authoritative)
+                    // 단, 사망 상태 등 중요한 상태는 동기화 고려 가능하나 여기선 위치/애니메이션 위주
+                    if (player.isLocalPlayer) {
+                        return;
+                    }
+
+                    // 원격 플레이어 동기화
+                    const anim = pData.anim;
+                    const isDead = pData.isDead ?? false;
+                    const isHidden = pData.isHidden ?? false;
+                    const curses = pData.curses ?? [];
+
+                    player.setRemoteState(
+                        pData.x,
+                        pData.y,
+                        pData.vx ?? 0,
+                        pData.vy ?? 0,
+                        anim,
+                        isDead,
+                        curses,
+                        isHidden
+                    );
+
+                    player.applyRemoteDirection();
+                    player.applyRemoteAnimation();
+
+                    // 만약 colorIndex가 바뀌었거나 초기화되지 않았다면 동기화
+                    if (pData.colorIndex !== undefined && player.colorIndex !== pData.colorIndex) {
+                        player.setColor(pData.colorIndex);
+                    }
+                }
+            });
+        } catch (e) {
+            // JSON Parse Error Ignore
+        }
+    };
 
     private onGimmickUpdate = (msg: GameMessage) => {
         if (!msg.content) return;
