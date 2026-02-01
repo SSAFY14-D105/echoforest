@@ -11,7 +11,8 @@ import {
     RemoteTrack,
     RemoteTrackPublication,
     VideoPresets,
-    createLocalTracks
+    createLocalTracks,
+    DataPacket_Kind
 } from 'livekit-client';
 import { LIVEKIT_SERVER_URL as API_LIVEKIT_SERVER_URL, getLiveKitToken } from '../apis/livekitApi';
 import { LIVEKIT_URL as CONFIG_LIVEKIT_URL } from '../config';
@@ -42,6 +43,7 @@ export class LiveKitService {
     private onConnectedCallback: ConnectionCallback | null = null;
     private onDisconnectedCallback: ConnectionCallback | null = null;
     private onErrorCallback: ErrorCallback | null = null;
+    private onDataReceivedCallback: ((payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void) | null = null;
 
     // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
     onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
@@ -71,6 +73,21 @@ export class LiveKitService {
     onError(callback: ErrorCallback) {
         this.onErrorCallback = callback;
         return this;
+    }
+
+    onDataReceived(callback: (payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void) {
+        this.onDataReceivedCallback = callback;
+        return this;
+    }
+
+    // 데이터 전송 (DataChannel)
+    async sendData(data: string | Uint8Array, reliable: boolean = true) {
+        if (!this.room || !this.room.localParticipant) {
+            console.warn('[LiveKitService] Cannot send data: not connected');
+            return;
+        }
+        const payload = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+        await this.room.localParticipant.publishData(payload, { reliable });
     }
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
@@ -232,6 +249,11 @@ export class LiveKitService {
         this.room.on(RoomEvent.Disconnected, () => {
             // console.log('🔌 연결 종료');
             this.onDisconnectedCallback?.();
+        });
+
+        this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind, topic?: string) => {
+            // console.log(`[LiveKitService] Data received from ${participant?.identity}: ${new TextDecoder().decode(payload)}`);
+            this.onDataReceivedCallback?.(payload, participant, kind || DataPacket_Kind.RELIABLE);
         });
     }
 
