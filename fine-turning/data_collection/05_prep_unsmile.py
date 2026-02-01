@@ -1,14 +1,47 @@
-# 원본 unsmile모델 데이터셋의 재라벨링 (기존 UnSmile모델 데이터셋을 욕설/악플|기타혐오|clean 3가지 라벨로 분류)
 import csv
 import os
+import shutil
+from datetime import datetime
 
 # 파일 경로 설정 (절대 경로 복구)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_train_clean_hybrid_11k.tsv")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_converted_8label.tsv")
+ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "05_external_history")
 
 # -------------------------------------------------------------------------
 # 키워드 정의 (자동 마킹용)
+# -------------------------------------------------------------------------
+# ... (Keywords omitted for brevity - they remain unchanged) ...
+
+def convert_unsmile():
+    # ... (Processing logic remains unchanged until saving) ...
+    # ...
+    
+    # 저장
+    try:
+        with open(OUTPUT_FILE, 'w', encoding='utf-8', newline='') as f:
+            headers = ['sentence', '악플/욕설', '기타_혐오', 'clean', '남탓', '감정표출', '좌절', '칭찬', '게임오더']
+            writer = csv.DictWriter(f, fieldnames=headers, delimiter='\t')
+            writer.writeheader()
+            writer.writerows(rows_to_save)
+        print(f"\nSaved converted data to {OUTPUT_FILE}")
+        print("Format: sentence | 악플/욕설 | 기타_혐오 | clean | 남탓 | 감정표출 | 좌절 | 칭찬 | 게임오더")
+        
+        # 아카이브 저장
+        if not os.path.exists(ARCHIVE_DIR):
+            os.makedirs(ARCHIVE_DIR)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_file = os.path.join(ARCHIVE_DIR, f"unsmile_converted_{timestamp}.tsv")
+        shutil.copy(OUTPUT_FILE, archive_file)
+        print(f"Archived to: {archive_file}")
+        
+    except Exception as e:
+         print(f"Error saving file: {e}")
+
+if __name__ == "__main__":
+    convert_unsmile()
 # -------------------------------------------------------------------------
 KEYWORDS_BLAME = [
     "너 때문", "니 탓", "뭐하냐", "뭐하심", "왜 저래", "왜 그래", 
@@ -136,6 +169,16 @@ def convert_unsmile():
             writer.writerows(rows_to_save)
         print(f"\nSaved converted data to {OUTPUT_FILE}")
         print("Format: sentence | 악플/욕설 | 기타_혐오 | clean | 남탓 | 감정표출 | 좌절 | 칭찬 | 게임오더")
+
+        # 아카이브 저장
+        if not os.path.exists(ARCHIVE_DIR):
+            os.makedirs(ARCHIVE_DIR)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_file = os.path.join(ARCHIVE_DIR, f"unsmile_converted_{timestamp}.tsv")
+        shutil.copy(OUTPUT_FILE, archive_file)
+        print(f"Archived to: {archive_file}")
+
     except Exception as e:
          print(f"Error saving file: {e}")
 
