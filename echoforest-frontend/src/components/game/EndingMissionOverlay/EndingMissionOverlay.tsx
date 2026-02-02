@@ -47,7 +47,9 @@ export default function EndingMissionOverlay({
 }: EndingMissionOverlayProps) {
     const [isCapturing, setIsCapturing] = useState(false);
     const [captureComplete, setCaptureComplete] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null); // [NEW] 카운트다운 state
     const captureStartedRef = useRef(false); // [FIX] 캡처 시작 여부 추적 (중복 방지)
+    const countdownStartedRef = useRef(false); // [FIX] 카운트다운 시작 여부 추적 (중복 방지)
 
     // 리모트 참가자의 클리어 상태 관리
     const [remoteStates, setRemoteStates] = useState<Map<string, boolean>>(new Map());
@@ -146,7 +148,7 @@ export default function EndingMissionOverlay({
         const targets = allParticipants.slice(0, 4);
         if (targets.length === 0) return false;
 
-        return targets.every(p => {
+        const result = targets.every(p => {
             // 더미는 항상 클리어로 간주 (테스트 편의성)
             if (p.isDummy) return true;
 
@@ -156,6 +158,13 @@ export default function EndingMissionOverlay({
                 return remoteStates.get(p.identity);
             }
         });
+
+        // [DEBUG] allCleared 상태 변경 로그
+        if (result) {
+            console.log('[EndingMissionOverlay] ✅ All participants cleared!');
+        }
+
+        return result;
     }, [allParticipants, participantStates, remoteStates]);
 
     // 엔딩 미션 시작 시 720p로 해상도 변경 + 카메라 강제 켜기
@@ -182,17 +191,26 @@ export default function EndingMissionOverlay({
         // 마운트 후 짧게 폴링하여 로컬 비디오가 확실히 연결되도록 함
         let attempts = 0;
         const maxAttempts = 10;
+        console.log('[EndingMissionOverlay] Starting local video polling...');
         const interval = setInterval(() => {
             attempts++;
             const localEl = localVideoRefs.current.get(nickname);
             if (localEl) {
+                console.log(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl found`, {
+                    readyState: localEl.readyState,
+                    videoWidth: localEl.videoWidth,
+                    videoHeight: localEl.videoHeight
+                });
                 const success = liveKitService.attachLocalVideo(localEl);
                 if (success) {
-                    console.log('[EndingMissionOverlay] Local video attached via polling');
+                    console.log('[EndingMissionOverlay] ✅ Local video attached via polling');
                     clearInterval(interval);
                 }
+            } else {
+                console.warn(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl NOT found`);
             }
             if (attempts >= maxAttempts) {
+                console.warn('[EndingMissionOverlay] Max polling attempts reached');
                 clearInterval(interval);
             }
         }, 300);
@@ -200,20 +218,28 @@ export default function EndingMissionOverlay({
         return () => clearInterval(interval);
     }, [nickname]);
 
-    // 비디오 엘리먼트 Ref 콜백
+    // [FIX] participantInfos를 ref로 관리하여 handleVideoRef의 의존성 제거
+    const participantInfosRef = useRef(participantInfos);
+    useEffect(() => {
+        participantInfosRef.current = participantInfos;
+    }, [participantInfos]);
+
+    // [FIX] 비디오 엘리먼트 Ref 콜백 - 의존성 없음 (stable)
     const handleVideoRef = useCallback((el: HTMLVideoElement | null, identity: string, isLocal: boolean) => {
         if (el) {
             videoRefs.current.set(identity, el);
 
             if (isLocal) {
                 localVideoRefs.current.set(identity, el);
+                // [DEBUG] 로그 과다 방지를 위해 상태 변경 시에만 로그 출력 고려 (일단 유지)
+                // console.log(`[EndingMissionOverlay] Local video added: ${identity}`);
                 try {
                     liveKitService.attachLocalVideo(el);
                 } catch (e) {
                     console.error('Attach local video failed:', e);
                 }
             } else {
-                const info = (participantInfos || []).find(p => p.identity === identity);
+                const info = (participantInfosRef.current || []).find(p => p.identity === identity);
                 if (info && info.videoTrack) {
                     info.videoTrack.attach(el);
                 }
@@ -222,9 +248,10 @@ export default function EndingMissionOverlay({
             videoRefs.current.delete(identity);
             if (isLocal) {
                 localVideoRefs.current.delete(identity);
+                // console.log(`[EndingMissionOverlay] Local video removed: ${identity}`);
             }
         }
-    }, [participantInfos]);
+    }, []); // 의존성 없음
 
     // 리모트 비디오 트랙 재연결
     useEffect(() => {
@@ -237,46 +264,25 @@ export default function EndingMissionOverlay({
                 try {
                     info.videoTrack.attach(videoEl);
                 } catch (e) {
-                    // ignore - already attached
+                    // ignore
                 }
             }
         });
-
-        // [FIX] 타이밍 이슈 해결: 재시도 로직 추가
-        const retryTimeout = setTimeout(() => {
-            participantInfos.forEach(info => {
-                if (info.identity === nickname) return;
-                const videoEl = videoRefs.current.get(info.identity);
-                if (videoEl && info.videoTrack) {
-                    try {
-                        info.videoTrack.attach(videoEl);
-                    } catch (e) {
-                        // Ignore
-                    }
-                }
-            });
-        }, 200);
-
-        return () => clearTimeout(retryTimeout);
     }, [participantInfos, nickname]);
 
     // [FIX] handleMotionCleared를 useCallback으로 감싸기
-    // [FIX] handleMotionCleared를 useCallback으로 감싸기
     const handleMotionCleared = useCallback(() => {
         onMotionCleared?.();
-        // setCountdown(3); // 카운트다운 제거 요청으로 삭제
     }, [onMotionCleared]);
 
-    // [FIX] handleCapture를 useCallback으로 감싸기 - 선언 순서 수정
+    // [FIX] handleCapture를 useCallback으로 감싸기
     const handleCapture = useCallback(async () => {
-        if (captureStartedRef.current) return; // [FIX] 중복 호출 2중 방지
+        if (captureStartedRef.current) return;
         captureStartedRef.current = true;
 
         setIsCapturing(true);
 
         try {
-            // [FIX] 중복 업로드 방지: 내 로컬 비디오만 캡처해서 업로드 (각자 자기 것만)
-            // 기존에는 모든 참가자를 캡처했기 때문에 (참가자 수 x 참가자 수)만큼 사진이 생성됨
             const localParticipant = allParticipants.find(p => p.isLocal);
             if (localParticipant) {
                 const videoEl = videoRefs.current.get(localParticipant.identity);
@@ -296,25 +302,53 @@ export default function EndingMissionOverlay({
         }
     }, [allParticipants, onCaptureComplete]);
 
-    // 모든 참가자 포즈 인식 완료 시 자동 진행
-    // [FIX] 모션 인식 성공 직전에 캡처 실행
+    // [NEW] 카운트다운 및 캡처 로직
     useEffect(() => {
-        if (captureComplete) return;
+        if (captureComplete || isCapturing) return;
 
-        if (allCleared) {
-            handleCapture(); // 캡처 먼저!
-            handleMotionCleared(); // 모션 클리어 처리
-
-            // 카운트다운 없이 2초 후 종료
-            setTimeout(() => {
-                onClose?.();
-            }, 2000);
+        // [FIX] ref로 중복 시작 방지 (allCleared가 여러 번 true가 되어도 한 번만 실행)
+        if (allCleared && !countdownStartedRef.current) {
+            console.log('[EndingMissionOverlay] ⏰ Starting countdown...');
+            countdownStartedRef.current = true;
+            setCountdown(3);
         }
-    }, [allCleared, captureComplete, handleMotionCleared, handleCapture, onClose]);
+    }, [allCleared, captureComplete, isCapturing]); // [FIX] countdown 의존성 제거
 
-    // 참가자별 포즈 상태 조회 (UI 표시용)
+    // [FIX] 콜백들을 ref로 관리하여 timer useEffect 의존성 제거
+    const handleCaptureRef = useRef(handleCapture);
+    const handleMotionClearedRef = useRef(handleMotionCleared);
+    const onCloseRef = useRef(onClose);
+
+    useEffect(() => {
+        handleCaptureRef.current = handleCapture;
+        handleMotionClearedRef.current = handleMotionCleared;
+        onCloseRef.current = onClose;
+    }, [handleCapture, handleMotionCleared, onClose]);
+
+    // 카운트다운 타이머
+    useEffect(() => {
+        if (countdown === null) return;
+
+        if (countdown > 0) {
+            console.log(`[EndingMissionOverlay] Countdown: ${countdown}`);
+            const timer = setTimeout(() => {
+                setCountdown(prev => (prev !== null ? prev - 1 : null));
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0 && !captureStartedRef.current) {
+            console.log('[EndingMissionOverlay] 📸 Countdown finished! Starting capture...');
+            // Ref를 통해 최신 함수 호출
+            handleCaptureRef.current().then(() => {
+                handleMotionClearedRef.current();
+                setTimeout(() => {
+                    onCloseRef.current?.();
+                }, 3000);
+            });
+        }
+    }, [countdown]); // 의존성을 countdown 하나로 최소화
+
+    // 참가자별 포즈 상태 조회
     const getDisplayState = useCallback((participant: ExtendedParticipant) => {
-        // 더미는 항상 클리어 상태
         if (participant.isDummy) {
             return {
                 isCleared: true,
@@ -340,88 +374,43 @@ export default function EndingMissionOverlay({
             <div className={styles.container}>
                 <h2 className={styles.title}>🎉 스테이지 클리어!</h2>
 
-                {/* 로딩 표시 */}
                 {!isLoaded && !captureComplete && (
                     <p className={styles.loadingText}>🔄 포즈 인식 준비 중...</p>
                 )}
 
-                {/* 카메라 그리드 */}
+                {countdown !== null && countdown > 0 && (
+                    <div className={styles.countdownOverlay}>
+                        <span className={styles.countdownNumber}>{countdown}</span>
+                    </div>
+                )}
+
                 <div className={styles.cameraGrid}>
                     {allParticipants.slice(0, 4).map((participant, index) => {
-                        const participantInfo = !participant.isLocal
-                            ? (participantInfos || []).find(p => p.identity === participant.identity)
-                            : null;
-
                         const displayState = getDisplayState(participant);
                         const targetPose = poseAssignments.get(participant.identity);
-                        const isDummy = participant.isDummy;
 
                         return (
-                            <div
+                            <ParticipantCameraBox
                                 key={participant.identity}
-                                className={`${styles.cameraBox} ${displayState?.isCleared ? styles.cleared : ''}`}
-                                style={{ borderColor: displayState?.isCleared ? '#4CAF50' : PLAYER_COLORS[index] }}
-                            >
-                                {/* 목표 포즈 표시 (더미에게는 표시 안함) */}
-                                {targetPose && !isDummy && (
-                                    <div className={styles.targetPose}>
-                                        <span className={styles.poseEmoji}>{targetPose.emoji}</span>
-                                        <span className={styles.poseName}>{targetPose.label}</span>
-                                    </div>
-                                )}
-
-                                {/* 더미 라벨 */}
-                                {isDummy && (
-                                    <div className={styles.targetPose}>
-                                        <span className={styles.poseEmoji}>💤</span>
-                                        <span className={styles.poseName}>대기 중</span>
-                                    </div>
-                                )}
-
-                                {/* 비디오 */}
-                                <video
-                                    ref={(el) => handleVideoRef(el, participant.identity, participant.isLocal)}
-                                    autoPlay
-                                    muted={participant.isLocal}
-                                    playsInline
-                                    className={styles.video}
-                                    style={{
-                                        display: (!participant.isLocal && !participantInfo?.videoTrack) ? 'none' : 'block'
-                                    }}
-                                />
-
-                                {/* 현재 감지 상태 표시 */}
-                                {!isDummy && displayState?.currentGesture && !displayState.isCleared && (
-                                    <div className={styles.detectionStatus}>
-                                        감지: {displayState.currentGesture}
-                                    </div>
-                                )}
-
-                                {/* 인식 완료 오버레이 */}
-                                {displayState?.isCleared && (
-                                    <div className={styles.clearedOverlay}>
-                                        <span className={styles.checkmark}>{isDummy ? '💤' : '✅'}</span>
-                                    </div>
-                                )}
-
-                                {/* 플레이어 라벨 */}
-                                <span className={styles.playerLabel}>
-                                    P{index + 1}: {participant.identity === nickname ? '나' : participant.identity}{isDummy ? ' (대기)' : ''}
-                                </span>
-                            </div>
+                                participant={participant}
+                                index={index}
+                                displayState={displayState}
+                                targetPose={targetPose}
+                                handleVideoRef={handleVideoRef}
+                                nickname={nickname}
+                                participantInfosRef={participantInfosRef} // prop for remote track lookup if needed
+                            />
                         );
                     })}
                 </div>
 
-                {/* 상태 표시 */}
                 <div className={styles.statusArea}>
                     {!captureComplete && (
                         <div className={styles.statusContainer}>
                             <p className={styles.statusText}>📸 각자 표시된 포즈를 취해주세요!</p>
                             <p className={styles.subStatusText}>
-                                {/* 실제 참가자 기준 완료 수 */}
                                 {allParticipants.filter(p => {
-                                    if (p.isDummy) return false; // 더미는 카운트에서 제외
+                                    if (p.isDummy) return false;
                                     if (p.isLocal) return participantStates.find(s => s.identity === p.identity)?.isCleared;
                                     return remoteStates.get(p.identity);
                                 }).length} / {realParticipantCount} 완료
@@ -436,6 +425,88 @@ export default function EndingMissionOverlay({
                     )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+// [FIX] 분리된 비디오 컴포넌트 - 불필요한 리렌더링 및 비디오 ref 재설정 방지
+interface ParticipantCameraBoxProps {
+    participant: ExtendedParticipant;
+    index: number;
+    displayState: any;
+    targetPose: any;
+    handleVideoRef: (el: HTMLVideoElement | null, identity: string, isLocal: boolean) => void;
+    nickname: string;
+    participantInfosRef: React.MutableRefObject<ParticipantInfo[]>;
+}
+
+function ParticipantCameraBox({
+    participant,
+    index,
+    displayState,
+    targetPose,
+    handleVideoRef,
+    nickname,
+    participantInfosRef
+}: ParticipantCameraBoxProps) {
+    const isDummy = participant.isDummy;
+
+    // [KEY] 비디오 ref 콜백을 stable하게 유지
+    const onVideoRef = useCallback((el: HTMLVideoElement | null) => {
+        handleVideoRef(el, participant.identity, participant.isLocal);
+    }, [handleVideoRef, participant.identity, participant.isLocal]);
+
+    // 리모트 트랙의 경우 여기서 display 여부 확인
+    const shouldShowVideo = participant.isLocal || (
+        !participant.isLocal &&
+        participantInfosRef.current?.find(p => p.identity === participant.identity)?.videoTrack
+    );
+
+    return (
+        <div
+            className={`${styles.cameraBox} ${displayState?.isCleared ? styles.cleared : ''}`}
+            style={{ borderColor: displayState?.isCleared ? '#4CAF50' : PLAYER_COLORS[index] }}
+        >
+            {targetPose && !isDummy && (
+                <div className={styles.targetPose}>
+                    <span className={styles.poseEmoji}>{targetPose.emoji}</span>
+                    <span className={styles.poseName}>{targetPose.name}</span>
+                </div>
+            )}
+
+            {isDummy && (
+                <div className={styles.targetPose}>
+                    <span className={styles.poseEmoji}>💤</span>
+                    <span className={styles.poseName}>대기 중</span>
+                </div>
+            )}
+
+            <video
+                ref={onVideoRef}
+                autoPlay
+                muted={participant.isLocal}
+                playsInline
+                className={styles.video}
+                style={{
+                    display: shouldShowVideo ? 'block' : 'none'
+                }}
+            />
+
+            {!isDummy && displayState?.currentGesture && !displayState.isCleared && (
+                <div className={styles.detectionStatus}>
+                    감지: {displayState.currentGesture}
+                </div>
+            )}
+
+            {displayState?.isCleared && (
+                <div className={styles.clearedOverlay}>
+                    <span className={styles.checkmark}>{isDummy ? '💤' : '✅'}</span>
+                </div>
+            )}
+
+            <span className={styles.playerLabel}>
+                P{index + 1}: {participant.identity === nickname ? '나' : participant.identity}{isDummy ? ' (대기)' : ''}
+            </span>
         </div>
     );
 }

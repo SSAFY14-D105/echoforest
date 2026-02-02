@@ -12,12 +12,12 @@ export default class LeftPokeGesture extends BaseGesture {
         this.label = '왼볼콕! 👈';
         this.emoji = '👈';
         this.thresholds = {
-            pokeDistance: 0.25,
+            pokeDistance: 0.4, // [FIX] 판정 범위 더 완화 (0.3 -> 0.4)
             ...config
         };
 
-        // 왼쪽 볼 영역 (MediaPipe 기준 Right Side Index들)
-        // 280번대가 화면 왼쪽(사용자의 왼쪽)에 해당
+        // [FIX] 왼쪽/오른쪽 반대로 인식되는 문제 수정 (다시 280번대로 변경)
+        // 사용자의 '왼쪽 볼'이 화면상(거울모드 등)의 좌표계와 반대일 수 있음
         this.cheekPoints = [280, 425, 291, 411];
     }
 
