@@ -154,11 +154,7 @@ export class LiveKitService {
             let videoTrack: RemoteTrack | null = null;
             let audioTrack: RemoteTrack | null = null;
 
-            // 디버깅: 모든 트랙행 확인
-            console.log(`[LiveKitService] Participant ${participant.identity} has ${participant.trackPublications.size} tracks`);
-
             participant.trackPublications.forEach((pub: RemoteTrackPublication) => {
-                console.log(`  - Track: ${pub.kind}, Subbed: ${pub.isSubscribed}, Muted: ${pub.isMuted}, Source: ${pub.source}`);
 
                 // [FIX] isSubscribed 체크 제거 - 트랙 객체가 존재하면 사용 (구독 상태와 무관하게 표시 시도)
                 if (pub.track) {
@@ -268,7 +264,7 @@ export class LiveKitService {
                 return;
             }
 
-            console.log('✅ LiveKit 토큰 발급 성공 (수동 토큰)');
+            // console.log('✅ LiveKit 토큰 발급 성공 (수동 토큰)');
             this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.startSyncInterval(); // [FIX] 폴링 시작
@@ -288,18 +284,14 @@ export class LiveKitService {
         if (!this.room) return;
 
         this.room.on(RoomEvent.ParticipantConnected, () => {
-            console.log('📥 참가자 입장:', this.room?.remoteParticipants.size);
             this.notifyParticipantUpdate();
         });
 
         this.room.on(RoomEvent.ParticipantDisconnected, () => {
-            console.log('📤 참가자 퇴장');
             this.notifyParticipantUpdate();
         });
 
-        // this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
-        this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
-            console.log('🎥 트랙 구독:', track.kind, participant.identity);
+        this.room.on(RoomEvent.TrackSubscribed, (track) => {
 
             // 오디오 트랙은 자동으로 재생되도록 attach
             if (track.kind === Track.Kind.Audio) {
