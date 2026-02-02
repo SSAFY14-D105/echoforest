@@ -85,7 +85,7 @@ class UserServiceTest {
         }
 
         // when
-        Map<String, String> result = userService.login(loginReq);
+        Map<String, Object> result = userService.login(loginReq);
 
         // then
         assertThat(result).containsEntry("token", token);
