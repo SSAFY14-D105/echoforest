@@ -12,12 +12,11 @@ export default class RightPokeGesture extends BaseGesture {
         this.label = '오른볼콕! 👉';
         this.emoji = '👉';
         this.thresholds = {
-            pokeDistance: 0.25,
+            pokeDistance: 0.4, // [FIX] 판정 범위 더 완화 (0.3 -> 0.4)
             ...config
         };
 
-        // 오른쪽 볼 영역 (MediaPipe 기준 Left Side Index들)
-        // 거울모드 특성상 50번대가 화면 오른쪽(사용자의 오른쪽)에 해당할 수 있음
+        // [FIX] 왼쪽/오른쪽 반대로 인식되는 문제 수정 (다시 50번대로 변경)
         this.cheekPoints = [50, 205, 61, 187];
     }
 
