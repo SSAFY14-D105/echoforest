@@ -2,7 +2,7 @@
  * StagePlayView - 멀티플레이 스테이지 플레이 화면
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
@@ -60,15 +60,21 @@ export default function StagePlayView({
         return unsubscribe;
     }, []);
 
+    // 종료 처리 중복 방지 락
+    const isProcessingEndRef = useRef(false);
+    const isUploadingRef = useRef(false); // [FIX] 업로드 중복 방지 락
+
     // 서버로부터 엔딩 미션 시작/종료 이벤트 수신
     useEffect(() => {
         const handleEndingMissionStart = () => {
-            // console.log('[StagePlayView] Received ENDING_MISSION_START from server');
+            // [DEBUG] 엔딩 미션 시작 이벤트 추적
+            console.log('[DEBUG] 🎬 ENDING_MISSION_START received');
             setEndingMission(true);
         };
 
         const handleEndingMissionEnd = () => {
-            // console.log('[StagePlayView] Received ENDING_MISSION_END from server');
+            // [DEBUG] 엔딩 미션 종료 이벤트 추적
+            console.log('[DEBUG] 🏁 ENDING_MISSION_END received');
             // 오버레이만 닫음 - 실제 스테이지 전환은 STAGE_TRANSITION 메시지에서 처리
             setEndingMission(false);
         };
@@ -84,6 +90,10 @@ export default function StagePlayView({
 
     // 엔딩 미션 시 이미지 캡처 완료 핸들러
     const handleCaptureComplete = async (captures: Blob[]) => {
+        // [FIX] 업로드 중복 방지
+        if (isUploadingRef.current) return;
+        isUploadingRef.current = true;
+
         // console.log('[StagePlayView] handleCaptureComplete called with', captures.length, 'captures');
 
         if (captures.length === 0) {
@@ -126,12 +136,26 @@ export default function StagePlayView({
     };
 
     // 엔딩 미션 종료 핸들러 (오버레이 닫기/캡처 완료 시)
-    const handleEndingMissionClose = () => {
-        // 모든 플레이어가 개별적으로 완료 신호 전송
-        // 서버가 전원 완료 확인 후 ENDING_MISSION_END를 브로드캐스트하면
-        // handleEndingMissionEnd 이벤트 핸들러에서 상태 변경 처리됨
-        gameWebSocket.sendEndingMissionEnd(roomId);
-    };
+    const handleEndingMissionClose = useCallback(() => {
+        // [FIX] 중복 호출 방지 (Ref 사용)
+        if (isProcessingEndRef.current) return;
+        isProcessingEndRef.current = true;
+
+        // [FIX] 중복 방지: 호스트만 종료 신호를 보내도록 변경
+        // 이렇게 하면 서버가 여러 번 ENDING_MISSION_END를 브로드캐스트하는 것을 근본적으로 방지 가능
+        if (isHost && isEndingMission) {
+            console.log('[StagePlayView] 👑 Host sending ENDING_MISSION_END');
+            gameWebSocket.sendEndingMissionEnd(roomId);
+        } else {
+            console.log('[StagePlayView] Non-host waiting for server signal...');
+        }
+
+        // 안전장치: 10초 후 락 해제 (혹시 모를 상황 대비)
+        setTimeout(() => {
+            isProcessingEndRef.current = false;
+            isUploadingRef.current = false; // [FIX] 업로드 락도 함께 해제
+        }, 10000);
+    }, [isHost, isEndingMission, roomId]);
 
     // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버가 모든 클라이언트에 브로드캐스트)
     const handleTestEndingMission = () => {

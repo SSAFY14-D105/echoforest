@@ -49,6 +49,10 @@ export function useGameWebSocket() {
         if (isSoloMode) return;
         if (!roomId || !nickname) return;
 
+        // [FIX] 마지막 처리된 STAGE_TRANSITION을 추적하여 중복 방지
+        let lastProcessedStage: string | null = null;
+        let lastTransitionTime = 0;
+
         gameWebSocket.onMessage((msg: GameMessage) => {
             switch (msg.type) {
                 case 'UPDATE':
@@ -176,7 +180,22 @@ export function useGameWebSocket() {
 
                 case 'STAGE_TRANSITION':
                     if (msg.content) {
-                        // Server sends "MULTI_X" format
+                        const now = Date.now();
+                        const currentStage = useGameStore.getState().currentStage;
+
+                        // [FIX] 중복 방지: 같은 스테이지이거나 1초 내 중복 메시지면 무시
+                        if (msg.content === currentStage) {
+                            console.log(`[DEBUG] 🚫 Ignoring duplicate STAGE_TRANSITION: ${msg.content} (same as current)`);
+                            break;
+                        }
+                        if (msg.content === lastProcessedStage && now - lastTransitionTime < 2000) {
+                            console.log(`[DEBUG] 🚫 Ignoring rapid STAGE_TRANSITION: ${msg.content} (debounced)`);
+                            break;
+                        }
+
+                        console.log(`[DEBUG] 🚀 STAGE_TRANSITION accepted: ${msg.content}`);
+                        lastProcessedStage = msg.content;
+                        lastTransitionTime = now;
                         selectStage(msg.content);
                     }
                     break;
