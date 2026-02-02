@@ -1,11 +1,26 @@
+<<<<<<< HEAD
+import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
+import { distanceAR, Landmark } from '../../utils/gesture-helpers';
+=======
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
 import { distanceAR, type Landmark } from '../../utils/gesture-helpers';
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
 
 export default class BigHeartGesture extends BaseGesture {
-    constructor() {
-        super();
+    label: string;
+    emoji: string;
+    thresholds: any;
+
+    constructor(config: any = {}) {
+        super(config);
         this.label = '머리 위 하트! 🙆‍♂️';
         this.emoji = '🙆‍♂️';
+        this.thresholds = {
+            wristToTipRatio: 1.3, // 손목 거리가 손끝 거리보다 1.3배 이상이어야 함
+            maxTipDist: 0.45,     // 손끝-이마 거리가 0.45 이하
+            maxTipsGap: 0.16,     // 양 손끝 간격이 0.16 이하 (하트 닫힘)
+            ...config
+        };
     }
 
     check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
@@ -38,21 +53,19 @@ export default class BigHeartGesture extends BaseGesture {
 
         if (!isAbove) return { detected: false, score: 0 };
 
-        // **판별 핵심: 삼각형 구조**
-        // 손목이 손끝보다 이마에서 훨씬 멀어야 함 (팔을 벌림)
-        // 그리고 손끝은 이마에 가까워야 함 (허공 X)
-        if (avgWristDist > avgTipDist * 1.3 && avgTipDist < 0.45) {
+        // **판별 핵심**
+        // 손목이 손끝보다 이마에서 훨씬 멀어야 함.
+        if (avgWristDist > avgTipDist * this.thresholds.wristToTipRatio &&
+            avgTipDist < this.thresholds.maxTipDist) {
 
-            // 추가: 양손 끝끼리도 가까워야 함 (하트가 닫혀야 함)
+            // 양손 끝끼리도 가까워야 함 (하트가 닫혀야 함)
             const tipsGap = distanceAR(hand1[12], hand2[12], aspectRatio);
 
-            // 0.16 미만이면 하트 (고양이 귀는 0.16 이상)
-            if (tipsGap < 0.16) {
+            if (tipsGap < this.thresholds.maxTipsGap) {
                 return {
                     detected: true,
                     score: 0.99,
-                    label: this.label,
-                    emoji: this.emoji
+                    label: this.label
                 };
             }
         }

@@ -233,3 +233,42 @@
     font-weight: 600;
     color: #555;
 }
+
+/* 상단 섹션: 카메라 + 정보 패널 (WaitingRoom 스타일 복사) */
+.topSection {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-bottom: 12px;
+    height: 140px;
+    /* Force height to match camera */
+}
+
+/* 정보 패널 */
+.infoPanel {
+    flex-shrink: 0;
+    width: 250px;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.roomInfo {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
