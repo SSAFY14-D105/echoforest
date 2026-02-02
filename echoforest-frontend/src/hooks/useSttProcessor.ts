@@ -16,7 +16,6 @@ export interface UseSttProcessorReturn {
     isListening: boolean;
     transcript: string;
     interimTranscript: string;
-    boosterActive: boolean;
     curseState: {
         stack: number;
         cursedPlayer: string | null;
@@ -24,7 +23,6 @@ export interface UseSttProcessorReturn {
         queueCount: number;
         countdown: number;
     };
-    setBoosterMode: (active: boolean) => void;
     restartListening: () => void;
 }
 
@@ -37,10 +35,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     } = useSpeechRecognition();
 
     const {
-        isBoosterMode,
-        boosterActive,
         curseState,
-        setBoosterMode,
         setTranscript,
         onPositiveDetected,
         onQueueUpdate,
@@ -91,6 +86,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     useEffect(() => {
         if (workerInitializedRef.current) return;
 
+        console.log('[STT Processor] Worker 초기화');
         sttWorkerService.initialize();
         workerInitializedRef.current = true;
 
@@ -99,37 +95,37 @@ export function useSttProcessor(): UseSttProcessorReturn {
         };
     }, []);
 
+    // STT 시작 - LiveKit보다 먼저 실행하여 마이크 접근권 확보
+    // Web Speech API가 먼저 마이크에 접근하면 LiveKit이 공유받을 수 있음
+    useEffect(() => {
+        // 마운트 직후 바로 STT 시작 (LiveKit보다 먼저)
+        console.log('[STT Processor] STT 즉시 시작 (LiveKit 전)');
+        startListening();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 마운트 시 한 번만 실행
+
     // 결과 핸들러 등록 (handleWorkerResult 변경 시 재등록)
     useEffect(() => {
         const cleanup = sttWorkerService.onResult(handleWorkerResult);
         return cleanup;
     }, [handleWorkerResult]);
 
-    // 부스터 모드 변경 시 Worker에 알림
-    useEffect(() => {
-        sttWorkerService.setBoosterMode(isBoosterMode);
-    }, [isBoosterMode]);
-
-    // 게임 시작/스테이지 변경 시 음성 인식 재시작 및 Worker 리셋
+    // 게임 시작/스테이지 변경 시 Worker 리셋만 수행 (STT는 이미 실행 중)
     useEffect(() => {
         const gameJustStarted = isGameStarted && !prevGameStartedRef.current;
         const stageChanged = currentStage !== prevStageRef.current && currentStage !== null;
 
         if (gameJustStarted || stageChanged) {
-
             // Worker 상태 초기화
             sttWorkerService.reset();
             reset();
-
-            // 약간의 딜레이 후 재시작 (상태 안정화 대기)
-            setTimeout(() => {
-                startListening();
-            }, 500);
+            // [FIX] startListening 중복 호출 제거 - 이미 초기화 useEffect에서 실행됨
+            // 불필요한 재시작이 aborted 에러의 원인이었음
         }
 
         prevGameStartedRef.current = isGameStarted;
         prevStageRef.current = currentStage;
-    }, [isGameStarted, currentStage, startListening, reset]);
+    }, [isGameStarted, currentStage, reset]);
 
     // 최종 결과 처리 → Worker로 전송
     useEffect(() => {
@@ -139,42 +135,32 @@ export function useSttProcessor(): UseSttProcessorReturn {
             sttWorkerService.processTranscript(
                 transcript,
                 true, // isFinal
-                isBoosterMode,
                 isCursed
             );
         }
-    }, [transcript, isBoosterMode, isCursed]);
+    }, [transcript, isCursed]);
 
-    // 중간 결과 처리 → Worker로 전송 (부스터 모드에서 긍정어 감지용)
+    // 중간 결과 처리 → Worker로 전송 (저주 상태에서 긍정어 감지용)
     useEffect(() => {
         if (interimTranscript) {
             sttWorkerService.processTranscript(
                 interimTranscript,
                 false, // isFinal
-                isBoosterMode,
                 isCursed
             );
         }
-    }, [interimTranscript, isBoosterMode, isCursed]);
+    }, [interimTranscript, isCursed]);
 
     // 수동 재시작 함수
     const restartListening = useCallback(() => {
         startListening();
     }, [startListening]);
 
-    // setBoosterMode를 Worker와 Store 모두에 적용
-    const handleSetBoosterMode = useCallback((active: boolean) => {
-        setBoosterMode(active);
-        sttWorkerService.setBoosterMode(active);
-    }, [setBoosterMode]);
-
     return {
         isListening,
         transcript,
         interimTranscript,
-        boosterActive,
         curseState,
-        setBoosterMode: handleSetBoosterMode,
         restartListening,
     };
 }

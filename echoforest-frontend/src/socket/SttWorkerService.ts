@@ -88,21 +88,13 @@ class SttWorkerService {
     /**
      * 트랜스크립트 처리 요청
      */
-    processTranscript(text: string, isFinal: boolean, isBoosterMode: boolean, isCursed: boolean): void {
+    processTranscript(text: string, isFinal: boolean, isCursed: boolean): void {
         this.send({
             type: 'PROCESS_TRANSCRIPT',
             text,
             isFinal,
-            isBoosterMode,
             isCursed
         });
-    }
-
-    /**
-     * 부스터 모드 설정
-     */
-    setBoosterMode(active: boolean): void {
-        this.send({ type: 'SET_BOOSTER_MODE', active });
     }
 
     /**

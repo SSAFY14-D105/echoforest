@@ -137,11 +137,12 @@ export class LiveKitService {
         }
     }
 
-    // [NEW] 로컬 트랙 준비 완료 여부
+    // [NEW] 로컬 오디오 트랙 준비 완료 여부 (STT 충돌 방지용)
+    // STT와 충돌하는 것은 마이크(오디오)이므로 오디오 트랙 확인
     get isLocalTrackReady(): boolean {
         if (!this.room?.localParticipant) return false;
-        const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-        return !!cameraPublication?.track;
+        const micPublication = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
+        return !!micPublication?.track;
     }
 
     // 참가자 정보 수집
@@ -348,7 +349,8 @@ export class LiveKitService {
     private async setupLocalTracks(opId: number) {
 
         try {
-
+            // LiveKit 음성 채팅 활성화
+            // React Strict Mode 제거 후 STT와 공존 가능한지 테스트
             const tracks = await createLocalTracks({
                 audio: true,
                 video: true
