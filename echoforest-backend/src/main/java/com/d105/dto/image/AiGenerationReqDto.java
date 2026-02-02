@@ -22,4 +22,7 @@ public class AiGenerationReqDto {
     @Schema(description = "요청한 유저 ID", example = "1")
     @NotNull(message = "유저 ID는 필수입니다.")
     private Long userId;
+
+    @Schema(description = "스테이지 번호 (선택)", example = "4")
+    private Integer stageNumber;
 }
