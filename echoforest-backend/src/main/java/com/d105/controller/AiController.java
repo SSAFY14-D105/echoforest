@@ -81,4 +81,17 @@ public class AiController {
 
         return ResponseEntity.ok(resultImages);
     }
+
+    @Operation(summary = "최종 결과 이메일 발송", description = "방의 모든 스테이지가 종료된 후, 합성된 모든 이미지를 참여자들에게 이메일로 일괄 발송합니다.")
+    @PostMapping("/finish/{roomId}")
+    public ResponseEntity<?> sendFinishEmail(@PathVariable String roomId) {
+        try {
+            aiGenerationService.sendGameSummaryEmail(roomId);
+            return ResponseEntity.ok().body(Map.of("message", "이메일 발송 요청이 완료되었습니다."));
+        } catch (Exception e) {
+            log.error("Email Sending Error", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "이메일 발송 실패: " + e.getMessage()));
+        }
+    }
 }
