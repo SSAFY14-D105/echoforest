@@ -13,18 +13,78 @@ export class Spring {
     public readonly id: string;
     public readonly bouncePower: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, id: string, bouncePower: number = -15, width: number = 48, height: number = 16, texture?: string, frame?: string | number, angle: number = 0) {
+    constructor(scene: Phaser.Scene, x: number, y: number, id: string, bouncePower: number = -15, width: number = 48, height: number = 16, texture?: string, frame?: string | number, angle: number = 0, collisionData?: any[]) {
         this.scene = scene;
         this.id = id;
         this.bouncePower = bouncePower;
 
-        // 스프링 물리 바디 (센서로 설정)
-        this.body = this.scene.matter.add.rectangle(x, y, width, height, {
-            isSensor: true,
-            isStatic: true,
-            label: `spring-${id}`,
-            angle: Phaser.Math.DegToRad(angle)
-        });
+        if (collisionData && collisionData.length > 0) {
+            const bodies: MatterJS.BodyType[] = [];
+            const scale = 4;
+
+            // 0. Calculate Original Dimensions
+            const rawWidth = Math.max(...collisionData.map((o: any) => o.x + o.width));
+            const rawHeight = Math.max(...collisionData.map((o: any) => o.y + o.height));
+            const originalWidthPixel = rawWidth * scale;
+            const originalHeightPixel = rawHeight * scale;
+
+            // 1. Create Parts relative to Original Tile Center
+            collisionData.forEach((obj: any) => {
+                const w = obj.width * scale;
+                const h = obj.height * scale;
+                const cx = (obj.x * scale) + (w / 2) - (originalWidthPixel / 2);
+                const cy = (obj.y * scale) + (h / 2) - (originalHeightPixel / 2);
+
+                if (obj.ellipse) {
+                    bodies.push(this.scene.matter.bodies.circle(cx, cy, w / 2));
+                } else {
+                    bodies.push(this.scene.matter.bodies.rectangle(cx, cy, w, h));
+                }
+            });
+
+            // 2. Create Body
+            this.body = this.scene.matter.body.create({
+                parts: bodies,
+                isSensor: true,
+                isStatic: true,
+                label: `spring-${id}`
+            });
+
+            // 3. Scale Body
+            if (width > 0 && height > 0 && originalWidthPixel > 0 && originalHeightPixel > 0) {
+                const scaleX = width / originalWidthPixel;
+                const scaleY = height / originalHeightPixel;
+                if (Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01) {
+                    this.scene.matter.body.scale(this.body, scaleX, scaleY);
+                }
+            }
+
+            // 4. Calculate CoM Offset
+            const coMOffsetX = this.body.position.x;
+            const coMOffsetY = this.body.position.y;
+
+            // 4. Set Body Position accounting for CoM offset and Rotation
+            const rad = Phaser.Math.DegToRad(angle);
+            const rotatedCoMX = coMOffsetX * Math.cos(rad) - coMOffsetY * Math.sin(rad);
+            const rotatedCoMY = coMOffsetX * Math.sin(rad) + coMOffsetY * Math.cos(rad);
+
+            this.scene.matter.body.setPosition(this.body, {
+                x: x + rotatedCoMX,
+                y: y + rotatedCoMY
+            });
+
+            this.scene.matter.body.setAngle(this.body, rad);
+            this.scene.matter.world.add(this.body);
+
+        } else {
+            // 스프링 물리 바디 (센서로 설정)
+            this.body = this.scene.matter.add.rectangle(x, y, width, height, {
+                isSensor: true,
+                isStatic: true,
+                label: `spring-${id}`,
+                angle: Phaser.Math.DegToRad(angle)
+            });
+        }
 
         if (texture) {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
