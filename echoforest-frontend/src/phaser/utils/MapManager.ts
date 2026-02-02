@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import BaseGameScene from '../scenes/BaseGameScene';
-import { Key, Lock, Spike, Goal, Spring, Elevator, MovableBlock, Bumper, MovingBumper, PoisonMushroom, BlockButton, TogglePlatform, TriggerButton, Signboard, GhostPlatform, Respawn } from '../gimmicks';
+import TiledHelper from './TiledHelper';
+import CollisionBuilder from './CollisionBuilder';
+import ObjectFactory from './ObjectFactory';
 
 /**
  * MapManager
  * Tiled Map의 로딩, 충돌체 병합, 기믹 생성을 담당하는 클래스.
  * - Group Layer 및 Class 속성 지원
  * - 공통 기믹 생성 로직 캡슐화
+ * - (Refactored) 이제 세부 로직은 Helper 클래스들에게 위임합니다.
  */
 export default class MapManager {
     private scene: BaseGameScene;
@@ -54,92 +57,85 @@ export default class MapManager {
     /**
      * 월드 경계를 설정하고 타일셋과 레이어를 생성합니다.
      * 모든 타일 레이어를 순회하며 생성하고, Solid 속성이 있는 경우 충돌체를 병합생성합니다.
-     * @param tilesetName Tiled에서 설정한 타일셋 이름
-     * @param tilesetKey Phaser 캐시 키
-     * @param tilesetName Tiled에서 설정한 타일셋 이름
-     * @param tilesetKey Phaser 캐시 키
-     * @param backgroundKey 배경 이미지 키 (옵션)
      */
-
-
     /**
-     * 비동기 초기화 메서드 - 무거운 충돌체 생성을 여러 프레임에 나눠 처리하여 버벅임 방지
+     * 월드 경계를 설정하고 타일셋과 레이어를 생성합니다.
+     * 모든 타일 레이어를 순회하며 생성하고, Solid 속성이 있는 경우 충돌체를 병합생성합니다.
      */
-    public async initializeAsync(tilesetName: string, tilesetKey: string, backgroundKey?: string): Promise<void> {
-        const { ts, collisionLayers } = this.setupMapLayers(tilesetName, tilesetKey, backgroundKey);
-        if (!ts) return;
-
-        // 비동기 방식: 충돌체 생성을 청크 단위로 처리
-        for (const layer of collisionLayers) {
-            await this.createMergedCollisionsAsync(layer);
-        }
-
-        // console.log(`[MapManager] Async initialization complete for map: ${this.mapKey}`);
-    }
-
-    /**
-     * 맵 레이어 설정 공통 로직
-     * - 월드 경계 설정, 타일셋 추가, 레이어 생성, 배경 설정
-     * @returns 타일셋과 충돌 처리가 필요한 레이어 목록
-     */
-    private setupMapLayers(tilesetName: string, tilesetKey: string, backgroundKey?: string): { ts: Phaser.Tilemaps.Tileset | null; collisionLayers: Phaser.Tilemaps.TilemapLayer[] } {
+    public initialize(tilesetNames: string | string[], tilesetKeys: string | string[], backgroundKey?: string): void {
         // 월드 경계 설정
         this.scene.matter.world.setBounds(0, 0, this.getWorldWidth(), this.getWorldHeight());
 
-        // 타일셋 추가
-        const ts = this.map.addTilesetImage(tilesetName, tilesetKey);
-        if (!ts) {
-            console.error(`[MapManager] Failed to add tileset: ${tilesetName}`);
-            return { ts: null, collisionLayers: [] };
-        }
+        // 타일셋 추가 (다중 지원)
+        const names = Array.isArray(tilesetNames) ? tilesetNames : [tilesetNames];
+        const keys = Array.isArray(tilesetKeys) ? tilesetKeys : [tilesetKeys];
+        const tilesets: Phaser.Tilemaps.Tileset[] = [];
+
+        names.forEach((name, i) => {
+            const key = keys[i] || keys[0]; // 키가 부족하면 첫 번째 키 재사용 (혹은 매칭되는 키 사용)
+            const ts = this.map.addTilesetImage(name, key);
+            if (ts) {
+                tilesets.push(ts);
+            } else {
+                console.warn(`[MapManager] Failed to add tileset: ${name} (Key: ${key})`);
+            }
+        });
 
         // Render Skip 대상 레이어 식별 (Group Layer 상속 포함)
         const skippedLayerNames = this.getSkippedLayerNames();
 
-        // 충돌체 생성이 필요한 레이어 목록 수집
-        const collisionLayers: Phaser.Tilemaps.TilemapLayer[] = [];
-
         // 모든 타일 레이어 순회 및 생성
         this.map.layers.forEach(layerData => {
-            const layerClass = this.getLayerProperty(layerData, 'class') || (layerData as any).class;
+            const layerClass = TiledHelper.getLayerProperty(layerData, 'class') || (layerData as any).class;
 
-            // 렌더링 스킵 조건 (로직 전용 레이어)
+            // 1. 렌더링 스킵 조건 (로직 전용 레이어)
             if (layerClass === 'GhostPlatform' || skippedLayerNames.has(layerData.name)) return;
 
-            // 레이어 생성
-            const layer = this.map.createLayer(layerData.name, ts, 0, this.offsetY);
+            // 레이어 생성 (모든 타일셋 전달)
+            const layer = this.map.createLayer(layerData.name, tilesets, 0, this.offsetY);
             if (layer) {
                 layer.setScale(this.mapScale);
                 layer.setDepth(-10 + this.map.layers.indexOf(layerData) * 0.1);
 
-                // 충돌체 생성 조건 체크
+                // 3. 충돌체 생성 (CollisionBuilder 위임)
                 const lowerName = layerData.name.toLowerCase();
-                if (layerClass === 'Solid' || this.getLayerProperty(layerData, 'collides') === true || lowerName === 'tiles' || lowerName === 'tile' || lowerName.includes('tile')) {
-                    collisionLayers.push(layer);
+                if (layerClass === 'Solid' || TiledHelper.getLayerProperty(layerData, 'collides') === true || lowerName === 'tiles' || lowerName === 'tile' || lowerName.includes('tile')) {
+                    CollisionBuilder.createMergedCollisions(this.scene, this.map, layer, this.mapScale, this.offsetY);
                 }
             } else {
                 console.warn(`[MapManager] Failed to create layer: ${layerData.name}`);
             }
         });
 
-        // 배경 설정
+        // 배경 설정 (수동 배경이 지정된 경우에만 생성)
         if (backgroundKey) {
             this.scene.setupTiledBackground(backgroundKey, 0.2);
         }
+    }
 
-        return { ts, collisionLayers };
+    /**
+     * 비동기적으로 맵을 초기화합니다. (대형 맵 로딩 시 프레임 드롭 방지)
+     */
+    public initializeAsync(tilesetNames: string | string[], tilesetKeys: string | string[], backgroundKey?: string): Promise<void> {
+        return new Promise((resolve) => {
+            // 메인 스레드 차단을 막기 위해 setTimeout으로 지연 실행
+            setTimeout(() => {
+                this.initialize(tilesetNames, tilesetKeys, backgroundKey);
+                resolve();
+            }, 0);
+        });
     }
 
     /**
      * Raw JSON 데이터를 검색하여 렌더링에서 제외해야 할 레이어 이름 목록을 반환합니다.
-     * (예: Group Layer에 GhostPlatform 속성이 있는 경우 내부 레이어들)
      */
     private getSkippedLayerNames(): Set<string> {
         const skippedNames = new Set<string>();
         const rawMapData = this.scene.cache.tilemap.get(this.mapKey);
+        const layers = rawMapData?.data?.layers || rawMapData?.layers;
 
-        if (rawMapData && rawMapData.data && rawMapData.data.layers) {
-            this.findSkippedLayersRecursive(rawMapData.data.layers, skippedNames);
+        if (layers) {
+            this.findSkippedLayersRecursive(layers, skippedNames);
         }
 
         return skippedNames;
@@ -147,7 +143,7 @@ export default class MapManager {
 
     private findSkippedLayersRecursive(layers: any[], skippedNames: Set<string>, parentClass?: string): void {
         layers.forEach(layer => {
-            const myClass = this.getLayerProperty(layer, 'class') || layer.class || layer.type || parentClass;
+            const myClass = TiledHelper.getLayerProperty(layer, 'class') || layer.class || layer.type || parentClass;
 
             if (layer.type === 'group' && layer.layers) {
                 this.findSkippedLayersRecursive(layer.layers, skippedNames, myClass);
@@ -161,43 +157,66 @@ export default class MapManager {
 
     /**
      * Tiled 데이터구조를 순회하며 모든 레이어(그룹 포함)를 처리합니다.
-     * Phaser의 map.objects는 중첩된 그룹 레이어 내부의 오브젝트 레이어를 누락할 수 있으므로,
-     * Raw JSON 데이터를 직접 재귀적으로 탐색합니다.
      */
     public createObjects(): void {
         const rawMapData = this.scene.cache.tilemap.get(this.mapKey);
-        if (!rawMapData || !rawMapData.data || !rawMapData.data.layers) {
+        const layers = rawMapData?.data?.layers || rawMapData?.layers;
+
+        if (!layers) {
             console.warn(`[MapManager] Raw map data not found for key: ${this.mapKey}`);
-            // Fallback (incomplete)
+            // Fallback (incomplete) - depth handling weak here
             this.map.objects.forEach(objLayer => this.processObjectLayer(objLayer));
             return;
         }
 
-        // 재귀적으로 모든 레이어 탐색 (Group Layer 속성 상속 지원)
-        this.processLayersRecursively(rawMapData.data.layers);
+        // [FIX] Depth Management: Use a mutable counter to track rendering order across recursion
+        // start from -10 to match previous behavior or just use integers
+        const depthCounter = { value: 0 };
+
+        // 재귀적으로 모든 레이어 탐색
+        this.processLayersRecursively(layers, undefined, 0, 0, depthCounter);
     }
 
-    private processLayersRecursively(layers: any[], parentClass?: string, parentOffsetX: number = 0, parentOffsetY: number = 0): void {
+    private processLayersRecursively(
+        layers: any[],
+        parentClass?: string,
+        parentOffsetX: number = 0,
+        parentOffsetY: number = 0,
+        depthCounter: { value: number } = { value: 0 }
+    ): void {
         layers.forEach(layer => {
+            // [FIX] Increment depth for each layer to ensure correct order
+            // Phaser renders higher depth on top
+            const currentDepth = depthCounter.value++;
+
             // 현재 레이어의 Class 또는 Type 속성 확인
-            const myClass = this.getLayerProperty(layer, 'class') || layer.class || layer.type || parentClass;
+            const myClass = TiledHelper.getLayerProperty(layer, 'class') || layer.class || layer.type || parentClass;
 
             // 현재 레이어의 오프셋 (Group Layer 포함)
             const currentOffsetX = parentOffsetX + (layer.offsetx || 0);
             const currentOffsetY = parentOffsetY + (layer.offsety || 0);
 
             if (layer.type === 'group' && layer.layers) {
-                // Group Layer: 내부 레이어 재귀 호출 (상위 속성 및 오프셋 전달)
-                this.processLayersRecursively(layer.layers, myClass, currentOffsetX, currentOffsetY);
+                // Group Layer: 내부 레이어 재귀 호출
+                this.processLayersRecursively(layer.layers, myClass, currentOffsetX, currentOffsetY, depthCounter);
             } else if (layer.type === 'objectgroup') {
                 // Object Layer: 기믹 생성 처리
-                this.processObjectLayer(layer as any, myClass, currentOffsetX, currentOffsetY);
+                // [FIX] Pass calculated depth
+                this.processObjectLayer(layer as any, myClass, currentOffsetX, currentOffsetY, currentDepth);
             } else if (layer.type === 'tilelayer') {
-                // Tile Layer: GhostPlatform 여부 확인
+                // Tile Layer
+                // [FIX] Update depth of existing TileLayer to match Tiled order
+                const mapLayer = this.map.getLayer(layer.name);
+                if (mapLayer && mapLayer.tilemapLayer) {
+                    mapLayer.tilemapLayer.setDepth(currentDepth);
+                    // console.log(`[MapManager] Set depth for TileLayer ${layer.name}: ${currentDepth}`);
+                }
+
+                // GhostPlatform creation check
                 if (myClass === 'GhostPlatform') {
-                    const phaserLayer = this.map.layers.find(l => l.name === layer.name);
-                    if (phaserLayer) {
-                        this.createGhostPlatformsFromLayer(phaserLayer, currentOffsetX, currentOffsetY);
+                    // ... existing logic ...
+                    if (mapLayer) {
+                        CollisionBuilder.createGhostPlatformsFromLayer(this.scene, this.map, mapLayer, this.mapScale, this.offsetY, currentOffsetX, currentOffsetY);
                     }
                 }
             }
@@ -205,24 +224,17 @@ export default class MapManager {
     }
 
     /**
-     * 재귀적으로 모든 레이어를 탐색하여 Object Layer를 수집합니다.
+     * 단일 오브젝트 레이어 처리
      */
-    private collectObjectLayers(layers: any[], result: any[]): void {
-        layers.forEach(layer => {
-            if (layer.type === 'objectgroup') {
-                result.push(layer);
-            } else if (layer.type === 'group' && layer.layers) {
-                this.collectObjectLayers(layer.layers, result);
-            }
-        });
-    }
-
-    /**
-     * 단일 오브젝트 레이어 처리 (타입 추론 포함)
-     */
-    private processObjectLayer(objectLayer: Phaser.Types.Tilemaps.ObjectLayerConfig, parentClass?: string, offsetX: number = 0, offsetY: number = 0): void {
+    private processObjectLayer(
+        objectLayer: Phaser.Types.Tilemaps.ObjectLayerConfig,
+        parentClass?: string,
+        offsetX: number = 0,
+        offsetY: number = 0,
+        depth: number = 0 // [New]
+    ): void {
         // 레이어 자체의 속성 확인
-        let layerClass = this.getLayerProperty(objectLayer, 'class') || (objectLayer as any).class || (objectLayer as any).type || parentClass;
+        let layerClass = TiledHelper.getLayerProperty(objectLayer, 'class') || (objectLayer as any).class || (objectLayer as any).type || parentClass;
 
         // Tiled Parsing 이슈 대응: 이름으로 추론
         if (!layerClass && objectLayer.name) {
@@ -234,465 +246,19 @@ export default class MapManager {
 
         if (objectLayer.objects) {
             objectLayer.objects.forEach((obj: any) => {
-                this.createObject(obj, layerClass, offsetX, offsetY);
+                // ObjectFactory 위임
+                ObjectFactory.createObject(
+                    this.scene,
+                    this.map,
+                    obj,
+                    this.mapScale,
+                    this.offsetY,
+                    layerClass,
+                    offsetX,
+                    offsetY,
+                    depth // [FIX] Pass depth
+                );
             });
         }
-    }
-
-    private createObject(obj: Phaser.Types.Tilemaps.TiledObject, parentClass?: string, offsetX: number = 0, offsetY: number = 0): void {
-        const width = (obj.width || 0) * this.mapScale;
-        const height = (obj.height || 0) * this.mapScale;
-
-        const gidRaw = obj.gid || 0;
-
-        // 오프셋 적용 (Group Layer 상속값 포함)
-        const scaledOffsetX = offsetX * this.mapScale;
-        const scaledOffsetY = offsetY * this.mapScale;
-
-        // Tiled Pivot (Rotation Center) Calculation
-        // Tiled (x, y) coordinates essentially represent the Pivot point
-        const pivotX = (obj.x || 0) * this.mapScale + scaledOffsetX;
-        const pivotY = (obj.y || 0) * this.mapScale + scaledOffsetY + this.offsetY;
-
-        // Determine Unrotated Center Offset relative to Pivot
-        let localOffsetX = 0;
-        let localOffsetY = 0;
-
-        if (gidRaw > 0) {
-            // Tile Object (GID > 0): Pivot is Bottom-Left
-            // Unrotated Center is (w/2, -h/2) relative to Pivot
-            localOffsetX = width / 2;
-            localOffsetY = -height / 2;
-        } else {
-            // Shape Object (Rectangle/Ellipse): Pivot is Top-Left
-            // Unrotated Center is (w/2, h/2) relative to Pivot
-            localOffsetX = width / 2;
-            localOffsetY = height / 2;
-        }
-
-        // Apply Rotation to the Center Offset
-        // Tiled & Phaser Rotation is Clockwise Positive (Degree)
-        const rotationDeg = obj.rotation || 0;
-        const rotationRad = Phaser.Math.DegToRad(rotationDeg);
-
-        // Rotation Matrix for Clockwise rotation in screen coordinates (Y down)
-        // x' = x * cos(θ) - y * sin(θ)
-        // y' = x * sin(θ) + y * cos(θ)
-        const cos = Math.cos(rotationRad);
-        const sin = Math.sin(rotationRad);
-
-        const rotatedOffsetX = localOffsetX * cos - localOffsetY * sin;
-        const rotatedOffsetY = localOffsetX * sin + localOffsetY * cos;
-
-        // Final Center Position
-        const centerX = pivotX + rotatedOffsetX;
-        const centerY = pivotY + rotatedOffsetY;
-
-        const gid = gidRaw & ~(0x80000000 | 0x40000000 | 0x20000000 | 0x10000000); // GID flipping
-
-        let texture = '';
-        let frame = 0;
-        if (gid > 0) {
-            const tileset = this.map.tilesets.find(ts =>
-                gid >= ts.firstgid && gid < ts.firstgid + ts.total
-            );
-            if (tileset) {
-                texture = tileset.name;
-                frame = gid - tileset.firstgid;
-            }
-        }
-
-        const rotation = obj.rotation || 0;
-        let type = obj.type || (obj as any).class;
-        if (!type && parentClass) type = parentClass;
-
-        // ... Type inference ...
-        if (!type) {
-            if (gid === 111 || gid === 131) type = 'Lock';
-            else if (gid === 113) type = 'Goal';
-            // [FIX] Relaxed Spawn detection: Check name case-insensitive
-            else if (gid === 96 || gid === 30 || (obj.name && (obj.name.toLowerCase() === 'spawn' || obj.name.toLowerCase() === 'spawnpoint'))) type = 'Spawn';
-            else if (this.getObjectProperty(obj, 'collides') === true) type = 'Solid';
-            else if (this.getObjectProperty(obj, 'playerIndex') !== undefined || this.getObjectProperty(obj, 'isDefault') !== undefined) type = 'Spawn';
-            else if (this.getObjectProperty(obj, 'targetX') !== undefined || this.getObjectProperty(obj, 'targetY') !== undefined) {
-                if (this.getObjectProperty(obj, 'speed') !== undefined) type = 'MovingBumper';
-                else type = 'Elevator';
-            }
-        }
-
-        // Factory Logic
-        switch (type) {
-            case 'Spawn':
-            case 'SpawnPoint': {
-                const playerIndex = this.getObjectProperty(obj, 'playerIndex');
-                const isDefault = this.getObjectProperty(obj, 'isDefault');
-                const respawn = new Respawn(
-                    this.scene,
-                    centerX, centerY, `respawn-${obj.id}`, playerIndex !== undefined ? Number(playerIndex) : undefined, isDefault === true || isDefault === 'true',
-                    texture, frame
-                );
-                respawn.setScale(this.mapScale);
-                this.scene.spawnPoints.push(respawn);
-                // console.log(`[MapManager] Spawn registered: (${centerX}, ${centerY})`);
-                break;
-            }
-            case 'Signboard': {
-                const message = this.getObjectProperty(obj, 'message') || '내용이 없습니다.';
-                this.scene.signboards.push(new Signboard(this.scene, {
-                    id: obj.id!.toString(), x: centerX, y: centerY, message, width, height, texture, frame, angle: rotation
-                }));
-                break;
-            }
-            case 'Lock': {
-                const doorId = this.getObjectProperty(obj, 'doorId') || 1;
-                const targetGoalId = this.getObjectProperty(obj, 'targetGoalId');
-                this.scene.locks.push(new Lock(this.scene, centerX, centerY, `lock-${doorId}`, width, height, texture, frame, rotation, targetGoalId));
-                break;
-            }
-            case 'Key': {
-                const doorId = this.getObjectProperty(obj, 'doorId') || 1;
-                this.scene.keys.push(new Key(this.scene, centerX, centerY, obj.id!.toString(), `lock-${doorId}`, width, height, texture, frame, rotation));
-                break;
-            }
-            case 'MovableBlock': {
-                const targetBlockId = this.getObjectProperty(obj, 'targetBlockId');
-                const reqPlayers = this.getObjectProperty(obj, 'requiredPlayers') || 1;
-                const block = new MovableBlock(this.scene, {
-                    id: obj.id!.toString(), x: centerX, y: centerY, width, height, requiredPlayers: reqPlayers,
-                    texture, frame, targetBlockId: targetBlockId
-                });
-                if (targetBlockId) block.setVisible(false);
-                this.scene.movableBlocks.push(block);
-                break;
-            }
-            case 'Goal': {
-                const reqPlayers = this.getObjectProperty(obj, 'requiredPlayers') || 1;
-                const targetGoalId = this.getObjectProperty(obj, 'targetGoalId');
-                const goal = new Goal(this.scene, centerX, centerY, obj.id!.toString(), reqPlayers, width, height, texture, frame, rotation, targetGoalId);
-
-                // [FIX] targetGoalId가 있는 경우(Lock에 의해 해금되는 경우)에만 숨김 처리
-                // 그렇지 않은 경우(단독 Goal)에는 기본적으로 보이게 설정
-                if (targetGoalId) {
-                    goal.setVisible(false);
-                } else {
-                    goal.setVisible(true);
-                }
-
-                this.scene.goals.push(goal);
-                break;
-            }
-            case 'BlockButton': {
-                const props = this.getAllObjectProperties(obj);
-                const targetBlockId = props.targetBlockId;
-                const button = new BlockButton(this.scene, {
-                    id: obj.id!.toString(), x: centerX, y: centerY, width, height, texture, frame,
-                    targetBlockId: targetBlockId,
-                    spawnConfig: targetBlockId ? undefined : {
-                        id: `spawned-block-${obj.id}`,
-                        x: (props.spawnX || 0) * this.mapScale,
-                        y: (props.spawnY || 0) * this.mapScale + this.offsetY,
-                        width: (props.blockWidth || 16) * this.mapScale,
-                        height: (props.blockHeight || 16) * this.mapScale,
-                        requiredPlayers: props.requiredPlayers || 1,
-                        texture: 'tiles_tileset', frame: 21
-                    }
-                });
-                this.scene.blockButtons.push(button);
-                break;
-            }
-            case 'Elevator': {
-                const props = this.getAllObjectProperties(obj);
-                this.scene.elevators.push(new Elevator(this.scene, {
-                    id: obj.id!.toString(), x: centerX, initialY: centerY,
-                    targetY: (props.targetY || 0) * this.mapScale + this.offsetY,
-                    width, height, requiredPlayers: props.requiredPlayers || 1, texture, frame
-                }));
-                break;
-            }
-            case 'Spring': {
-                this.scene.springs.push(new Spring(this.scene, centerX, centerY, obj.id!.toString(), -15, width, height, texture, frame, rotation));
-                break;
-            }
-            case 'Spike': {
-                this.scene.spikes.push(new Spike(this.scene, centerX, centerY, obj.id!.toString(), width * 0.8, height, texture, frame, rotation));
-                break;
-            }
-            case 'Bumper': {
-                this.scene.bumpers.push(new Bumper(this.scene, centerX, centerY, width, height, texture, frame, rotation));
-                break;
-            }
-            case 'PoisonMushroom':
-            case 'Mushroom': {
-                this.scene.poisonMushrooms.push(new PoisonMushroom(this.scene, centerX, centerY, obj.id!.toString(), width, height, texture, frame));
-                break;
-            }
-            case 'TogglePlatform': {
-                this.scene.togglePlatforms.push(new TogglePlatform(this.scene, centerX, centerY, obj.id!.toString(), width, height));
-                break;
-            }
-            case 'TriggerButton': {
-                const props = this.getAllObjectProperties(obj);
-                this.scene.triggerButtons.push(new TriggerButton(this.scene, {
-                    id: obj.id!.toString(), x: centerX, y: centerY, targetId: props.targetId || '',
-                    width, height, oneTime: props.oneTime !== undefined ? props.oneTime : true
-                }));
-                break;
-            }
-            case 'GhostPlatform': {
-                this.scene.ghostPlatforms.push(new GhostPlatform(this.scene, {
-                    id: obj.id!.toString(), x: centerX, y: centerY, width, height, texture, frame
-                }));
-                break;
-            }
-            case 'MovingBumper': {
-                const props = this.getAllObjectProperties(obj);
-                this.scene.movingBumpers.push(new MovingBumper(this.scene, {
-                    id: obj.id!.toString(), startX: centerX, startY: centerY,
-                    endX: props.targetX !== undefined ? props.targetX * this.mapScale : centerX,
-                    endY: props.targetY !== undefined ? props.targetY * this.mapScale + this.offsetY : centerY,
-                    size: width, speed: props.speed || 0.002, power: props.power, offset: props.offset,
-                    texture, frame
-                }));
-                break;
-            }
-            case 'Solid': {
-                this.scene.matter.add.rectangle(centerX, centerY, width, height, { isStatic: true, label: 'ground' });
-                break;
-            }
-            case 'Respawn': {
-                const props = this.getAllObjectProperties(obj);
-                const isDefault = props.isDefault === true;
-                const playerIndex = props.playerIndex !== undefined ? props.playerIndex : undefined;
-
-                // Respawn 객체를 시각적으로 생성 (Sprite 상속)
-                const respawn = new Respawn(
-                    this.scene,
-                    centerX,
-                    centerY,
-                    obj.id!.toString(),
-                    playerIndex,
-                    isDefault,
-                    texture,
-                    frame
-                );
-                respawn.setScale(this.mapScale);
-                this.scene.spawnPoints.push(respawn);
-                // console.log(`[MapManager] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
-                break;
-            }
-        }
-    }
-
-    /**
-     * TileLayer 데이터를 기반으로 GhostPlatform 기믹들을 생성합니다. (가로 병합 적용)
-     */
-    private createGhostPlatformsFromLayer(layerData: Phaser.Tilemaps.LayerData, offsetX: number = 0, offsetY: number = 0): void {
-        const width = layerData.width;
-        const height = layerData.height;
-        const processed = Array.from({ length: height }, () => Array(width).fill(false));
-        const tileWidth = this.map.tileWidth * this.mapScale;
-        const tileHeight = this.map.tileHeight * this.mapScale;
-
-        const scaledOffsetX = offsetX * this.mapScale;
-        const scaledOffsetY = offsetY * this.mapScale;
-
-        // 원시 데이터(data)는 2차원 배열이거나 1차원 배열일 수 있음. Phaser layerData.data는 Tile 객체들의 2차원 배열.
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                if (processed[y][x]) continue;
-
-                const tile = layerData.data[y][x];
-                if (tile && tile.index !== -1) {
-                    // 가로로 이어지는 타일 병합
-                    let w = 1;
-                    while (x + w < width) {
-                        const nextTile = layerData.data[y][x + w];
-                        if (nextTile && nextTile.index !== -1 && !processed[y][x + w]) {
-                            w++;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // 병합 처리 표시
-                    for (let k = 0; k < w; k++) {
-                        processed[y][x + k] = true;
-                    }
-
-                    // GhostPlatform 생성
-                    const pixelWidth = w * tileWidth;
-                    const pixelHeight = tileHeight;
-                    const centerX = x * tileWidth + pixelWidth / 2 + scaledOffsetX;
-                    const centerY = y * tileHeight + pixelHeight / 2 + this.offsetY + scaledOffsetY;
-
-                    // 타일의 텍스처 정보 가져오기 (첫 번째 타일 기준)
-                    let texture = '';
-                    let frame = 0;
-                    const tileset = tile.tileset;
-                    if (tileset) {
-                        texture = tileset.name;
-                        frame = tile.index - tileset.firstgid;
-                    }
-
-                    this.scene.ghostPlatforms.push(new GhostPlatform(this.scene, {
-                        id: `ghost-layer-${layerData.name}-${x}-${y}`,
-                        x: centerX,
-                        y: centerY,
-                        width: pixelWidth,
-                        height: pixelHeight,
-                        texture, // 타일셋 텍스처 사용
-                        frame: frame // 첫 번째 타일의 프레임 (반복 패턴을 위해선 TileSprite 등의 처리가 필요할 수 있음)
-                    }));
-                }
-            }
-        }
-    }
-
-    /**
-     * 타일이 충돌 가능한지 확인하는 헬퍼 메서드
-     */
-    private isTileCollidable(tile: Phaser.Tilemaps.Tile | null): boolean {
-        if (!tile) return false;
-        // 1. 'collides' 커스텀 속성 확인
-        if (tile.properties.collides) return true;
-        // 2. Class 또는 Type이 'Solid'인지 확인
-        const tileClass = tile.properties.class || tile.properties.type;
-        return tileClass === 'Solid';
-    }
-
-
-
-    /**
-     * 비동기 충돌체 생성 - 프레임 드롭 방지를 위해 청크 단위로 나눠 처리
-     */
-    private createMergedCollisionsAsync(layer: Phaser.Tilemaps.TilemapLayer): Promise<void> {
-        return new Promise((resolve) => {
-            const { width, height } = this.map;
-            const mergedRects: { x: number; y: number; w: number; h: number }[] = [];
-            const processed = Array.from({ length: height }, () => Array(width).fill(false));
-
-            const ROWS_PER_CHUNK = 5; // 한 번에 처리할 행 수
-            let currentRow = 0;
-
-            const processChunk = () => {
-                const endRow = Math.min(currentRow + ROWS_PER_CHUNK, height);
-
-                for (let y = currentRow; y < endRow; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const tile = layer.getTileAt(x, y);
-
-                        if (this.isTileCollidable(tile) && !processed[y][x]) {
-                            // 가로로 얼마나 이어지는지 확인
-                            let w = 1;
-                            while (x + w < width) {
-                                const nextTile = layer.getTileAt(x + w, y);
-                                if (this.isTileCollidable(nextTile) && !processed[y][x + w]) {
-                                    w++;
-                                } else {
-                                    break;
-                                }
-                            }
-
-                            // 세로로 얼마나 이어지는지 확인
-                            let h = 1;
-                            while (y + h < height) {
-                                let rowMatch = true;
-                                for (let k = 0; k < w; k++) {
-                                    const belowTile = layer.getTileAt(x + k, y + h);
-                                    if (!this.isTileCollidable(belowTile) || processed[y + h][x + k]) {
-                                        rowMatch = false;
-                                        break;
-                                    }
-                                }
-                                if (rowMatch) {
-                                    h++;
-                                } else {
-                                    break;
-                                }
-                            }
-
-                            // 병합된 영역 마킹 및 기록
-                            for (let row = y; row < y + h; row++) {
-                                for (let col = x; col < x + w; col++) {
-                                    processed[row][col] = true;
-                                }
-                            }
-                            mergedRects.push({ x, y, w, h });
-                        }
-                    }
-                }
-
-                currentRow = endRow;
-
-                if (currentRow < height) {
-                    // 다음 청크를 다음 프레임에 처리
-                    requestAnimationFrame(processChunk);
-                } else {
-                    // 모든 행 처리 완료 - 물리 바디 생성
-                    this.createCollisionBodiesFromRects(mergedRects);
-                    resolve();
-                }
-            };
-
-            // 첫 청크 시작
-            processChunk();
-        });
-    }
-
-    /**
-     * 병합된 사각형 목록에서 물리 바디들을 생성
-     */
-    private createCollisionBodiesFromRects(mergedRects: { x: number; y: number; w: number; h: number }[]): void {
-        const tileWidth = this.map.tileWidth * this.mapScale;
-        const tileHeight = this.map.tileHeight * this.mapScale;
-
-        mergedRects.forEach(rect => {
-            const pixelWidth = rect.w * tileWidth;
-            const pixelHeight = rect.h * tileHeight;
-            const centerX = (rect.x * tileWidth) + (pixelWidth / 2);
-            const centerY = (rect.y * tileHeight) + (pixelHeight / 2) + this.offsetY + 1;
-
-            this.scene.matter.add.rectangle(centerX, centerY, pixelWidth, pixelHeight - 2, {
-                isStatic: true,
-                label: 'ground',
-                friction: 0,
-                frictionStatic: 0
-            });
-        });
-    }
-
-    private getObjectProperty(obj: Phaser.Types.Tilemaps.TiledObject, name: string): any {
-        if (obj.properties) {
-            // properties는 {name, value} 배열일 수도 있고, 키-값 객체일 수도 있습니다 (Phaser 버전에 따라 다름)
-            if (Array.isArray(obj.properties)) {
-                return obj.properties.find((p: any) => p.name === name)?.value;
-            } else {
-                return (obj.properties as any)[name];
-            }
-        }
-        return undefined;
-    }
-
-    private getAllObjectProperties(obj: Phaser.Types.Tilemaps.TiledObject): any {
-        const props: any = {};
-        if (obj.properties) {
-            if (Array.isArray(obj.properties)) {
-                obj.properties.forEach((p: any) => props[p.name] = p.value);
-            } else {
-                Object.assign(props, obj.properties);
-            }
-        }
-        return props;
-    }
-
-    private getLayerProperty(layer: any, name: string): any {
-        if (layer.properties) {
-            if (Array.isArray(layer.properties)) {
-                return layer.properties.find((p: any) => p.name === name)?.value;
-            } else {
-                return layer.properties[name];
-            }
-        }
-        return undefined;
     }
 }

@@ -12,6 +12,7 @@ export interface MovingBumperConfig {
     offset?: number; // 초기 위상차
     texture?: string;
     frame?: string | number;
+    angle?: number; // 회전 각도 (도)
 }
 
 export class MovingBumper {
@@ -28,6 +29,7 @@ export class MovingBumper {
     private power: number;
     private speed: number;
     private offset: number;
+    private angle: number;
 
     public readonly id: string;
 
@@ -42,16 +44,12 @@ export class MovingBumper {
         this.power = config.power || 8;
         this.speed = config.speed || 0.002;
         this.offset = config.offset || 0;
+        this.angle = config.angle || 0;
 
         const centerX = (this.startX + this.endX) / 2;
         const centerY = (this.startY + this.endY) / 2;
 
         // 원형 물리 바디 생성 (초기 위치는 중심)
-        // The provided code edit had a syntax error and an incorrect usage of add.gameObject.
-        // Assuming the intent was to update the label and keep the circle body creation,
-        // this line is adjusted to reflect the label change.
-        // If the intent was to use add.gameObject with a sprite/graphics,
-        // that would require a more significant refactor of the class structure.
         this.body = this.scene.matter.add.circle(centerX, centerY, this.size / 2, {
             isStatic: true,
             isSensor: true,
@@ -61,6 +59,7 @@ export class MovingBumper {
         if (config.texture) {
             this.sprite = this.scene.add.sprite(centerX, centerY, config.texture, config.frame);
             this.sprite.setDisplaySize(this.size, this.size);
+            this.sprite.setAngle(this.angle); // 회전 적용
             this.sprite.setDepth(5);
         } else {
             this.graphics = this.scene.add.graphics();

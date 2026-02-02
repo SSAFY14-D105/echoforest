@@ -38,6 +38,15 @@ export function setupTiledBackground(
     const scale = worldHeight / bgSource.height;
     const scaledWidth = bgSource.width * scale;
 
+    // [DEBUG] Texture Info
+    console.log(`[SceneHelper] Texture '${textureKey}': Source(${bgSource.width}x${bgSource.height})`);
+
+    // [DEBUG] Background Debug Layer (Magenta)
+    // If you see Magenta, it means the background images are missing or transparent.
+    const debugBg = scene.add.rectangle(worldWidth / 2, worldHeight / 2, worldWidth * 10, worldHeight * 10, 0xff00ff);
+    debugBg.setDepth(-101); // Behind images (-100), in front of camera bg
+    debugBg.setScrollFactor(scrollFactor);
+
     // 필요한 타일 개수 계산 (여유있게 +1)
     const numTiles = Math.ceil(worldWidth / scaledWidth) + 1;
 
@@ -51,7 +60,13 @@ export function setupTiledBackground(
     const overlap = 2;
     const effectiveWidth = scaledWidth - overlap;
 
-    for (let i = 0; i < numTiles; i++) {
+    // [DEBUG] Tiling Info
+    console.log(`[SceneHelper] Setup BG: World(${worldWidth}x${worldHeight}), ScreenH(${screenHeight}), Scale(${scale.toFixed(4)}), ScaledW(${scaledWidth.toFixed(1)}), NumTiles(${numTiles})`);
+
+    // [FIX] 앞뒤로 여유 타일을 두어 끊김 현상 방지 (-10 ~ numTiles + 10)
+    // -10부터 시작하여 왼쪽 공백(초반부) 완벽 커버
+    // numTiles + 10까지 생성하여 오른쪽 끝부분 완벽 커버 (와이드 모니터 등 대비)
+    for (let i = -10; i < numTiles + 10; i++) {
         // 중심 좌표 계산: (인덱스 * 유효너비) + (실제너비 / 2)
         // 겹치는 만큼 왼쪽으로 당겨짐
         const x = i * effectiveWidth + (scaledWidth / 2);
@@ -61,8 +76,9 @@ export function setupTiledBackground(
         bg.setDepth(-100); // 모든 오브젝트 뒤에 배치
         bg.setScrollFactor(scrollFactor);
 
-        // 홀수 번째 타일은 좌우 반전 (index 1, 3, 5...)
-        if (i % 2 === 1) {
+        // 홀수 번째 타일은 좌우 반전 (index 1, 3, 5... and -1, -3...)
+        // Math.abs()를 사용하여 음수 인덱스도 정상 처리
+        if (Math.abs(i) % 2 === 1) {
             bg.setFlipX(true);
         }
     }

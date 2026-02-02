@@ -420,7 +420,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         // [DEBUG] 물리 바디 시각화 (디버깅용) - 배포 시 false로 변경
         this.matter.world.createDebugGraphic();
-        this.matter.world.drawDebug = false;
+        this.matter.world.drawDebug = true;
 
         // 바닥 플랫폼 (별도 생성)
         if (this.shouldCreateDefaultFloor()) {
@@ -508,8 +508,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private onCollisionStart(event: Phaser.Physics.Matter.Events.CollisionStartEvent): void {
         event.pairs.forEach((pair) => {
-            const labelA = pair.bodyA.label || '';
-            const labelB = pair.bodyB.label || '';
+            // [FIX] 복합 바디(Compound Body)의 경우, 부모 바디의 라벨을 확인해야 함
+            const bodyA = pair.bodyA as MatterJS.BodyType;
+            const bodyB = pair.bodyB as MatterJS.BodyType;
+
+            const labelA = (bodyA.parent && bodyA.parent.label) ? bodyA.parent.label : (bodyA.label || '');
+            const labelB = (bodyB.parent && bodyB.parent.label) ? bodyB.parent.label : (bodyB.label || '');
 
             if (labelA.startsWith('key-') || labelB.startsWith('key-')) {
                 this.handleKeyCollision(labelA, labelB);
@@ -574,8 +578,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private onCollisionActive(event: Phaser.Physics.Matter.Events.CollisionActiveEvent): void {
         event.pairs.forEach((pair) => {
-            const labelA = pair.bodyA.label || '';
-            const labelB = pair.bodyB.label || '';
+            const bodyA = pair.bodyA as MatterJS.BodyType;
+            const bodyB = pair.bodyB as MatterJS.BodyType;
+
+            const labelA = (bodyA.parent && bodyA.parent.label) ? bodyA.parent.label : (bodyA.label || '');
+            const labelB = (bodyB.parent && bodyB.parent.label) ? bodyB.parent.label : (bodyB.label || '');
             const normal = pair.collision.normal;
 
             const isSensorA = pair.bodyA.isSensor;
@@ -620,8 +627,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private onCollisionEnd(event: Phaser.Physics.Matter.Events.CollisionEndEvent): void {
         event.pairs.forEach((pair) => {
-            const labelA = pair.bodyA.label || '';
-            const labelB = pair.bodyB.label || '';
+            const bodyA = pair.bodyA as MatterJS.BodyType;
+            const bodyB = pair.bodyB as MatterJS.BodyType;
+
+            const labelA = (bodyA.parent && bodyA.parent.label) ? bodyA.parent.label : (bodyA.label || '');
+            const labelB = (bodyB.parent && bodyB.parent.label) ? bodyB.parent.label : (bodyB.label || '');
 
             if (labelA.startsWith('signboard-') || labelB.startsWith('signboard-')) {
                 this.handleSignboardOverlap(labelA, labelB, false);
@@ -1040,24 +1050,33 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         this.popupContainer = this.add.container(centerX, centerY).setDepth(100).setScrollFactor(0);
 
-        // 배경 박스 (반투명 검정)
+        // [Redesign] 칠판 스타일 배경 박스
         const bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.8);
-        bg.fillRoundedRect(-150, -50, 300, 100, 10);
-        bg.lineStyle(2, 0xffffff, 1);
-        bg.strokeRoundedRect(-150, -50, 300, 100, 10);
 
-        // 메시지 텍스트
+        // 1. 배경 (짙은 칠판색)
+        bg.fillStyle(0x2C2E2B, 0.95);
+        bg.fillRoundedRect(-200, -100, 400, 200, 10); // 400x200 크기
+
+        // 2. 외부 테두리 (밝은 갈색 나무)
+        bg.lineStyle(6, 0x8D6E63, 1);
+        bg.strokeRoundedRect(-203, -103, 406, 206, 12);
+
+        // 3. 내부 테두리 (진한 갈색 그림자/음영)
+        bg.lineStyle(4, 0x3E2723, 1);
+        bg.strokeRoundedRect(-200, -100, 400, 200, 10);
+
+        // 메시지 텍스트 (크기 확대 및 줄바꿈 여유 확보)
         const msg = this.add.text(0, -10, text, {
-            fontSize: '18px',
+            fontSize: '20px',
+            fontFamily: 'Monospace', // 픽셀 느낌을 위해 Monospace 계열 시도
             color: '#ffffff',
             align: 'center',
-            wordWrap: { width: 280 }
+            wordWrap: { width: 360 } // 텍스트 영역 360px
         }).setOrigin(0.5);
 
-        // 닫기 안내
-        const closeHint = this.add.text(0, 30, '(범위를 벗어나면 닫힙니다)', {
-            fontSize: '12px',
+        // 닫기 안내 (하단으로 이동)
+        const closeHint = this.add.text(0, 80, '(범위를 벗어나면 닫힙니다)', {
+            fontSize: '14px',
             color: '#aaaaaa'
         }).setOrigin(0.5);
 
