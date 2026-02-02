@@ -157,6 +157,15 @@ export function useMotionDetector(videoRef: React.RefObject<HTMLVideoElement | n
         }
         return () => {
             isLooping.current = false;
+            // MediaPipe 모델 리소스 해제 (메모리 누수 방지)
+            if (gestureRecognizerRef.current) {
+                gestureRecognizerRef.current.close();
+                gestureRecognizerRef.current = null;
+            }
+            if (faceLandmarkerRef.current) {
+                faceLandmarkerRef.current.close();
+                faceLandmarkerRef.current = null;
+            }
         };
     }, [isLoaded, detect, videoRef]);
 

@@ -2,8 +2,6 @@ import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGes
 import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class CheekHeartGesture extends BaseGesture {
-    label: string;
-    emoji: string;
     private leftCheekZone: number[];
     private rightCheekZone: number[];
     private leftJawZone: number[];

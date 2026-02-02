@@ -2,8 +2,6 @@ import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGes
 import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class HeartGesture extends BaseGesture {
-    label: string;
-    emoji: string;
     private thresholds: any;
 
     constructor(config: any = {}) {
