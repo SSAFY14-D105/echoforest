@@ -21,6 +21,8 @@ import KissGesture from '../components/motion/KissGesture';
 import BothCheekPokeGesture from '../components/motion/BothCheekPokeGesture';
 import FlowerPoseGesture from '../components/motion/FlowerPoseGesture';
 import TalmoBeamGesture from '../components/motion/TalmoBeamGesture';
+import LeftPokeGesture from '../components/motion/LeftPokeGesture';
+import RightPokeGesture from '../components/motion/RightPokeGesture';
 
 // 제스처 클래스 매핑
 const GESTURE_CLASS_MAP: Record<string, new () => any> = {
@@ -36,6 +38,8 @@ const GESTURE_CLASS_MAP: Record<string, new () => any> = {
     'BothCheekPokeGesture': BothCheekPokeGesture,
     'FlowerPoseGesture': FlowerPoseGesture,
     'TalmoBeamGesture': TalmoBeamGesture,
+    'LeftPokeGesture': LeftPokeGesture,
+    'RightPokeGesture': RightPokeGesture,
 };
 
 export interface ParticipantPoseState {

@@ -5,7 +5,7 @@ export default class LGesture extends BaseGesture {
     constructor() {
         super();
         this.label = 'L';
-        this.emoji = '👆';
+        this.emoji = '🔫';
     }
 
     check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
