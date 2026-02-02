@@ -2,11 +2,13 @@ package com.d105.service;
 
 import com.d105.dto.user.LoginReqDto;
 import com.d105.dto.user.SignUpReqDto;
+import com.d105.dto.user.UserResDto;
 import com.d105.entity.User;
 import com.d105.repository.UserRepository;
 import com.d105.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,13 @@ public class UserService {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final SessionService sessionService;
     private final com.d105.manager.WebSocketSessionManager webSocketSessionManager;
+
+    @Transactional(readOnly = true)
+    public UserResDto getMyInfo(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return UserResDto.from(user);
+    }
 
     // 회원가입
     @Transactional
