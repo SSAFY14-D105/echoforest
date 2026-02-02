@@ -255,3 +255,24 @@
         opacity: 1;
     }
 }
+
+/* 카운트다운 오버레이 */
+.countdownOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(2px);
+}
+
+.countdownNumber {
+    font-size: 150px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 40px rgba(255, 215, 0, 0.9);
+    animation: countdownPulse 1s ease-in-out infinite;
+}

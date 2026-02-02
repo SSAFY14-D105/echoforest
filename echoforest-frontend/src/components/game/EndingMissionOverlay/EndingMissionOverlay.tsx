@@ -47,6 +47,7 @@ export default function EndingMissionOverlay({
 }: EndingMissionOverlayProps) {
     const [isCapturing, setIsCapturing] = useState(false);
     const [captureComplete, setCaptureComplete] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null); // [NEW] 카운트다운 state
     const captureStartedRef = useRef(false); // [FIX] 캡처 시작 여부 추적 (중복 방지)
 
     // 리모트 참가자의 클리어 상태 관리
@@ -250,21 +251,34 @@ export default function EndingMissionOverlay({
         }
     }, [allParticipants, onCaptureComplete]);
 
-    // 모든 참가자 포즈 인식 완료 시 자동 진행
-    // [FIX] 모션 인식 성공 직전에 캡처 실행
+    // [NEW] 카운트다운 및 캡처 로직
     useEffect(() => {
-        if (captureComplete) return;
+        if (captureComplete || isCapturing) return;
 
-        if (allCleared) {
-            handleCapture(); // 캡처 먼저!
-            handleMotionCleared(); // 모션 클리어 처리
-
-            // 카운트다운 없이 2초 후 종료
-            setTimeout(() => {
-                onClose?.();
-            }, 2000);
+        if (allCleared && countdown === null) {
+            setCountdown(3);
         }
-    }, [allCleared, captureComplete, handleMotionCleared, handleCapture, onClose]);
+    }, [allCleared, captureComplete, isCapturing, countdown]);
+
+    // 카운트다운 타이머
+    useEffect(() => {
+        if (countdown === null) return;
+
+        if (countdown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(prev => (prev !== null ? prev - 1 : null));
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0 && !captureStartedRef.current) {
+            // 카운트다운 0이 되면 캡처 시작
+            handleCapture().then(() => {
+                handleMotionCleared();
+                setTimeout(() => {
+                    onClose?.();
+                }, 3000); // 캡처 완료 후 3초 뒤 닫기 (결과 확인 시간)
+            });
+        }
+    }, [countdown, handleCapture, handleMotionCleared, onClose]);
 
     // 참가자별 포즈 상태 조회 (UI 표시용)
     const getDisplayState = useCallback((participant: ExtendedParticipant) => {
@@ -299,6 +313,13 @@ export default function EndingMissionOverlay({
                     <p className={styles.loadingText}>🔄 포즈 인식 준비 중...</p>
                 )}
 
+                {/* 카운트다운 오버레이 */}
+                {countdown !== null && countdown > 0 && (
+                    <div className={styles.countdownOverlay}>
+                        <span className={styles.countdownNumber}>{countdown}</span>
+                    </div>
+                )}
+
                 {/* 카메라 그리드 */}
                 <div className={styles.cameraGrid}>
                     {allParticipants.slice(0, 4).map((participant, index) => {
@@ -320,7 +341,7 @@ export default function EndingMissionOverlay({
                                 {targetPose && !isDummy && (
                                     <div className={styles.targetPose}>
                                         <span className={styles.poseEmoji}>{targetPose.emoji}</span>
-                                        <span className={styles.poseName}>{targetPose.label}</span>
+                                        <span className={styles.poseName}>{targetPose.name}</span>
                                     </div>
                                 )}
 
