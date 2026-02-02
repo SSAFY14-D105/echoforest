@@ -38,12 +38,12 @@ public class AiGenerationService {
 
     // AI 생성 프롬프트 (템플릿 기반 이미지 합성)
     // [좌표 설정] 템플릿의 하얀 네모칸 위치 (X, Y, Width, Height)
-    // 1024x1024 템플릿 기준 수정값 (200x200, 중앙 집중형, Y축 +20px 하향 조정)
+    // 1024x1024 템플릿 기준 수정값 (300x200, 가로 1.5배 확대, 1행 -10px/2행 -5px 상향 조정)
     private static final int[][] SLOT_COORDINATES = {
-            { 302, 322, 200, 200 }, // Slot 1 (Top-Left)
-            { 522, 322, 200, 200 }, // Slot 2 (Top-Right)
-            { 302, 542, 200, 200 }, // Slot 3 (Bottom-Left)
-            { 522, 542, 200, 200 } // Slot 4 (Bottom-Right)
+            { 202, 312, 300, 200 }, // Slot 1 (Top-Left)
+            { 522, 312, 300, 200 }, // Slot 2 (Top-Right)
+            { 202, 537, 300, 200 }, // Slot 3 (Bottom-Left)
+            { 522, 537, 300, 200 } // Slot 4 (Bottom-Right)
     };
 
     private final ImageService imageService;
