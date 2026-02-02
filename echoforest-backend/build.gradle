@@ -56,6 +56,9 @@ dependencies {
 
     // 이메일 발송
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    
+    // WebP 이미지 지원 (TwelveMonkeys)
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.12.0'
 }
 
 tasks.named('test') {
