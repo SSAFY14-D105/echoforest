@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
 import { distanceAR, Landmark } from '../../utils/gesture-helpers';
+=======
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { distanceAR, type Landmark } from '../../utils/gesture-helpers';
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
 
 export default class BigHeartGesture extends BaseGesture {
     label: string;

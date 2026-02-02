@@ -53,11 +53,11 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             const config: Phaser.Types.Core.GameConfig = {
                 type: Phaser.AUTO,
                 parent: parent,
-                width: 1280,
-                height: 720,
+                width: '100%',
+                height: '100%',
                 scale: {
-                    mode: Phaser.Scale.FIT,
-                    autoCenter: Phaser.Scale.CENTER_BOTH
+                    mode: Phaser.Scale.RESIZE,
+                    autoCenter: Phaser.Scale.NO_CENTER
                 },
                 backgroundColor: '#2c3e50',
                 render: {

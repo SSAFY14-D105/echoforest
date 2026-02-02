@@ -31,8 +31,13 @@ export default class BaseGesture {
      * @param landmarks MediaPipe 손 랜드마크 (0~20)
      * @param metadata 추가 정보 (손바닥 크기 등)
      */
+<<<<<<< HEAD
     check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         throw new Error("check() method must be implemented");
+=======
+    check(_landmarks: Landmark[], _metadata: GestureMetadata = {}): GestureResult {
+        return { detected: false, score: 0 };
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
     }
 
     /**

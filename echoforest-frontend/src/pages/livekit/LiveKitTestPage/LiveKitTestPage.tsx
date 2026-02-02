@@ -17,13 +17,13 @@ export default function LiveKitTestPage() {
     // 테스트용 기본값
     const roomId = 'room_1';
     const username = 'testUser';
-    const userId = 'testUser';
+
 
     useEffect(() => {
         async function getToken() {
             try {
                 // console.log('🚀 토큰 발급 시작...');
-                const response = await fetchLiveKitToken({ roomId, userId, username });
+                const response = await fetchLiveKitToken({ roomId, username });
                 // console.log('✅ 토큰 발급 성공!');
                 setToken(response.token);
             } catch (err) {

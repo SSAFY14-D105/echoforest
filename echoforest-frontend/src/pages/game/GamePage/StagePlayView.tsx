@@ -148,29 +148,54 @@ export default function StagePlayView({
     return (
         <div className={styles.gameContainer}>
             <PauseOverlay pausedBy={pausedBy} />
+            {/* [FIX] participantInfos 전달하여 원격 비디오 표시 */}
+            {/* 상단 영역: 카메라 2개 + 정보 패널 + 카메라 2개 */}
+            <div className={styles.topSection}>
+                <CameraArea
+                    startSlot={0}
+                    endSlot={2}
+                    participantInfos={participantInfos}
+                    isLiveKitConnected={liveKitService.isConnected}
+                />
+
+                {/* 정보 패널 */}
+                <div className={styles.infoPanel}>
+                    <div className={styles.roomInfo}>
+                        <span>Stage {stageNum}</span>
+                        <span style={{ margin: '0 8px', color: '#ccc' }}>|</span>
+                        <span>Room: <span className={styles.roomId}>{roomId}</span></span>
+                        <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
+                    </div>
+                    {/* 저주 스택 바 이동 */}
+                    <CurseStackBar
+                        stack={curseState.stack}
+                        cursedPlayer={curseState.cursedPlayer}
+                        isListening={isListening}
+                    />
+                </div>
+
+                <CameraArea
+                    startSlot={2}
+                    endSlot={4}
+                    participantInfos={participantInfos}
+                    isLiveKitConnected={liveKitService.isConnected}
+                />
+            </div>
+
             <div className={`pixel-box ${styles.canvasWrapper}`}>
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}
                     isSoloMode={isSoloMode}
                 />
-                <div className={styles.gameInfo}>
-                    🎮 Stage {stageNum} 진행 중 | Room: <span className={styles.roomId}>{roomId}</span>
-                    <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
-                </div>
                 <button
                     className={styles.testClearBtn}
                     onClick={handleTestEndingMission}
                 >
                     🏆 테스트: 엔딩 미션 시작
                 </button>
-                <CurseStackBar
-                    stack={curseState.stack}
-                    cursedPlayer={curseState.cursedPlayer}
-                    isListening={isListening}
-                />
             </div>
-            <CameraArea />
+            {/* CameraArea moved to top */}
             <FloatingButton
                 onPress={() => setBoosterMode(true)}
                 onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}
@@ -182,6 +207,7 @@ export default function StagePlayView({
                 <EndingMissionOverlay
                     participantInfos={participantInfos}
                     nickname={nickname}
+                    roomId={roomId}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
                 />

@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import type { Player } from '../store/useGameStore';
 import { useSttStore } from '../store/useSttStore';
+import { useToastStore } from '../store/useToastStore';
 import { gameWebSocket } from '../socket/GameWebSocket';
 import type { GameMessage, ServerPlayerState } from '../socket/GameWebSocket';
 
@@ -34,6 +35,8 @@ export function useGameWebSocket() {
         onCurseReleased,
     } = useSttStore();
 
+    const { showToast } = useToastStore();
+
     const parseStageNum = (stageId: string | null): number => {
         if (!stageId) return 1;
         const num = parseInt(stageId.replace(/^(MULTI_|SOLO_)/, ''), 10);
@@ -51,14 +54,66 @@ export function useGameWebSocket() {
                 case 'UPDATE':
                     if (msg.content) {
                         try {
-                            const serverPlayers: ServerPlayerState[] = JSON.parse(msg.content);
-                            // [DEBUG]
-                            if (Math.random() < 0.05) {
-                                // console.log(`[UDPATE] Received ${serverPlayers.length} players. Names: ${serverPlayers.map(p => p.id).join(', ')}`);
+                            // [PROTOCOL v2] Array Based Protocol
+                            // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
+                            const serverPlayers: any[] = JSON.parse(msg.content);
+                            const currentPlayers = useGameStore.getState().players;
+
+                            let shouldUpdate = false;
+
+                            // 1. Check for length mismatch
+                            if (serverPlayers.length !== currentPlayers.length) {
+                                shouldUpdate = true;
+                            } else {
+                                // 2. Create a map for current players for efficient lookup
+                                const currentPlayerMap = new Map<string, Player>();
+                                currentPlayers.forEach(p => currentPlayerMap.set(p.id, p));
+
+                                // 3. Check for changes in critical status
+                                for (const serverPlayer of serverPlayers) {
+                                    // serverPlayer[0]: id
+                                    const currentPlayer = currentPlayerMap.get(serverPlayer[0]);
+
+                                    if (!currentPlayer) {
+                                        shouldUpdate = true;
+                                        break;
+                                    }
+
+                                    // serverPlayer[6]: isDead, [8]: isDisconnected
+                                    const sIsDead = serverPlayer[6] ?? false;
+                                    const sIsDisconnected = serverPlayer[8] ?? false;
+
+                                    if (currentPlayer.isDead !== sIsDead ||
+                                        currentPlayer.isDisconnected !== sIsDisconnected) {
+                                        shouldUpdate = true;
+                                        break;
+                                    }
+                                }
                             }
-                            syncPlayersFromServer(serverPlayers);
+
+                            if (shouldUpdate) {
+                                // Convert Array back to Object for Store
+                                const convertedPlayers = serverPlayers.map(p => ({
+                                    id: p[0],
+                                    x: p[1],
+                                    y: p[2],
+                                    vx: p[3],
+                                    vy: p[4],
+                                    anim: p[5],
+                                    isDead: p[6],
+                                    isHidden: p[7],
+                                    isDisconnected: p[8],
+                                    colorIndex: p[9],
+                                    curses: p[10],
+                                    hp: p[11],
+                                    isAfk: p[12],
+                                    nickname: p[0], // nickname fallback to id
+                                    isHost: false // Host info usually separate or derived
+                                }));
+                                syncPlayersFromServer(convertedPlayers as any);
+                            }
                         } catch (e) {
-                            // 파싱 에러만 로그
+                            console.error("Error parsing UPDATE message content:", e);
                         }
                     }
                     break;
@@ -148,8 +203,14 @@ export function useGameWebSocket() {
                     alert('방장에 의해 강제 퇴장되었습니다.');
                     break;
 
+                case 'DUPLICATE_LOGIN':
+                    alert(msg.content || '다른 기기에서 로그인하여 접속이 종료됩니다.');
+                    leaveGame();
+                    useGameStore.getState().logout();
+                    break;
+
                 case 'GAME_PAUSED':
-                    setGamePaused(msg.content || 'Unknown Player');
+                    setGamePaused(msg.content || msg.username || 'Unknown Player');
                     break;
 
                 case 'GAME_RESUMED':
@@ -170,12 +231,14 @@ export function useGameWebSocket() {
                 case 'CURSE_TRIGGERED':
                     if (msg.cursedPlayerId) {
                         onCurseTriggered(msg.cursedPlayerId, msg.mapId ?? 1);
+                        showToast(`${msg.cursedPlayerId}님이 저주에 걸렸습니다!`, 'warning');
                     }
                     break;
 
                 case 'CURSE_RELEASED':
                     if (msg.releasedPlayerId) {
                         onCurseReleased(msg.releasedPlayerId, msg.word ?? '');
+                        showToast(`${msg.releasedPlayerId}님이 저주에서 해제되었습니다!`, 'success');
                     }
                     break;
             }
@@ -191,6 +254,17 @@ export function useGameWebSocket() {
                 console.error('WebSocket 재연결 실패:', err);
             });
         }
+
+        // [FIX] Heartbeat (Ping) Loop - Prevent Soft Disconnect in idle screens
+        const intervalId = setInterval(() => {
+            if (gameWebSocket.isConnected()) {
+                gameWebSocket.ping();
+            }
+        }, 30000); // 30초마다 핑 전송
+
+        return () => {
+            clearInterval(intervalId);
+        };
 
 
 

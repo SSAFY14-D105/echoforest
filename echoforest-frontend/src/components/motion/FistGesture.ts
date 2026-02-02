@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
 import { distance, isFingerExtended, Landmark } from '../../utils/gesture-helpers';
+=======
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
 
 export default class FistGesture extends BaseGesture {
     label: string;
@@ -16,6 +21,7 @@ export default class FistGesture extends BaseGesture {
     }
 
     check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
+<<<<<<< HEAD
         // 손가락 접힘 여부 (Tip-Wrist vs PIP-Wrist)
         const isIndexClosed = !isFingerExtended(landmarks, 8, 6);
         const isMiddleClosed = !isFingerExtended(landmarks, 12, 10);
@@ -28,6 +34,12 @@ export default class FistGesture extends BaseGesture {
         if (!isIndexClosed) {
             return { detected: false, score: 0 };
         }
+=======
+        const threshold = 0.8; // Default threshold
+
+        // 만약 Helper가 fingers 객체를 제공하지 않는다면 계산
+        // let fingers = (_metadata as any).fingers;
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
 
         const closedList = [isIndexClosed, isMiddleClosed, isRingClosed, isPinkyClosed];
         const closedCount = closedList.filter(Boolean).length;

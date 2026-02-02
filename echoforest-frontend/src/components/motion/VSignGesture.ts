@@ -34,8 +34,12 @@ export default class VSignGesture extends BaseGesture {
         return angle * (180 / Math.PI);
     }
 
+<<<<<<< HEAD
     check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const { palmSize } = metadata;
+=======
+    check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
+>>>>>>> de01de68483739874f9083b4953344580dda6da3
         const t = this.thresholds;
 
         // 1. 손가락 상태 확인 함수

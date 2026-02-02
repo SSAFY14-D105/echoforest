@@ -24,7 +24,7 @@
 .topRightButtons {
     position: absolute;
     top: 20px;
-    right: 20px;
+    right: 100px;
     z-index: 100;
     display: flex;
     gap: 12px;
@@ -130,6 +130,8 @@
     object-fit: contain;
     filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.5));
 }
+
+
 
 /* 에러 토스트 */
 .errorToast {

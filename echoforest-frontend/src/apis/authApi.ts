@@ -177,6 +177,8 @@ export async function updateNickname(userId: number, newNickname: string): Promi
 export async function logout(): Promise<void> {
     const res = await httpClient('/user/logout', {
         method: 'POST',
+        // @ts-ignore - skipInterceptor is custom
+        skipInterceptor: true
     });
 
     if (!res.ok) {

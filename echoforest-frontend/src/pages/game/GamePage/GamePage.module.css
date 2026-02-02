@@ -16,16 +16,28 @@
     position: relative;
     overflow: hidden;
     border-radius: 12px;
-    margin-bottom: 12px;
-    background: #2c3e50;
+    margin-bottom: 0;
+    /* 하단 카메라 제거로 인해 마진 0 */
+    background: #000;
+    /* [FIX] 블랙 배경으로 변경하여 레터박스 이질감 제거 */
     min-height: 0;
     /* flex 자식에서 중요 */
+
+    /* [FIX] 중앙 정렬 및 가득 채우기 */
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    /* 내부 캔버스 중앙 정렬용 */
+    justify-content: center;
+    align-items: center;
 }
 
 .gameCanvas {
     width: 100%;
     height: 100%;
     display: block;
+    object-fit: contain;
+    /* 비율 유지하며 꽉 채우기 (필요 시 cover) */
 }
 
 /* 게임 정보 오버레이 */
@@ -43,7 +55,8 @@
 
 .roomId {
     color: #e74c3c;
-    margin-right: 8px; /* 버튼과 간격 */
+    margin-right: 8px;
+    /* 버튼과 간격 */
 }
 
 .copyBtn {
@@ -219,4 +232,43 @@
     font-size: 14px;
     font-weight: 600;
     color: #555;
+}
+
+/* 상단 섹션: 카메라 + 정보 패널 (WaitingRoom 스타일 복사) */
+.topSection {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-bottom: 12px;
+    height: 140px;
+    /* Force height to match camera */
+}
+
+/* 정보 패널 */
+.infoPanel {
+    flex-shrink: 0;
+    width: 250px;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.roomInfo {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
