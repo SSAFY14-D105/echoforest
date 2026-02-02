@@ -73,7 +73,7 @@
     border: none;
     color: #ffeeb0;
     font-family: var(--font-title);
-    font-size: 32px;
+    font-size: 42px;
     font-weight: bold;
     cursor: pointer;
     padding: 0;
@@ -91,8 +91,6 @@
     text-shadow: none;
     /* 기존 shadow 유지하려면 none 제거하거나 조정 필요. 원본은 hover시 shadow 변경 없음 또는 상속 */
 }
-
-/* My Info styles removed - moved to MyInfoModal.module.css */
 
 @keyframes fadeIn {
     from {
