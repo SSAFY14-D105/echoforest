@@ -178,6 +178,29 @@ export default function EndingMissionOverlay({
         };
     }, []);
 
+    // [FIX] 로컬 비디오 연결 폴링 (타이밍 이슈 해결)
+    useEffect(() => {
+        // 마운트 후 짧게 폴링하여 로컬 비디오가 확실히 연결되도록 함
+        let attempts = 0;
+        const maxAttempts = 10;
+        const interval = setInterval(() => {
+            attempts++;
+            const localEl = localVideoRefs.current.get(nickname);
+            if (localEl) {
+                const success = liveKitService.attachLocalVideo(localEl);
+                if (success) {
+                    console.log('[EndingMissionOverlay] Local video attached via polling');
+                    clearInterval(interval);
+                }
+            }
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+            }
+        }, 300);
+
+        return () => clearInterval(interval);
+    }, [nickname]);
+
     // 비디오 엘리먼트 Ref 콜백
     const handleVideoRef = useCallback((el: HTMLVideoElement | null, identity: string, isLocal: boolean) => {
         if (el) {
@@ -215,10 +238,27 @@ export default function EndingMissionOverlay({
                 try {
                     info.videoTrack.attach(videoEl);
                 } catch (e) {
-                    // ignore
+                    // ignore - already attached
                 }
             }
         });
+
+        // [FIX] 타이밍 이슈 해결: 재시도 로직 추가
+        const retryTimeout = setTimeout(() => {
+            participantInfos.forEach(info => {
+                if (info.identity === nickname) return;
+                const videoEl = videoRefs.current.get(info.identity);
+                if (videoEl && info.videoTrack) {
+                    try {
+                        info.videoTrack.attach(videoEl);
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
+            });
+        }, 200);
+
+        return () => clearTimeout(retryTimeout);
     }, [participantInfos, nickname]);
 
     // [FIX] handleMotionCleared를 useCallback으로 감싸기
