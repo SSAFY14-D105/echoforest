@@ -1,4 +1,21 @@
 .container {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    border-radius: 8px;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 오버레이 모드 (필요 시 사용) */
+.overlay {
     position: absolute;
     top: 8px;
     left: 50%;
@@ -6,11 +23,6 @@
     z-index: 100;
     min-width: 280px;
     max-width: 400px;
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    border: 1px solid rgba(102, 126, 234, 0.3);
 }
 
 .header {

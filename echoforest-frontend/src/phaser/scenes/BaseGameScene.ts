@@ -94,6 +94,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private lastBlockUpdateTime: number = 0;
     private readonly SYNC_INTERVAL: number = 50; // 20 TPS
 
+    // [PERFORMANCE] 무거운 로직(재귀 계산 등) 쓰로틀링
+    private heavyLogicTimer: number = 0;
+    private readonly HEAVY_LOGIC_INTERVAL: number = 50; // 3 frames (60fps)
+    private cachedElevatorWeights: Map<string, number> = new Map();
+    // [PERFORMANCE] GC 최적화를 위한 재사용 Set
+    private processedBlocks: Set<string> = new Set();
+
     // 초기 배치 여부 (씬 시작/재시작 시 스폰 지점 강제 적용용)
     private isInitialPlacement: boolean = true;
     // 솔로 모드 여부 (로컬 물리 사용)
@@ -1277,53 +1284,55 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 여기서는 안전하게 화면 밖(100px)으로 나가면 복구
         const mapBottomY = this.gameHeight > 0 ? this.gameHeight : 720;
 
-        this.players.forEach(player => {
-            const pos = player.getPosition();
+        // 참고: mapBottomY는 루프 밖에서 미리 계산됨
 
-            // 바닥(화면 끝)에 닿는 즉시 낙사 처리 (여유 공간 0)
+        // [PERFORMANCE] Loop Combination: Bounds Check + Update
+        // 두 개의 루프를 하나로 합쳐 순회 비용 절감
+        this.movingBumpers.forEach(bumper => bumper.update(time));
+
+        this.players.forEach((player, label) => {
+            // 1. Bounds Check (낙사)
+            const pos = player.getPosition();
             if (pos.y > mapBottomY) {
                 if (player.isLocalPlayer && !this.isDead) {
                     console.warn(`[Physics] Player ${player.nickname} fell out of bounds (${pos.y.toFixed(0)}), triggering death.`);
                     this.triggerDeath('fall');
                 }
             }
-        });
 
-        // [DEBUG] 로컬 플레이어 상태 주기적 로깅 (1초마다)
-        /*
-        if (this.game.loop.frame % 60 === 0 && this.myPlayerId) {
-            const p = this.players.get(this.myPlayerId);
-            if (p) {
-                const s = p.getSprite();
-                console.log(`[DEBUG] ${this.getSceneKey()} Frame ${this.game.loop.frame}: Pos(${p.getPosition().x.toFixed(0)}, ${p.getPosition().y.toFixed(0)}), Vis:${s.visible}, Alpha:${s.alpha}, Depth:${s.depth}, CamX:${this.cameras.main.scrollX.toFixed(0)}`);
-            }
-        }
-        */
-
-
-        // 이동형 범퍼 업데이트
-        this.movingBumpers.forEach(bumper => bumper.update(time));
-
-        this.players.forEach((player, label) => {
+            // 2. Player Update (Interpolation & Input)
             // 코요테 타임(groundedFrames)이 남아있으면 땅에 닿은 것으로 간주
             const isGrounded = (this.groundedFrames.get(label) || 0) > 0;
-            player.update(isGrounded);
+            // [PERFORMANCE] Delta time 전달하여 프레임 독립적 보간 수행
+            player.update(isGrounded, delta);
         });
 
-        // 엘리베이터 무게 계산 및 업데이트
+        // [PERFORMANCE] Elevators Weight Calculation Throttling
+        this.heavyLogicTimer += delta;
+        if (this.heavyLogicTimer > this.HEAVY_LOGIC_INTERVAL) {
+            this.elevators.forEach(elevator => {
+                const label = elevator.getBody().label;
+                const weight = this.calculateTotalWeight(label);
+                this.cachedElevatorWeights.set(label, weight);
+            });
+            this.heavyLogicTimer = 0;
+        }
+
+        // 엘리베이터 무게 적용 (매 프레임 호출하되, 계산된 캐시값 사용)
         this.elevators.forEach(elevator => {
-            const weight = this.calculateTotalWeight(elevator.getBody().label);
+            const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
             elevator.update(weight);
         });
 
         // 블록-블록 접촉 수동 감지 (Static 바디끼리는 물리 충돌 안 함)
+        // [NOTE] 블록 관련 로직은 물리 안정성을 위해 매 프레임 수행
         this.detectBlockContacts();
 
         // 블록 체인 평가 및 이동
-        const processedBlocks = new Set<string>();
+        this.processedBlocks.clear();
         this.movableBlocks.forEach(block => {
             const label = block.getBody().label;
-            if (processedBlocks.has(label)) return;
+            if (this.processedBlocks.has(label)) return;
 
             const pushLeft = this.pushMapLeft.get(label)?.size || 0;
             const pushRight = this.pushMapRight.get(label)?.size || 0;
@@ -1331,9 +1340,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // 밀기 방향 결정 및 체인 처리 (체인 내 모든 블록 업데이트는 tryMoveBlockChain에서 처리)
             const netPush = pushLeft - pushRight;
             if (netPush > 0) {
-                this.tryMoveBlockChain(label, 'right', pushLeft, processedBlocks);
+                this.tryMoveBlockChain(label, 'right', pushLeft, this.processedBlocks);
             } else if (netPush < 0) {
-                this.tryMoveBlockChain(label, 'left', pushRight, processedBlocks);
+                this.tryMoveBlockChain(label, 'left', pushRight, this.processedBlocks);
             } else {
                 // 밀기 인원이 없으면 기본 표시
                 block.update(0, 0);
@@ -1593,6 +1602,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.on('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.on('BLOCK_UPDATE', this.onBlockUpdate);
         gameWebSocket.on('GAME_RESET', this.onGameReset);
+        // [PERFORMANCE] Phaser 직접 수신으로 스토어 거치지 않고 위치 동기화
+        gameWebSocket.on('UPDATE', this.onPlayerUpdate);
     }
 
     private cleanupSocketListeners(): void {
@@ -1600,7 +1611,65 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.off('GIMMICK_UPDATE', this.onGimmickUpdate);
         gameWebSocket.off('BLOCK_UPDATE', this.onBlockUpdate);
         gameWebSocket.off('GAME_RESET', this.onGameReset);
+        gameWebSocket.off('UPDATE', this.onPlayerUpdate);
     }
+
+    // [PERFORMANCE] 고빈도 위치/상태 업데이트 직접 처리
+    private onPlayerUpdate = (msg: GameMessage): void => {
+        if (!msg.content) return;
+
+        try {
+            // [PROTOCOL v2] Array Based Protocol
+            // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
+            const serverPlayers: any[] = JSON.parse(msg.content);
+
+            serverPlayers.forEach((pData) => {
+                // Array Index Mapping
+                const id = pData[0];
+                const player = this.players.get(id);
+
+                if (player) {
+                    // 로컬 플레이어는 서버 위치 무시 (Client Authoritative)
+                    if (player.isLocalPlayer) {
+                        return;
+                    }
+
+                    // 원격 플레이어 동기화
+                    const x = pData[1];
+                    const y = pData[2];
+                    const vx = pData[3] ?? 0;
+                    const vy = pData[4] ?? 0;
+                    const anim = pData[5];
+                    const isDead = pData[6] ?? false;
+                    const isHidden = pData[7] ?? false;
+                    // const isDisconnected = pData[8] ?? false; // 필요 시 사용
+                    const colorIndex = pData[9];
+                    const curses = pData[10] ?? [];
+
+                    player.setRemoteState(
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        anim,
+                        isDead,
+                        curses,
+                        isHidden
+                    );
+
+                    player.applyRemoteDirection();
+                    player.applyRemoteAnimation();
+
+                    // 만약 colorIndex가 바뀌었거나 초기화되지 않았다면 동기화
+                    if (colorIndex !== undefined && player.colorIndex !== colorIndex) {
+                        player.setColor(colorIndex);
+                    }
+                }
+            });
+        } catch (e) {
+            // JSON Parse Error Ignore
+        }
+    };
 
     private onGimmickUpdate = (msg: GameMessage) => {
         if (!msg.content) return;
