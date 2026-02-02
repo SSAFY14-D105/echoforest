@@ -38,7 +38,12 @@ interface GameState {
     pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
 
     // 엔딩 미션 상태
+    // 엔딩 미션 상태
     isEndingMission: boolean; // 엔딩 미션 중인지 여부
+
+    // [NEW] 권한 확인 여부 (로그인 후 필수)
+    hasMediaPermission: boolean;
+    setHasMediaPermission: (granted: boolean) => void;
 
     // 액션(함수)들
     setNickname: (name: string) => void;
@@ -81,7 +86,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     onMoveCallback: null,
     pausedBy: null,
     isEndingMission: false,
+    hasMediaPermission: false,
 
+    setHasMediaPermission: (granted: boolean) => set({ hasMediaPermission: granted }),
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
     setEndingMission: (active) => set({ isEndingMission: active }),
 
@@ -279,7 +286,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             isGameStarted: false,
             isSoloMode: false,
             currentStage: null,
-            pausedBy: null
+            pausedBy: null,
+            hasMediaPermission: false // [FIX] 로그아웃 시 권한 상태 초기화
         });
     }
 
