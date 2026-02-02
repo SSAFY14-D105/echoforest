@@ -81,6 +81,9 @@ export function useMultiMotionDetector({
     // 초기 상태 설정
     useEffect(() => {
         const initialStates: ParticipantPoseState[] = [];
+        console.log('[MultiMotionDetector] Initializing participant states...', {
+            assignmentsCount: poseAssignments.size
+        });
         poseAssignments.forEach((pose, identity) => {
             initialStates.push({
                 identity,
@@ -94,9 +97,13 @@ export function useMultiMotionDetector({
             const GestureClass = GESTURE_CLASS_MAP[pose.gestureClass];
             if (GestureClass) {
                 gestureInstancesRef.current.set(identity, new GestureClass());
+                console.log(`[MultiMotionDetector] Created gesture instance for ${identity}: ${pose.gestureClass} (${pose.emoji})`);
+            } else {
+                console.error(`[MultiMotionDetector] Gesture class not found: ${pose.gestureClass}`);
             }
         });
         setParticipantStates(initialStates);
+        console.log('[MultiMotionDetector] Initialized states:', initialStates);
     }, [poseAssignments]);
 
     // MediaPipe 모델 로딩
@@ -162,6 +169,10 @@ export function useMultiMotionDetector({
 
         const videoMap = videoRefs.current;
         if (!videoMap || videoMap.size === 0) {
+            // [DEBUG] 비디오가 없는 경우 로그 (처음 한 번만)
+            if (!isLooping.current) {
+                console.warn('[MultiMotionDetector] No videos in videoMap');
+            }
             requestAnimationFrame(detect);
             return;
         }
@@ -177,7 +188,9 @@ export function useMultiMotionDetector({
         currentVideoIndex.current = (currentVideoIndex.current + 1) % identities.length;
 
         const video = videoMap.get(identity);
-        if (!video || video.readyState !== 4) {
+        // [FIX] 라이브 스트림은 readyState가 2 이상이면 감지 가능
+        // readyState: 0=NOTHING, 1=METADATA, 2=CURRENT_DATA, 3=FUTURE_DATA, 4=ENOUGH_DATA
+        if (!video || video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
             requestAnimationFrame(detect);
             return;
         }
@@ -190,6 +203,19 @@ export function useMultiMotionDetector({
 
             // Face Detection
             const faceResult = faceLandmarkerRef.current.detectForVideo(video, nowInMs);
+            const faceLandmarks = faceResult.faceLandmarks?.[0];
+
+            // [FIX] 얼굴 크기 동적 계산 (왼쪽 귀 234 - 오른쪽 귀 454 거리)
+            let faceSize = 0.1;
+            if (faceLandmarks && faceLandmarks.length > 454) {
+                const p1 = faceLandmarks[234];
+                const p2 = faceLandmarks[454];
+                // 거리 계산 (Euclidean distance 2D)
+                faceSize = Math.sqrt(
+                    Math.pow(p1.x - p2.x, 2) +
+                    Math.pow(p1.y - p2.y, 2)
+                );
+            }
 
             // Metadata
             const aspectRatio = video.videoWidth / video.videoHeight || 1.0;
@@ -197,14 +223,19 @@ export function useMultiMotionDetector({
                 palmSize: 0.1,
                 aspectRatio,
                 allHands: handResult.landmarks,
-                faceLandmarks: faceResult.faceLandmarks?.[0],
-                faceSize: 0.1
+                faceLandmarks: faceLandmarks,
+                faceSize: faceSize // 동적 계산된 크기 적용
             };
 
             const gestureInstance = gestureInstancesRef.current.get(identity);
             // [FIX] 손 OR 얼굴이 감지되면 제스처 체크 (KissGesture 등 얼굴 기반 제스처 지원)
             const hasHands = handResult.landmarks.length > 0;
             const hasFace = faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0;
+
+            // [DEBUG] 감지 루프 실행 확인 (주기적으로 로그 - 10초마다 한 번씩)
+            if (Date.now() % 10000 < 100) {
+                console.log(`[MultiMotionDetector] Detecting for ${identity}: hands=${hasHands}, face=${hasFace}, readyState=${video.readyState}`);
+            }
 
             if (gestureInstance && (hasHands || hasFace)) {
                 // 손 랜드마크가 없으면 빈 배열 전달 (제스처 클래스에서 처리)
@@ -213,7 +244,10 @@ export function useMultiMotionDetector({
 
                 // [DEBUG] 인식 상태 로그 (개발 중 확인용)
                 if (result.detected) {
-                    console.log(`[MultiMotionDetector] ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
+                    console.log(`[MultiMotionDetector] ✅ ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
+                } else if (hasHands || hasFace) {
+                    // [DEBUG] 손/얼굴은 감지됐지만 제스처가 인식되지 않은 경우
+                    console.log(`[MultiMotionDetector] ❌ ${identity}: Not matched (score: ${result.score.toFixed(2)})`);
                 }
 
                 setParticipantStates(prev => {
@@ -245,10 +279,14 @@ export function useMultiMotionDetector({
     // 감지 루프 시작/중지
     useEffect(() => {
         if (isLoaded && enabled) {
+            console.log('[MultiMotionDetector] Starting detection loop');
             isLooping.current = true;
             detect();
+        } else {
+            console.log('[MultiMotionDetector] Detection loop not started:', { isLoaded, enabled });
         }
         return () => {
+            console.log('[MultiMotionDetector] Stopping detection loop');
             isLooping.current = false;
         };
     }, [isLoaded, enabled, detect]);
