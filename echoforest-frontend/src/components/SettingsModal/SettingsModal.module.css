@@ -64,128 +64,6 @@
     min-width: 400px;
 }
 
-/* 섹션 */
-.section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* 섹션 헤더 (나뭇잎 + 텍스트) */
-.sectionHeader {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    color: #ffeeb0;
-    font-family: var(--font-title);
-    font-size: 32px;
-    font-weight: bold;
-    text-shadow:
-        3px 3px 0px #000,
-        -1px -1px 0px #000,
-        1px -1px 0px #000,
-        -1px 1px 0px #000;
-}
-
-/* 나뭇잎 아이콘 */
-.leafIcon {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    filter: drop-shadow(3px 3px 0px rgba(0, 0, 0, 0.5));
-}
-
-/* 닉네임 컬럼 레이아웃 */
-.nicknameColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-/* 닉네임 입력 행 */
-.nicknameRow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: 60px;
-}
-
-/* SignupForm 스타일 적용: 둥근 모서리 */
-.nicknameInput {
-    flex: 1;
-    padding: 12px 16px;
-    font-size: 16px;
-    font-family: var(--font-main);
-    border: none;
-    background: #fff;
-    color: #333;
-    border-radius: 12px;
-    /* SignupForm style */
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
-}
-
-.nicknameInput:focus {
-    outline: 3px solid #7ab;
-    /* SignupForm focus style */
-}
-
-/* 확인 버튼 - SignupForm 스타일 적용 */
-.confirmButton {
-    padding: 12px 24px;
-    border: none;
-    background: #5a7a7a;
-    /* SignupForm Button Color */
-    color: #ffffff;
-    /* Changed to white */
-    font-family: var(--font-title);
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-radius: 16px;
-    /* SignupForm style */
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
-}
-
-.confirmButton:hover:not(:disabled) {
-    background: #6a8a8a;
-    color: #fff;
-    transform: translateY(-2px);
-}
-
-.confirmButton:active:not(:disabled) {
-    background: #4a6a6a;
-}
-
-.confirmButton:disabled {
-    background-color: rgba(100, 100, 100, 0.6);
-    cursor: not-allowed;
-    color: #888;
-}
-
-/* 유효성 검사 메시지 - SignupForm 색상 일치 */
-.checkStatus {
-    font-size: 14px;
-    font-family: var(--font-main);
-    margin: 0 0 0 60px;
-    font-weight: bold;
-    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
-}
-
-.checking {
-    color: #ffd700;
-    /* SignupForm Yellow */
-}
-
-.available {
-    color: #7cba4c;
-    /* SignupForm Green */
-}
-
-.duplicate {
-    color: #ff6b6b;
-    /* SignupForm Red */
-}
-
 /* 메뉴 버튼 (추억 돌아보기 & 로그아웃) */
 .menuButton {
     display: flex;
@@ -210,4 +88,20 @@
 .menuButton:hover {
     color: #ffffff;
     transform: scale(1.03);
+    text-shadow: none;
+    /* 기존 shadow 유지하려면 none 제거하거나 조정 필요. 원본은 hover시 shadow 변경 없음 또는 상속 */
+}
+
+/* My Info styles removed - moved to MyInfoModal.module.css */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
