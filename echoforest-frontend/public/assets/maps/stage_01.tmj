@@ -267,24 +267,6 @@
                  "y":158
                 }, 
                 {
-                 "gid":145,
-                 "height":18,
-                 "id":26,
-                 "name":"",
-                 "properties":[
-                        {
-                         "name":"power",
-                         "type":"float",
-                         "value":20
-                        }],
-                 "rotation":-90,
-                 "type":"Bumper",
-                 "visible":true,
-                 "width":18,
-                 "x":256,
-                 "y":276
-                }, 
-                {
                  "gid":125,
                  "height":18,
                  "id":27,
@@ -571,7 +553,6 @@
                  "objectgroup":
                     {
                      "draworder":"index",
-                     "id":2,
                      "name":"",
                      "objects":[
                             {
@@ -669,7 +650,6 @@
                  "objectgroup":
                     {
                      "draworder":"index",
-                     "id":2,
                      "name":"",
                      "objects":[
                             {
@@ -731,7 +711,6 @@
                  "objectgroup":
                     {
                      "draworder":"index",
-                     "id":2,
                      "name":"",
                      "objects":[
                             {
@@ -793,7 +772,6 @@
                  "objectgroup":
                     {
                      "draworder":"index",
-                     "id":2,
                      "name":"",
                      "objects":[
                             {
@@ -819,7 +797,6 @@
                  "objectgroup":
                     {
                      "draworder":"index",
-                     "id":2,
                      "name":"",
                      "objects":[
                             {

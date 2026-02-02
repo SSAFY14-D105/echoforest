@@ -9,6 +9,7 @@ import Solo2Scene from './scenes/Solo2Scene';
 import Solo3Scene from './scenes/Solo3Scene';
 import Solo4Scene from './scenes/Solo4Scene';
 import Solo5Scene from './scenes/Solo5Scene';
+import Stage4Scene from './scenes/Stage4Scene';
 
 interface PhaserGameProps {
     startScene?: string;  // 시작할 씬 지정 (기본: LobbyScene)
@@ -71,7 +72,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                     matter: {
                         autoUpdate: false, // [CRITICAL] 수동 업데이트로 전환하여 탭 복귀 시 물리 폭주(Physics Explosion) 방지
                         gravity: { x: 0, y: 1 },
-                        debug: true
+                        debug: false
                     }
                 },
                 scene: [], // 씬은 수동으로 추가
@@ -85,6 +86,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
             gameRef.current.scene.add('Stage1Scene', Stage1Scene, false);
             gameRef.current.scene.add('Stage2Scene', Stage2Scene, false);
             gameRef.current.scene.add('Stage3Scene', Stage3Scene, false);
+            gameRef.current.scene.add('Stage4Scene', Stage4Scene, false);
             gameRef.current.scene.add('Solo2Scene', Solo2Scene, false);
             gameRef.current.scene.add('Solo3Scene', Solo3Scene, false);
             gameRef.current.scene.add('Solo4Scene', Solo4Scene, false);
