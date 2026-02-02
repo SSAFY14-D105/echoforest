@@ -2,6 +2,8 @@ import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
 import { distance, isFingerExtended, Landmark } from '../../utils/gesture-helpers';
 
 export default class RightPokeGesture extends BaseGesture {
+    label: string;
+    emoji: string;
     thresholds: any;
     cheekPoints: number[];
 
@@ -19,7 +21,7 @@ export default class RightPokeGesture extends BaseGesture {
         this.cheekPoints = [50, 205, 61, 187];
     }
 
-    check(multiHandLandmarks: any[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: any[], metadata: GestureMetadata): GestureResult {
         const faceLandmarks = metadata.faceLandmarks;
         const allHands = metadata.allHands;
 
@@ -32,12 +34,12 @@ export default class RightPokeGesture extends BaseGesture {
         let detected = false;
 
         for (const hand of allHands) {
-            if (!isFingerExtended(hand, 8, 6)) continue;
+            if (!isFingerExtended(hand as Landmark[], 8, 6)) continue;
 
-            const indexTip = hand[8];
+            const indexTip = hand[8] as Landmark;
             let minDist = Infinity;
             for (const idx of this.cheekPoints) {
-                const cheekPoint = faceLandmarks[idx];
+                const cheekPoint = faceLandmarks[idx] as Landmark;
                 const d = distance(indexTip, cheekPoint);
                 const normDist = d / faceSize;
                 if (normDist < minDist) minDist = normDist;

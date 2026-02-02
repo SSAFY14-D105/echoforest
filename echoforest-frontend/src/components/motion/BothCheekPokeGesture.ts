@@ -21,7 +21,7 @@ export default class BothCheekPokeGesture extends BaseGesture {
         };
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): any {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const faceLandmarks = metadata.faceLandmarks;
         const allHands = metadata.allHands;
 
@@ -42,22 +42,23 @@ export default class BothCheekPokeGesture extends BaseGesture {
             let faceSize = metadata.faceSize || 0.1;
 
             for (const hand of allHands) {
+                const handLandmarks = hand as Landmark[];
                 // 검지 펴짐 체크
-                if (!isFingerExtended(hand, 8, 6)) continue;
+                if (!isFingerExtended(handLandmarks, 8, 6)) continue;
 
                 // 2. 검지 각도 체크 (140도 미만 스킵)
-                const indexAngle = calculateAngle(hand[5], hand[6], hand[8]);
+                const indexAngle = calculateAngle(handLandmarks[5], handLandmarks[6], handLandmarks[8]);
                 if (indexAngle < 140) continue;
 
                 // [중요] 엄지 위치 체크 (볼하트 오인식 방지)
                 // 만약 엄지가 얼굴 턱선/볼 하단에 가까이 붙어있다면 -> 이건 하트 동작이지 볼콕이 아님!
                 // 볼콕은 보통 주먹을 쥐거나 엄지가 떨어져 있음.
-                const thumbTip = hand[4];
+                const thumbTip = handLandmarks[4];
                 const jawPoints = [365, 379, 400, 352, 136, 150, 176, 123]; // 좌우 통합 체크
                 let minThumbDist = Infinity;
 
                 for (const jIdx of jawPoints) {
-                    const jp = faceLandmarks[jIdx];
+                    const jp = faceLandmarks[jIdx] as Landmark;
                     if (jp) {
                         const d = distance(thumbTip, jp);
                         if (d < minThumbDist) minThumbDist = d;
@@ -70,12 +71,12 @@ export default class BothCheekPokeGesture extends BaseGesture {
                     continue;
                 }
 
-                const indexTip = hand[8];
+                const indexTip = handLandmarks[8];
 
                 // 1. 왼쪽 볼(Left Target)과의 거리 체크
                 let minL = Infinity;
                 for (const pid of this.leftTargetPoints) {
-                    const d = distance(indexTip, faceLandmarks[pid]);
+                    const d = distance(indexTip, faceLandmarks[pid] as Landmark);
                     if (d < minL) minL = d;
                 }
                 const normLeft = minL / faceSize;
@@ -90,7 +91,7 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 // 2. 오른쪽 볼(Right Target)과의 거리 체크
                 let minR = Infinity;
                 for (const pid of this.rightTargetPoints) {
-                    const d = distance(indexTip, faceLandmarks[pid]);
+                    const d = distance(indexTip, faceLandmarks[pid] as Landmark);
                     if (d < minR) minR = d;
                 }
                 const normRight = minR / faceSize;

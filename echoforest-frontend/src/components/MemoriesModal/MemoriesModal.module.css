@@ -118,7 +118,7 @@
     row-gap: 36px;
     column-gap: 24px;
     /* 스크롤바 제거 후 좌우 대칭 패딩 적용 */
-    padding: 10px 40px;
+    padding: 10px 60px;
     overflow-y: hidden;
     /* 스크롤바 숨김 */
 }
