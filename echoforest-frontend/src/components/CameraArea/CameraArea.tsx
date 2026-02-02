@@ -165,7 +165,11 @@ export default function CameraArea({
                             key={slotIndex}
                             className={`${styles.cameraBox} ${styles.waiting}`}
                         >
-                            {ANIMAL_ICONS[slotIndex]} (대기중...)
+                            <img
+                                src="/assets/ui/waiting_people.png"
+                                alt="Waiting"
+                                className={styles.waitingPeopleImage}
+                            />
                         </div>
                     );
                 }
