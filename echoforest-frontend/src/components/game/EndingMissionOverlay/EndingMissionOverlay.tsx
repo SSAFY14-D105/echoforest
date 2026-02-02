@@ -72,8 +72,6 @@ export default function EndingMissionOverlay({
                 ...(participantInfos || []).filter(p => p.identity !== nickname).map(p => ({ ...p, isLocal: false, isDummy: false }))
             ];
 
-            console.log('[EndingMissionOverlay] Real participants:', real.length, real.map(p => p.identity));
-
             // 4명 미만일 경우 더미 추가
             if (real.length < 4) {
                 const dummies = Array(4 - real.length).fill(null).map((_, i) => ({
@@ -82,7 +80,6 @@ export default function EndingMissionOverlay({
                     isDummy: true
                 }));
                 const result = [...real, ...dummies];
-                console.log('[EndingMissionOverlay] With dummies:', result.length, result.map(p => p.identity));
                 return result;
             }
             return real.slice(0, 4);
@@ -259,13 +256,11 @@ export default function EndingMissionOverlay({
         if (captureComplete) return;
 
         if (allCleared) {
-            console.log('[EndingMissionOverlay] All poses cleared! Capturing now...');
             handleCapture(); // 캡처 먼저!
             handleMotionCleared(); // 모션 클리어 처리
 
             // 카운트다운 없이 2초 후 종료
             setTimeout(() => {
-                console.log('[EndingMissionOverlay] Triggering onClose immediately after capture...');
                 onClose?.();
             }, 2000);
         }

@@ -266,9 +266,6 @@ class GameWebSocket {
     // 메시지 전송
     send(message: GameMessage) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            if (message.type !== 'MOVE' && message.type !== 'PING') {
-                console.log('📤 Sending WebSocket Message:', JSON.stringify(message));
-            }
             this.ws.send(JSON.stringify(message));
         } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
             // [FIX] 연결 중일 때 중요 메시지는 큐에 저장

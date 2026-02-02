@@ -54,11 +54,6 @@ export function useGameWebSocket() {
         let lastTransitionTime = 0;
 
         gameWebSocket.onMessage((msg: GameMessage) => {
-            // [DEBUG] 수신 메시지 로깅 (UPDATE 메시지 제외)
-            if (msg.type !== 'UPDATE') {
-                console.log(`[WebSocket] 📩 Received: ${msg.type}`, msg.content);
-            }
-
             switch (msg.type) {
                 case 'UPDATE':
                     if (msg.content) {
@@ -190,15 +185,12 @@ export function useGameWebSocket() {
 
                         // [FIX] 중복 방지: 같은 스테이지이거나 1초 내 중복 메시지면 무시
                         if (msg.content === currentStage) {
-                            console.log(`[DEBUG] 🚫 Ignoring duplicate STAGE_TRANSITION: ${msg.content} (same as current)`);
                             break;
                         }
                         if (msg.content === lastProcessedStage && now - lastTransitionTime < 2000) {
-                            console.log(`[DEBUG] 🚫 Ignoring rapid STAGE_TRANSITION: ${msg.content} (debounced)`);
                             break;
                         }
 
-                        console.log(`[DEBUG] 🚀 STAGE_TRANSITION accepted: ${msg.content}`);
                         lastProcessedStage = msg.content;
                         lastTransitionTime = now;
                         selectStage(msg.content);
