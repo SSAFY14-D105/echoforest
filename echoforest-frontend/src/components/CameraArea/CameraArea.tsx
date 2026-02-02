@@ -117,14 +117,35 @@ export default function CameraArea({
 
             if (info.videoTrack) {
                 if (videoEl) {
-                    // [FIX] 트랙 attach
-                    info.videoTrack.attach(videoEl);
+                    // [FIX] 트랙 attach - 이미 attach된 경우를 대비해 try-catch
+                    try {
+                        info.videoTrack.attach(videoEl);
+                    } catch (e) {
+                        console.warn(`[CameraArea] Failed to attach video for ${info.identity}:`, e);
+                    }
                 } else {
-                    // [FIX] 비디오 엘리먼트가 아직 마운트되지 않은 경우 잠시 후 재시도
                     console.log(`[CameraArea] Video element not ready for ${info.identity}, will retry on ref mount`);
                 }
             }
         });
+
+        // [FIX] 타이밍 이슈 해결: 트랙은 있는데 ref가 아직 없는 경우를 위한 재시도
+        // 짧은 딜레이 후 다시 한 번 시도
+        const retryTimeout = setTimeout(() => {
+            displayParticipantInfos.forEach(info => {
+                if (info.identity === nickname) return;
+                const videoEl = remoteVideoRefs.current[info.identity];
+                if (info.videoTrack && videoEl) {
+                    try {
+                        info.videoTrack.attach(videoEl);
+                    } catch (e) {
+                        // Ignore - already attached or other issue
+                    }
+                }
+            });
+        }, 200);
+
+        return () => clearTimeout(retryTimeout);
     }, [displayParticipantInfos, nickname]);
 
     const handleToggleMic = async () => {
