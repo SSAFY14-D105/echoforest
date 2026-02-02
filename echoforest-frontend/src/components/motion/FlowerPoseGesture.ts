@@ -37,9 +37,9 @@ export default class FlowerPoseGesture extends BaseGesture {
         for (const hand of allHands) {
             // 1. 손목(0)이나 손바닥 중심이 턱 근처에 있는지 체크
             // 꽃받침은 보통 손목이나 손바닥 아랫부분을 턱에 댐
-            const wrist = hand[0];
-            const thumbBase = hand[1];
-            const pinkyBase = hand[17];
+            const wrist = hand[0] as Landmark;
+            const thumbBase = hand[1] as Landmark;
+            const pinkyBase = hand[17] as Landmark;
 
             // 손의 "받침" 부분 (손목~손바닥 하단)
             const basePoints = [wrist, thumbBase, pinkyBase];
@@ -48,7 +48,7 @@ export default class FlowerPoseGesture extends BaseGesture {
 
             // 얼굴의 턱 포인트들과 비교
             for (const jawIdx of this.jawPoints) {
-                const jawPt = faceLandmarks[jawIdx];
+                const jawPt = faceLandmarks[jawIdx] as Landmark;
                 if (!jawPt) continue;
 
                 for (const basePt of basePoints) {
@@ -62,7 +62,7 @@ export default class FlowerPoseGesture extends BaseGesture {
             if (minToJaw < this.thresholds.distance) {
                 // 3. 모양 체크 (손이 펴져 있어야 함, 주먹이면 안됨)
                 // 적어도 3개 이상의 손가락이 펴져 있어야 '꽃' 모양
-                const extendedCount = [8, 12, 16, 20].filter(idx => isFingerExtended(hand, idx, idx - 2)).length;
+                const extendedCount = [8, 12, 16, 20].filter(idx => isFingerExtended(hand as Landmark[], idx, idx - 2)).length;
 
                 if (extendedCount >= 3) {
                     detectedHands++;
