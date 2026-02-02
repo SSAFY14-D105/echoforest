@@ -1,0 +1,138 @@
+/* 폼 컨테이너 */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 400px;
+}
+
+/* 인풋 그룹 */
+.inputGroup {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transform: translateX(-30px);
+}
+
+/* 라벨 - 흰색, 갈무리 체 */
+.label {
+    font-family: var(--font-main);
+    font-size: 20px;
+    color: #ffffff;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    min-width: 160px;
+    /* "비밀번호 확인" 등 긴 텍스트를 위해 너비 확보 */
+    text-align: right;
+}
+
+/* 인풋 필드 - 둥근 모서리 */
+.input {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: #fff;
+    font-size: 16px;
+    font-family: var(--font-main);
+    color: #333;
+    min-width: 240px;
+    border-radius: 12px;
+    /* 둥근 모서리 */
+}
+
+.input:focus {
+    outline: 3px solid #7ab;
+}
+
+.input:disabled {
+    background: rgba(200, 200, 200, 0.8);
+    cursor: not-allowed;
+}
+
+/* 중복 체크 상태 표시 */
+.checkStatus {
+    font-size: 13px;
+    margin: -12px 0 0 180px;
+    /* 라벨 너비(160px) + 간격(20px) 고려하여 조정 */
+    padding: 4px 8px;
+    transform: translateX(-100px);
+}
+
+.checking {
+    color: #ffd700;
+}
+
+.available {
+    color: #7cba4c;
+}
+
+.duplicate {
+    color: #ff6b6b;
+}
+
+/* 에러 메시지 */
+.error {
+    color: #ff6b6b;
+    font-size: 14px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    border: 2px solid #ff6b6b;
+    border-radius: 8px;
+}
+
+/* 회원가입 버튼 - 둥근 모서리 */
+.btn {
+    padding: 14px 40px;
+    border: none;
+    background: #5a7a7a;
+    color: #ffffff;
+    font-family: var(--font-title);
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: center;
+    margin-top: 12px;
+    border-radius: 16px;
+    /* 둥근 모서리 */
+}
+
+.btn:hover:not(:disabled) {
+    background: #6a8a8a;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+    background: #4a6a6a;
+}
+
+.btn:disabled {
+    background-color: rgba(100, 100, 100, 0.6);
+    cursor: not-allowed;
+    color: #888;
+}
+
+/* 뒤로가기 버튼 */
+.linkBtn {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 100;
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    text-decoration: none;
+    padding: 0;
+}
+
+.linkBtn:hover {
+    color: #ffffff;
+    transform: translateX(-5px);
+}
