@@ -79,7 +79,8 @@
     flex-direction: column;
     align-items: flex-start;
     /* 왼쪽으로 이동 */
-    transform: translate(-100px);
+    transform: translate(-60px);
+    width: 450px;
 }
 
 /* 메뉴 아이템들 */
