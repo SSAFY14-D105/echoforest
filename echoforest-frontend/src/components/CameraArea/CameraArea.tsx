@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { liveKitService } from '../../socket/LiveKitService';
@@ -21,7 +21,7 @@ export default function CameraArea({
     isLiveKitConnected: externalIsConnected
 }: CameraAreaProps) {
     // 1. Stable State (Primitive values)
-    const nickname = useGameStore(state => state.nickname);
+    // const nickname = useGameStore(state => state.nickname);
     // const roomId = useGameStore(state => state.roomId);
     const isSoloMode = useGameStore(state => state.isSoloMode);
     // [FIX] 게임 시작 여부 확인
@@ -32,26 +32,22 @@ export default function CameraArea({
     const [isMicEnabled, setIsMicEnabled] = useState(true);
     const [isCameraEnabled, setIsCameraEnabled] = useState(true);
 
-    // [FIX] callback ref - 비디오 엘리먼트가 DOM에 마운트되는 즉시 LiveKit에 등록
     const localVideoRef = useRef<HTMLVideoElement>(null);
-    const localVideoCallbackRef = (element: HTMLVideoElement | null) => {
-        // ref 업데이트
-        (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
 
-        // DOM에 마운트되면 즉시 LiveKit에 등록
-        if (element) {
-            liveKitService.setLocalVideoElement(element);
-        }
-    };
+    // [FIX] callback ref - 비디오 엘리먼트가 DOM에 마운트되는 즉시 LiveKit에 등록 (useCallback으로 안정화)
+    const onLocalVideoRef = useCallback((element: HTMLVideoElement | null) => {
+        // ref 업데이트
+        localVideoRef.current = element;
+
+        // DOM에 마운트되면 LiveKit에 등록 (null이면 detach 처리됨)
+        liveKitService.setLocalVideoElement(element);
+    }, []);
 
     // Remote Participants State (fallback for standalone usage, e.g., in game)
     const [internalParticipantInfos, setInternalParticipantInfos] = useState<ParticipantInfo[]>([]);
 
     const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
-
-    // Remote Video Refs map (key: identity or index)
-    const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
     // Use external participantInfos if provided (from WaitingRoom), otherwise use internal
     const displayParticipantInfos = externalParticipantInfos ?? internalParticipantInfos;
@@ -108,45 +104,6 @@ export default function CameraArea({
 
         return () => clearInterval(interval);
     }, [isConnected]);
-
-    // Remote Video Track Attachment (트랙 변경 시 재연결)
-    useEffect(() => {
-        displayParticipantInfos.forEach(info => {
-            if (info.identity === nickname) return;
-            const videoEl = remoteVideoRefs.current[info.identity];
-
-            if (info.videoTrack) {
-                if (videoEl) {
-                    // [FIX] 트랙 attach - 이미 attach된 경우를 대비해 try-catch
-                    try {
-                        info.videoTrack.attach(videoEl);
-                    } catch (e) {
-                        console.warn(`[CameraArea] Failed to attach video for ${info.identity}:`, e);
-                    }
-                } else {
-                    console.log(`[CameraArea] Video element not ready for ${info.identity}, will retry on ref mount`);
-                }
-            }
-        });
-
-        // [FIX] 타이밍 이슈 해결: 트랙은 있는데 ref가 아직 없는 경우를 위한 재시도
-        // 짧은 딜레이 후 다시 한 번 시도
-        const retryTimeout = setTimeout(() => {
-            displayParticipantInfos.forEach(info => {
-                if (info.identity === nickname) return;
-                const videoEl = remoteVideoRefs.current[info.identity];
-                if (info.videoTrack && videoEl) {
-                    try {
-                        info.videoTrack.attach(videoEl);
-                    } catch (e) {
-                        // Ignore - already attached or other issue
-                    }
-                }
-            });
-        }, 200);
-
-        return () => clearTimeout(retryTimeout);
-    }, [displayParticipantInfos, nickname]);
 
     const handleToggleMic = async () => {
         const newState = await liveKitService.toggleMic();
@@ -234,7 +191,7 @@ export default function CameraArea({
                             <div className={styles.cameraContent}>
                                 {/* Always render video element, hide with CSS when camera off */}
                                 <video
-                                    ref={localVideoCallbackRef}
+                                    ref={onLocalVideoRef}
                                     autoPlay
                                     muted
                                     playsInline
@@ -247,40 +204,12 @@ export default function CameraArea({
                                 <span className={styles.playerLabel}>나</span>
                             </div>
                         ) : (
-                            <div className={styles.cameraContent}>
-                                {/* Remote Video */}
-                                <video
-                                    ref={el => {
-                                        // [FIX] ref 정리 로직 개선
-                                        if (playerNickname) {
-                                            if (el) {
-                                                remoteVideoRefs.current[playerNickname] = el;
-                                                // 즉시 attach 시도
-                                                const info = displayParticipantInfos.find(p => p.identity === playerNickname);
-                                                if (info?.videoTrack) {
-                                                    info.videoTrack.attach(el);
-                                                }
-                                            } else {
-                                                delete remoteVideoRefs.current[playerNickname];
-                                            }
-                                        }
-                                    }}
-                                    autoPlay
-                                    playsInline
-                                    className={styles.remoteVideo}
-                                    style={{ display: participantInfo?.videoTrack && participantInfo.isCameraEnabled ? 'block' : 'none' }}
-                                />
-
-                                {(!participantInfo?.videoTrack || !participantInfo.isCameraEnabled) && (
-                                    <div className={styles.cameraOff}>
-                                        {participantInfo ? '📹' : '...'}
-                                    </div>
-                                )}
-
-                                <div className={styles.remoteLabel}>
-                                    P{slotIndex + 1}: {playerNickname}
-                                </div>
-                            </div>
+                            <RemoteVideo
+                                participantInfo={participantInfo}
+                                nickname={playerNickname}
+                                slotIndex={slotIndex}
+                                className={styles.remoteVideo}
+                            />
                         )}
 
                         {/* My Controls */}
@@ -327,5 +256,72 @@ export default function CameraArea({
                 );
             })}
         </div >
+    );
+}
+
+// [FIX] Separate Component for Remote Video to ensure Ref stability
+// 부모 리렌더링 시에도 ref가 유지되도록 컴포넌트 분리
+function RemoteVideo({
+    participantInfo,
+    nickname,
+    slotIndex,
+    className
+}: {
+    participantInfo: ParticipantInfo | null | undefined,
+    nickname: string | undefined,
+    slotIndex: number,
+    className: string
+}) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const videoEl = videoRef.current;
+        if (!videoEl) return;
+
+        if (!participantInfo?.videoTrack) {
+            console.log(`[RemoteVideo] No video track for ${nickname} (Slot ${slotIndex})`);
+            return;
+        }
+
+        // Track Attachment
+        console.log(`[RemoteVideo] Attaching track for ${nickname} (Slot ${slotIndex})`);
+        participantInfo.videoTrack.attach(videoEl);
+
+        // Ensure playback
+        videoEl.play().catch(e => console.warn(`[RemoteVideo] Play failed for ${nickname}:`, e));
+
+        return () => {
+            // Detach handled by LiveKit usually, but we can be explicit if needed
+            // participantInfo.videoTrack?.detach(videoEl);
+        };
+    }, [participantInfo?.videoTrack, nickname, slotIndex]);
+
+    const isVideoVisible = participantInfo?.videoTrack && participantInfo.isCameraEnabled;
+
+    // Debug visibility
+    // useEffect(() => {
+    //    console.log(`[RemoteVideo] ${nickname} Visible: ${isVideoVisible} (Track: ${!!participantInfo?.videoTrack}, Enabled: ${participantInfo?.isCameraEnabled})`);
+    // }, [isVideoVisible, nickname, participantInfo]);
+
+    return (
+        <div className={styles.cameraContent}>
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={className}
+                style={{ display: isVideoVisible ? 'block' : 'none' }}
+            />
+
+            {!isVideoVisible && (
+                <div className={styles.cameraOff}>
+                    {participantInfo ? '📹' : '...'}
+                </div>
+            )}
+
+            <div className={styles.remoteLabel}>
+                P{slotIndex + 1}: {nickname}
+            </div>
+        </div>
     );
 }

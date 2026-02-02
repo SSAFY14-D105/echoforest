@@ -154,9 +154,14 @@ export class LiveKitService {
             let videoTrack: RemoteTrack | null = null;
             let audioTrack: RemoteTrack | null = null;
 
+            // 디버깅: 모든 트랙행 확인
+            console.log(`[LiveKitService] Participant ${participant.identity} has ${participant.trackPublications.size} tracks`);
+
             participant.trackPublications.forEach((pub: RemoteTrackPublication) => {
-                // [FIX] 트랙이 구독 완료된 경우에만 사용
-                if (pub.isSubscribed && pub.track) {
+                console.log(`  - Track: ${pub.kind}, Subbed: ${pub.isSubscribed}, Muted: ${pub.isMuted}, Source: ${pub.source}`);
+
+                // [FIX] isSubscribed 체크 제거 - 트랙 객체가 존재하면 사용 (구독 상태와 무관하게 표시 시도)
+                if (pub.track) {
                     if (pub.track.kind === Track.Kind.Video) {
                         videoTrack = pub.track;
                     } else if (pub.track.kind === Track.Kind.Audio) {
@@ -164,6 +169,11 @@ export class LiveKitService {
                     }
                 }
             });
+
+            // videoTrack 상태 디버깅: 트랙은 있는데 isCameraEnabled가 false인 경우 확인
+            // if (participant.identity !== this.room.localParticipant?.identity) {
+            //      console.log(`[LiveKitService] Participant ${participant.identity} - VideoTrack: ${!!videoTrack}, CameraEnabled: ${participant.isCameraEnabled}`);
+            // }
 
             participantInfos.push({
                 identity: participant.identity,
@@ -178,10 +188,58 @@ export class LiveKitService {
         return participantInfos;
     }
 
+    // NodeJS.Timeout 대신 ReturnType<typeof setInterval> 사용 (환경 호환성)
+    private syncInterval: ReturnType<typeof setInterval> | null = null;
+    private lastParticipantInfos: ParticipantInfo[] = [];
+
     // 참가자 업데이트 통지 (모든 구독자에게 알림)
     private notifyParticipantUpdate() {
-        const participants = this.getParticipants();
-        this.participantCallbacks.forEach(callback => callback(participants));
+        if (!this.room) return;
+        const currentInfos = this.getParticipants();
+
+        // [FIX] 중복 업데이트 방지 (Change Detection)
+        // 1초 폴링이 돌아도 실제 데이터가 변하지 않았으면 리렌더링 유발 안 함
+        if (this.areParticipantInfosEqual(this.lastParticipantInfos, currentInfos)) {
+            return;
+        }
+
+        this.lastParticipantInfos = currentInfos;
+        this.participantCallbacks.forEach(callback => callback(currentInfos));
+    }
+
+    // 변경 감지 (Deep Compare for ParticipantInfo)
+    private areParticipantInfosEqual(prev: ParticipantInfo[], curr: ParticipantInfo[]): boolean {
+        if (prev.length !== curr.length) return false;
+
+        for (let i = 0; i < prev.length; i++) {
+            const p1 = prev[i];
+            const p2 = curr[i];
+
+            if (p1.identity !== p2.identity) return false;
+            // if (p1.isSpeaking !== p2.isSpeaking) return false; // Speaking은 너무 자주 변하므로 생략 가능 (필요 시 포함)
+            if (p1.isMuted !== p2.isMuted) return false;
+            if (p1.isCameraEnabled !== p2.isCameraEnabled) return false;
+            if (p1.videoTrack !== p2.videoTrack) return false; // Track Reference Check
+            if (p1.audioTrack !== p2.audioTrack) return false;
+        }
+        return true;
+    }
+
+    private startSyncInterval() {
+        if (this.syncInterval) clearInterval(this.syncInterval);
+        // 1초마다 상태 동기화 (이벤트 누락 방지 및 상태 수렴용)
+        this.syncInterval = setInterval(() => {
+            if (this.room && this.room.state === 'connected') {
+                this.notifyParticipantUpdate();
+            }
+        }, 1000);
+    }
+
+    private stopSyncInterval() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+        }
     }
 
     // LiveKit Room 연결 (토큰 직접 입력 - 테스트용)
@@ -213,6 +271,7 @@ export class LiveKitService {
             console.log('✅ LiveKit 토큰 발급 성공 (수동 토큰)');
             this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
+            this.startSyncInterval(); // [FIX] 폴링 시작
             this.notifyParticipantUpdate();
 
         } catch (err: any) {
@@ -248,7 +307,10 @@ export class LiveKitService {
                 audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
             }
 
-            this.notifyParticipantUpdate();
+            // [FIX] 약간의 지연 후 업데이트 (내부 상태 반영 대기)
+            setTimeout(() => {
+                this.notifyParticipantUpdate();
+            }, 100);
         });
 
         this.room.on(RoomEvent.TrackUnsubscribed, () => {
@@ -373,6 +435,7 @@ export class LiveKitService {
 
             await this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
+            this.startSyncInterval(); // [FIX] 폴링 시작
             this.notifyParticipantUpdate();
         } catch (err: any) {
             if (myId === this.connectionOpId) {
@@ -387,6 +450,7 @@ export class LiveKitService {
 
     // 연결 종료
     disconnect() {
+        this.stopSyncInterval(); // [FIX] 폴링 중지
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
             console.log('[LiveKitService] 연결 종료');
