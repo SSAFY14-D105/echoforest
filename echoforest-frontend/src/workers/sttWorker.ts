@@ -9,9 +9,8 @@
 
 // === 메시지 타입 정의 ===
 export type WorkerInMessage =
-    | { type: 'PROCESS_TRANSCRIPT'; text: string; isFinal: boolean; isBoosterMode: boolean; isCursed: boolean }
-    | { type: 'RESET' }
-    | { type: 'SET_BOOSTER_MODE'; active: boolean };
+    | { type: 'PROCESS_TRANSCRIPT'; text: string; isFinal: boolean; isCursed: boolean }
+    | { type: 'RESET' };
 
 export type WorkerOutMessage =
     | { type: 'POSITIVE_DETECTED'; word: string; isCursed: boolean }
@@ -104,21 +103,23 @@ function processTranscript(text: string, isFinal: boolean, isCursed: boolean) {
             } as WorkerOutMessage);
             return; // 긍정어 발견 시 배치 큐에 추가하지 않음
         }
+    }
 
-        // 최종 결과만 배치 큐에 추가
-        if (isFinal) {
-            speechQueue.push(cleanText);
+    // [FIX] 최종 결과는 항상 배치 큐에 추가 (저주 여부와 무관)
+    // 욕설 감지를 위해서는 저주가 없을 때도 서버로 전송해야 함
+    if (isFinal) {
+        speechQueue.push(cleanText);
+        console.log('[STT Worker] 배치 큐에 추가:', cleanText, '/ 큐 크기:', speechQueue.length);
 
-            self.postMessage({
-                type: 'QUEUE_UPDATE',
-                count: speechQueue.length,
-                texts: [...speechQueue]
-            } as WorkerOutMessage);
+        self.postMessage({
+            type: 'QUEUE_UPDATE',
+            count: speechQueue.length,
+            texts: [...speechQueue]
+        } as WorkerOutMessage);
 
-            // 타이머가 없으면 시작
-            if (!batchTimerId) {
-                startBatchTimer();
-            }
+        // 타이머가 없으면 시작
+        if (!batchTimerId) {
+            startBatchTimer();
         }
     }
 }

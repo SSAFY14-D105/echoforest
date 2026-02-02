@@ -67,6 +67,13 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                 },
                 // @ts-ignore - Phaser 3 config property
                 disableVisibilityChange: true, // 탭 전환/최소화 시에도 게임 루프 계속 실행
+                // [FIX] Web Audio 완전 비활성화 - Web Speech API(STT)와 충돌 방지
+                // Phaser가 Web Audio Context를 생성만 해도 STT가 'aborted' 에러 발생
+                // 배경음악은 BackgroundMusic.tsx에서 HTML5 Audio 사용
+                audio: {
+                    noAudio: true,
+                    disableWebAudio: true  // Web Audio Context 생성 자체를 차단
+                },
                 physics: {
                     default: 'matter',
                     matter: {
