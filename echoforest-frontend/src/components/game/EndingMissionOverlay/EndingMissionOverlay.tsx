@@ -335,7 +335,7 @@ export default function EndingMissionOverlay({
                                 {targetPose && !isDummy && (
                                     <div className={styles.targetPose}>
                                         <span className={styles.poseEmoji}>{targetPose.emoji}</span>
-                                        <span className={styles.poseName}>{targetPose.name}</span>
+                                        <span className={styles.poseName}>{targetPose.label}</span>
                                     </div>
                                 )}
 

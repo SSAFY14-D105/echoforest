@@ -3,7 +3,7 @@
  * 모든 제스처 감지 모듈은 이 클래스를 상속받아야 합니다.
  */
 
-import { Landmark } from '../../utils/gesture-helpers';
+import type { Landmark } from '../../utils/gesture-helpers';
 
 export interface GestureMetadata {
     palmSize: number;
@@ -17,6 +17,9 @@ export interface GestureResult {
     detected: boolean;
     score: number;
     label?: string; // 제스처 이름
+    emoji?: string;
+    extra?: any;
+    [key: string]: any;
 }
 
 export default class BaseGesture {
@@ -31,13 +34,8 @@ export default class BaseGesture {
      * @param landmarks MediaPipe 손 랜드마크 (0~20)
      * @param metadata 추가 정보 (손바닥 크기 등)
      */
-<<<<<<< HEAD
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
         throw new Error("check() method must be implemented");
-=======
-    check(_landmarks: Landmark[], _metadata: GestureMetadata = {}): GestureResult {
-        return { detected: false, score: 0 };
->>>>>>> de01de68483739874f9083b4953344580dda6da3
     }
 
     /**

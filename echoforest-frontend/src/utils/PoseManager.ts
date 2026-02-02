@@ -20,6 +20,7 @@ export interface PoseInfo {
     score: number;
     detected: boolean;
     timestamp?: number;
+    gestureClass: string;
 }
 
 export default class PoseManager {
@@ -52,6 +53,7 @@ export default class PoseManager {
      */
     detect(landmarks: Landmark[], metadata: any): PoseInfo | null {
         let bestResult: GestureResult | null = null;
+        let bestGesture: BaseGesture | null = null;
         let maxScore = 0;
 
         for (const gesture of this.gestures) {
@@ -62,6 +64,7 @@ export default class PoseManager {
                     if (result.score >= 0.4) {
                         maxScore = result.score;
                         bestResult = result;
+                        bestGesture = gesture;
                     }
                 }
             } catch (e) {
@@ -69,16 +72,43 @@ export default class PoseManager {
             }
         }
 
-        if (bestResult && bestResult.detected) {
+        if (bestResult && bestResult.detected && bestGesture) {
             return {
                 label: bestResult.label || 'Unknown',
                 emoji: (bestResult as any).emoji || '',
                 score: bestResult.score,
                 detected: true,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                gestureClass: bestGesture.constructor.name
             };
         }
 
         return null;
     }
 }
+
+/**
+ * 참가자들에게 포즈 할당 (랜덤)
+ * @param identities 참가자 ID 목록
+ * @param roomId 방 ID (시드용 - 현재는 미사용)
+ */
+export const assignPosesToParticipants = (identities: string[], _roomId: string): Map<string, PoseInfo> => {
+    const manager = new PoseManager();
+    const gestures = manager.getGestures();
+    const assignments = new Map<string, PoseInfo>();
+
+    identities.forEach((id) => {
+        // 랜덤 포즈 선택
+        const gesture = gestures[Math.floor(Math.random() * gestures.length)];
+
+        assignments.set(id, {
+            label: (gesture as any).label || gesture.constructor.name,
+            emoji: (gesture as any).emoji || '❓',
+            score: 0,
+            detected: false,
+            gestureClass: gesture.constructor.name
+        });
+    });
+
+    return assignments;
+};

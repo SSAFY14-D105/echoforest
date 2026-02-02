@@ -2,8 +2,8 @@
  * V-Sign (승리의 브이) 제스처 감지
  * 프론트엔드 이식용 (Portable)
  */
-import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
-import { Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureMetadata, type GestureResult } from './BaseGesture';
+import type { Landmark } from '../../utils/gesture-helpers';
 
 export default class VSignGesture extends BaseGesture {
     thresholds: any;
@@ -34,12 +34,7 @@ export default class VSignGesture extends BaseGesture {
         return angle * (180 / Math.PI);
     }
 
-<<<<<<< HEAD
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
-        const { palmSize } = metadata;
-=======
     check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
->>>>>>> de01de68483739874f9083b4953344580dda6da3
         const t = this.thresholds;
 
         // 1. 손가락 상태 확인 함수
