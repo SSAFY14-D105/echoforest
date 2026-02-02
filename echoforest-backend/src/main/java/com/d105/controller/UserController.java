@@ -39,6 +39,16 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "내 정보 조회 (매너점수 포함)")
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyInfo(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String username) {
+        if (username == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "인증 정보가 없습니다."));
+        }
+        return ResponseEntity.ok(userService.getMyInfo(username));
+    }
+
     @Operation(summary = "아이디 중복 확인 (true: 중복, false: 사용 가능)")
     @GetMapping("/check-id")
     public ResponseEntity<?> checkId(@RequestParam String username) {
