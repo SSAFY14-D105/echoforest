@@ -18,11 +18,11 @@ export const AVAILABLE_POSES: PoseInfo[] = [
     { id: 'ok', name: 'OK', emoji: '👌', difficulty: 1, gestureClass: 'OKGesture' },
     { id: 'kiss', name: '츄~💋', emoji: '💋', difficulty: 2, gestureClass: 'KissGesture' },
     { id: 'cheekpoke', name: '양볼 콕!', emoji: '👉👈', difficulty: 2, gestureClass: 'BothCheekPokeGesture' },
-    { id: 'leftpoke', name: '왼볼 콕!', emoji: '�', difficulty: 1, gestureClass: 'LeftPokeGesture' },
-    { id: 'rightpoke', name: '오른볼 콕!', emoji: '�', difficulty: 1, gestureClass: 'RightPokeGesture' },
+    { id: 'leftpoke', name: '왼볼 콕!', emoji: '👉', difficulty: 1, gestureClass: 'LeftPokeGesture' },
+    { id: 'rightpoke', name: '오른볼 콕!', emoji: '👈', difficulty: 1, gestureClass: 'RightPokeGesture' },
     { id: 'l', name: 'L 사인', emoji: '🔫', difficulty: 1, gestureClass: 'LGesture' },
-    { id: 'heart', name: '하트', emoji: '❤️', difficulty: 2, gestureClass: 'HeartGesture' },
-    { id: 'cheekheart', name: '볼하트', emoji: '🫶', difficulty: 2, gestureClass: 'CheekHeartGesture' },
+    { id: 'heart', name: '하트', emoji: '🫶', difficulty: 2, gestureClass: 'HeartGesture' },
+    { id: 'cheekheart', name: '볼하트', emoji: '❤️', difficulty: 2, gestureClass: 'CheekHeartGesture' },
     { id: 'bigheart', name: '큰 하트', emoji: '💕', difficulty: 2, gestureClass: 'BigHeartGesture' },
     { id: 'catears', name: '고양이 귀', emoji: '😺', difficulty: 2, gestureClass: 'CatEarsGesture' },
     { id: 'flower', name: '꽃받침', emoji: '🌸', difficulty: 1, gestureClass: 'FlowerPoseGesture' },
@@ -71,13 +71,17 @@ function seededShuffle<T>(array: T[], seed: number): T[] {
  * roomId 기반으로 참가자들에게 각각 다른 포즈 할당
  * @param participantIds 참가자 identity 배열 (최대 4명)
  * @param roomId 방 ID (시드 생성용)
+ * @param stage 스테이지 번호 (시드 생성용, 스테이지별로 다른 포즈 할당)
  * @returns identity → PoseInfo 맵
  */
 export function assignPosesToParticipants(
     participantIds: string[],
-    roomId: string
+    roomId: string,
+    stage?: number | null
 ): Map<string, PoseInfo> {
-    const seed = simpleHash(roomId);
+    // [FIX] 스테이지 번호를 시드에 포함하여 스테이지별로 다른 포즈 할당
+    const seedString = `${roomId}-stage${stage ?? 0}`;
+    const seed = simpleHash(seedString);
     const shuffledPoses = seededShuffle(ENDING_MISSION_POSES, seed);
 
     const assignments = new Map<string, PoseInfo>();

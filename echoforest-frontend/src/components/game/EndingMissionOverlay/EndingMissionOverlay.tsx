@@ -27,6 +27,8 @@ interface EndingMissionOverlayProps {
     nickname: string;
     /** 방 ID (포즈 시드 생성용) */
     roomId?: string;
+    /** 스테이지 번호 (포즈 할당 시드용) */
+    stage?: number | null;
     /** 모션 인식 완료 콜백 */
     onMotionCleared?: () => void;
     /** 이미지 캡처 완료 콜백 */
@@ -41,6 +43,7 @@ export default function EndingMissionOverlay({
     participantInfos = [],
     nickname,
     roomId = 'default-room',
+    stage = null,
     onMotionCleared,
     onCaptureComplete,
     onClose
@@ -93,13 +96,14 @@ export default function EndingMissionOverlay({
 
     // roomId 기반으로 각 참가자에게 포즈 할당
     // [FIX] 실제 참가자만 포즈 할당 (더미는 포즈 없음)
+    // [FIX] 스테이지 번호를 포함하여 스테이지별로 다른 포즈 할당
     const poseAssignments = useMemo(() => {
         const realIdentities = allParticipants
             .filter(p => !p.isDummy)
             .slice(0, 4)
             .map(p => p.identity);
-        return assignPosesToParticipants(realIdentities, roomId);
-    }, [allParticipants, roomId]);
+        return assignPosesToParticipants(realIdentities, roomId, stage);
+    }, [allParticipants, roomId, stage]);
 
     // 멀티 모션 감지 훅 (내 비디오만 감지)
     const { isLoaded, participantStates } = useMultiMotionDetector({

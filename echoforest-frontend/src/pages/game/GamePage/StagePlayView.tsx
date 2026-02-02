@@ -230,6 +230,7 @@ export default function StagePlayView({
                     participantInfos={participantInfos}
                     nickname={nickname}
                     roomId={roomId}
+                    stage={parseInt(stageNum)}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
                 />
