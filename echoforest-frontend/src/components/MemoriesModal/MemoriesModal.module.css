@@ -19,7 +19,8 @@
     height: 100%;
     object-fit: cover;
     z-index: -1;
-    filter: brightness(0.6);
+    /* 필터 제거하여 원본(칠판 배경 포함)이 보이도록 함 */
+    /* filter: brightness(0.6); */
 }
 
 .backButton {
@@ -57,11 +58,22 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    /* Glassmorphism board style */
-    background: rgba(43, 85, 43, 0.85);
-    border: 4px solid #6b9c5a;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
+    position: relative;
+
+    /* CSS로 칠판 스타일 구현 (배경 이미지의 칠판 크기 제약을 극복) */
+    background: #2F3530;
+    /* 칠판색 (진한 녹회색) */
+    border: 16px solid #5D4037;
+    /* 나무 테두리 색상 */
+    border-radius: 16px;
+    box-shadow:
+        inset 0 0 20px rgba(0, 0, 0, 0.5),
+        /* 안쪽 그림자 */
+        0 20px 50px rgba(0, 0, 0, 0.6);
+    /* 바깥 그림자 */
+
+    /* 기존 투명/위치 조정 제거하고 중앙 정렬 */
+    /* transform: translate(-40px); -> 제거 */
 }
 
 .boardContent {
@@ -76,11 +88,16 @@
 
 .title {
     font-size: 2.2rem;
-    color: #e0f2d8;
+    color: #ffeeb0;
+    /* 칠판 분필 색상 */
     margin-bottom: 20px;
     /* 제목 아래 여백 줄임 */
     font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow:
+        3px 3px 0px #000,
+        -1px -1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -224,9 +241,9 @@
 }
 
 .infoText {
-    color: #e0f2d8;
+    color: #ffeeb0;
     font-size: 1rem;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     margin-right: 10px;
 }
 
@@ -264,9 +281,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #e0f2d8;
+    color: #ffeeb0;
+    /* 분필 색상 */
     gap: 20px;
     font-size: 1.2rem;
-    opacity: 0.8;
+    opacity: 0.9;
     text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
