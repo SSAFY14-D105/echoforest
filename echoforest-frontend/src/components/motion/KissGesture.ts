@@ -10,8 +10,6 @@ const FACE_LANDMARKS = {
 };
 
 export default class KissGesture extends BaseGesture {
-    label: string;
-    emoji: string;
     private thresholds: any;
 
     constructor() {
