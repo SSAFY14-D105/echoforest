@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { gameWebSocket } from '../../socket/GameWebSocket';
 import { checkNickname, updateNickname } from '../../apis/authApi';
+import MemoriesModal from '../MemoriesModal/MemoriesModal';
 import styles from './SettingsModal.module.css';
 
 interface SettingsModalProps {
@@ -16,6 +17,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [nicknameCheckStatus, setNicknameCheckStatus] = useState<'unchecked' | 'checking' | 'available' | 'duplicate'>('unchecked');
+    const [showMemories, setShowMemories] = useState(false);
 
     // 닉네임 중복 확인 (debounce)
     useEffect(() => {
@@ -81,8 +83,12 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     };
 
     const handleMemoriesClick = () => {
-        alert('추억 돌아보기 페이지는 준비 중입니다! 🌲');
+        setShowMemories(true);
     };
+
+    if (showMemories) {
+        return <MemoriesModal onClose={() => setShowMemories(false)} />;
+    }
 
     return (
         <div className={styles.container}>
