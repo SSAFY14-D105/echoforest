@@ -144,8 +144,13 @@ export default function StagePlayView({
         // [FIX] 중복 방지: 호스트만 종료 신호를 보내도록 변경
         // 이렇게 하면 서버가 여러 번 ENDING_MISSION_END를 브로드캐스트하는 것을 근본적으로 방지 가능
         if (isHost && isEndingMission) {
-            console.log('[StagePlayView] 👑 Host sending ENDING_MISSION_END');
+            console.log('[StagePlayView] 👑 Host sending ENDING_MISSION_END & NEXT_STAGE');
             gameWebSocket.sendEndingMissionEnd(roomId);
+
+            // [FIX] 서버가 ENDING_MISSION_END만으로 스테이지 전환을 안 할 경우 대비해 명시적 전환 요청
+            setTimeout(() => {
+                gameWebSocket.sendNextStage(roomId);
+            }, 500); // 0.5초 딜레이로 순서 보장
         } else {
             console.log('[StagePlayView] Non-host waiting for server signal...');
         }

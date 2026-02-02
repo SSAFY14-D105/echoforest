@@ -54,6 +54,11 @@ export function useGameWebSocket() {
         let lastTransitionTime = 0;
 
         gameWebSocket.onMessage((msg: GameMessage) => {
+            // [DEBUG] 수신 메시지 로깅 (UPDATE 메시지 제외)
+            if (msg.type !== 'UPDATE') {
+                console.log(`[WebSocket] 📩 Received: ${msg.type}`, msg.content);
+            }
+
             switch (msg.type) {
                 case 'UPDATE':
                     if (msg.content) {
