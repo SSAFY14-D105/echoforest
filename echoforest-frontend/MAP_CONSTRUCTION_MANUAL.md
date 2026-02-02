@@ -6,6 +6,7 @@
 - 오브젝트 **회전(Rotation)** 보정 로직 추가 (Tiled와 동일한 회전 적용 확인 완료)
 - **Respawn** 포인트 시각화 및 설정 방법 명확화
 - **Group Layer** 및 중첩 레이어 완전 지원
+- **개발 가이드 추가**: Scene 구현 시 기믹 초기화 순서 주의사항
 
 ---
 
@@ -33,8 +34,6 @@
 > **충돌(Collision) 레이어**: `MapManager`는 다음 조건 중 하나를 만족하는 레이어만 물리 충돌체로 변환합니다.
 > 1. 레이어 이름이 **`Tile`** 또는 **`tiles`**인 경우 (대소문자 구분 없음)
 > 2. 레이어 Custom Property에 **`collides: true`**가 설정된 경우
-> 3. 레이어 Class가 **`Solid`**인 경우
-
 > 3. 레이어 Class가 **`Solid`**인 경우
 
 ### 1.3. 배경 화면 설정 (Map Background)
@@ -121,3 +120,93 @@ A. 바닥 레이어의 이름이 `Tile` 또는 `tiles`인지 확인하세요. �
 
 **Q. 오브젝트 이미지가 너무 작게 나옵니다.**
 A. `MapManager`가 자동으로 4배 확대를 적용하지만, 버그가 의심되면 개발팀에 제보해주세요. (Respawn 오브젝트 스케일 버그는 2025.1 버전에서 수정됨)
+
+---
+
+## 6. 개발 가이드 (Development Guide) (New)
+
+### 6.1. Scene에서 MapManager 적용 시 주의사항
+
+`BaseGameScene`을 상속받는 Scene에서 `MapManager`를 사용할 때 **초기화 순서**가 매우 중요합니다.
+
+**문제 상황:**
+`create()` 메서드에서 `MapManager.createObjects()`를 `super.create()`보다 **먼저** 호출하면 생성된 오브젝트들이 사라집니다.
+
+```typescript
+create() {
+    this.mapManager = new MapManager(this, ...);
+    this.mapManager.createObjects(); // (X) 이 시점에 생성된 오브젝트는
+    super.create();                  // (X) 이 함수 내부의 resetState()에 의해 모두 삭제됩니다!
+}
+```
+
+**해결 방법:**
+`create()` 메서드에서 `MapManager` 인스턴스만 생성하고, 실제 오브젝트 생성 로직(`createObjects`)은 오버라이드된 **`createGimmicks()`** 메서드 내부에서 수행해야 합니다.
+
+```typescript
+create() {
+    // 1. 인스턴스만 생성 (super.create()에서 필요한 getWorldWidth 등을 위해)
+    this.mapManager = new MapManager(this, 'stage_key');
+    super.create();
+}
+
+protected createGimmicks(): void {
+    // 2. 실제 기믹/오브젝트 생성은 여기서 수행
+    // (super.create() 내부에서 resetState() 직후에 이 메서드를 호출함)
+    this.mapManager.initialize(...);
+    this.mapManager.createObjects();
+    this.offsetY = this.mapManager.getOffsetY();
+}
+```
+
+### 6.2. 오브젝트 회전 문제 (Object Rotation Issues)
+
+**문제 상황:**
+Tiled에서 오브젝트를 회전시켜 배치했으나, 게임 내에서는 회전이 적용되지 않거나 이미지가 이상하게 표시되는 경우.
+
+**원인 및 해결:**
+1.  **Gimmick Class 지원 미비**: 해당 기믹 클래스(`PoisonMushroom`, `MovingBumper` 등)가 생성자에서 `angle` 또는 `rotation` 값을 받지 않거나 무시하고 있을 수 있습니다.
+    -   **Fix**: 기믹 클래스 생성자에 `angle` 인자를 추가하고, `sprite.setAngle(angle)` 및 물리 바디 회전을 적용하세요.
+    -   **Fix**: `MapManager`에서 오브젝트 생성 시 Tiled 데이터의 `obj.rotation` 값을 전달하도록 수정하세요.
+
+2.  **Object Type 불일치 (Shape vs Tile)**:
+    -   **증상**: 이미지가 아예 안 나오거나 단순 도형으로 나옴.
+    -   **원인**: Tiled에서 이미지를 드래그해서 배치한 **Tile Object**가 아니라, 사각형 그리기 도구로 만든 **Shape Object**인 경우입니다. Shape Object는 GID(Tile ID)가 없어서 이미지를 불러올 수 없습니다.
+    -   **해결**: 해당 도형 오브젝트를 삭제하고, 타일셋에서 이미지를 드래그하여 다시 배치하세요.
+
+### 6.3. 다중 타일셋 사용 시 주의사항 (Using Multiple Tilesets)
+
+**문제 상황:**
+Tiled에서는 맵이 정상적으로 보이지만, 게임 내에서 특정 오브젝트(예: `MovingBumper`)의 이미지가 보이지 않음.
+
+**원인:**
+기본 타일셋(`tiles_tileset`) 외에 **추가 타일셋**(예: `players_tileset` / `tilemap-characters.png`)을 사용했으나, 코드에서 이를 로드하지 않았기 때문입니다.
+
+**해결 방법:**
+`Scene` 파일에서 사용된 **모든** 타일셋을 로드하고 등록해야 합니다.
+
+1.  **Preload**:
+    ```typescript
+    preload() {
+        super.preload();
+        // 기본 타일셋
+        this.load.spritesheet('tiles_tileset', 'assets/tilesets/tilemap.png', ...);
+        
+        // [필수] 추가로 사용된 타일셋도 로드해야 함!
+        this.load.spritesheet('players_tileset', 'assets/tilesets/tilemap-characters.png', { frameWidth: 24, frameHeight: 24, spacing: 1 });
+    }
+    ```
+
+2.  **Create (MapManager 초기화 시)**:
+    ```typescript
+    protected createGimmicks(): void {
+        this.mapManager.initialize('tiles_tileset', 'tiles_tileset', 'background_image');
+        
+        // [필수] 추가 타일셋 등록
+        // Tiled의 타일셋 이름('players_tileset')과 Phaser 캐시 키('players_tileset')를 매칭
+        this.mapManager.getMap().addTilesetImage('players_tileset', 'players_tileset');
+        
+        this.mapManager.createObjects();
+        // ...
+    }
+    ```
