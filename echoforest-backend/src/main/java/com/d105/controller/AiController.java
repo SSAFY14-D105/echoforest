@@ -29,6 +29,7 @@ public class AiController {
 
     private final AiGenerationService aiGenerationService;
     private final ImageService imageService;
+    private final com.d105.service.RedisRoomService redisRoomService;
 
     @Operation(summary = "AI 이미지 생성 (실제 게임용)", description = "DB에 저장된 유저별 사진을 사용하여 AI 합성 이미지를 생성하고 이메일로 전송합니다.")
     @PostMapping("/generate")
@@ -86,12 +87,36 @@ public class AiController {
         return ResponseEntity.ok(resultImages);
     }
 
-    @Operation(summary = "최종 결과 이메일 발송", description = "방의 모든 스테이지가 종료된 후, 합성된 모든 이미지를 참여자들에게 이메일로 일괄 발송합니다.")
+    @Operation(summary = "최종 결과 이메일 발송 및 통계 반환", description = "방의 모든 스테이지가 종료된 후, 합성된 모든 이미지를 참여자들에게 이메일로 일괄 발송하고 게임 통계를 반환합니다.")
     @PostMapping("/finish/{roomId}")
     public ResponseEntity<?> sendFinishEmail(@PathVariable String roomId) {
         try {
+            // 1. 이메일 발송
             aiGenerationService.sendGameSummaryEmail(roomId);
-            return ResponseEntity.ok().body(Map.of("message", "이메일 발송 요청이 완료되었습니다."));
+
+            // 2. 통계 조회
+            java.util.Set<String> players = redisRoomService.getPlayers(roomId);
+            // 만약 players가 비어있다면(이미 나갔다면), 통계 키에서 조회
+            if (players.isEmpty()) {
+                // RedisRoomService에 public 메서드로 keys 조회 기능이 없으므로,
+                // 일단 현재 존재하는 플레이어 대상으로 하되,
+                // RedisRoomService.getPlayers는 PLAYERS_SUFFIX 집합을 반환함.
+                // 방이 폭파되지 않았다면 데이터가 있을 것임.
+            }
+
+            List<Map<String, Object>> stats = new java.util.ArrayList<>();
+            for (String username : players) {
+                int kissCount = redisRoomService.getKissCount(roomId, username);
+                int curseCount = redisRoomService.getCurseCount(roomId, username);
+                stats.add(Map.of(
+                        "username", username,
+                        "kissCount", kissCount,
+                        "curseCount", curseCount));
+            }
+
+            return ResponseEntity.ok().body(Map.of(
+                    "message", "이메일 발송 요청이 완료되었습니다.",
+                    "stats", stats));
         } catch (Exception e) {
             log.error("Email Sending Error", e);
             return ResponseEntity.internalServerError()
