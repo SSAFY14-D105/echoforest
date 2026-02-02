@@ -145,29 +145,7 @@ export default function EndingMissionOverlay({
         });
     }, [participantStates, nickname]);
 
-    // [FIX] 전체 클리어 여부 계산 - 더미는 항상 클리어로 간주
-    const allCleared = useMemo(() => {
-        const targets = allParticipants.slice(0, 4);
-        if (targets.length === 0) return false;
 
-        const result = targets.every(p => {
-            // 더미는 항상 클리어로 간주 (테스트 편의성)
-            if (p.isDummy) return true;
-
-            if (p.isLocal) {
-                return participantStates.find(s => s.identity === p.identity)?.isCleared;
-            } else {
-                return remoteStates.get(p.identity);
-            }
-        });
-
-        // [DEBUG] allCleared 상태 변경 로그
-        if (result) {
-            console.log('[EndingMissionOverlay] ✅ All participants cleared!');
-        }
-
-        return result;
-    }, [allParticipants, participantStates, remoteStates]);
 
     // 엔딩 미션 시작 시 720p로 해상도 변경 + 카메라 강제 켜기
     useEffect(() => {
@@ -272,10 +250,7 @@ export default function EndingMissionOverlay({
         });
     }, [participantInfos, nickname]);
 
-    // [FIX] handleMotionCleared를 useCallback으로 감싸기
-    const handleMotionCleared = useCallback(() => {
-        onMotionCleared?.();
-    }, [onMotionCleared]);
+
 
     // [NEW] 즉시 캡처 (포즈 완료 순간에 바로 촬영)
     const handleInstantCapture = useCallback(async () => {
