@@ -853,7 +853,7 @@
                         {
                          "name":"targetY",
                          "type":"float",
-                         "value":86
+                         "value":76
                         }],
                  "rotation":0,
                  "type":"Elevator",
@@ -3895,7 +3895,7 @@
          "y":0
         }],
  "nextlayerid":26,
- "nextobjectid":411,
+ "nextobjectid":412,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
