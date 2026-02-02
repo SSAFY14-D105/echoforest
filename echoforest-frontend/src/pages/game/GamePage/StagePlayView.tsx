@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StagePlayView - 멀티플레이 스테이지 플레이 화면
  */
 
@@ -15,6 +15,7 @@ import type { ParticipantInfo } from '../../../socket/LiveKitService';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import { uploadAllEndingCaptures, generateCompositeImage } from '../../../apis/imageApi';
 import ResultOverlay from '../../../components/game/ResultOverlay/ResultOverlay';
+import AudioController from '../../../components/common/AudioController';
 import styles from './GamePage.module.css';
 
 interface StagePlayViewProps {
@@ -91,14 +92,6 @@ export default function StagePlayView({
         };
     }, [setEndingMission, onClearStage, currentStage]);
 
-    // [FIX] 스테이지 변경 시 상태 리셋 (중요: 이전 스테이지 업로드 기록이 남아서 다음 스테이지 합성을 방해하는 문제 해결)
-    useEffect(() => {
-        uploadedUserIdsRef.current.clear();
-        hasGeneratedImageRef.current = false;
-        isUploadingRef.current = false;
-        console.log(`[StagePlayView] State reset for new Stage: ${stageNum}`);
-    }, [stageNum]);
-
     // [NEW] LiveKit 데이터 수신 (IMAGE_UPLOADED)
     useEffect(() => {
         const handleDataReceived = (payload: Uint8Array) => {
@@ -129,10 +122,10 @@ export default function StagePlayView({
         if (hasGeneratedImageRef.current) return;
 
         const currentCount = uploadedUserIdsRef.current.size;
-        // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 (participantInfos.length + 1) 체크 (participantInfos는 원격 참가자만 포함하므로)
-        const requiredCount = isSoloMode ? 1 : (participantInfos.length + 1);
+        // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 participantInfos.length 체크
+        const requiredCount = isSoloMode ? 1 : Math.max(1, participantInfos.length);
 
-        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded. (isSolo=${isSoloMode}, remotes=${participantInfos.length})`);
+        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded.`);
 
         if (currentCount >= requiredCount) {
             console.log('[StagePlayView] All participants uploaded! Generating composite...');
@@ -222,17 +215,11 @@ export default function StagePlayView({
 
     // 엔딩 미션 종료 핸들러 (오버레이 닫기/캡처 완료 시)
     const handleEndingMissionClose = useCallback(() => {
-        console.log('[StagePlayView] handleEndingMissionClose called. Stage:', stageNum);
-
         // [FIX] 중복 호출 방지 (Ref 사용)
-        if (isProcessingEndRef.current) {
-            console.log('[StagePlayView] isProcessingEndRef is true, ignoring.');
-            return;
-        }
+        if (isProcessingEndRef.current) return;
 
         // [NEW] 스테이지 4라면 결과 화면을 보여줌 (종료 프로세스 중단)
         if (stageNum === '4') {
-            console.log('[StagePlayView] Stage 4 detected, showing ResultOverlay.');
             setShowResultOverlay(true);
             return;
         }
@@ -242,7 +229,6 @@ export default function StagePlayView({
         // [FIX] 중복 방지: 호스트만 종료 신호를 보내도록 변경
         // 이렇게 하면 서버가 여러 번 ENDING_MISSION_END를 브로드캐스트하는 것을 근본적으로 방지 가능
         if (isHost && isEndingMission) {
-            console.log('[StagePlayView] Sending ENDING_MISSION_END signal.');
             gameWebSocket.sendEndingMissionEnd(roomId);
 
             // [FIX] 서버가 ENDING_MISSION_END만으로 스테이지 전환을 안 할 경우 대비해 명시적 전환 요청
@@ -313,6 +299,7 @@ export default function StagePlayView({
             </div>
 
             <div className={`pixel-box ${styles.canvasWrapper}`}>
+                <AudioController className={styles.gameAudioController} />
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}

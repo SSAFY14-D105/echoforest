@@ -106,7 +106,7 @@ export default function MyInfoModal({ onClose }: MyInfoModalProps) {
             {/* 배경 이미지 (SettingsModal과 통일) */}
             <img
                 className={styles.bgImage}
-                src="/assets/backgrounds/main_page.jpg"
+                src="/assets/backgrounds/main_page.png"
                 alt="메아리의 숲"
             />
 

@@ -10,6 +10,7 @@ import type { ParticipantInfo } from '../../../socket/LiveKitService';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
+import AudioController from '../../../components/common/AudioController';
 import styles from './WaitingRoom.module.css';
 
 
@@ -147,6 +148,7 @@ export default function WaitingRoom({
 
             {/* 하단 게임 영역 */}
             <div className={styles.gameSection}>
+                <AudioController className={styles.gameAudioController} />
                 <PhaserGame
                     startScene="LobbyScene"
                     onSendState={onSendState}
