@@ -141,10 +141,12 @@ export const useSttStore = create<SttState>((set, get) => ({
 
     onBatchReady: (texts: string[]) => {
         const { roomId } = useGameStoreCompat();
+        console.log('[STT 배치] 서버로 전송 준비:', { roomId, texts, connected: gameWebSocket.isConnected() });
         if (roomId && gameWebSocket.isConnected()) {
             sendSpeechBatch(roomId, texts);
+            console.log('[STT 배치] ✅ 서버로 전송 완료:', texts);
         } else {
-            console.warn('[배치] WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
+            console.warn('[배치] ❌ WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
         }
     },
 
