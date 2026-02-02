@@ -92,6 +92,14 @@ export default function StagePlayView({
         };
     }, [setEndingMission, onClearStage, currentStage]);
 
+    // [FIX] 스테이지 변경 시 상태 리셋 (중요: 이전 스테이지 업로드 기록이 남아서 다음 스테이지 합성을 방해하는 문제 해결)
+    useEffect(() => {
+        uploadedUserIdsRef.current.clear();
+        hasGeneratedImageRef.current = false;
+        isUploadingRef.current = false;
+        console.log(`[StagePlayView] State reset for new Stage: ${stageNum}`);
+    }, [stageNum]);
+
     // [NEW] LiveKit 데이터 수신 (IMAGE_UPLOADED)
     useEffect(() => {
         const handleDataReceived = (payload: Uint8Array) => {
@@ -122,10 +130,10 @@ export default function StagePlayView({
         if (hasGeneratedImageRef.current) return;
 
         const currentCount = uploadedUserIdsRef.current.size;
-        // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 participantInfos.length 체크
-        const requiredCount = isSoloMode ? 1 : Math.max(1, participantInfos.length);
+        // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 (participantInfos.length + 1) 체크 (participantInfos는 원격 참가자만 포함하므로)
+        const requiredCount = isSoloMode ? 1 : (participantInfos.length + 1);
 
-        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded.`);
+        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded. (isSolo=${isSoloMode}, remotes=${participantInfos.length})`);
 
         if (currentCount >= requiredCount) {
             console.log('[StagePlayView] All participants uploaded! Generating composite...');
