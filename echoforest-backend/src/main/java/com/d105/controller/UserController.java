@@ -32,8 +32,8 @@ public class UserController {
     @Operation(summary = "로그인 (JWT 토큰 + 닉네임 반환)")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginReqDto req) {
-        // AuthService에서 Map<String, String> 형태로 반환받음
-        Map<String, String> result = userService.login(req);
+        // AuthService에서 Map<String, Object> 형태로 반환받음
+        Map<String, Object> result = userService.login(req);
 
         // 프론트엔드로 전송: {"token": "...", "nickname": "..."}
         return ResponseEntity.ok(result);
