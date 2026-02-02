@@ -142,6 +142,12 @@ export default function LobbyPage() {
         </button>
       </div>
 
+      {/* [NEW] 메인 타이틀 (MainPage와 동일) */}
+      <div className={styles.titleWrapper}>
+        <h1 className={styles.mainTitle}>메아리의 숲</h1>
+        <h2 className={styles.subTitle}>Echo Forest</h2>
+      </div>
+
       {/* 메뉴 (검정 보드 위치) */}
       {!showSettings && !showJoinModal && (
         <div className={styles.menuWrapper}>

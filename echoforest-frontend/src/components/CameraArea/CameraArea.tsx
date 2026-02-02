@@ -279,12 +279,10 @@ function RemoteVideo({
         if (!videoEl) return;
 
         if (!participantInfo?.videoTrack) {
-            console.log(`[RemoteVideo] No video track for ${nickname} (Slot ${slotIndex})`);
             return;
         }
 
         // Track Attachment
-        console.log(`[RemoteVideo] Attaching track for ${nickname} (Slot ${slotIndex})`);
         participantInfo.videoTrack.attach(videoEl);
 
         // Ensure playback
@@ -297,11 +295,6 @@ function RemoteVideo({
     }, [participantInfo?.videoTrack, nickname, slotIndex]);
 
     const isVideoVisible = participantInfo?.videoTrack && participantInfo.isCameraEnabled;
-
-    // Debug visibility
-    // useEffect(() => {
-    //    console.log(`[RemoteVideo] ${nickname} Visible: ${isVideoVisible} (Track: ${!!participantInfo?.videoTrack}, Enabled: ${participantInfo?.isCameraEnabled})`);
-    // }, [isVideoVisible, nickname, participantInfo]);
 
     return (
         <div className={styles.cameraContent}>

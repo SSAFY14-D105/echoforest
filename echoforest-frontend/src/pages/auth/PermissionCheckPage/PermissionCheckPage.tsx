@@ -26,7 +26,6 @@ export default function PermissionCheckPage() {
                     const micStatus = await navigator.permissions.query({ name: 'microphone' as any });
 
                     if (cameraStatus.state === 'granted' && micStatus.state === 'granted') {
-                        console.log('[PermissionCheck] Already granted. Redirecting to Lobby...');
                         setHasMediaPermission(true);
                         navigate('/lobby', { replace: true });
                         return;
