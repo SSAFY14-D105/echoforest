@@ -10,7 +10,7 @@ import type { Player } from '../store/useGameStore';
 import { useSttStore } from '../store/useSttStore';
 import { useToastStore } from '../store/useToastStore';
 import { gameWebSocket } from '../socket/GameWebSocket';
-import type { GameMessage, ServerPlayerState } from '../socket/GameWebSocket';
+import type { GameMessage } from '../socket/GameWebSocket';
 
 export function useGameWebSocket() {
     const {
