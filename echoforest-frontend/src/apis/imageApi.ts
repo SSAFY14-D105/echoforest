@@ -114,3 +114,45 @@ export async function uploadAllEndingCaptures(
 
     return results;
 }
+
+/**
+ * 내 이미지 목록 조회
+ * @param userId 유저 ID
+ */
+export async function getMyImages(userId: number): Promise<ImageResponseDto[]> {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/images/my?userId=${userId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+
+    if (!response.ok) {
+        throw new Error('이미지 목록 조회 실패');
+    }
+
+    return response.json();
+}
+
+/**
+ * 선택한 이미지 이메일 전송 (내 메일)
+ * @param userId 유저 ID
+ * @param imageIds 이미지 ID 목록
+ */
+export async function sendImagesToEmail(
+    userId: number,
+    imageIds: number[]
+): Promise<void> {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/images/email`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ userId, imageIds })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '이메일 전송 실패');
+    }
+}
