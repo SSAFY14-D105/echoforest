@@ -2,7 +2,7 @@ import BaseGesture, { GestureResult } from '../components/motion/BaseGesture';
 import BigHeartGesture from '../components/motion/BigHeartGesture';
 import BothCheekPokeGesture from '../components/motion/BothCheekPokeGesture';
 import CatEarsGesture from '../components/motion/CatEarsGesture';
-import CheekHeartGesture from '../components/motion/CheekHeartGesture';
+import FlowerPoseGesture from '../components/motion/FlowerPoseGesture';
 import FistGesture from '../components/motion/FistGesture';
 import HeartGesture from '../components/motion/HeartGesture';
 import KissGesture from '../components/motion/KissGesture';
@@ -30,7 +30,7 @@ export default class PoseManager {
             new BigHeartGesture(),
             new BothCheekPokeGesture(),
             new CatEarsGesture(),
-            new CheekHeartGesture(),
+            new FlowerPoseGesture(), // CheekHeart -> FlowerPose 교체
             new FistGesture(),
             new HeartGesture(),
             new KissGesture(),

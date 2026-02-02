@@ -18,7 +18,7 @@ export default class BigHeartGesture extends BaseGesture {
         };
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const hands = metadata.allHands;
         const aspectRatio = metadata.aspectRatio || 1.0;
         const face = metadata.faceLandmarks;

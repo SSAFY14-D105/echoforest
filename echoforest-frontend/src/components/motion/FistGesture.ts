@@ -15,7 +15,7 @@ export default class FistGesture extends BaseGesture {
         };
     }
 
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
         // 손가락 접힘 여부 (Tip-Wrist vs PIP-Wrist)
         const isIndexClosed = !isFingerExtended(landmarks, 8, 6);
         const isMiddleClosed = !isFingerExtended(landmarks, 12, 10);

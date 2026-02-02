@@ -14,7 +14,7 @@ export default class TalmoBeamGesture extends BaseGesture {
     /**
      * 탈모빔 감지 (양손)
      */
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
         const allHands = metadata.allHands;
         if (!allHands || allHands.length < 2) {
             return { detected: false, score: 0 };

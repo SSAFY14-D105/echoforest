@@ -8,8 +8,6 @@ export default class BothCheekPokeGesture extends BaseGesture {
 
     // 왼쪽/오른쪽 볼 포인트 (싱글 볼콕 제스처와 동일하게 맞춤)
     // 거울모드 기준:
-    // 사용자의 왼쪽 볼(화면 왼쪽) -> 280, 291 등 (Right Indices)
-    // 사용자의 오른쪽 볼(화면 오른쪽) -> 50, 61 등 (Left Indices)
     leftTargetPoints: number[] = [280, 425, 291, 411];
     rightTargetPoints: number[] = [50, 205, 61, 187];
 
@@ -47,10 +45,30 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 // 검지 펴짐 체크
                 if (!isFingerExtended(hand, 8, 6)) continue;
 
-                // [중요] 검지 각도 체크 (곧게 펴져있어야 함)
-                // 볼하트(Cheek Heart)는 구부러져서 C자를 그림 -> 각도 낮음
+                // 2. 검지 각도 체크 (140도 미만 스킵)
                 const indexAngle = calculateAngle(hand[5], hand[6], hand[8]);
-                if (indexAngle < 140) continue; // 140도 미만이면 너무 구부러진 것 -> 스킵
+                if (indexAngle < 140) continue;
+
+                // [중요] 엄지 위치 체크 (볼하트 오인식 방지)
+                // 만약 엄지가 얼굴 턱선/볼 하단에 가까이 붙어있다면 -> 이건 하트 동작이지 볼콕이 아님!
+                // 볼콕은 보통 주먹을 쥐거나 엄지가 떨어져 있음.
+                const thumbTip = hand[4];
+                const jawPoints = [365, 379, 400, 352, 136, 150, 176, 123]; // 좌우 통합 체크
+                let minThumbDist = Infinity;
+
+                for (const jIdx of jawPoints) {
+                    const jp = faceLandmarks[jIdx];
+                    if (jp) {
+                        const d = distance(thumbTip, jp);
+                        if (d < minThumbDist) minThumbDist = d;
+                    }
+                }
+                const normThumb = minThumbDist / faceSize;
+
+                // 엄지가 얼굴에 매우 가까우면(0.35 이내) 볼콕 후보에서 제외 또는 감점
+                if (normThumb < 0.35) {
+                    continue;
+                }
 
                 const indexTip = hand[8];
 
