@@ -84,5 +84,13 @@ public class User {
     public void updateGameStats(int kissCount, int curseCount) {
         this.kissCount += kissCount;
         this.curseCount += curseCount;
+
+        // 매너 점수 재계산
+        // 공식: 36.5 + (kiss * 0.1) - (curse * 0.2)
+        BigDecimal base = BigDecimal.valueOf(36.5);
+        BigDecimal kissBonus = BigDecimal.valueOf(this.kissCount).multiply(BigDecimal.valueOf(0.1));
+        BigDecimal cursePenalty = BigDecimal.valueOf(this.curseCount).multiply(BigDecimal.valueOf(0.2));
+
+        this.mannerScore = base.add(kissBonus).subtract(cursePenalty);
     }
 }

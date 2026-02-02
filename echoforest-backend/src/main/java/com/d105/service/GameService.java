@@ -503,6 +503,14 @@ public class GameService {
         int delta = aiSentimentService.analyzeBatch(texts);
 
         if (delta > 0) {
+            // [NEW] 저주 횟수(부정적인 말) 증가 - 발화자 기준
+            // 세션에서 username 가져오기
+            String username = (String) session.getAttributes().get("username");
+            if (username != null) {
+                redisRoomService.incrementCurse(roomId, username);
+                log.info("🤬 User {} incremented Curse Count (delta: {})", username, delta);
+            }
+
             // 2. 스택 증가
             boolean curseTrigger = room.addCurseStack(delta);
             int currentStack = room.getCurseStack();
@@ -550,6 +558,10 @@ public class GameService {
         String sessionId = room.findSessionIdByUsername(username);
         if (sessionId != null) {
             room.triggerCurseEvent(sessionId, true); // isPositive = true
+
+            // [NEW] 뽀뽀 횟수(긍정적인 말) 증가
+            redisRoomService.incrementKiss(roomId, username);
+            log.info("😘 User {} incremented Kiss Count", username);
 
             // CURSE_RELEASED 브로드캐스트
             GameMessageDto releaseMsg = new GameMessageDto();
