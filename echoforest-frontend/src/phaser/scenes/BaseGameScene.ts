@@ -1855,6 +1855,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // console.log(`[BaseGameScene] Forcing initial state sync for ${this.myPlayerId}`);
         // isHidden을 강제로 false로 보내서 스테이지 클리어 상태가 아님을 알림
         this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead, curses, false);
+
+        // [FIX] 추가 안전장치: 서버에 "골에서 나옴" 신호를 보내어 이전 스테이지의 클리어 상태(Goal Entered)를 확실히 해제
+        // 서버가 "모든 플레이어 골인" 상태를 유지하고 있을 경우를 대비함
+        const roomId = this.roomId || useGameStore.getState().roomId;
+        if (roomId && !this.isSoloMode) {
+            gameWebSocket.sendStageExit(roomId);
+        }
     }
 
     private handleLocalPlayerInput(): void {
