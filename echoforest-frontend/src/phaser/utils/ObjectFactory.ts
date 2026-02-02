@@ -17,7 +17,8 @@ export default class ObjectFactory {
         worldOffsetY: number,
         parentClass?: string,
         parentOffsetX: number = 0,
-        parentOffsetY: number = 0
+        parentOffsetY: number = 0,
+        depth: number = 0 // [New] Depth for rendering order
     ): void {
         const width = (obj.width || 0) * mapScale;
         const height = (obj.height || 0) * mapScale;
@@ -264,6 +265,32 @@ export default class ObjectFactory {
                 respawn.setScale(mapScale);
                 scene.spawnPoints.push(respawn);
                 console.log(`[ObjectFactory] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
+                break;
+            }
+            default: {
+                if (gid > 0) {
+                    const sprite = scene.add.sprite(centerX, centerY, texture, frame);
+
+                    // [FIX] Scale Calculation
+                    const currentFrame = sprite.frame;
+                    if (currentFrame) {
+                        const baseW = currentFrame.width;
+                        const baseH = currentFrame.height;
+                        // Avoid division by zero
+                        const scaleX = baseW > 0 ? (width / baseW) : mapScale;
+                        const scaleY = baseH > 0 ? (height / baseH) : mapScale;
+                        sprite.setScale(scaleX, scaleY);
+                    } else {
+                        sprite.setScale(mapScale);
+                    }
+
+                    sprite.setRotation(Phaser.Math.DegToRad(rotation));
+                    sprite.setDepth(depth); // [FIX] Use calculated depth
+
+                    if (obj.name) sprite.setName(obj.name);
+
+                    // console.log(`[ObjectFactory] Created generic visual object: ${obj.name} depth=${depth}`);
+                }
                 break;
             }
         }

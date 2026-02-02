@@ -85,7 +85,7 @@ export class Player {
         this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
         this.sprite.setOrigin(0.5, 1); // 하단 중앙을 기준으로 설정하여 충돌체 하단과 일치시키기 용이하게 함
         this.sprite.play(`player_idle_${this.colorName}`);
-        this.sprite.setDepth(10); // 기믹보다 위로 배치
+        this.sprite.setDepth(2000); // [FIX] 기믹보다 확실히 위로 배치 (안전값)
     }
 
     private createBody(x: number, y: number): MatterJS.BodyType {

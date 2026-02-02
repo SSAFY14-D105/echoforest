@@ -78,7 +78,7 @@
                         {
                          "name":"message",
                          "type":"string",
-                         "value":"\n\ud611\ub825 \ud574\ubcf4\uc790!"
+                         "value":"\ud611\ub825 \ud574\ubcf4\uc790!"
                         }],
                  "rotation":0,
                  "type":"Signboard",
