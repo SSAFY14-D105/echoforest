@@ -39,7 +39,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             {/* 배경 이미지 */}
             <img
                 className={styles.bgImage}
-                src="/assets/backgrounds/main_page.jpg"
+                src="/assets/backgrounds/main_page.png"
                 alt="메아리의 숲"
             />
 

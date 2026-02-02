@@ -5,6 +5,7 @@ import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
 import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
 import SettingsModal from '../../../components/SettingsModal/SettingsModal';
+import AudioController from '../../../components/common/AudioController';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
@@ -124,10 +125,11 @@ export default function LobbyPage() {
 
   return (
     <div className={styles.container}>
+      <AudioController />
       {/* 배경 이미지 */}
       <img
         className={styles.bgImage}
-        src="/assets/backgrounds/main_page.jpg"
+        src="/assets/backgrounds/main_page.png"
         alt="메아리의 숲"
       />
 
