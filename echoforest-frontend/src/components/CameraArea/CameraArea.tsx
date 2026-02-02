@@ -6,6 +6,7 @@ import type { ParticipantInfo } from '../../socket/LiveKitService';
 import styles from './CameraArea.module.css';
 
 const MAX_PLAYERS = 4;
+const ANIMAL_ICONS = ['🍄', '🌰', '🌱', '🍂'];
 
 interface CameraAreaProps {
     startSlot?: number;
@@ -164,7 +165,7 @@ export default function CameraArea({
                             key={slotIndex}
                             className={`${styles.cameraBox} ${styles.waiting}`}
                         >
-                            P{slotIndex + 1} (대기중...)
+                            {ANIMAL_ICONS[slotIndex]} (대기중...)
                         </div>
                     );
                 }
@@ -199,9 +200,11 @@ export default function CameraArea({
                                     style={{ display: isCameraEnabled ? 'block' : 'none' }}
                                 />
                                 {!isCameraEnabled && (
-                                    <div className={styles.cameraOff}>📹</div>
+                                    <div className={styles.cameraOff}>
+                                        <img src="/assets/ui/camera_off.png" alt="Camera Off" className={styles.cameraOffImage} />
+                                    </div>
                                 )}
-                                <span className={styles.playerLabel}>나</span>
+                                <span className={styles.playerLabel}>나 {ANIMAL_ICONS[slotIndex]}</span>
                             </div>
                         ) : (
                             <RemoteVideo
@@ -308,12 +311,16 @@ function RemoteVideo({
 
             {!isVideoVisible && (
                 <div className={styles.cameraOff}>
-                    {participantInfo ? '📹' : '...'}
+                    {participantInfo ? (
+                        <img src="/assets/ui/camera_off.png" alt="Camera Off" className={styles.cameraOffImage} />
+                    ) : (
+                        '...'
+                    )}
                 </div>
             )}
 
             <div className={styles.remoteLabel}>
-                P{slotIndex + 1}: {nickname}
+                {ANIMAL_ICONS[slotIndex]} {nickname}
             </div>
         </div>
     );

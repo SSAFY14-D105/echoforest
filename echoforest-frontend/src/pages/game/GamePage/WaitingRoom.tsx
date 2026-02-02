@@ -101,9 +101,12 @@ export default function WaitingRoom({
 
                 {/* 정보 패널 */}
                 <div className={styles.infoPanel}>
-                    <div className={styles.roomInfo}>
+                    <div
+                        className={styles.roomInfo}
+                        onClick={onCopyRoomId}
+                        title="클릭하여 방 코드 복사"
+                    >
                         🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span>
-                        <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
                     </div>
 
 

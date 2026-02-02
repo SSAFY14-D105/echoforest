@@ -23,10 +23,9 @@
 /* 정보 패널 */
 .infoPanel {
     flex-shrink: 0;
-    width: 200px;
-    background: #fff;
-    border: 2px solid #333;
-    border-radius: 8px;
+    width: 280px;
+    background: transparent;
+    border: none;
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -34,31 +33,37 @@
 }
 
 .roomInfo {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     text-align: center;
-    padding: 8px;
+    padding: 12px;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.roomInfo:hover {
+    transform: scale(1.05);
+    background: #f0f0f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .roomId {
     color: #e74c3c;
-}
-
-.copyBtn {
-    background: none;
-    border: none;
-    cursor: pointer;
+    font-family: var(--font-main);
+    /* 코드처럼 보이게 */
     font-size: 14px;
-    padding: 0;
-    vertical-align: middle;
-    transition: transform 0.2s;
 }
 
-.copyBtn:hover {
-    transform: scale(1.2);
+.copyIcon {
+    font-size: 14px;
 }
 
 /* 버튼 공통 스타일 */
@@ -91,8 +96,8 @@
 }
 
 .actionBtn.readyActive {
-    background: #4CAF50;
-    color: white;
+    background: #ffeeb0;
+    color: #333;
 }
 
 /* Ready 상태 */
