@@ -63,7 +63,7 @@ public class AiGenerationService {
         log.info("Requesting Local Image Composition for user: {}, Room: {}", userId, roomId);
         try {
             // 1. 이미지 선별
-            List<String> selectedImagePaths = selectOneImagePerUser(roomId);
+            List<String> selectedImagePaths = selectOneImagePerUser(roomId, stageNumber);
             if (selectedImagePaths.isEmpty()) {
                 if (sourceImages != null && !sourceImages.isEmpty()) {
                     selectedImagePaths = sourceImages;
@@ -258,8 +258,17 @@ public class AiGenerationService {
         log.info("Sent summary emails to {} users.", userIds.size());
     }
 
-    private List<String> selectOneImagePerUser(String roomId) {
-        List<Image> roomImages = imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId);
+    private List<String> selectOneImagePerUser(String roomId, Integer stageNumber) {
+        List<Image> roomImages;
+        if (stageNumber != null) {
+            // [FIX] 특정 스테이지의 사진으로만 합성하도록 필터링
+            roomImages = imageRepository.findByRoomCodeAndStageNumberAndDeletedAtIsNullOrderByCreatedAtDesc(roomId,
+                    stageNumber);
+        } else {
+            // 스테이지 지정 없으면 전체 방 사진 중 랜덤 (기존 로직 유지)
+            roomImages = imageRepository.findByRoomCodeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId);
+        }
+
         if (roomImages.isEmpty())
             return Collections.emptyList();
 
@@ -267,6 +276,8 @@ public class AiGenerationService {
                 .collect(Collectors.groupingBy(img -> img.getUser().getId()));
 
         List<String> selectedPaths = new ArrayList<>();
+        // 랜덤 대신 최신순으로 정렬되었으므로 첫 번째(가장 최근) 사진 선택하는 것이 더 자연스러움
+        // 다만 "랜덤 포즈" 게임이므로 랜덤이 나을 수도 있음. 기존 로직 유지 (랜덤).
         Random random = new Random();
 
         for (List<Image> userPhotos : imagesByUser.values()) {
