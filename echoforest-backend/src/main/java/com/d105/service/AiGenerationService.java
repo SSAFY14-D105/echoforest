@@ -90,9 +90,12 @@ public class AiGenerationService {
     /**
      * [테스트용] 사용자가 직접 업로드한 파일 4개를 사용하여 로컬 이미지 합성
      */
+    /**
+     * [테스트용/직접 업로드용] 사용자가 직접 업로드한 파일 4개를 사용하여 로컬 이미지 합성
+     */
     @Transactional
-    public ImageResponseDto generateTestImage(List<MultipartFile> files, Long userId) {
-        log.info("Requesting TEST Local Image Composition for user: {}", userId);
+    public ImageResponseDto generateTestImage(List<MultipartFile> files, Long userId, String roomId) {
+        log.info("Requesting Direct Image Composition for user: {}, Room: {}", userId, roomId);
         try {
             if (files == null || files.isEmpty()) {
                 throw new IllegalArgumentException("테스트할 이미지가 없습니다.");
@@ -101,10 +104,10 @@ public class AiGenerationService {
             for (MultipartFile file : files) {
                 base64Images.add(Base64.getEncoder().encodeToString(file.getBytes()));
             }
-            return composeImageLocal(base64Images, "TEST_ROOM", userId);
+            return composeImageLocal(base64Images, roomId != null ? roomId : "TEST_ROOM", userId);
         } catch (Exception e) {
-            log.error("Failed to generate TEST combined image", e);
-            throw new RuntimeException("테스트 이미지 합성 실패: " + e.getMessage(), e);
+            log.error("Failed to generate combined image", e);
+            throw new RuntimeException("이미지 합성 실패: " + e.getMessage(), e);
         }
     }
 

@@ -50,8 +50,8 @@ public class AiController {
     @PostMapping(value = "/test/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> testGenerateImage(
             @Parameter(description = "합성할 이미지 파일들 (최대 4개)") @RequestPart("files") List<MultipartFile> files,
-
-            @Parameter(description = "요청 유저 ID (이메일 전송 대상)") @RequestParam("userId") Long userId) {
+            @Parameter(description = "요청 유저 ID") @RequestParam("userId") Long userId,
+            @Parameter(description = "방 코드 (선택)") @RequestParam(value = "roomId", required = false) String roomId) {
         try {
             if (files.size() > 4) {
                 return ResponseEntity.badRequest().body(Map.of("error", "파일은 최대 4개까지만 업로드 가능합니다."));
@@ -59,7 +59,8 @@ public class AiController {
 
             ImageResponseDto generatedImage = aiGenerationService.generateTestImage(
                     files,
-                    userId);
+                    userId,
+                    roomId);
             return ResponseEntity.ok(generatedImage);
 
         } catch (Exception e) {
