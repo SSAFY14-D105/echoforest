@@ -9,9 +9,8 @@
 
 // === 메시지 타입 정의 ===
 export type WorkerInMessage =
-    | { type: 'PROCESS_TRANSCRIPT'; text: string; isFinal: boolean; isBoosterMode: boolean; isCursed: boolean }
-    | { type: 'RESET' }
-    | { type: 'SET_BOOSTER_MODE'; active: boolean };
+    | { type: 'PROCESS_TRANSCRIPT'; text: string; isFinal: boolean; isCursed: boolean }
+    | { type: 'RESET' };
 
 export type WorkerOutMessage =
     | { type: 'POSITIVE_DETECTED'; word: string; isCursed: boolean }

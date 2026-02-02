@@ -34,8 +34,6 @@ export interface SttState {
     transcript: string;
     lastDetectedWord: string | null;
     wordType: 'positive' | 'negative' | null;
-    isBoosterMode: boolean;
-    boosterActive: boolean;
     curseState: CurseState;
     speechQueue: string[];
     warningModal: WarningModal;
@@ -43,7 +41,6 @@ export interface SttState {
     penaltyLevel: number | null;
 
     // === Actions ===
-    setBoosterMode: (active: boolean) => void;
     setTranscript: (text: string) => void;
 
     // Worker 결과 핸들러
@@ -66,8 +63,6 @@ export const useSttStore = create<SttState>((set, get) => ({
     transcript: '',
     lastDetectedWord: null,
     wordType: null,
-    isBoosterMode: false,
-    boosterActive: false,
     curseState: {
         stack: 0,
         cursedPlayer: null,
@@ -87,21 +82,17 @@ export const useSttStore = create<SttState>((set, get) => ({
     penaltyLevel: null,
 
     // === 기본 액션 ===
-    setBoosterMode: (active: boolean) => {
-        set({ isBoosterMode: active });
-    },
-
     setTranscript: (text: string) => {
         set({ transcript: text });
     },
 
     // === Worker 결과 핸들러 ===
     onPositiveDetected: (word: string, isCursed: boolean) => {
+        // 저주 상태일 때만 처리
         if (isCursed) {
             set({
                 lastDetectedWord: word,
                 wordType: 'positive',
-                boosterActive: true,
                 warningModal: {
                     isVisible: true,
                     level: 0,
@@ -118,29 +109,14 @@ export const useSttStore = create<SttState>((set, get) => ({
             if (roomId && isConnected) {
                 sendCurseRelease(roomId, word);
             }
-        } else {
-            set({
-                lastDetectedWord: word,
-                wordType: 'positive',
-                boosterActive: true,
-                warningModal: {
-                    isVisible: true,
-                    level: 0,
-                    emoji: '💖',
-                    title: '긍정어 발동!',
-                    message: `"${word}" 감지!\n(저주 상태가 아닙니다)`,
-                    keyword: word,
-                },
-            });
-        }
 
-        // 3초 후 모달 숨김
-        setTimeout(() => {
-            set({
-                boosterActive: false,
-                warningModal: { ...get().warningModal, isVisible: false }
-            });
-        }, 3000);
+            // 3초 후 모달 숨김
+            setTimeout(() => {
+                set({
+                    warningModal: { ...get().warningModal, isVisible: false }
+                });
+            }, 3000);
+        }
     },
 
     onQueueUpdate: (count: number, texts: string[]) => {
@@ -246,8 +222,6 @@ export const useSttStore = create<SttState>((set, get) => ({
             transcript: '',
             lastDetectedWord: null,
             wordType: null,
-            isBoosterMode: false,
-            boosterActive: false,
             curseState: {
                 stack: 0,
                 cursedPlayer: null,

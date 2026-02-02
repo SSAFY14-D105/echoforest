@@ -6,7 +6,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
-import FloatingButton from '../../../components/stt/FloatingButton';
 import CurseStackBar from '../../../components/stt/CurseStackBar';
 import EndingMissionOverlay from '../../../components/game/EndingMissionOverlay/EndingMissionOverlay';
 import { useGameStore } from '../../../store/useGameStore';
@@ -26,8 +25,6 @@ interface StagePlayViewProps {
         cursedPlayer: string | null;
     };
     isListening: boolean;
-    boosterActive: boolean;
-    setBoosterMode: (active: boolean) => void;
     onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     onCopyRoomId: () => void;
     onClearStage: (stageId: string) => void;
@@ -40,8 +37,6 @@ export default function StagePlayView({
     isSoloMode,
     curseState,
     isListening,
-    boosterActive,
-    setBoosterMode,
     onSendState,
     onCopyRoomId,
     onClearStage,
@@ -218,11 +213,6 @@ export default function StagePlayView({
                 </button>
             </div>
             {/* CameraArea moved to top */}
-            <FloatingButton
-                onPress={() => setBoosterMode(true)}
-                onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}
-                isActive={boosterActive}
-            />
 
             {/* 엔딩 미션 오버레이 */}
             {isEndingMission && (
