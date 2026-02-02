@@ -54,9 +54,7 @@ export default function GamePage() {
 
   const {
     isListening,
-    boosterActive,
     curseState,
-    setBoosterMode,
   } = useSttProcessor();
 
   // === Local State ===
@@ -168,8 +166,6 @@ export default function GamePage() {
         currentStage={currentStage}
         curseState={curseState}
         isListening={isListening}
-        boosterActive={boosterActive}
-        setBoosterMode={setBoosterMode}
         onLeave={leaveGame}
       />
     );
@@ -185,8 +181,6 @@ export default function GamePage() {
         isSoloMode={isSoloMode}
         curseState={curseState}
         isListening={isListening}
-        boosterActive={boosterActive}
-        setBoosterMode={setBoosterMode}
         onSendState={handleSendState}
         onCopyRoomId={handleCopyRoomId}
         onClearStage={handleClearStage}

@@ -38,7 +38,12 @@ interface GameState {
     pausedBy: string | null; // 일시정지 유발자, null이면 진행 중
 
     // 엔딩 미션 상태
+    // 엔딩 미션 상태
     isEndingMission: boolean; // 엔딩 미션 중인지 여부
+
+    // [NEW] 권한 확인 여부 (로그인 후 필수)
+    hasMediaPermission: boolean;
+    setHasMediaPermission: (granted: boolean) => void;
 
     // 액션(함수)들
     setNickname: (name: string) => void;
@@ -81,7 +86,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     onMoveCallback: null,
     pausedBy: null,
     isEndingMission: false,
+    hasMediaPermission: false,
 
+    setHasMediaPermission: (granted: boolean) => set({ hasMediaPermission: granted }),
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
     setEndingMission: (active) => set({ isEndingMission: active }),
 
@@ -107,7 +114,24 @@ export const useGameStore = create<GameState>((set, get) => ({
             currentStage: initialStage > 0 ? `MULTI_${initialStage}` : null
         });
     },
-    leaveGame: () => set({ roomId: '', isHost: false, players: [], isGameStarted: false, isSoloMode: false, currentStage: null }),
+    leaveGame: () => {
+        // [FIX] 게임 퇴장 시 정리 작업
+        const currentRoomId = get().roomId;
+
+        // WebSocket 퇴장 메시지 전송
+        import('../socket/GameWebSocket').then(({ gameWebSocket }) => {
+            if (currentRoomId && gameWebSocket.isConnected()) {
+                gameWebSocket.sendLeave(currentRoomId);
+            }
+        }).catch(console.warn);
+
+        // LiveKit 연결 해제
+        import('../socket/LiveKitService').then(({ liveKitService }) => {
+            liveKitService.disconnect();
+        }).catch(console.warn);
+
+        set({ roomId: '', isHost: false, players: [], isGameStarted: false, isSoloMode: false, currentStage: null });
+    },
     addPlayer: (player) => set((state) => ({
         players: state.players.some(p => p.id === player.id)
             ? state.players
@@ -279,7 +303,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             isGameStarted: false,
             isSoloMode: false,
             currentStage: null,
-            pausedBy: null
+            pausedBy: null,
+            hasMediaPermission: false // [FIX] 로그아웃 시 권한 상태 초기화
         });
     }
 

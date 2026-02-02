@@ -2,7 +2,11 @@ import React from 'react';
 import styles from './AudioController.module.css';
 import { useAudioStore } from '../../store/useAudioStore';
 
-export default function AudioController() {
+interface AudioControllerProps {
+    className?: string;
+}
+
+export default function AudioController({ className }: AudioControllerProps) {
     const { isMuted, volume, toggleMute, setVolume } = useAudioStore();
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -10,7 +14,7 @@ export default function AudioController() {
     };
 
     return (
-        <div className={styles.container}>
+        <div className={`${styles.container} ${className || ''}`}>
             <button
                 className={styles.button}
                 onClick={toggleMute}

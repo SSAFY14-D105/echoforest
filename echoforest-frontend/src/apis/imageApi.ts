@@ -156,3 +156,108 @@ export async function sendImagesToEmail(
         throw new Error(errorData.error || '이메일 전송 실패');
     }
 }
+
+/**
+ * AI 합성 이미지 생성 요청 (로컬 합성)
+ * @param files 캡처 이미지 파일들
+ * @param userId 요청 유저 ID
+ * @param roomId 방 코드 (선택)
+ * @param stageNumber 스테이지 번호 (선택)
+ */
+export async function generateAiImage(
+    files: Blob[],
+    userId: number,
+    roomId?: string,
+    stageNumber?: number
+): Promise<ImageResponseDto> {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    files.forEach(file => {
+        formData.append('files', file);
+    });
+    // query param 전달
+    let url = `${API_BASE_URL}/ai/test/generate?userId=${userId}`;
+    if (roomId) url += `&roomId=${roomId}`;
+    if (stageNumber) url += `&stageNumber=${stageNumber}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`이미지 합성 실패: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * [HOST Only] 서버에 DB 이미지를 사용한 합성 요청 (동기화 완료 후 호출)
+ */
+export async function generateCompositeImage(
+    roomId: string,
+    userId: number,
+    stageNumber: number
+): Promise<ImageResponseDto> {
+    const token = localStorage.getItem('token');
+
+    // AiGenerationReqDto 스펙에 맞춤 (sourceImages 필수이므로 dummy 전달, 실제로 DB 이미지 있으면 무시됨)
+    const body = {
+        sourceImages: ["dummy"],
+        roomId,
+        userId,
+        stageNumber
+    };
+
+    const response = await fetch(`${API_BASE_URL}/ai/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`이미지 합성 실패 (Composite): ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * 방의 합성된 이미지 목록 조회 (RESULT 타입)
+ * @param roomCode 방 코드
+ */
+export async function getRoomGeneratedImages(roomCode: string): Promise<ImageResponseDto[]> {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/ai/room/${roomCode}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+
+    if (!response.ok) {
+        throw new Error('합성 이미지 목록 조회 실패');
+    }
+
+    return response.json();
+}
+
+/**
+ * 최종 결과 이메일 발송 요청
+ * @param roomId 방 코드/ID
+ */
+export async function sendFinishEmail(roomId: string): Promise<void> {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/ai/finish/${roomId}`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+
+    if (!response.ok) {
+        throw new Error('이메일 발송 요청 실패');
+    }
+}

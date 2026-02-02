@@ -3,7 +3,6 @@
  */
 
 import PhaserGame from '../../../phaser/PhaserGame';
-import FloatingButton from '../../../components/stt/FloatingButton';
 import CurseStackBar from '../../../components/stt/CurseStackBar';
 import styles from './GamePage.module.css';
 
@@ -15,8 +14,6 @@ interface SoloPlayViewProps {
         cursedPlayer: string | null;
     };
     isListening: boolean;
-    boosterActive: boolean;
-    setBoosterMode: (active: boolean) => void;
     onLeave: () => void;
 }
 
@@ -25,8 +22,6 @@ export default function SoloPlayView({
     currentStage,
     curseState,
     isListening,
-    boosterActive,
-    setBoosterMode,
     onLeave,
 }: SoloPlayViewProps) {
     const sceneKey = currentStage.replace('SOLO_', 'Solo') + 'Scene';
@@ -48,11 +43,6 @@ export default function SoloPlayView({
                     isListening={isListening}
                 />
             </div>
-            <FloatingButton
-                onPress={() => setBoosterMode(true)}
-                onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}
-                isActive={boosterActive}
-            />
         </div>
     );
 }

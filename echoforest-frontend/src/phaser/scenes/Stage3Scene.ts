@@ -62,6 +62,8 @@ export default class Stage3Scene extends BaseGameScene {
     }
 
     protected createGimmicks(): void {
+        // [수정] stage_03.tmj에서 정의된 'players_tileset' 추가 등록
+        this.mapManager?.getMap().addTilesetImage('players_tileset', 'players_tileset');
         this.mapManager?.createObjects();
     }
 

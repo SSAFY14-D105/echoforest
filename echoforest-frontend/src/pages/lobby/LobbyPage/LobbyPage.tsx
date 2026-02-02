@@ -5,6 +5,7 @@ import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
 import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
 import SettingsModal from '../../../components/SettingsModal/SettingsModal';
+import AudioController from '../../../components/common/AudioController';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
@@ -124,10 +125,11 @@ export default function LobbyPage() {
 
   return (
     <div className={styles.container}>
+      <AudioController />
       {/* 배경 이미지 */}
       <img
         className={styles.bgImage}
-        src="/assets/backgrounds/main_page.jpg"
+        src="/assets/backgrounds/main_page.png"
         alt="메아리의 숲"
       />
 
@@ -140,6 +142,12 @@ export default function LobbyPage() {
         >
           🧪 혼자하기
         </button>
+      </div>
+
+      {/* [NEW] 메인 타이틀 (MainPage와 동일) */}
+      <div className={styles.titleWrapper}>
+        <h1 className={styles.mainTitle}>메아리의 숲</h1>
+        <h2 className={styles.subTitle}>Echo Forest</h2>
       </div>
 
       {/* 메뉴 (검정 보드 위치) */}

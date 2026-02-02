@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StagePlayView - 멀티플레이 스테이지 플레이 화면
  */
 
@@ -6,14 +6,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import PhaserGame from '../../../phaser/PhaserGame';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
-import FloatingButton from '../../../components/stt/FloatingButton';
 import CurseStackBar from '../../../components/stt/CurseStackBar';
 import EndingMissionOverlay from '../../../components/game/EndingMissionOverlay/EndingMissionOverlay';
 import { useGameStore } from '../../../store/useGameStore';
 import { liveKitService } from '../../../socket/LiveKitService';
 import type { ParticipantInfo } from '../../../socket/LiveKitService';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
-import { uploadAllEndingCaptures } from '../../../apis/imageApi';
+import { uploadAllEndingCaptures, generateCompositeImage } from '../../../apis/imageApi';
+import ResultOverlay from '../../../components/game/ResultOverlay/ResultOverlay';
+import AudioController from '../../../components/common/AudioController';
 import styles from './GamePage.module.css';
 
 interface StagePlayViewProps {
@@ -26,8 +27,6 @@ interface StagePlayViewProps {
         cursedPlayer: string | null;
     };
     isListening: boolean;
-    boosterActive: boolean;
-    setBoosterMode: (active: boolean) => void;
     onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     onCopyRoomId: () => void;
     onClearStage: (stageId: string) => void;
@@ -40,8 +39,6 @@ export default function StagePlayView({
     isSoloMode,
     curseState,
     isListening,
-    boosterActive,
-    setBoosterMode,
     onSendState,
     onCopyRoomId,
     onClearStage,
@@ -49,8 +46,11 @@ export default function StagePlayView({
     const stageNum = currentStage.replace('MULTI_', '');
 
     // 엔딩 미션 상태
-    const { isEndingMission, setEndingMission, nickname, isHost } = useGameStore();
+    const { isEndingMission, setEndingMission, nickname, isHost, leaveGame } = useGameStore();
     const [participantInfos, setParticipantInfos] = useState<ParticipantInfo[]>([]);
+
+    // [NEW] 최종 결과 오버레이 상태
+    const [showResultOverlay, setShowResultOverlay] = useState(false);
 
     // LiveKit 참가자 정보 구독
     useEffect(() => {
@@ -63,6 +63,9 @@ export default function StagePlayView({
     // 종료 처리 중복 방지 락
     const isProcessingEndRef = useRef(false);
     const isUploadingRef = useRef(false); // [FIX] 업로드 중복 방지 락
+    // [NEW] 이미지 업로드 완료한 유저 ID 집합 (호스트가 추적)
+    const uploadedUserIdsRef = useRef<Set<number>>(new Set());
+    const hasGeneratedImageRef = useRef(false); // 이미 생성 요청했는지 여부
 
     // 서버로부터 엔딩 미션 시작/종료 이벤트 수신
     useEffect(() => {
@@ -83,6 +86,65 @@ export default function StagePlayView({
             gameWebSocket.off('ENDING_MISSION_END', handleEndingMissionEnd);
         };
     }, [setEndingMission, onClearStage, currentStage]);
+
+    // [FIX] 스테이지 변경 시 상태 리셋 (중요: 이전 스테이지 업로드 기록이 남아서 다음 스테이지 합성을 방해하는 문제 해결)
+    useEffect(() => {
+        uploadedUserIdsRef.current.clear();
+        hasGeneratedImageRef.current = false;
+        isUploadingRef.current = false;
+        console.log(`[StagePlayView] State reset for new Stage: ${stageNum}`);
+    }, [stageNum]);
+
+    // [NEW] LiveKit 데이터 수신 (IMAGE_UPLOADED)
+    useEffect(() => {
+        const handleDataReceived = (payload: Uint8Array) => {
+            try {
+                const message = new TextDecoder().decode(payload);
+                const data = JSON.parse(message);
+
+                if (data.type === 'IMAGE_UPLOADED' && data.stage === stageNum) {
+                    console.log(`[StagePlayView] User ${data.userId} uploaded image for stage ${stageNum}`);
+
+                    // 호스트라면 업로드 카운트 추적 및 합성 트리거
+                    if (isHost) {
+                        uploadedUserIdsRef.current.add(data.userId);
+                        checkAndGenerateComposite();
+                    }
+                }
+            } catch (err) {
+                console.error('[StagePlayView] Failed to parse data message:', err);
+            }
+        };
+
+        const unsubscribe = liveKitService.onDataReceived(handleDataReceived);
+        return unsubscribe;
+    }, [isHost, stageNum, participantInfos]);
+
+    // 호스트 전용: 모든 참가자가 업로드했는지 확인하고 합성 요청
+    const checkAndGenerateComposite = async () => {
+        if (hasGeneratedImageRef.current) return;
+
+        const currentCount = uploadedUserIdsRef.current.size;
+        // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 (participantInfos.length + 1) 체크 (participantInfos는 원격 참가자만 포함하므로)
+        const requiredCount = isSoloMode ? 1 : (participantInfos.length + 1);
+
+        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded. (isSolo=${isSoloMode}, remotes=${participantInfos.length})`);
+
+        if (currentCount >= requiredCount) {
+            console.log('[StagePlayView] All participants uploaded! Generating composite...');
+            hasGeneratedImageRef.current = true;
+
+            try {
+                const storedUserId = localStorage.getItem('userId');
+                const hostUserId = storedUserId ? parseInt(storedUserId, 10) : 0;
+                // 호스트가 대표로 요청
+                await generateCompositeImage(roomId, hostUserId, parseInt(stageNum));
+                console.log('[StagePlayView] Composite generation requested successfully.');
+            } catch (error) {
+                console.error('[StagePlayView] Composite generation failed:', error);
+            }
+        }
+    };
 
     // 엔딩 미션 시 이미지 캡처 완료 핸들러
     const handleCaptureComplete = async (captures: Blob[]) => {
@@ -124,8 +186,31 @@ export default function StagePlayView({
                 participantUserIds,
                 roomId
             );
-            // console.log('[StagePlayView] Upload results:', results);
-            // console.log('[StagePlayView] Ending captures uploaded successfully');
+
+            // 2. [NEW] LiveKit으로 '업로드 완료' 신호 전송
+            if (liveKitService.isConnected) {
+                const msg = JSON.stringify({ type: 'IMAGE_UPLOADED', stage: stageNum, userId });
+                await liveKitService.sendData(msg);
+            } else {
+                console.warn('[StagePlayView] LiveKit not connected, cannot send upload signal.');
+            }
+
+            // [HOST SELF CHECK] 내가 호스트라면 내 업로드도 카운트에 포함
+            if (isHost) {
+                uploadedUserIdsRef.current.add(userId);
+                checkAndGenerateComposite();
+            }
+
+            // 싱글 모드거나 연결 안된 경우 (Fallback): 즉시 생성 시도
+            if (isSoloMode || !liveKitService.isConnected) {
+                if (!isHost) {
+                    // 싱글모드인데 호스트가 아닐리 없지만, 혹시 모를 경우 직접 요청
+                    // (다만 generateCompositeImage는 DB이미지 쓰므로 업로드 직후 호출하면 됨)
+                    try {
+                        await generateCompositeImage(roomId, userId, stageNumber);
+                    } catch (e) { console.error(e); }
+                }
+            }
         } catch (error) {
             console.error('[StagePlayView] Failed to upload captures:', error);
         }
@@ -135,6 +220,13 @@ export default function StagePlayView({
     const handleEndingMissionClose = useCallback(() => {
         // [FIX] 중복 호출 방지 (Ref 사용)
         if (isProcessingEndRef.current) return;
+
+        // [NEW] 스테이지 4라면 결과 화면을 보여줌 (종료 프로세스 중단)
+        if (stageNum === '4') {
+            setShowResultOverlay(true);
+            return;
+        }
+
         isProcessingEndRef.current = true;
 
         // [FIX] 중복 방지: 호스트만 종료 신호를 보내도록 변경
@@ -153,7 +245,12 @@ export default function StagePlayView({
             isProcessingEndRef.current = false;
             isUploadingRef.current = false; // [FIX] 업로드 락도 함께 해제
         }, 10000);
-    }, [isHost, isEndingMission, roomId]);
+    }, [isHost, isEndingMission, roomId, stageNum]);
+
+    // 최종 결과 화면 닫기 (메인으로 이동 또는 완전 종료)
+    const handleResultClose = () => {
+        leaveGame();
+    };
 
     // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버가 모든 클라이언트에 브로드캐스트)
     const handleTestEndingMission = () => {
@@ -205,6 +302,7 @@ export default function StagePlayView({
             </div>
 
             <div className={`pixel-box ${styles.canvasWrapper}`}>
+                <AudioController className={styles.gameAudioController} />
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}
@@ -218,20 +316,23 @@ export default function StagePlayView({
                 </button>
             </div>
             {/* CameraArea moved to top */}
-            <FloatingButton
-                onPress={() => setBoosterMode(true)}
-                onRelease={() => setTimeout(() => setBoosterMode(false), 3000)}
-                isActive={boosterActive}
-            />
 
             {/* 엔딩 미션 오버레이 */}
-            {isEndingMission && (
+            {isEndingMission && !showResultOverlay && (
                 <EndingMissionOverlay
                     participantInfos={participantInfos}
                     nickname={nickname}
                     roomId={roomId}
                     onCaptureComplete={handleCaptureComplete}
                     onClose={handleEndingMissionClose}
+                />
+            )}
+
+            {/* [NEW] 최종 결과 화면 (스테이지 4 전용) */}
+            {showResultOverlay && (
+                <ResultOverlay
+                    roomId={roomId}
+                    onClose={handleResultClose}
                 />
             )}
         </div>

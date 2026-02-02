@@ -107,6 +107,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <img src="/assets/ui/join_room.png" alt="" className={styles.modalIcon} />
                 <h3>방 코드 입력</h3>
                 <p className={styles.modalDesc}>공유받은 6자리 코드를 입력하세요</p>
                 <input
@@ -134,7 +135,7 @@ export default function JoinGameModal({ nickname, onClose }: JoinGameModalProps)
                         className={styles.btnPrimary}
                         disabled={isConnecting}
                     >
-                        {isConnecting ? '연결 중...' : '입장'}
+                        {isConnecting ? '입장 중...' : '입장'}
                     </button>
                 </div>
             </div>

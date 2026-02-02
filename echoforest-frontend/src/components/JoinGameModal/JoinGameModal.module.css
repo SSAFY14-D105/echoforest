@@ -26,15 +26,17 @@
 
 .modal {
     background: white;
-    border: 4px solid var(--frog-dark);
-    box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     padding: 32px 24px;
     width: 90%;
     max-width: 400px;
     animation: slideUp 0.3s;
     box-sizing: border-box;
     position: relative;
-    /* 픽셀 느낌을 위한 모서리 처리 (옵션) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 @keyframes slideUp {
@@ -49,17 +51,25 @@
     }
 }
 
+.modalIcon {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
 .modal h3 {
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     font-size: 24px;
-    color: var(--frog-dark);
+    color: #333;
     font-family: var(--font-title);
     text-align: center;
     text-transform: uppercase;
 }
 
 .modalDesc {
-    color: #555;
+    color: #666;
     margin: 0 0 24px 0;
     font-size: 14px;
     text-align: center;
@@ -70,7 +80,8 @@
 .codeInput {
     width: 100%;
     padding: 16px;
-    border: 3px solid var(--frog-dark);
+    border: 2px solid #ddd;
+    border-radius: 8px;
     font-size: 24px;
     text-align: center;
     font-weight: bold;
@@ -80,74 +91,74 @@
     box-sizing: border-box;
     font-family: var(--font-title);
     background: #f9f9f9;
-    box-shadow: inset 4px 4px 0px 0px rgba(0, 0, 0, 0.05);
+    color: #5d4037;
 }
 
 .codeInput:focus {
     outline: none;
     background: white;
-    transform: translateY(-2px);
-    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.1);
+    border-color: #ffeeb0;
+    box-shadow: 0 0 0 3px rgba(255, 238, 176, 0.5);
 }
 
 .error {
-    color: var(--scarf-red);
+    color: #d32f2f;
     font-size: 14px;
     margin: 0 0 20px 0;
     text-align: center;
     font-weight: bold;
     background: #fff0f0;
     padding: 8px;
-    border: 2px solid var(--scarf-red);
+    border-radius: 4px;
+    border: 1px solid #d32f2f;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* 모달 액션 */
 .modalActions {
     display: flex;
     gap: 12px;
+    width: 100%;
 }
 
 .btnPrimary,
 .btnSecondary {
     flex: 1;
     padding: 14px;
-    border: 3px solid var(--frog-dark);
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.1s;
+    transition: all 0.2s;
     font-family: var(--font-title);
-    position: relative;
-    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .btnPrimary {
-    background: var(--frog-green);
-    color: white;
-    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.2);
+    background: #ffeeb0;
+    color: #333;
 }
 
 .btnPrimary:hover:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.15);
-    filter: brightness(1.1);
+    background: #ffe082;
+    transform: translateY(-2px);
 }
 
 .btnSecondary {
-    background: white;
-    color: var(--frog-dark);
+    background: #f0f0f0;
+    color: #666;
 }
 
 .btnSecondary:hover:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.15);
-    background: var(--bg-cream);
+    background: #e0e0e0;
+    transform: translateY(-2px);
 }
 
 .btnPrimary:active,
 .btnSecondary:active {
-    transform: translate(4px, 4px);
-    box-shadow: none;
+    transform: translateY(0);
 }
 
 .btnPrimary:disabled,
@@ -155,8 +166,6 @@
     opacity: 0.6;
     cursor: not-allowed;
     background: #ccc;
-    border-color: #999;
-    color: #666;
+    color: #888;
     transform: none;
-    box-shadow: none;
 }
