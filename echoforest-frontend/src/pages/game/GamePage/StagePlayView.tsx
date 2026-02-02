@@ -14,6 +14,7 @@ import { liveKitService } from '../../../socket/LiveKitService';
 import type { ParticipantInfo } from '../../../socket/LiveKitService';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
 import { uploadAllEndingCaptures } from '../../../apis/imageApi';
+import AudioController from '../../../components/common/AudioController';
 import styles from './GamePage.module.css';
 
 interface StagePlayViewProps {
@@ -205,6 +206,7 @@ export default function StagePlayView({
             </div>
 
             <div className={`pixel-box ${styles.canvasWrapper}`}>
+                <AudioController className={styles.gameAudioController} />
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}

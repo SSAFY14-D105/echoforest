@@ -10,8 +10,8 @@ import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
 import ToastContainer from './components/ToastContainer/ToastContainer';
 import BackgroundMusic from './components/common/BackgroundMusic';
-import AudioController from './components/common/AudioController';
 import { useAudioStore } from './store/useAudioStore';
+import SplashScreen from './components/SplashScreen/SplashScreen';
 
 export default function App() {
   const { nickname, roomId, setNickname } = useGameStore();
@@ -37,7 +37,7 @@ export default function App() {
     } else if (token && storedNickname && !nickname) {
       setNickname(storedNickname);
     }
-    setIsInitializing(false);
+
   }, []);
 
   // [NEW] 실시간 권한 변경 감지 (브라우저 설정에서 권한 해제 시 즉시 대응)
@@ -73,22 +73,16 @@ export default function App() {
     checkAndMonitor();
   }, [nickname]);
 
-  if (isInitializing) {
-    return (
-      <div className="app-container">
-        <ToastContainer />
-        <BackgroundMusic />
-        <AudioController />
-        <div style={{ width: '100vw', height: '100vh', backgroundColor: '#2d2d2d' }} />
-      </div>
-    );
-  }
+
 
   return (
     <div className="app-container">
+      {isInitializing ? (
+        <SplashScreen onFinished={() => setIsInitializing(false)} />
+      ) : null}
+
       <ToastContainer />
       <BackgroundMusic />
-      <AudioController />
 
       <Routes>
         {/* Auth Routes */}
