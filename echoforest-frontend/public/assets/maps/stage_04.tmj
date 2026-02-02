@@ -336,7 +336,7 @@
                         {
                          "name":"requiredPlayers",
                          "type":"int",
-                         "value":1
+                         "value":4
                         }, 
                         {
                          "name":"targetGoalId",
@@ -633,7 +633,7 @@
                         {
                          "name":"requiredPlayers",
                          "type":"int",
-                         "value":1
+                         "value":4
                         }, 
                         {
                          "name":"targetY",

@@ -98,7 +98,38 @@ Tiled 에디터와 파이저(Phaser) 엔진은 **회전 축(Pivot Point)** 처�
 
 ---
 
-## 4. 타입 지정 (Type Inference Priority)
+## 4. 멀티플레이 스테이지 구성 규칙 (Multiplayer Scene Rules)
+멀티플레이 스테이지(`Stage1Scene` ~ `Stage4Scene`)는 **서버와의 상태 동기화** 및 **엔딩 미션(포즈 인식)**을 위해 반드시 아래 규칙을 따라야 합니다.
+
+### 4.1. Scene 클래스 구조
+*   모든 멀티플레이 Scene은 `BaseGameScene`을 상속받아야 합니다.
+*   `create()` 메서드에서 `MapManager`를 통해 맵을 로드해야 합니다.
+
+### 4.2. 스테이지 클리어 및 이동 (중요!)
+*   **절대 금지**: Scene 코드 내에서 `this.scene.start('NextStage')`를 직접 호출하면 안 됩니다.
+    *   이유: 엔딩 미션(포즈 인식, 사진 촬영)을 건너뛰게 되며, 플레이어 간 동기화가 깨집니다.
+*   **올바른 방법**: `onStageComplete()` 메서드에서는 **오직 `super.onStageComplete()`만 호출**하세요.
+    ```typescript
+    protected onStageComplete(): void {
+        // [O] 서버에 클리어 신호만 전송 -> 이후 엔딩 미션 및 이동은 서버가 제어함
+        super.onStageComplete();
+    }
+    ```
+*   **이동 흐름**:
+    1.  플레이어 전원 도착 (`onStageComplete`)
+    2.  서버: 엔딩 미션 시작 신호 (`ENDING_MISSION_START`)
+    3.  클라이언트: 오버레이 표시 및 포즈 인식
+    4.  서버: 사진 촬영 완료 후 다음 스테이지 신호 (`NEXT_STAGE`)
+    5.  클라이언트: 자동으로 다음 Scene으로 전환
+
+### 4.3. 맵 파일(.tmj) 필수 요소
+*   멀티플레이 맵에는 반드시 다음 객체가 포함되어야 합니다.
+    *   **SpawnPoint**: 시작 위치 (속성: `isDefault: true` 권장)
+    *   **Goal**: 도착 지점 (Object Layer에 배치, Type: `Goal`)
+
+---
+
+## 5. 타입 지정 (Type Inference Priority)
 
 게임이 오브젝트가 어떤 기믹인지 판단하는 우선순위는 다음과 같습니다.
 
@@ -110,7 +141,7 @@ Tiled 에디터와 파이저(Phaser) 엔진은 **회전 축(Pivot Point)** 처�
 
 ---
 
-## 5. 자주 묻는 질문 (Troubleshooting)
+## 6. 자주 묻는 질문 (Troubleshooting)
 
 **Q. 맵을 수정했는데 게임에 반영이 안 됩니다.**
 A. `public/assets/maps/` 경로에 `.tmj` 파일이 정확히 저장되었는지, 브라우저 캐시가 남아있는지 확인하세요.
@@ -123,9 +154,9 @@ A. `MapManager`가 자동으로 4배 확대를 적용하지만, 버그가 의심
 
 ---
 
-## 6. 개발 가이드 (Development Guide) (New)
+## 7. 개발 가이드 (Development Guide)
 
-### 6.1. Scene에서 MapManager 적용 시 주의사항
+### 7.1. Scene에서 MapManager 적용 시 주의사항
 
 `BaseGameScene`을 상속받는 Scene에서 `MapManager`를 사용할 때 **초기화 순서**가 매우 중요합니다.
 
@@ -159,7 +190,7 @@ protected createGimmicks(): void {
 }
 ```
 
-### 6.2. 오브젝트 회전 문제 (Object Rotation Issues)
+### 7.2. 오브젝트 회전 문제 (Object Rotation Issues)
 
 **문제 상황:**
 Tiled에서 오브젝트를 회전시켜 배치했으나, 게임 내에서는 회전이 적용되지 않거나 이미지가 이상하게 표시되는 경우.
@@ -174,7 +205,7 @@ Tiled에서 오브젝트를 회전시켜 배치했으나, 게임 내에서는 �
     -   **원인**: Tiled에서 이미지를 드래그해서 배치한 **Tile Object**가 아니라, 사각형 그리기 도구로 만든 **Shape Object**인 경우입니다. Shape Object는 GID(Tile ID)가 없어서 이미지를 불러올 수 없습니다.
     -   **해결**: 해당 도형 오브젝트를 삭제하고, 타일셋에서 이미지를 드래그하여 다시 배치하세요.
 
-### 6.3. 다중 타일셋 사용 시 주의사항 (Using Multiple Tilesets)
+### 7.3. 다중 타일셋 사용 시 주의사항 (Using Multiple Tilesets)
 
 **문제 상황:**
 Tiled에서는 맵이 정상적으로 보이지만, 게임 내에서 특정 오브젝트(예: `MovingBumper`)의 이미지가 보이지 않음.
