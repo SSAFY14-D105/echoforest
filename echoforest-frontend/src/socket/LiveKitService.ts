@@ -188,7 +188,7 @@ export class LiveKitService {
     async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
-        // console.log(`[LiveKitService] 수동 연결 시도 #${myId} - Token 제공됨`);
+        console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${_roomName}, User: ${_username}`);
 
         try {
             // 2. Room 생성 및 연결 (공통 로직 Reuse 권장되지만, 중복 방지를 위해 여기도 구현)
@@ -210,7 +210,7 @@ export class LiveKitService {
                 return;
             }
 
-            // console.log('✅ LiveKit Room 연결 성공 (수동 토큰)');
+            console.log('✅ LiveKit 토큰 발급 성공 (수동 토큰)');
             this.setupLocalTracks(myId);
             this.onConnectedCallback?.();
             this.notifyParticipantUpdate();
@@ -229,18 +229,18 @@ export class LiveKitService {
         if (!this.room) return;
 
         this.room.on(RoomEvent.ParticipantConnected, () => {
-            //console.log('📥 참가자 입장');
+            console.log('📥 참가자 입장:', this.room?.remoteParticipants.size);
             this.notifyParticipantUpdate();
         });
 
         this.room.on(RoomEvent.ParticipantDisconnected, () => {
-            //console.log('📤 참가자 퇴장');
+            console.log('📤 참가자 퇴장');
             this.notifyParticipantUpdate();
         });
 
-        //this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
-        this.room.on(RoomEvent.TrackSubscribed, (track) => {
-            //console.log('🎥 트랙 구독:', track.kind, participant.identity);
+        // this.room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
+        this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+            console.log('🎥 트랙 구독:', track.kind, participant.identity);
 
             // 오디오 트랙은 자동으로 재생되도록 attach
             if (track.kind === Track.Kind.Audio) {
@@ -380,7 +380,7 @@ export class LiveKitService {
                 this.onErrorCallback?.(err?.message || 'LiveKit 연결에 실패했습니다.');
                 throw err;
             } else {
-                // console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
+                console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
             }
         }
     }
@@ -389,7 +389,7 @@ export class LiveKitService {
     disconnect() {
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
-            // console.log('[LiveKitService] 연결 종료');
+            console.log('[LiveKitService] 연결 종료');
             this.room.disconnect();
             this.room = null;
         }
