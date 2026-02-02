@@ -276,14 +276,20 @@ export default function EndingMissionOverlay({
         setIsCapturing(true);
 
         try {
-            const currentParticipants = allParticipants;
-            const videoElements: (HTMLVideoElement | null)[] = currentParticipants
-                .map(p => videoRefs.current.get(p.identity) || null);
-
-            const captures = await captureAllParticipants(videoElements);
-
-            onCaptureComplete?.(captures);
-            setCaptureComplete(true);
+            // [FIX] 중복 업로드 방지: 내 로컬 비디오만 캡처해서 업로드 (각자 자기 것만)
+            // 기존에는 모든 참가자를 캡처했기 때문에 (참가자 수 x 참가자 수)만큼 사진이 생성됨
+            const localParticipant = allParticipants.find(p => p.isLocal);
+            if (localParticipant) {
+                const videoEl = videoRefs.current.get(localParticipant.identity);
+                if (videoEl) {
+                    console.log('[EndingMissionOverlay] Capturing local video only:', localParticipant.identity);
+                    const captures = await captureAllParticipants([videoEl]);
+                    onCaptureComplete?.(captures);
+                    setCaptureComplete(true);
+                } else {
+                    console.warn('[EndingMissionOverlay] Local video element not found for capture');
+                }
+            }
         } catch (error) {
             console.error('[EndingMissionOverlay] Capture failed:', error);
         } finally {
