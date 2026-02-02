@@ -266,14 +266,10 @@ class GameWebSocket {
     // 메시지 전송
     send(message: GameMessage) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            if (message.type !== 'MOVE') {
-                //console.log('📤 전송:', message);
-            }
             this.ws.send(JSON.stringify(message));
         } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
             // [FIX] 연결 중일 때 중요 메시지는 큐에 저장
             if (message.type === 'JOIN' || message.type === 'CREATE' || message.type === 'READY' || message.type === 'START_GAME') {
-
                 this.messageQueue.push(message);
             }
         } else {

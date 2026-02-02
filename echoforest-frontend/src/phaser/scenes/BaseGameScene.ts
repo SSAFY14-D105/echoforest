@@ -196,6 +196,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.events.on('shutdown', this.shutdown, this);
             this.events.on('destroy', this.shutdown, this);
 
+            // [FIX] Scene 시작 시 강제 상태 동기화 (잠시 대기 후 실행하여 콜백 연결 보장)
+            // 서버에 "나 여기 있고, 숨겨지지 않았다(isHidden: false)"라고 알려주어 이전 스테이지의 클리어 상태가 넘어오는 것을 방지
+            this.time.delayedCall(200, () => {
+                this.forceSyncState();
+            });
+
             // [LIFECYCLE] Scene Created Log
             // console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
         } catch (e) {
@@ -1826,6 +1832,40 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
     }
 
+    // [FIX] 강제 상태 동기화 (Scene 시작 시 호출)
+    private forceSyncState(): void {
+        // 콜백이나 내 플레이어가 없으면 스킵
+        if (!this.sendStateCallback || !this.myPlayerId) return;
+
+        const myPlayer = this.players.get(this.myPlayerId);
+        if (!myPlayer) return;
+
+        // 즉시 상태 전송 (isHidden: false 강제)
+        const { x, y } = myPlayer.getPosition();
+        const velocity = myPlayer.getVelocity();
+        // 초기화 시점에는 저주가 없을 가능성이 높지만 확인
+        const curses = myPlayer.hasCurse() && myPlayer['currentCurseId'] ? [myPlayer['currentCurseId']] : [];
+
+        let syncAnim = 'idle';
+        const match = this.getSceneKey().match(/Stage(\d+)Scene/);
+        if (match) {
+            syncAnim += `|s:${match[1]}`;
+        }
+
+        // [DEBUG] 강제 상태 동기화 호출 추적
+        console.log(`[DEBUG] ⚡ forceSyncState called in ${this.getSceneKey()} for player: ${this.myPlayerId}`);
+        // isHidden을 강제로 false로 보내서 스테이지 클리어 상태가 아님을 알림
+        this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead, curses, false);
+
+        // [FIX] 추가 안전장치: 서버에 "골에서 나옴" 신호를 보내어 이전 스테이지의 클리어 상태(Goal Entered)를 확실히 해제
+        // 서버가 "모든 플레이어 골인" 상태를 유지하고 있을 경우를 대비함
+        const roomId = this.roomId || useGameStore.getState().roomId;
+        if (roomId && !this.isSoloMode) {
+            console.log(`[DEBUG] 📤 Sending STAGE_EXIT from forceSyncState for room: ${roomId}`);
+            gameWebSocket.sendStageExit(roomId);
+        }
+    }
+
     private handleLocalPlayerInput(): void {
         if (this.isDead) return;
 
@@ -2071,12 +2111,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
-        // console.log(`[${this.getSceneKey()}] 🎉 Stage Complete! Sending clear signal...`);
+        // [DEBUG] 스테이지 클리어 호출 추적
+        console.log(`[DEBUG] � onStageComplete called in ${this.getSceneKey()}`);
 
         // [FIX] roomId가 설정되지 않았을 경우 Store에서 가져옴
         const roomId = this.roomId || useGameStore.getState().roomId;
 
         if (roomId && gameWebSocket.isConnected()) {
+            console.log(`[DEBUG] 📤 Sending STAGE_CLEAR to server for room: ${roomId}`);
             gameWebSocket.sendStageClear(roomId);
 
             // UI 피드백: "다른 멤버를 기다리는 중..."

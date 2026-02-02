@@ -45,9 +45,9 @@ export default function EndingMissionOverlay({
     onCaptureComplete,
     onClose
 }: EndingMissionOverlayProps) {
-    const [countdown, setCountdown] = useState<number | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const [captureComplete, setCaptureComplete] = useState(false);
+    const captureStartedRef = useRef(false); // [FIX] 캡처 시작 여부 추적 (중복 방지)
 
     // 리모트 참가자의 클리어 상태 관리
     const [remoteStates, setRemoteStates] = useState<Map<string, boolean>>(new Map());
@@ -72,8 +72,6 @@ export default function EndingMissionOverlay({
                 ...(participantInfos || []).filter(p => p.identity !== nickname).map(p => ({ ...p, isLocal: false, isDummy: false }))
             ];
 
-            console.log('[EndingMissionOverlay] Real participants:', real.length, real.map(p => p.identity));
-
             // 4명 미만일 경우 더미 추가
             if (real.length < 4) {
                 const dummies = Array(4 - real.length).fill(null).map((_, i) => ({
@@ -82,7 +80,6 @@ export default function EndingMissionOverlay({
                     isDummy: true
                 }));
                 const result = [...real, ...dummies];
-                console.log('[EndingMissionOverlay] With dummies:', result.length, result.map(p => p.identity));
                 return result;
             }
             return real.slice(0, 4);
@@ -106,7 +103,7 @@ export default function EndingMissionOverlay({
     const { isLoaded, participantStates } = useMultiMotionDetector({
         videoRefs: localVideoRefs,
         poseAssignments,
-        enabled: countdown === null && !captureComplete
+        enabled: !captureComplete
     });
 
     // DataChannel 수신 (리모트 클리어 상태 업데이트)
@@ -224,24 +221,17 @@ export default function EndingMissionOverlay({
     }, [participantInfos, nickname]);
 
     // [FIX] handleMotionCleared를 useCallback으로 감싸기
+    // [FIX] handleMotionCleared를 useCallback으로 감싸기
     const handleMotionCleared = useCallback(() => {
         onMotionCleared?.();
-        setCountdown(3);
+        // setCountdown(3); // 카운트다운 제거 요청으로 삭제
     }, [onMotionCleared]);
 
-    // 모든 참가자 포즈 인식 완료 시 자동 진행
-    useEffect(() => {
-        if (countdown !== null || captureComplete) return;
-
-        if (allCleared) {
-            console.log('[EndingMissionOverlay] All poses cleared!');
-            handleMotionCleared();
-        }
-    }, [allCleared, countdown, captureComplete, handleMotionCleared]);
-
-    // [FIX] handleCapture를 useCallback으로 감싸기
+    // [FIX] handleCapture를 useCallback으로 감싸기 - 선언 순서 수정
     const handleCapture = useCallback(async () => {
-        if (isCapturing) return; // 중복 호출 방지
+        if (captureStartedRef.current) return; // [FIX] 중복 호출 2중 방지
+        captureStartedRef.current = true;
+
         setIsCapturing(true);
 
         try {
@@ -253,33 +243,28 @@ export default function EndingMissionOverlay({
 
             onCaptureComplete?.(captures);
             setCaptureComplete(true);
-
-            setTimeout(() => {
-                onClose?.();
-            }, 2000);
         } catch (error) {
             console.error('[EndingMissionOverlay] Capture failed:', error);
         } finally {
             setIsCapturing(false);
         }
-    }, [allParticipants, onCaptureComplete, onClose, isCapturing]);
+    }, [allParticipants, onCaptureComplete]);
 
-    // 카운트다운 처리 (타이머)
+    // 모든 참가자 포즈 인식 완료 시 자동 진행
+    // [FIX] 모션 인식 성공 직전에 캡처 실행
     useEffect(() => {
-        if (countdown === null || countdown <= 0) return;
+        if (captureComplete) return;
 
-        const timer = setTimeout(() => {
-            setCountdown(prev => (prev || 0) - 1);
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [countdown]); // handleCapture 의존성 제거됨
+        if (allCleared) {
+            handleCapture(); // 캡처 먼저!
+            handleMotionCleared(); // 모션 클리어 처리
 
-    // 카운트다운 완료 시 캡처 트리거
-    useEffect(() => {
-        if (countdown === 0 && !isCapturing) {
-            handleCapture();
+            // 카운트다운 없이 2초 후 종료
+            setTimeout(() => {
+                onClose?.();
+            }, 2000);
         }
-    }, [countdown, isCapturing, handleCapture]);
+    }, [allCleared, captureComplete, handleMotionCleared, handleCapture, onClose]);
 
     // 참가자별 포즈 상태 조회 (UI 표시용)
     const getDisplayState = useCallback((participant: ExtendedParticipant) => {
@@ -310,7 +295,7 @@ export default function EndingMissionOverlay({
                 <h2 className={styles.title}>🎉 스테이지 클리어!</h2>
 
                 {/* 로딩 표시 */}
-                {!isLoaded && countdown === null && (
+                {!isLoaded && !captureComplete && (
                     <p className={styles.loadingText}>🔄 포즈 인식 준비 중...</p>
                 )}
 
@@ -335,7 +320,7 @@ export default function EndingMissionOverlay({
                                 {targetPose && !isDummy && (
                                     <div className={styles.targetPose}>
                                         <span className={styles.poseEmoji}>{targetPose.emoji}</span>
-                                        <span className={styles.poseName}>{targetPose.name}</span>
+                                        <span className={styles.poseName}>{targetPose.label}</span>
                                     </div>
                                 )}
 
@@ -384,7 +369,7 @@ export default function EndingMissionOverlay({
 
                 {/* 상태 표시 */}
                 <div className={styles.statusArea}>
-                    {countdown === null && !captureComplete && (
+                    {!captureComplete && (
                         <div className={styles.statusContainer}>
                             <p className={styles.statusText}>📸 각자 표시된 포즈를 취해주세요!</p>
                             <p className={styles.subStatusText}>
@@ -397,10 +382,7 @@ export default function EndingMissionOverlay({
                             </p>
                         </div>
                     )}
-                    {countdown !== null && countdown > 0 && (
-                        <div className={styles.countdown}>{countdown}</div>
-                    )}
-                    {countdown === 0 && isCapturing && (
+                    {isCapturing && (
                         <p className={styles.statusText}>📷 촬영 중...</p>
                     )}
                     {captureComplete && (
