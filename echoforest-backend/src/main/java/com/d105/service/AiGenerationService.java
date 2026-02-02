@@ -187,34 +187,72 @@ public class AiGenerationService {
 
         log.info("Composed Image saved successfully: {} (Type: RESULT)", savedImage.getId());
 
-        sendEmailToUser(userId, resultBytes, savedImage.getFileName());
+        // sendEmailToUser(userId, resultBytes, savedImage.getFileName()); // 개별 발송 제거
 
         return ImageResponseDto.from(savedImage);
     }
 
-    private void sendEmailToUser(Long userId, byte[] imageBytes, String fileName) {
-        // 유저 정보 조회
-        userRepository.findById(userId).ifPresent(user -> {
-            String email = user.getEmail();
-            if (email != null && !email.isEmpty()) {
-                String subject = "[EchoForest] 당신의 멋진 게임 결과 이미지가 도착했습니다!";
-                String body = """
-                        <html>
-                        <body>
-                            <h3>안녕하세요, %s님!</h3>
-                            <p>"메아리의 숲"에서의 소중한 추억을 이미지를 보내드립니다.</p>
-                            <p>친구 혹은 가족들과 함께한 오늘의 추억을 간직하세요! 🥰</p>
-                            <br/>
-                            <p>감사합니다.</p>
-                            <p>-메아리의 숲 일동.</p>
-                        </body>
-                        </html>
-                        """.formatted(user.getNickname());
+    /**
+     * [게임 종료 로직] 방의 모든 결과 이미지를 모아서 참가자 전원에게 이메일 발송
+     */
+    @Transactional(readOnly = true)
+    public void sendGameSummaryEmail(String roomId) {
+        log.info("Preparing summary email for room: {}", roomId);
 
-                // 이메일 서비스 호출 (비동기 처리를 고려할 수도 있음)
-                emailService.sendEmailWithImage(email, subject, body, imageBytes, fileName);
+        // 1. 해당 방의 RESULT 타입 이미지 조회
+        List<Image> resultImages = imageRepository
+                .findByRoomCodeAndImageTypeAndDeletedAtIsNullOrderByCreatedAtDesc(roomId, "RESULT");
+        if (resultImages.isEmpty()) {
+            log.warn("No result images found for room: {}", roomId);
+            return;
+        }
+
+        // 2. 이미지 파일 로드 (Map<FileName, byte[]>)
+        Map<String, byte[]> attachments = new java.util.HashMap<>();
+        for (Image img : resultImages) {
+            try {
+                Path path = Paths.get(uploadDir, img.getFileName());
+                if (Files.exists(path)) {
+                    byte[] bytes = Files.readAllBytes(path);
+                    attachments.put(img.getFileName(), bytes);
+                }
+            } catch (IOException e) {
+                log.error("Failed to read image file: {}", img.getFileName(), e);
             }
-        });
+        }
+
+        if (attachments.isEmpty()) {
+            log.warn("No image files could be loaded.");
+            return;
+        }
+
+        // 3. 방에 참여했던 모든 유저 식별 (이미지 업로더 기준)
+        List<Long> userIds = getRoomUserIds(roomId);
+
+        // 4. 각 유저에게 이메일 발송
+        for (Long uid : userIds) {
+            userRepository.findById(uid).ifPresent(user -> {
+                String email = user.getEmail();
+                if (email != null && !email.isEmpty()) {
+                    String subject = "[EchoForest] 메아리의 숲 여정이 끝났습니다!";
+                    String body = """
+                            <html>
+                            <body>
+                                <h3>안녕하세요, %s님!</h3>
+                                <p>모든 스테이지를 클리어하신 것을 축하합니다! 🎉</p>
+                                <p>각 스테이지에서 촬영된 소중한 추억들을 첨부파일로 보내드립니다.</p>
+                                <p>즐거운 시간이 되셨기를 바랍니다.</p>
+                                <br/>
+                                <p>- 메아리의 숲 일동 드림</p>
+                            </body>
+                            </html>
+                            """.formatted(user.getNickname());
+
+                    emailService.sendEmailWithImages(email, subject, body, attachments);
+                }
+            });
+        }
+        log.info("Sent summary emails to {} users.", userIds.size());
     }
 
     private List<String> selectOneImagePerUser(String roomId) {
