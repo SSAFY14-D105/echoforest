@@ -16,6 +16,34 @@ export default function PermissionCheckPage() {
         }
     }, [nickname, navigate]);
 
+    // [New] 페이지 진입 시 이미 권한이 있으면 바로 통과
+    useEffect(() => {
+        const checkExistingPermission = async () => {
+            try {
+                // 1. Permissions API 확인
+                if (navigator.permissions && navigator.permissions.query) {
+                    const cameraStatus = await navigator.permissions.query({ name: 'camera' as any });
+                    const micStatus = await navigator.permissions.query({ name: 'microphone' as any });
+
+                    if (cameraStatus.state === 'granted' && micStatus.state === 'granted') {
+                        console.log('[PermissionCheck] Already granted. Redirecting to Lobby...');
+                        setHasMediaPermission(true);
+                        navigate('/lobby', { replace: true });
+                        return;
+                    }
+                }
+
+                // 2. (Optional) getUserMedia로 조용히 확인 (이미 허용했다면 prompt 없이 성공)
+                // 단, 거부 상태면 에러나므로 try-catch 필수. 
+                // 여기서는 prompt가 뜰 위험이 있어 Permissions API만 우선 신뢰
+            } catch (e) {
+                console.warn('[PermissionCheck] Auto-check failed:', e);
+            }
+        };
+
+        checkExistingPermission();
+    }, [navigate, setHasMediaPermission]);
+
     const requestPermission = async () => {
         setIsLoading(true);
         setError(null);
