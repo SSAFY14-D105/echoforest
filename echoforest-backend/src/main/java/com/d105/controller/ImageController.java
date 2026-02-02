@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 public class ImageController {
 
     private final ImageService imageService;
+    private final com.d105.service.EmailService emailService;
 
     /**
      * 이미지 업로드 (파일 + DB 저장)
@@ -123,5 +124,60 @@ public class ImageController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .body(resource);
+    }
+
+    /**
+     * 이미지 이메일 전송 (다중 선택)
+     */
+    @Operation(summary = "이미지 이메일 전송", description = "선택한 이미지들을 이메일로 전송합니다.")
+    @PostMapping("/email")
+    public ResponseEntity<?> sendImagesToEmail(@RequestBody Map<String, Object> payload) {
+        try {
+            Long userId = ((Number) payload.get("userId")).longValue();
+            String email = (String) payload.get("email");
+            List<Integer> imageIdInts = (List<Integer>) payload.get("imageIds");
+            List<Long> imageIds = imageIdInts.stream().map(Integer::longValue).collect(Collectors.toList());
+
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "이메일 주소가 필요합니다."));
+            }
+
+            if (imageIds == null || imageIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "이미지를 선택해주세요."));
+            }
+
+            List<Image> images = imageService.getImagesByIds(imageIds, userId);
+            if (images.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "전송할 유효한 이미지가 없습니다."));
+            }
+
+            Map<String, byte[]> attachments = new java.util.HashMap<>();
+            for (Image img : images) {
+                try {
+                    Resource resource = imageService.downloadImage(img.getId());
+                    if (resource != null && resource.exists()) {
+                        attachments.put(img.getFileName(), resource.getContentAsByteArray());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to read image file: {}", img.getFileName(), e);
+                    // 실패한 이미지는 제외하고 계속 진행
+                }
+            }
+
+            if (attachments.isEmpty()) {
+                return ResponseEntity.internalServerError().body(Map.of("error", "이미지 파일을 읽을 수 없습니다."));
+            }
+
+            String subject = "[메아리의 숲] 추억이 도착했습니다 🌲";
+            String text = "<h1>메아리의 숲에서 보낸 추억들</h1><p>당신의 소중한 순간들을 첨부파일로 보내드립니다.</p>";
+
+            emailService.sendEmailWithImages(email, subject, text, attachments);
+
+            return ResponseEntity.ok(Map.of("message", "이메일이 발송되었습니다. (총 " + attachments.size() + "장)"));
+
+        } catch (Exception e) {
+            log.error("Failed to send email", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "이메일 전송 중 오류가 발생했습니다: " + e.getMessage()));
+        }
     }
 }

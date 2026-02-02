@@ -142,6 +142,19 @@ public class ImageService {
     }
 
     /**
+     * 이미지 ID 목록으로 이미지 리스트 조회 (본인 소유만)
+     */
+    public List<Image> getImagesByIds(List<Long> imageIds, Long userId) {
+        List<Image> images = imageRepository.findAllById(imageIds);
+
+        // 본인 이미지인지 확인 및 삭제된 이미지 제외
+        return images.stream()
+                .filter(img -> img.getUser().getId().equals(userId))
+                .filter(img -> img.getDeletedAt() == null)
+                .toList();
+    }
+
+    /**
      * 오래된 이미지 일괄 삭제 (Hard Delete - 스케줄러)
      * - 7일 지난 이미지는 Soft Delete 여부와 상관없이 완전히 삭제 (용량 확보)
      */
