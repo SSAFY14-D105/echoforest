@@ -28,19 +28,39 @@ public class EmailService {
      */
     @Async
     public void sendEmailWithImage(String toEmail, String subject, String text, byte[] imageBytes, String fileName) {
-        log.info("Sending email to: {}", toEmail);
+        // 단일 이미지 발송 (하위 호환 유지)
+        java.util.Map<String, byte[]> images = new java.util.HashMap<>();
+        if (fileName != null && imageBytes != null) {
+            images.put(fileName, imageBytes);
+        }
+        sendEmailWithImages(toEmail, subject, text, images);
+    }
+
+    /**
+     * 여러 이미지를 첨부하여 이메일 발송
+     *
+     * @param toEmail 수신자 이메일
+     * @param subject 제목
+     * @param text    본문
+     * @param images  이미지 파일명과 데이터 (Map<FileName, Byte[]>)
+     */
+    @Async
+    public void sendEmailWithImages(String toEmail, String subject, String text, java.util.Map<String, byte[]> images) {
+        log.info("Sending email with {} images to: {}", (images != null ? images.size() : 0), toEmail);
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
-            // multipart: true (첨부파일 허용)
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(toEmail);
             helper.setSubject(subject);
-            helper.setText(text, true); // html 허용
+            helper.setText(text, true);
 
-            // 이미지 첨부
-            if (imageBytes != null && imageBytes.length > 0) {
-                helper.addAttachment(fileName, new ByteArrayResource(imageBytes));
+            if (images != null && !images.isEmpty()) {
+                for (java.util.Map.Entry<String, byte[]> entry : images.entrySet()) {
+                    if (entry.getValue() != null && entry.getValue().length > 0) {
+                        helper.addAttachment(entry.getKey(), new ByteArrayResource(entry.getValue()));
+                    }
+                }
             }
 
             javaMailSender.send(message);
@@ -48,8 +68,6 @@ public class EmailService {
 
         } catch (MessagingException e) {
             log.error("Failed to send email to {}", toEmail, e);
-            // 이메일 발송 실패가 게임 로직(이미지 저장 등)을 롤백시키지 않도록 예외를 삼키거나 커스텀 예외 처리
-            // 여기서는 로그만 남김
         }
     }
 }
