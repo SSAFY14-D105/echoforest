@@ -1,10 +1,7 @@
-import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
-import { distance, isFingerExtended, calculateDistances, Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { distance, isFingerExtended, calculateDistances, type Landmark } from '../../utils/gesture-helpers';
 
 export default class LGesture extends BaseGesture {
-    label: string;
-    emoji: string;
-
     constructor() {
         super();
         this.label = 'L';
@@ -28,43 +25,35 @@ export default class LGesture extends BaseGesture {
             const faceSize = distance(faceTop, faceBottom);
 
             // 얼굴 근처(얼굴 크기의 1.2배 이내)에 손이 있으면 L 인식 차단
-            // 볼콕 제스처가 우선되도록 유도
             if (distToNose < faceSize * 1.2) {
                 return { detected: false, score: 0 };
             }
         }
 
         // 2. 손가락 상태 계산
-        // @ts-ignore
-        let fingers = metadata.fingers;
-        if (!fingers) {
-            const calcRes = calculateDistances(landmarks, palmSize);
-            fingers = calcRes.fingers;
+        // Helper의 calculateDistances는 extended만 반환하므로 closed는 !extended로 판단
+        let fingers: any;
+        const calcRes = calculateDistances(landmarks, palmSize);
+        fingers = calcRes.fingers;
 
-            const thumbTipToIndexMcp = distance(landmarks[4], landmarks[5]) / palmSize;
-            const thumbTipToWrist = distance(landmarks[4], landmarks[0]) / palmSize;
-            const thumbReallyExtended = isFingerExtended(landmarks, 4, 3) &&
-                (thumbTipToIndexMcp > 0.5 || thumbTipToWrist > 1.2);
-            fingers.thumb.extended = thumbReallyExtended;
-        }
+        // 엄지 특별 체크
+        const thumbTipToIndexMcp = distance(landmarks[4], landmarks[5]) / palmSize;
+        const thumbTipToWrist = distance(landmarks[4], landmarks[0]) / palmSize;
+        const thumbReallyExtended = isFingerExtended(landmarks, 4, 3) &&
+            (thumbTipToIndexMcp > 0.5 || thumbTipToWrist > 1.2);
+
+        fingers.thumb.extended = thumbReallyExtended;
 
         // 3. L 조건: 엄지, 검지 펴짐 + 나머지 접힘
         const isL = fingers.thumb.extended && fingers.index.extended &&
-            !fingers.middle.extended && !fingers.ring.extended && !fingers.pinky.extended; // [FIX] helper returns extended, so !extended means closed roughly
-
-        // Note: Original code used .closed property which might be missing in simple helper.
-        // Assuming we need to implement .closed or rely on !extended.
-        // Let's assume helper's extended encompasses 'not closed'.
-        // Wait, original code explicitly accessed .closed.
-        // If my generated gesture-helpers.ts does NOT provide .closed, I should use !extended or calculate it.
-        // My generated gesture-helpers.ts ONLY provides `extended`.
-        // So I should use `!fingers.middle.extended` instead of `fingers.middle.closed`.
+            !fingers.middle.extended && !fingers.ring.extended && !fingers.pinky.extended;
 
         if (isL) {
             return {
                 detected: true,
                 score: 0.85,
-                label: this.label
+                label: this.label,
+                emoji: this.emoji
             };
         }
 
