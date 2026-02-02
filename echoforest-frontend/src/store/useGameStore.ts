@@ -228,7 +228,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             isHost: true,
         });
     },
-    selectStage: (stageId) => set({ currentStage: stageId }),
+    selectStage: (stageId) => set({
+        currentStage: stageId,
+        isEndingMission: false // [FIX] 새 스테이지 시작 시 엔딩 미션 상태 초기화하여 루프 방지
+    }),
     clearStage: (stageId) => set((state) => ({
         clearedStages: state.clearedStages.includes(stageId)
             ? state.clearedStages

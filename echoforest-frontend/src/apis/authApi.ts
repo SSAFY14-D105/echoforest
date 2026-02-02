@@ -61,6 +61,7 @@ export interface AuthResponse {
 export interface LoginResponse {
     token: string;
     nickname: string;  // 백엔드에서 반환하는 닉네임
+    userId: number;    // 유저 ID 추가
 }
 
 export interface SignupResponse {
