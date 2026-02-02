@@ -49,7 +49,7 @@ public class UserService {
     }
 
     // 로그인
-    public Map<String, String> login(LoginReqDto req) {
+    public Map<String, Object> login(LoginReqDto req) {
         // 1. 아이디로 유저 조회
         User user = userRepository.findByUsername(req.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
@@ -87,10 +87,11 @@ public class UserService {
         eventPublisher
                 .publishEvent(new com.d105.event.UserLoggedInEvent(this, user.getId(), user.getUsername(), token));
 
-        // 7. 토큰과 닉네임을 Map에 담아서 반환
+        // 7. 토큰과 닉네임, userId를 Map에 담아서 반환
         return Map.of(
                 "token", token,
-                "nickname", user.getNickname());
+                "nickname", user.getNickname(),
+                "userId", user.getId());
     }
 
     // 아이디 중복 확인

@@ -28,6 +28,7 @@ public class ImageController {
 
     private final ImageService imageService;
     private final com.d105.service.EmailService emailService;
+    private final com.d105.repository.UserRepository userRepository;
 
     /**
      * 이미지 업로드 (파일 + DB 저장)
@@ -131,15 +132,22 @@ public class ImageController {
      */
     @Operation(summary = "이미지 이메일 전송", description = "선택한 이미지들을 이메일로 전송합니다.")
     @PostMapping("/email")
-    public ResponseEntity<?> sendImagesToEmail(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> sendImagesToEmail(@RequestBody com.d105.dto.image.EmailImagesReqDto req) {
         try {
-            Long userId = ((Number) payload.get("userId")).longValue();
-            String email = (String) payload.get("email");
-            List<Integer> imageIdInts = (List<Integer>) payload.get("imageIds");
-            List<Long> imageIds = imageIdInts.stream().map(Integer::longValue).collect(Collectors.toList());
+            Long userId = req.getUserId();
+            List<Long> imageIds = req.getImageIds();
+
+            if (userId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "유저 ID가 필요합니다."));
+            }
+
+            // 유저 조회 및 이메일 가져오기
+            com.d105.entity.User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            String email = user.getEmail();
 
             if (email == null || email.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "이메일 주소가 필요합니다."));
+                return ResponseEntity.badRequest().body(Map.of("error", "등록된 이메일이 없습니다."));
             }
 
             if (imageIds == null || imageIds.isEmpty()) {
