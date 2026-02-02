@@ -260,8 +260,8 @@ export function useMultiMotionDetector({
                                 ...updated[idx],
                                 currentGesture: result.detected ? result.label || null : null,
                                 score: result.score,
-                                // [FIX] 임계값 0.7 → 0.5로 낮춤 (인식률 향상)
-                                isCleared: result.detected && result.score > 0.5
+                                // [FIX] 임계값 0.4로 설정 (적절한 인식률)
+                                isCleared: result.detected && result.score > 0.4
                             };
                         }
                     }

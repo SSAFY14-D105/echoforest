@@ -9,7 +9,7 @@ import type { ParticipantInfo } from '../../../socket/LiveKitService';
 import { liveKitService } from '../../../socket/LiveKitService';
 import { captureAllParticipants } from '../../../utils/captureUtils';
 import { assignPosesToParticipants } from '../../../utils/PoseManager';
-import { useMultiMotionDetector } from '../../../hooks/useMultiMotionDetector';
+import { useMultiMotionDetector, type ParticipantPoseState } from '../../../hooks/useMultiMotionDetector';
 import styles from './EndingMissionOverlay.module.css';
 
 // 타입 확장을 통해 isDummy 등 내부 속성 처리
@@ -27,6 +27,8 @@ interface EndingMissionOverlayProps {
     nickname: string;
     /** 방 ID (포즈 시드 생성용) */
     roomId?: string;
+    /** 스테이지 번호 (포즈 할당 시드용) */
+    stage?: number | null;
     /** 모션 인식 완료 콜백 */
     onMotionCleared?: () => void;
     /** 이미지 캡처 완료 콜백 */
@@ -41,15 +43,14 @@ export default function EndingMissionOverlay({
     participantInfos = [],
     nickname,
     roomId = 'default-room',
+    stage = null,
     onMotionCleared,
     onCaptureComplete,
     onClose
 }: EndingMissionOverlayProps) {
-    const [isCapturing, setIsCapturing] = useState(false);
     const [captureComplete, setCaptureComplete] = useState(false);
-    const [countdown, setCountdown] = useState<number | null>(null); // [NEW] 카운트다운 state
     const captureStartedRef = useRef(false); // [FIX] 캡처 시작 여부 추적 (중복 방지)
-    const countdownStartedRef = useRef(false); // [FIX] 카운트다운 시작 여부 추적 (중복 방지)
+    const previousStatesRef = useRef<ParticipantPoseState[]>([]); // [NEW] 이전 상태 추적 (포즈 완료 감지용)
 
     // 리모트 참가자의 클리어 상태 관리
     const [remoteStates, setRemoteStates] = useState<Map<string, boolean>>(new Map());
@@ -93,13 +94,14 @@ export default function EndingMissionOverlay({
 
     // roomId 기반으로 각 참가자에게 포즈 할당
     // [FIX] 실제 참가자만 포즈 할당 (더미는 포즈 없음)
+    // [FIX] 스테이지 번호를 포함하여 스테이지별로 다른 포즈 할당
     const poseAssignments = useMemo(() => {
         const realIdentities = allParticipants
             .filter(p => !p.isDummy)
             .slice(0, 4)
             .map(p => p.identity);
-        return assignPosesToParticipants(realIdentities, roomId);
-    }, [allParticipants, roomId]);
+        return assignPosesToParticipants(realIdentities, roomId, stage);
+    }, [allParticipants, roomId, stage]);
 
     // 멀티 모션 감지 훅 (내 비디오만 감지)
     const { isLoaded, participantStates } = useMultiMotionDetector({
@@ -143,29 +145,7 @@ export default function EndingMissionOverlay({
         });
     }, [participantStates, nickname]);
 
-    // [FIX] 전체 클리어 여부 계산 - 더미는 항상 클리어로 간주
-    const allCleared = useMemo(() => {
-        const targets = allParticipants.slice(0, 4);
-        if (targets.length === 0) return false;
 
-        const result = targets.every(p => {
-            // 더미는 항상 클리어로 간주 (테스트 편의성)
-            if (p.isDummy) return true;
-
-            if (p.isLocal) {
-                return participantStates.find(s => s.identity === p.identity)?.isCleared;
-            } else {
-                return remoteStates.get(p.identity);
-            }
-        });
-
-        // [DEBUG] allCleared 상태 변경 로그
-        if (result) {
-            console.log('[EndingMissionOverlay] ✅ All participants cleared!');
-        }
-
-        return result;
-    }, [allParticipants, participantStates, remoteStates]);
 
     // 엔딩 미션 시작 시 720p로 해상도 변경 + 카메라 강제 켜기
     useEffect(() => {
@@ -270,24 +250,19 @@ export default function EndingMissionOverlay({
         });
     }, [participantInfos, nickname]);
 
-    // [FIX] handleMotionCleared를 useCallback으로 감싸기
-    const handleMotionCleared = useCallback(() => {
-        onMotionCleared?.();
-    }, [onMotionCleared]);
 
-    // [FIX] handleCapture를 useCallback으로 감싸기
-    const handleCapture = useCallback(async () => {
+
+    // [NEW] 즉시 캡처 (포즈 완료 순간에 바로 촬영)
+    const handleInstantCapture = useCallback(async () => {
         if (captureStartedRef.current) return;
         captureStartedRef.current = true;
-
-        setIsCapturing(true);
 
         try {
             const localParticipant = allParticipants.find(p => p.isLocal);
             if (localParticipant) {
                 const videoEl = videoRefs.current.get(localParticipant.identity);
                 if (videoEl) {
-                    console.log('[EndingMissionOverlay] Capturing local video only:', localParticipant.identity);
+                    console.log('[EndingMissionOverlay] 📸 Capturing pose completion moment:', localParticipant.identity);
                     const captures = await captureAllParticipants([videoEl]);
                     onCaptureComplete?.(captures);
                     setCaptureComplete(true);
@@ -297,55 +272,32 @@ export default function EndingMissionOverlay({
             }
         } catch (error) {
             console.error('[EndingMissionOverlay] Capture failed:', error);
-        } finally {
-            setIsCapturing(false);
         }
     }, [allParticipants, onCaptureComplete]);
 
-    // [NEW] 카운트다운 및 캡처 로직
+    // [NEW] 포즈 완료 감지 및 즉시 캡처
     useEffect(() => {
-        if (captureComplete || isCapturing) return;
+        if (captureComplete) return;
 
-        // [FIX] ref로 중복 시작 방지 (allCleared가 여러 번 true가 되어도 한 번만 실행)
-        if (allCleared && !countdownStartedRef.current) {
-            console.log('[EndingMissionOverlay] ⏰ Starting countdown...');
-            countdownStartedRef.current = true;
-            setCountdown(3);
-        }
-    }, [allCleared, captureComplete, isCapturing]); // [FIX] countdown 의존성 제거
+        // 로컬 참가자의 상태 변화 감지
+        const localState = participantStates.find(s => s.identity === nickname);
+        const previousLocalState = previousStatesRef.current.find(s => s.identity === nickname);
 
-    // [FIX] 콜백들을 ref로 관리하여 timer useEffect 의존성 제거
-    const handleCaptureRef = useRef(handleCapture);
-    const handleMotionClearedRef = useRef(handleMotionCleared);
-    const onCloseRef = useRef(onClose);
-
-    useEffect(() => {
-        handleCaptureRef.current = handleCapture;
-        handleMotionClearedRef.current = handleMotionCleared;
-        onCloseRef.current = onClose;
-    }, [handleCapture, handleMotionCleared, onClose]);
-
-    // 카운트다운 타이머
-    useEffect(() => {
-        if (countdown === null) return;
-
-        if (countdown > 0) {
-            console.log(`[EndingMissionOverlay] Countdown: ${countdown}`);
-            const timer = setTimeout(() => {
-                setCountdown(prev => (prev !== null ? prev - 1 : null));
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0 && !captureStartedRef.current) {
-            console.log('[EndingMissionOverlay] 📸 Countdown finished! Starting capture...');
-            // Ref를 통해 최신 함수 호출
-            handleCaptureRef.current().then(() => {
-                handleMotionClearedRef.current();
+        // 이전에는 클리어 안됐는데 지금 클리어됨 → 즉시 캡처!
+        if (localState && !previousLocalState?.isCleared && localState.isCleared) {
+            console.log('[EndingMissionOverlay] ✅ Pose completed! Capturing immediately...');
+            handleInstantCapture().then(() => {
+                onMotionCleared?.();
+                // 3초 후 닫기
                 setTimeout(() => {
-                    onCloseRef.current?.();
+                    onClose?.();
                 }, 3000);
             });
         }
-    }, [countdown]); // 의존성을 countdown 하나로 최소화
+
+        // 현재 상태를 이전 상태로 저장
+        previousStatesRef.current = participantStates;
+    }, [participantStates, captureComplete, handleInstantCapture, nickname, onMotionCleared, onClose]);
 
     // 참가자별 포즈 상태 조회
     const getDisplayState = useCallback((participant: ExtendedParticipant) => {
@@ -378,12 +330,6 @@ export default function EndingMissionOverlay({
                     <p className={styles.loadingText}>🔄 포즈 인식 준비 중...</p>
                 )}
 
-                {countdown !== null && countdown > 0 && (
-                    <div className={styles.countdownOverlay}>
-                        <span className={styles.countdownNumber}>{countdown}</span>
-                    </div>
-                )}
-
                 <div className={styles.cameraGrid}>
                     {allParticipants.slice(0, 4).map((participant, index) => {
                         const displayState = getDisplayState(participant);
@@ -407,7 +353,7 @@ export default function EndingMissionOverlay({
                 <div className={styles.statusArea}>
                     {!captureComplete && (
                         <div className={styles.statusContainer}>
-                            <p className={styles.statusText}>📸 각자 표시된 포즈를 취해주세요!</p>
+                            <p className={styles.statusText}>📸 포즈를 완성하는 순간 자동으로 촬영됩니다!</p>
                             <p className={styles.subStatusText}>
                                 {allParticipants.filter(p => {
                                     if (p.isDummy) return false;
@@ -416,9 +362,6 @@ export default function EndingMissionOverlay({
                                 }).length} / {realParticipantCount} 완료
                             </p>
                         </div>
-                    )}
-                    {isCapturing && (
-                        <p className={styles.statusText}>📷 촬영 중...</p>
                     )}
                     {captureComplete && (
                         <p className={styles.statusText}>✅ 촬영 완료!</p>
