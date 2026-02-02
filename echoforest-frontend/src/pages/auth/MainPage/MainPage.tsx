@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import AudioController from '../../../components/common/AudioController';
 import styles from './MainPage.module.css';
 
 export default function MainPage() {
@@ -7,10 +8,11 @@ export default function MainPage() {
     // 메인 랜딩 페이지
     return (
         <div className={styles.container}>
+            <AudioController />
             {/* 배경 이미지 */}
             <img
                 className={styles.bgImage}
-                src="/assets/backgrounds/main_page.jpg"
+                src="/assets/backgrounds/main_page.png"
                 alt="메아리의 숲"
             />
 

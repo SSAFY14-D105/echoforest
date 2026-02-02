@@ -16,7 +16,7 @@ export default function SplashScreen({ onFinished }: SplashScreenProps) {
         // 2. 무거운 배경 이미지 프리로딩
         const imagePromise = new Promise((resolve) => {
             const img = new Image();
-            img.src = '/assets/backgrounds/main_page.jpg';
+            img.src = '/assets/backgrounds/main_page.png';
             img.onload = () => resolve(true);
             img.onerror = () => resolve(true); // 에러나도 진행은 해야함
         });

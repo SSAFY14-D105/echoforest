@@ -10,7 +10,6 @@ import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
 import ToastContainer from './components/ToastContainer/ToastContainer';
 import BackgroundMusic from './components/common/BackgroundMusic';
-import AudioController from './components/common/AudioController';
 import { useAudioStore } from './store/useAudioStore';
 import SplashScreen from './components/SplashScreen/SplashScreen';
 
@@ -84,7 +83,6 @@ export default function App() {
 
       <ToastContainer />
       <BackgroundMusic />
-      <AudioController />
 
       <Routes>
         {/* Auth Routes */}
