@@ -136,6 +136,30 @@ export async function checkLoginId(username: string): Promise<CheckIdResponse> {
     return res.json();
 }
 
+export interface MyInfoResponse {
+    id: number;
+    username: string;
+    nickname: string;
+    email: string;
+    kissCount: number;
+    curseCount: number;
+    mannerScore: number;
+}
+
+// 내 정보 조회
+export const getMyInfo = async (): Promise<MyInfoResponse> => {
+    // get 메서드가 아니라 httpClient 함수 자체를 호출해야 함
+    const res = await httpClient('/user/me', {
+        method: 'GET'
+    });
+
+    if (!res.ok) {
+        throw new Error(getErrorMessage(res.status));
+    }
+
+    return res.json();
+};
+
 /**
  * 닉네임 중복 확인 API
  */

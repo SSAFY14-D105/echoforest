@@ -112,7 +112,7 @@ export default function MemoriesModal({ onClose }: MemoriesModalProps) {
 
             {/* 뒤로가기 버튼 */}
             <button className={styles.backButton} onClick={onClose}>
-                ← 설정으로
+                ← 뒤로가기
             </button>
 
             <div className={styles.boardWrapper}>
