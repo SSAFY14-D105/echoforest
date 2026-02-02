@@ -37,7 +37,8 @@ public class AiController {
             ImageResponseDto generatedImage = aiGenerationService.generateAndSaveImage(
                     req.getSourceImages(),
                     req.getRoomId(),
-                    req.getUserId());
+                    req.getUserId(),
+                    req.getStageNumber());
             return ResponseEntity.ok(generatedImage);
         } catch (Exception e) {
             log.error("AI Generation Error", e);
@@ -51,7 +52,8 @@ public class AiController {
     public ResponseEntity<?> testGenerateImage(
             @Parameter(description = "합성할 이미지 파일들 (최대 4개)") @RequestPart("files") List<MultipartFile> files,
             @Parameter(description = "요청 유저 ID") @RequestParam("userId") Long userId,
-            @Parameter(description = "방 코드 (선택)") @RequestParam(value = "roomId", required = false) String roomId) {
+            @Parameter(description = "방 코드 (선택)") @RequestParam(value = "roomId", required = false) String roomId,
+            @Parameter(description = "스테이지 번호 (선택)") @RequestParam(value = "stageNumber", required = false) Integer stageNumber) {
         try {
             if (files.size() > 4) {
                 return ResponseEntity.badRequest().body(Map.of("error", "파일은 최대 4개까지만 업로드 가능합니다."));
@@ -60,7 +62,8 @@ public class AiController {
             ImageResponseDto generatedImage = aiGenerationService.generateTestImage(
                     files,
                     userId,
-                    roomId);
+                    roomId,
+                    stageNumber);
             return ResponseEntity.ok(generatedImage);
 
         } catch (Exception e) {

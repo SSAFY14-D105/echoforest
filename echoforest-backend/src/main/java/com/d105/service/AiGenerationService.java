@@ -58,7 +58,8 @@ public class AiGenerationService {
      * [메인 로직] DB에 저장된 방 이미지를 사용하여 로컬 이미지 합성
      */
     @Transactional
-    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String roomId, Long userId) {
+    public ImageResponseDto generateAndSaveImage(List<String> sourceImages, String roomId, Long userId,
+            Integer stageNumber) {
         log.info("Requesting Local Image Composition for user: {}, Room: {}", userId, roomId);
         try {
             // 1. 이미지 선별
@@ -79,7 +80,7 @@ public class AiGenerationService {
                     base64Images.add(Base64.getEncoder().encodeToString(bytes));
                 }
             }
-            return composeImageLocal(base64Images, roomId, userId);
+            return composeImageLocal(base64Images, roomId, userId, stageNumber);
 
         } catch (Exception e) {
             log.error("Failed to generate combined image", e);
@@ -88,13 +89,11 @@ public class AiGenerationService {
     }
 
     /**
-     * [테스트용] 사용자가 직접 업로드한 파일 4개를 사용하여 로컬 이미지 합성
-     */
-    /**
      * [테스트용/직접 업로드용] 사용자가 직접 업로드한 파일 4개를 사용하여 로컬 이미지 합성
      */
     @Transactional
-    public ImageResponseDto generateTestImage(List<MultipartFile> files, Long userId, String roomId) {
+    public ImageResponseDto generateTestImage(List<MultipartFile> files, Long userId, String roomId,
+            Integer stageNumber) {
         log.info("Requesting Direct Image Composition for user: {}, Room: {}", userId, roomId);
         try {
             if (files == null || files.isEmpty()) {
@@ -104,7 +103,7 @@ public class AiGenerationService {
             for (MultipartFile file : files) {
                 base64Images.add(Base64.getEncoder().encodeToString(file.getBytes()));
             }
-            return composeImageLocal(base64Images, roomId != null ? roomId : "TEST_ROOM", userId);
+            return composeImageLocal(base64Images, roomId != null ? roomId : "TEST_ROOM", userId, stageNumber);
         } catch (Exception e) {
             log.error("Failed to generate combined image", e);
             throw new RuntimeException("이미지 합성 실패: " + e.getMessage(), e);
@@ -114,7 +113,8 @@ public class AiGenerationService {
     /**
      * Java Graphics2D를 사용한 로컬 이미지 합성
      */
-    private ImageResponseDto composeImageLocal(List<String> base64Images, String roomId, Long userId)
+    private ImageResponseDto composeImageLocal(List<String> base64Images, String roomId, Long userId,
+            Integer stageNumber)
             throws IOException {
         log.info("Starting local image composition. Images count: {}", base64Images.size());
 
@@ -186,7 +186,7 @@ public class AiGenerationService {
 
         List<Long> participants = getRoomUserIds(roomId);
         Image savedImage = imageService.uploadImage(
-                multipartFile, userId, null, null, participants, roomId, "RESULT");
+                multipartFile, userId, null, stageNumber, participants, roomId, "RESULT");
 
         log.info("Composed Image saved successfully: {} (Type: RESULT)", savedImage.getId());
 
