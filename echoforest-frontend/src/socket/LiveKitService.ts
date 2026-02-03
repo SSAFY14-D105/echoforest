@@ -1,7 +1,3 @@
-/**
- * LiveKit 서비스
- * 음성/화상 통신 연결 및 관리 (Hook 대신 클래스 기반)
- */
 
 import {
     Room,
@@ -88,6 +84,24 @@ export class LiveKitService {
         };
     }
 
+    // [FIX] 로컬 트랙 발행 이벤트 콜백
+    private localTrackPublishedCallbacks: Set<() => void> = new Set();
+
+    onLocalTrackPublished(callback: () => void): () => void {
+        this.localTrackPublishedCallbacks.add(callback);
+        // 이미 트랙이 준비되어 있으면 즉시 실행
+        if (this.isLocalTrackReady) {
+            callback();
+        }
+        return () => {
+            this.localTrackPublishedCallbacks.delete(callback);
+        };
+    }
+
+    private notifyLocalTrackPublished() {
+        this.localTrackPublishedCallbacks.forEach(callback => callback());
+    }
+
     // 데이터 전송 (DataChannel)
     async sendData(data: string | Uint8Array, reliable: boolean = true) {
         if (!this.room || !this.room.localParticipant) {
@@ -100,39 +114,17 @@ export class LiveKitService {
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
     setLocalVideoElement(element: HTMLVideoElement | null) {
-
-
-        // [FIX] 같은 엘리먼트로 중복 호출 시 무시 (깜빡임 방지)
-        if (element === this.localVideoElement) {
-            // 같은 엘리먼트지만 트랙이 새로 준비되었을 수 있으므로 attach 시도
-            if (element && this.room?.localParticipant) {
-                const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-
-                if (cameraPublication?.track) {
-                    cameraPublication.track.attach(element);
-
-                }
-            }
-            return;
-        }
-
-        // 이전 엘리먼트에서 detach
-        if (this.localVideoElement && this.room?.localParticipant) {
-            const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-            if (cameraPublication?.track) {
-                cameraPublication.track.detach(this.localVideoElement);
-            }
-        }
-
         this.localVideoElement = element;
 
-        // 새 엘리먼트에 현재 트랙 attach
+        // [FIX] 트랙이 있으면 바로 연결, 없으면 대기 (notifyLocalTrackPublished에서 처리됨)
         if (element && this.room?.localParticipant) {
             const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
 
             if (cameraPublication?.track) {
                 cameraPublication.track.attach(element);
-
+                // console.log('[LiveKitService] Local video attached successfully');
+            } else {
+                // console.log('[LiveKitService] Video element set, waiting for track...');
             }
         }
     }
@@ -166,11 +158,6 @@ export class LiveKitService {
                     }
                 }
             });
-
-            // videoTrack 상태 디버깅: 트랙은 있는데 isCameraEnabled가 false인 경우 확인
-            // if (participant.identity !== this.room.localParticipant?.identity) {
-            //      console.log(`[LiveKitService] Participant ${participant.identity} - VideoTrack: ${!!videoTrack}, CameraEnabled: ${participant.isCameraEnabled}`);
-            // }
 
             participantInfos.push({
                 identity: participant.identity,
@@ -246,7 +233,7 @@ export class LiveKitService {
         console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${_roomName}, User: ${_username}`);
 
         try {
-            // 2. Room 생성 및 연결 (공통 로직 Reuse 권장되지만, 중복 방지를 위해 여기도 구현)
+            // 2. Room 생성 및 연결
             this.room = new Room({
                 adaptiveStream: true,
                 dynacast: true,
@@ -265,15 +252,24 @@ export class LiveKitService {
                 return;
             }
 
-            // console.log('✅ LiveKit 토큰 발급 성공 (수동 토큰)');
-            this.setupLocalTracks(myId);
+            console.log('✅ LiveKit 연결 성공 (OpId:', myId, ')');
+
+            // [FIX] 트랙 설정 대기 (최대 5초)
+            try {
+                await this.setupLocalTracks(myId);
+                // 트랙 설정 완료 후 이벤트 발생
+                this.notifyLocalTrackPublished();
+            } catch (trackError) {
+                console.warn('[LiveKitService] Setup local tracks failed but connected:', trackError);
+            }
+
             this.onConnectedCallback?.();
             this.startSyncInterval(); // [FIX] 폴링 시작
             this.notifyParticipantUpdate();
 
         } catch (err: any) {
             if (myId === this.connectionOpId) {
-                console.error('LiveKit 수동 연결 실패:', err);
+                console.error('LiveKit 연결 실패:', err);
                 this.onErrorCallback?.(err?.message || 'LiveKit 연결 실패');
                 throw err;
             }
@@ -285,19 +281,25 @@ export class LiveKitService {
         if (!this.room) return;
 
         this.room.on(RoomEvent.ParticipantConnected, () => {
+            // console.log('📥 참가자 입장:', this.room?.remoteParticipants.size);
             this.notifyParticipantUpdate();
         });
 
         this.room.on(RoomEvent.ParticipantDisconnected, () => {
+            // console.log('📤 참가자 퇴장');
             this.notifyParticipantUpdate();
         });
 
-        this.room.on(RoomEvent.TrackSubscribed, (track) => {
+        this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+            // console.log('🎥 트랙 구독:', track.kind, participant.identity);
 
             // 오디오 트랙은 자동으로 재생되도록 attach
             if (track.kind === Track.Kind.Audio) {
                 const audioElement = track.attach();
                 audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
+
+                // [FIX] Audio Element cleanup tracking
+                // 트랙에 element 참조가 내부적으로 있겠지만, 명시적으로 관리하지 않으면 누적될 수 있음
             }
 
             // [FIX] 약간의 지연 후 업데이트 (내부 상태 반영 대기)
@@ -306,7 +308,11 @@ export class LiveKitService {
             }, 100);
         });
 
-        this.room.on(RoomEvent.TrackUnsubscribed, () => {
+        this.room.on(RoomEvent.TrackUnsubscribed, (track, _publication, participant) => {
+            // [FIX] 오디오 트랙 구독 해제 시 detach하여 WebMediaPlayer 해제
+            if (track.kind === Track.Kind.Audio) {
+                track.detach().forEach(el => el.remove());
+            }
             this.notifyParticipantUpdate();
         });
 
@@ -326,6 +332,19 @@ export class LiveKitService {
 
         // [FIX] 트랙 구독 상태 변경 이벤트 (구독 완료 시 UI 업데이트)
         this.room.on(RoomEvent.TrackSubscriptionStatusChanged, () => {
+            this.notifyParticipantUpdate();
+        });
+
+        // [NEW] 로컬 트랙 발행됨 이벤트
+        this.room.on(RoomEvent.LocalTrackPublished, () => {
+            // console.log('[LiveKitService] Local track published!');
+
+            // 만약 대기중인 비디오 엘리먼트가 있으면 연결
+            if (this.localVideoElement) {
+                this.setLocalVideoElement(this.localVideoElement);
+            }
+
+            this.notifyLocalTrackPublished();
             this.notifyParticipantUpdate();
         });
 
@@ -398,47 +417,14 @@ export class LiveKitService {
 
     // LiveKit Room 연결 (API 사용)
     async connect(roomName: string, username: string): Promise<void> {
-        this.disconnect();
-        const myId = ++this.connectionOpId;
-
-
+        // 내부적으로 connectWithToken과 동일한 흐름을 타도록 토큰만 발급하고 위임
         try {
             const { token } = await getLiveKitToken({ roomId: roomName, username });
-
-            if (myId !== this.connectionOpId) return;
-
-
-
-            this.room = new Room({
-                adaptiveStream: true,
-                dynacast: true,
-                videoCaptureDefaults: {
-                    resolution: VideoPresets.h540.resolution,
-                }
-            });
-
-            this.setupRoomEvents();
-            await this.room.connect(LIVEKIT_URL, token);
-
-            if (myId !== this.connectionOpId) {
-                this.room.disconnect();
-                this.room = null;
-                return;
-            }
-
-
-            await this.setupLocalTracks(myId);
-            this.onConnectedCallback?.();
-            this.startSyncInterval(); // [FIX] 폴링 시작
-            this.notifyParticipantUpdate();
+            await this.connectWithToken(roomName, token, username);
         } catch (err: any) {
-            if (myId === this.connectionOpId) {
-                console.error('LiveKit 연결 실패:', err);
-                this.onErrorCallback?.(err?.message || 'LiveKit 연결에 실패했습니다.');
-                throw err;
-            } else {
-                console.log(`[LiveKitService] 이전 연결 시도 #${myId} 에러 무시됨`);
-            }
+            console.error('LiveKit Token Fetch Failed:', err);
+            this.onErrorCallback?.(err?.message || 'LiveKit 토큰 발급 실패');
+            throw err;
         }
     }
 
@@ -562,25 +548,13 @@ export class LiveKitService {
     }
 
     /**
-     * 로컬 비디오 트랙을 HTML video 엘리먼트에 연결
+     * 로컬 비디오 트랙을 HTML video 엘리먼트에 연결 (Legacy)
      * @param videoElement 연결할 video 엘리먼트
      * @returns 성공 여부
      */
     attachLocalVideo(videoElement: HTMLVideoElement): boolean {
-        if (!this.room || !this.room.localParticipant) {
-            console.warn('[LiveKitService] Cannot attach local video: not connected');
-            return false;
-        }
-
-        const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-        if (cameraPublication?.track) {
-            cameraPublication.track.attach(videoElement);
-            // console.log('[LiveKitService] Local video attached');
-            return true;
-        }
-
-        console.warn('[LiveKitService] No local camera track found');
-        return false;
+        this.setLocalVideoElement(videoElement);
+        return true;
     }
 
     /**
