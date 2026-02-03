@@ -158,7 +158,7 @@ export default function EndingMissionOverlay({
 
         return () => {
             try {
-                liveKitService.setVideoResolution('h540');
+                liveKitService.setVideoResolution('h360');
                 liveKitService.restoreCameraState();
             } catch (e) {
                 // console.warn('Camera restore error:', e);

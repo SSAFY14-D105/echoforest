@@ -117,14 +117,14 @@ export default function GamePage() {
     }
   }, [isHost, roomId]);
 
-  const handleToggleReady = () => {
+  const handleToggleReady = useCallback(() => {
     if (!roomId || isSoloMode) return;
     const newReady = !myReady;
     setMyReady(newReady);
     gameWebSocket.sendReady(roomId, newReady);
-  };
+  }, [roomId, isSoloMode, myReady]);
 
-  const handleStartGame = () => {
+  const handleStartGame = useCallback(() => {
     if (!isHost) return;
     // [PERFORMANCE] 렌더링 없이 최신 상태 조회
     const { isAllReady, players } = useGameStore.getState();
@@ -138,9 +138,9 @@ export default function GamePage() {
       }
       gameWebSocket.sendStartGame(roomId);
     }
-  };
+  }, [isHost, isSoloMode, roomId, startGame]);
 
-  const handleSelectStage = (stageNum: number) => {
+  const handleSelectStage = useCallback((stageNum: number) => {
     const isUnlocked = stageNum === 1 || clearedStages.includes(`MULTI_${stageNum - 1}`);
     if (isUnlocked) {
       selectStage(getMultiStageId(stageNum));
@@ -148,15 +148,15 @@ export default function GamePage() {
         (gameWebSocket as any).selectStage(roomId, stageNum);
       }
     }
-  };
+  }, [clearedStages, isHost, roomId, selectStage]);
 
-  const handleClearStage = (stageId: string) => {
+  const handleClearStage = useCallback((stageId: string) => {
     const stageNum = parseInt(stageId.replace(/^(MULTI_|SOLO_)/, ''), 10) || 1;
     clearStage(stageId);
     if (isHost && roomId && 'clearStageSync' in gameWebSocket) {
       (gameWebSocket as any).clearStageSync(roomId, stageNum);
     }
-  };
+  }, [clearStage, isHost, roomId]);
 
   const { showToast } = useToastStore();
 
@@ -171,7 +171,7 @@ export default function GamePage() {
     }
   }, [roomId, showToast]);
 
-  const addTestPlayer = () => {
+  const addTestPlayer = useCallback(() => {
     const currentPlayers = useGameStore.getState().players;
     if (currentPlayers.length < MAX_PLAYERS) {
       addPlayer({
@@ -180,7 +180,7 @@ export default function GamePage() {
         isHost: false
       });
     }
-  };
+  }, [addPlayer]);
 
   // ========== 렌더링 ==========
 
