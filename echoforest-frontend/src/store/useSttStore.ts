@@ -65,7 +65,7 @@ export const useSttStore = create<SttState>((set, get) => ({
     wordType: null,
     curseState: {
         stack: 0,
-        cursedPlayer: null,
+        cursedPlayers: [], // [복구] 초기값 빈 배열
         isCollecting: false,
         queueCount: 0,
         countdown: 0,
@@ -90,6 +90,25 @@ export const useSttStore = create<SttState>((set, get) => ({
     onPositiveDetected: (word: string, isCursed: boolean) => {
         // 저주 상태일 때만 처리
         if (isCursed) {
+            const { roomId, nickname } = useGameStoreCompat();
+            const cursedPlayers = get().curseState.cursedPlayers;
+
+            // [다중 저주] 본인이 저주에 걸렸는지 확인
+            const isSelfCursed = cursedPlayers.includes(nickname);
+
+            if (isSelfCursed) {
+                // [FIX] 본인이 저주에 걸린 경우: 긍정어 완전 무시 (인식 안함)
+                console.log(`[STT] ${nickname}님은 저주 상태 - 긍정어 "${word}" 무시`);
+                return;
+            }
+
+            // 다른 플레이어가 저주에 걸린 경우: 저주 해제 가능 (FIFO - 첫 번째 플레이어)
+            const cursedTeammates = cursedPlayers.filter((p: string) => p !== nickname);
+
+            if (cursedTeammates.length === 0) return; // 해제할 대상 없음
+
+            const firstCursedPlayer = cursedTeammates[0];  // FIFO: 첫 번째 저주 플레이어
+
             set({
                 lastDetectedWord: word,
                 wordType: 'positive',
@@ -98,13 +117,12 @@ export const useSttStore = create<SttState>((set, get) => ({
                     level: 0,
                     emoji: '✨',
                     title: '저주 해제!',
-                    message: `"${word}"로 저주가 해제됩니다!`,
+                    message: `"${word}"로 ${firstCursedPlayer}님의 저주를 해제합니다!`,
                     keyword: word,
                 },
             });
 
             // 서버로 저주 해제 요청
-            const { roomId } = useGameStoreCompat();
             const isConnected = gameWebSocket.isConnected();
             if (roomId && isConnected) {
                 sendCurseRelease(roomId, word);
@@ -162,12 +180,20 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => {
+        const currentCursedPlayers = get().curseState.cursedPlayers;
+
+        // 중복 방지: 이미 저주 걸린 플레이어는 추가하지 않음
+        // [FIX] 백엔드에서 이미 필터링하므로 이론상 발생하지 않지만, 발생 시 로그만 남김
+        if (currentCursedPlayers.includes(cursedPlayerId)) {
+            console.warn(`[STT] ${cursedPlayerId}님은 이미 저주 상태입니다 (백엔드 필터링 누락?)`);
+            // 스택만 초기화하고 계속 진행
+        }
 
         set({
             curseState: {
                 ...get().curseState,
                 stack: 0,
-                cursedPlayer: cursedPlayerId,
+                cursedPlayers: [...currentCursedPlayers, cursedPlayerId], // 배열에 추가
             },
             warningModal: {
                 isVisible: true,
@@ -189,38 +215,44 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     onCurseReleased: (releasedPlayerId: string, word: string) => {
-        // [FIX] 본인의 저주가 풀렸을 때만 UI 업데이트
         const { nickname } = useGameStoreCompat();
+        const cursedPlayers = get().curseState.cursedPlayers;
 
-        if (releasedPlayerId !== nickname) {
-            // 다른 사람의 저주 해제는 무시 (내 저주 상태에 영향 없음)
-            // console.log(`[STT] ${releasedPlayerId}님의 저주 해제 (본인 아님, UI 무시)`);
-            return;
+        // [FIX] 저주 상태는 모든 클라이언트에서 동기화되어야 함
+        // 배열에서 해제된 플레이어 제거
+        if (cursedPlayers.includes(releasedPlayerId)) {
+            const updatedCursedPlayers = cursedPlayers.filter((id: string) => id !== releasedPlayerId);
+
+            set({
+                curseState: {
+                    ...get().curseState,
+                    cursedPlayers: updatedCursedPlayers,
+                }
+            });
+
+            // 본인 해제 시 알림
+            if (releasedPlayerId === nickname) {
+                set({
+                    warningModal: {
+                        isVisible: true,
+                        level: 0,
+                        emoji: '✨',
+                        title: '해방!',
+                        message: `팀원의 도움으로 저주가 풀렸습니다!`,
+                        keyword: word,
+                    },
+                });
+
+                setTimeout(() => {
+                    set({ warningModal: { ...get().warningModal, isVisible: false } });
+                }, 3000);
+            }
         }
-
-        // 본인의 저주 해제 → UI 업데이트
-        set({
-            curseState: {
-                ...get().curseState,
-                cursedPlayer: null,
-            },
-            warningModal: {
-                isVisible: true,
-                level: 0,
-                emoji: '✨',
-                title: '저주 해제!',
-                message: `${releasedPlayerId}님이 "${word}"로 저주를 해제했습니다!`,
-            },
-        });
 
         // Phaser 씬에 저주 해제 이벤트 전달
         window.dispatchEvent(new CustomEvent('curse-released', {
             detail: { playerId: releasedPlayerId, word }
         }));
-
-        setTimeout(() => {
-            set({ warningModal: { ...get().warningModal, isVisible: false } });
-        }, 3000);
     },
 
     hideWarningModal: () => {
