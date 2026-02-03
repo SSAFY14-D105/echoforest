@@ -1779,66 +1779,73 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // 재귀적으로 위에 있는 모든 플레이어 수 계산 (AABB Overlap + Support Chain)
     private calculateTotalWeight(bottomLabel: string): number {
+        // [FIX] Set을 사용하여 중복 카운트 원천 차단
+        // 한 플레이어가 여러 번 감지되더라도(여러 파츠 충돌 등) Set에는 ID가 한 번만 저장됨
         const playersFound = new Set<string>();
 
         // 1. [Direct Check] 엘리베이터 ID인 경우, 직접 영역 겹침 검사 수행
-        // 물리 엔진의 충돌 이벤트(collisionStart/Active)가 불안정할 수 있으므로
-        // 매 프레임 위치 기반으로 확실하게 체크합니다.
         if (bottomLabel.startsWith('elevator-')) {
             const elevatorId = bottomLabel.replace('elevator-', '');
             const elevator = this.elevators.find(e => e.id === elevatorId);
 
             if (elevator) {
                 const elevatorBounds = elevator.getBody().bounds;
-                // 약간의 여유(Tolerance)를 두어 감지 범위 확장
-                // 위쪽으로 조금 더 높게 확인하여(Top - 10px) 발이 살짝 닿아도 인정
+                // 감지 영역 설정: 엘리베이터 위쪽을 살짝 더 높게 잡아(2px) 발이 닿은 상태 감지
                 const checkBounds = {
-                    minX: elevatorBounds.min.x,
-                    maxX: elevatorBounds.max.x,
-                    minY: elevatorBounds.min.y - 20, // 위쪽으로 20px 감지 영역 확장
+                    minX: elevatorBounds.min.x + 2, // 가장자리 살짝 제외 (스치기 방지)
+                    maxX: elevatorBounds.max.x - 2,
+                    minY: elevatorBounds.min.y - 10, // 위쪽으로 10px 감지 (너무 높으면 점프 시 오작동)
                     maxY: elevatorBounds.max.y
                 };
 
                 this.players.forEach(player => {
+                    // 이미 찾은 플레이어는 넘어감 (Set 덕분에 중복 삽입되진 않지만 최적화)
+                    if (playersFound.has(player.nickname)) return;
+
                     const playerBounds = player.getBody().bounds;
 
-                    // AABB Overlap Check
+                    // AABB Overlap Check (교차 영역 확인)
                     const overlaps = (
                         playerBounds.max.x > checkBounds.minX &&
                         playerBounds.min.x < checkBounds.maxX &&
-                        playerBounds.max.y > checkBounds.minY && // 발바닥(MaxY)이 감지 영역 상단(MinY)보다 아래에 있음
+                        playerBounds.max.y > checkBounds.minY && // 발바닥이 감지 영역 상단보다 아래
                         playerBounds.min.y < checkBounds.maxY
                     );
 
                     if (overlaps) {
                         playersFound.add(player.nickname);
+                        // console.log(`[Elevator] Detected direct overlap: ${player.nickname} on ${elevatorId}`);
                     }
                 });
             }
         }
 
-        // 2. [Chain Check] SupportMap을 이용한 추가/연쇄 감지 (기존 로직 유지)
-        // 플레이어 위에 플레이어가 있는 경우 처리
-        const queue = Array.from(playersFound); // 이미 찾은 플레이어들부터 시작
-        // 만약 엘리베이터 위 플레이어가 없다면 bottomLabel(엘리베이터) 자체에서 시작해야 함
+        // 2. [Chain Check] SupportMap을 이용한 추가/연쇄 감지 (탑 쌓기)
+        // 엘리베이터 위에 다른 블록이나 플레이어가 있고, 그 위에 또 플레이어가 있는 경우
+        const queue = Array.from(playersFound);
+
+        // 만약 직접 감지된 플레이어가 없더라도, 엘리베이터 자체 위에 쌓인 다른 물체가 있을 수 있으므로 큐에 추가
         if (queue.length === 0) queue.push(bottomLabel);
 
-        const visited = new Set<string>();
+        const visited = new Set<string>(queue); // 큐에 넣은 것은 방문 처리
 
         while (queue.length > 0) {
             const current = queue.shift()!;
-            if (visited.has(current)) continue;
-            visited.add(current);
 
-            // 현재 객체 위에 있는 다른 객체들 확인
+            // 현재 객체 위에 있는 다른 객체들 확인 (supportMap 이용)
             const supported = this.supportMap.get(current);
             if (supported) {
                 supported.forEach(topLabel => {
-                    // 플레이어라면 카운트
-                    if (this.players.has(topLabel)) {
-                        playersFound.add(topLabel);
+                    if (!visited.has(topLabel)) {
+                        visited.add(topLabel); // 방문 처리
+
+                        // 식별된 객체가 플레이어라면 카운트 목록에 추가
+                        if (this.players.has(topLabel)) {
+                            playersFound.add(topLabel);
+                        }
+                        // 연쇄 감지를 위해 큐에 추가
+                        queue.push(topLabel);
                     }
-                    queue.push(topLabel); // 연쇄 감지
                 });
             }
         }
