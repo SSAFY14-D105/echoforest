@@ -110,6 +110,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "ENDING_MISSION_END": // 엔딩 미션 종료 (Host -> Server -> All)
                     gameService.handleEndingMissionEnd(session, messageDto);
                     break;
+                case "ITEM_COLLECTED": // 아이템 획득 (Client -> Server)
+                    gameService.handleItemCollected(session, messageDto);
+                    break;
                 // ===== 강제 동기화 요청 =====
 
                 default:
