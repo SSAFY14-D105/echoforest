@@ -114,18 +114,20 @@ export default function WaitingRoom({
 
                     {isHost ? (
                         <button
-                            className={`${styles.actionBtn} ${(!isSoloMode && players.length > 1 && !allReady) ? '' : styles.readyActive}`}
+                            className={`${styles.actionBtn} ${(!isSoloMode && players.length > 1 && !allReady) || !isLiveKitConnected ? '' : styles.readyActive}`}
                             onClick={onStartGame}
-                            disabled={!isSoloMode && players.length > 1 && !allReady}
+                            disabled={(!isSoloMode && players.length > 1 && !allReady) || !isLiveKitConnected}
                         >
-                            {!isSoloMode && players.length > 1 && !allReady ? '준비 대기중...' : '게임 시작'}
+                            {!isLiveKitConnected ? '연결 중...' : (!isSoloMode && players.length > 1 && !allReady ? '준비 대기중...' : '게임 시작')}
                         </button>
                     ) : (
                         <button
                             className={`${styles.actionBtn} ${myReady ? styles.readyActive : ''}`}
                             onClick={onToggleReady}
+                            disabled={!isLiveKitConnected}
+                            style={{ opacity: !isLiveKitConnected ? 0.6 : 1, cursor: !isLiveKitConnected ? 'not-allowed' : 'pointer' }}
                         >
-                            {myReady ? '준비 완료!' : '준비'}
+                            {!isLiveKitConnected ? '연결 중...' : (myReady ? '준비 완료!' : '준비')}
                         </button>
                     )}
 
