@@ -393,6 +393,22 @@ public class GameRoom implements Runnable {
         curseManager.resetCurseStack();
     }
 
+    public void addToCurseQueue(String username) {
+        curseManager.addToCurseQueue(username);
+    }
+
+    public String releaseFromCurseQueue() {
+        return curseManager.releaseFromCurseQueue();
+    }
+
+    public boolean isPlayerCursed(String username) {
+        return curseManager.isPlayerCursed(username);
+    }
+
+    public boolean isCurseQueueEmpty() {
+        return curseManager.isCurseQueueEmpty();
+    }
+
     public void addTeamCurseStack(int delta) {
         if (curseManager.addTeamCurseStack(delta)) {
             String victim = curseManager.triggerRandomCurse(sessionManager.getPlayers());

@@ -6,8 +6,10 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 
 @Slf4j
@@ -23,6 +25,9 @@ public class CurseManager {
     // STT 저주 스택 (별도 관리)
     @Getter
     private int curseStack = 0;
+
+    // 저주 걸린 플레이어 큐 (FIFO)
+    private final Queue<String> cursedPlayersQueue = new LinkedList<>();
 
     private final Random random = new Random();
 
@@ -68,6 +73,54 @@ public class CurseManager {
     public void resetCurseStack() {
         this.curseStack = 0;
         log.info("🔮 Room {}: Curse stack reset", roomId);
+    }
+
+    /**
+     * 저주 큐에 플레이어 추가 (스택 10 도달 시)
+     *
+     * @param username 저주 걸린 플레이어
+     */
+    public void addToCurseQueue(String username) {
+        if (username == null || cursedPlayersQueue.contains(username)) {
+            log.warn("🔮 Room {}: 이미 저주 큐에 있거나 잘못된 플레이어: {}", roomId, username);
+            return;
+        }
+        cursedPlayersQueue.add(username);
+        log.info("💀 Room {}: {} 저주 큐에 추가 (큐 크기: {})", roomId, username, cursedPlayersQueue.size());
+    }
+
+    /**
+     * 저주 큐에서 FIFO로 플레이어 해제
+     *
+     * @return 해제된 플레이어 Username (큐가 비어있으면 null)
+     */
+    public String releaseFromCurseQueue() {
+        String released = cursedPlayersQueue.poll();
+        if (released != null) {
+            log.info("✨ Room {}: {} 저주 큐에서 해제 (남은 큐 크기: {})", roomId, released, cursedPlayersQueue.size());
+        }
+        return released;
+    }
+
+    /**
+     * 저주 큐에 플레이어가 있는지 확인
+     */
+    public boolean isPlayerCursed(String username) {
+        return cursedPlayersQueue.contains(username);
+    }
+
+    /**
+     * 저주 큐가 비어있는지 확인
+     */
+    public boolean isCurseQueueEmpty() {
+        return cursedPlayersQueue.isEmpty();
+    }
+
+    /**
+     * 저주 큐 크기 반환
+     */
+    public int getCurseQueueSize() {
+        return cursedPlayersQueue.size();
     }
 
     /**
