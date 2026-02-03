@@ -17,46 +17,35 @@
 
 /* 픽셀 아트 테마 -> 칠판 테마 변경 */
 .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 30px;
-
-    /* 칠판 스타일 구현 (픽셀 아트 테마) */
-    background: #3a4a3b;
-    /* 칠판색 (조금 더 초록빛) */
-    /* 픽셀 느낌의 나무 테두리 */
-    border: 8px solid #5D4037;
-    box-shadow:
-        0 0 0 4px #3E2723,
-        /* 안쪽 테두리 느낌 */
-        inset 0 0 0 4px #263327,
-        /* 칠판 안쪽 그림자 */
-        10px 10px 0px rgba(0, 0, 0, 0.5);
-    /* 하드 쉐도우 */
-    border-radius: 4px;
-    /* 픽셀 느낌을 위해 둥근 모서리 줄임 */
+    /* 칠판 스타일 -> 깔끔한 화이트 카드 스타일로 변경 (Game HUD와 통일) */
+    background: #fff;
+    /* 흰색 배경 */
+    border: 2px solid #ddd;
+    /* 깔끔한 회색 테두리 */
+    border-radius: 12px;
+    /* 둥근 모서리 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* 부드러운 그림자 */
 
     max-width: 900px;
     width: 90%;
     font-family: var(--font-main);
-    color: #ffeeb0;
-    /* 기본 텍스트 색상 (분필) */
+    color: #333;
+    /* 텍스트 색상: 검정/진회색 */
 }
 
 .title {
     font-size: 32px;
     font-weight: bold;
-    color: #ffeeb0;
-    /* 분필 색상 */
+    color: #333;
+    /* 타이틀도 검정 */
     margin-bottom: 24px;
-    /* text-shadow: 0 0 20px rgba(255, 215, 0, 0.6); <- 제거 */
-    text-shadow: 2px 2px 0 #333;
+    text-shadow: none;
+    /* 그림자 제거 */
     animation: none;
-    /* 심플하게 */
     font-family: var(--font-title);
-    border-bottom: 2px dashed rgba(255, 238, 176, 0.4);
-    /* 칠판 느낌 밑줄 */
+    border-bottom: 2px solid #eee;
+    /* 깔끔한 실선 */
     padding-bottom: 10px;
     width: 90%;
     text-align: center;
@@ -64,8 +53,8 @@
 
 /* 로딩 표시 */
 .loadingText {
-    color: #ddd;
-    /* 밝은 회색 분필 */
+    color: #666;
+    /* 어두운 회색 */
     font-size: 16px;
     margin-bottom: 20px;
     animation: blink 1s steps(2) infinite;
@@ -97,7 +86,9 @@
 
 .cameraBox {
     position: relative;
-    aspect-ratio: 16 / 9;
+    /* aspect-ratio: 16 / 9; <- 제거 (높이 고정) */
+    height: 140px;
+    /* Game HUD CameraArea 높이와 동일 */
     background: #000;
     /* border-radius: 12px; <- 제거 */
     border: 3px solid #fff;
@@ -105,6 +96,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     transition: transform 0.1s steps(2);
+    border-radius: 12px;
 }
 
 .cameraBox:hover {
@@ -215,10 +207,10 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    /* 어두운 배경 */
-    border: 2px dashed rgba(255, 255, 255, 0.2);
-    /* 점선 테두리 */
+    background: #f8f9fa;
+    /* 밝은 배경 */
+    border: 2px dashed #ddd;
+    /* 밝은 회색 점선 */
     padding: 10px;
     box-sizing: border-box;
 }
@@ -232,8 +224,8 @@
 
 .statusText {
     font-size: 20px;
-    color: #ffeeb0;
-    /* 분필 색상 */
+    color: #333;
+    /* 분필 색상 -> 검정 */
     margin: 0;
     font-family: var(--font-title);
 }
