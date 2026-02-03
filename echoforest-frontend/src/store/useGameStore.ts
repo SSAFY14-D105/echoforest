@@ -138,12 +138,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (currentRoomId && gameWebSocket.isConnected()) {
                 gameWebSocket.sendLeave(currentRoomId);
             }
-        }).catch(console.warn);
+        }).catch((/* e */) => { /* console.warn(e) */ });
 
         // LiveKit 연결 해제
         import('../socket/LiveKitService').then(({ liveKitService }) => {
             liveKitService.disconnect();
-        }).catch(console.warn);
+        }).catch((/* e */) => { /* console.warn(e) */ });
 
         set({ roomId: '', isHost: false, players: [], isGameStarted: false, isSoloMode: false, currentStage: null });
     },
@@ -291,7 +291,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const { logout } = await import('../apis/authApi');
             await logout();
         } catch (e) {
-            console.warn("로그아웃 API 호출 실패:", e);
+            // console.warn("로그아웃 API 호출 실패:", e);
         }
 
         // 1. localStorage 정리
@@ -306,7 +306,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const { GameWebSocket } = await import('../socket/GameWebSocket');
             GameWebSocket.resetInstance();
         } catch (e) {
-            console.warn("WebSocket 초기화 실패:", e);
+            // console.warn("WebSocket 초기화 실패:", e);
         }
 
         // 3. 상태 초기화

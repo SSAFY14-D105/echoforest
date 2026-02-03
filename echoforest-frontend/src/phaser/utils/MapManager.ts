@@ -77,7 +77,7 @@ export default class MapManager {
             if (ts) {
                 tilesets.push(ts);
             } else {
-                console.warn(`[MapManager] Failed to add tileset: ${name} (Key: ${key})`);
+                // console.warn(`[MapManager] Failed to add tileset: ${name} (Key: ${key})`);
             }
         });
 
@@ -103,7 +103,7 @@ export default class MapManager {
                     CollisionBuilder.createMergedCollisions(this.scene, this.map, layer, this.mapScale, this.offsetY);
                 }
             } else {
-                console.warn(`[MapManager] Failed to create layer: ${layerData.name}`);
+                // console.warn(`[MapManager] Failed to create layer: ${layerData.name}`);
             }
         });
 
@@ -163,7 +163,7 @@ export default class MapManager {
         const layers = rawMapData?.data?.layers || rawMapData?.layers;
 
         if (!layers) {
-            console.warn(`[MapManager] Raw map data not found for key: ${this.mapKey}`);
+            // console.warn(`[MapManager] Raw map data not found for key: ${this.mapKey}`);
             // Fallback (incomplete) - depth handling weak here
             this.map.objects.forEach(objLayer => this.processObjectLayer(objLayer));
             return;

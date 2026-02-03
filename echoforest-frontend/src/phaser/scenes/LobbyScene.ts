@@ -73,7 +73,7 @@ export default class LobbyScene extends BaseGameScene {
         if (this.mapManager) {
             this.mapManager.createObjects();
         } else {
-            console.warn('[LobbyScene] MapManager not initialized');
+            // console.warn('[LobbyScene] MapManager not initialized');
         }
     }
 }

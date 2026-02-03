@@ -141,12 +141,12 @@ export const useSttStore = create<SttState>((set, get) => ({
 
     onBatchReady: (texts: string[]) => {
         const { roomId } = useGameStoreCompat();
-        console.log('[STT 배치] 서버로 전송 준비:', { roomId, texts, connected: gameWebSocket.isConnected() });
+        // console.log('[STT 배치] 서버로 전송 준비:', { roomId, texts, connected: gameWebSocket.isConnected() });
         if (roomId && gameWebSocket.isConnected()) {
             sendSpeechBatch(roomId, texts);
-            console.log('[STT 배치] ✅ 서버로 전송 완료:', texts);
+            // console.log('[STT 배치] ✅ 서버로 전송 완료:', texts);
         } else {
-            console.warn('[배치] ❌ WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
+            // console.warn('[배치] ❌ WebSocket 미연결 - 전송 실패', { roomId, connected: gameWebSocket.isConnected() });
         }
     },
 
@@ -194,7 +194,7 @@ export const useSttStore = create<SttState>((set, get) => ({
 
         if (releasedPlayerId !== nickname) {
             // 다른 사람의 저주 해제는 무시 (내 저주 상태에 영향 없음)
-            console.log(`[STT] ${releasedPlayerId}님의 저주 해제 (본인 아님, UI 무시)`);
+            // console.log(`[STT] ${releasedPlayerId}님의 저주 해제 (본인 아님, UI 무시)`);
             return;
         }
 

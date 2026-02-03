@@ -57,7 +57,7 @@ export default class Solo1Scene extends BaseGameScene {
         if (this.mapManager) {
             this.mapManager.createObjects();
         } else {
-            console.warn('[Solo1Scene] MapManager not initialized');
+            // console.warn('[Solo1Scene] MapManager not initialized');
         }
     }
 

@@ -32,7 +32,7 @@ export default function App() {
     const storedNickname = localStorage.getItem('nickname');
 
     if (token && isTokenExpired(token)) {
-      console.warn('[App] Token expired. Logging out.');
+      // console.warn('[App] Token expired. Logging out.');
       useGameStore.getState().logout();
     } else if (token && storedNickname && !nickname) {
       setNickname(storedNickname);
@@ -54,7 +54,7 @@ export default function App() {
         const handleStatusChange = () => {
           const camState = camQuery.state;
           const micState = micQuery.state;
-          console.log(`[App] Permission changed - Camera: ${camState}, Mic: ${micState}`);
+          // console.log(`[App] Permission changed - Camera: ${camState}, Mic: ${micState}`);
 
           // 둘 중 하나라도 허용되지 않으면 권한 박탈
           if (camState !== 'granted' || micState !== 'granted') {
@@ -66,7 +66,7 @@ export default function App() {
         camQuery.onchange = handleStatusChange;
         micQuery.onchange = handleStatusChange;
       } catch (e) {
-        console.warn('[App] Permission API error:', e);
+        // console.warn('[App] Permission API error:', e);
       }
     };
 

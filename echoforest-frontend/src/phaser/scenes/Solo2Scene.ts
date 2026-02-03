@@ -66,7 +66,7 @@ export default class Solo2Scene extends BaseGameScene {
 
         // [Fix] 맵에 스폰 포인트가 없는 경우 기본 스폰 포인트 생성 (임시 위치)
         if (this.spawnPoints.length === 0) {
-            console.warn('[Solo2Scene] No spawn points found in map. Creating default spawn point.');
+            // console.warn('[Solo2Scene] No spawn points found in map. Creating default spawn point.');
             const defaultSpawn = new Respawn(this, 200, 400, 'default-spawn', 0, true);
             this.spawnPoints.push(defaultSpawn);
         }
