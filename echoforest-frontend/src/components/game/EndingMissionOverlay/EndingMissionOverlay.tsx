@@ -309,10 +309,10 @@ export default function EndingMissionOverlay({
             // console.log('[EndingMissionOverlay] ✅ Pose completed! Capturing immediately...');
             handleInstantCapture().then(() => {
                 onMotionCleared?.();
-                // 3초 후 닫기
-                setTimeout(() => {
-                    onClose?.();
-                }, 3000);
+                // [FIX] 여기서 닫지 않고, 부모 컴포넌트(handleCaptureComplete)에서 로딩 후 닫도록 위임
+                // setTimeout(() => {
+                //     onClose?.();
+                // }, 3000);
             });
         }
 
