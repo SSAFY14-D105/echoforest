@@ -28,6 +28,25 @@ export default class RightPokeGesture extends BaseGesture {
         }
 
         const faceSize = metadata.faceSize || 0.1;
+
+        // [배타적 로직] 왼쪽 볼(반대쪽)도 찔리고 있다면 -> 양볼콕이므로 나는 빠진다.
+        // 왼쪽 볼 포인트 (거울모드 기준 280번대)
+        const oppositeCheekPoints = [280, 425, 291, 411, 365, 379];
+        for (const hand of allHands) {
+            // 어떤 손이라도 반대쪽 볼 근처에 있으면 탈락
+            if (!isFingerExtended(hand, 8, 6)) continue;
+            const tip = hand[8];
+            for (const oppIdx of oppositeCheekPoints) {
+                if (faceLandmarks[oppIdx]) {
+                    const dist = distance(tip, faceLandmarks[oppIdx]);
+                    if (dist < faceSize * this.thresholds.pokeDistance) {
+                        // 반대쪽도 찔렸음 -> Both가 처리할 것임
+                        return { detected: false, score: 0 };
+                    }
+                }
+            }
+        }
+
         let bestScore = 0;
         let detected = false;
 

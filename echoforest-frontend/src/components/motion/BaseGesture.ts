@@ -21,6 +21,8 @@ export interface GestureResult {
 
 export default class BaseGesture {
     config: any;
+    label?: string;
+    emoji?: string;
 
     constructor(config: any = {}) {
         this.config = config;

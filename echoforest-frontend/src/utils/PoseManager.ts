@@ -4,8 +4,8 @@ import BothCheekPokeGesture from '../components/motion/BothCheekPokeGesture';
 import CatEarsGesture from '../components/motion/CatEarsGesture';
 import FlowerPoseGesture from '../components/motion/FlowerPoseGesture';
 import FistGesture from '../components/motion/FistGesture';
-import HeartGesture from '../components/motion/HeartGesture';
-import KissGesture from '../components/motion/KissGesture';
+// import HeartGesture from '../components/motion/HeartGesture';
+// import KissGesture from '../components/motion/KissGesture';
 import LGesture from '../components/motion/LGesture';
 import LeftPokeGesture from '../components/motion/LeftPokeGesture';
 import OKGesture from '../components/motion/OKGesture';
@@ -32,8 +32,8 @@ export default class PoseManager {
             new CatEarsGesture(),
             new FlowerPoseGesture(), // CheekHeart -> FlowerPose 교체
             new FistGesture(),
-            new HeartGesture(),
-            new KissGesture(),
+            // new HeartGesture(),
+            // new KissGesture(),
             new LGesture(),
             new LeftPokeGesture(),
             new OKGesture(),
@@ -41,6 +41,7 @@ export default class PoseManager {
             new TalmoBeamGesture(),
             new VSignGesture()
         ];
+        console.log("PoseManager initialized with:", this.gestures.map(g => g.label || g.constructor.name));
     }
 
     public getGestures() {

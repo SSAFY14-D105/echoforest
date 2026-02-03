@@ -8,8 +8,10 @@ export default class BothCheekPokeGesture extends BaseGesture {
 
     // 왼쪽/오른쪽 볼 포인트 (싱글 볼콕 제스처와 동일하게 맞춤)
     // 거울모드 기준:
-    leftTargetPoints: number[] = [280, 425, 291, 411];
-    rightTargetPoints: number[] = [50, 205, 61, 187];
+    // 왼쪽/오른쪽 볼 포인트 (싱글 볼콕 제스처와 동일하게 맞춤) + 턱/하관 포인트 + 볼 중앙 포인트 추가
+    // 거울모드 기준:
+    leftTargetPoints: number[] = [280, 425, 291, 411, 365, 379, 330, 347, 323]; // 볼 중앙 확장
+    rightTargetPoints: number[] = [50, 205, 61, 187, 136, 150, 101, 118, 93];   // 볼 중앙 확장
 
     constructor(config: any = {}) {
         super(config);
@@ -46,28 +48,40 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 if (!isFingerExtended(hand, 8, 6)) continue;
 
                 // 2. 검지 각도 체크 (140도 미만 스킵)
+                // 2. 검지 각도 체크 (140도 미만 스킵)
                 const indexAngle = calculateAngle(hand[5], hand[6], hand[8]);
                 if (indexAngle < 140) continue;
 
-                // [중요] 엄지 위치 체크 (볼하트 오인식 방지)
-                // 만약 엄지가 얼굴 턱선/볼 하단에 가까이 붙어있다면 -> 이건 하트 동작이지 볼콕이 아님!
-                // 볼콕은 보통 주먹을 쥐거나 엄지가 떨어져 있음.
-                const thumbTip = hand[4];
-                const jawPoints = [365, 379, 400, 352, 136, 150, 176, 123]; // 좌우 통합 체크
-                let minThumbDist = Infinity;
+                // [개선] 사용자가 "검지로만" 하고 싶을 때 (주먹 쥔 상태)를 지원
+                // 중지와 약지가 접혀있는지 확인
+                const wrist = hand[0];
+                const isMiddleFolded = distance(hand[12], wrist) < distance(hand[9], wrist);
+                const isRingFolded = distance(hand[16], wrist) < distance(hand[13], wrist);
 
-                for (const jIdx of jawPoints) {
-                    const jp = faceLandmarks[jIdx];
-                    if (jp) {
-                        const d = distance(thumbTip, jp);
-                        if (d < minThumbDist) minThumbDist = d;
+                // 중지/약지가 접혀있다면 -> "검지 콕" 의도일 확률 높음 -> 엄지 체크 완화/생략
+                // 중지/약지가 펴져있다면 -> "손바닥 콕" 또는 "볼 하트" -> 엄지 체크 엄격하게
+                const isFistPoke = isMiddleFolded && isRingFolded;
+
+                if (!isFistPoke) {
+                    // [중요] 엄지 위치 체크 (볼하트 오인식 방지 - 오픈 핸드일 때만 적용)
+                    // 만약 엄지가 얼굴 턱선/볼 하단에 가까이 붙어있다면 -> 이건 하트 동작이지 볼콕이 아님!
+                    const thumbTip = hand[4];
+                    const jawPoints = [365, 379, 400, 352, 136, 150, 176, 123]; // 좌우 통합 체크
+                    let minThumbDist = Infinity;
+
+                    for (const jIdx of jawPoints) {
+                        const jp = faceLandmarks[jIdx];
+                        if (jp) {
+                            const d = distance(thumbTip, jp);
+                            if (d < minThumbDist) minThumbDist = d;
+                        }
                     }
-                }
-                const normThumb = minThumbDist / faceSize;
+                    const normThumb = minThumbDist / faceSize;
 
-                // 엄지가 얼굴에 매우 가까우면(0.35 이내) 볼콕 후보에서 제외 또는 감점
-                if (normThumb < 0.35) {
-                    continue;
+                    // 엄지가 얼굴에 매우 가까우면(0.35 이내) 볼콕 후보에서 제외
+                    if (normThumb < 0.35) {
+                        continue;
+                    }
                 }
 
                 const indexTip = hand[8];
