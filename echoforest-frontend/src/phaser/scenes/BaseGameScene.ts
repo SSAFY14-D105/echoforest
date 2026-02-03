@@ -756,6 +756,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
      * 전체 게임 리셋 (서버 요청 수신 시 실행)
      */
     private resetGame(): void {
+        // [FIX] 리셋 시 유령 데이터 제거
+        // 엘리베이터 무게 계산 등에 쓰이는 지지 관계 맵을 초기화하여
+        // 이미 맵에서 사라지거나 이동된 플레이어가 여전히 타고 있는 것으로 인식되는 버그 수정
+        this.supportMap.clear();
+        this.groundedFrames.clear(); // 코요테 타임 등 물리 상태도 초기화
+
         if (this.isDead) { // 이미 죽음 처리가 진행 중이었다면 해제
             this.isDead = false;
         }
@@ -1305,6 +1311,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private removePlayer(nickname: string): void {
         const player = this.players.get(nickname);
         if (player) {
+            // [FIX] 플레이어 제거 시 지지 관계(엘리베이터 탑승 등)에서도 확실히 삭제
+            this.supportMap.forEach((supportingSet) => {
+                if (supportingSet.has(nickname)) {
+                    supportingSet.delete(nickname);
+                }
+            });
+
             player.destroy();
             this.players.delete(nickname);
             BaseGameScene.persistentCurses.delete(nickname);
