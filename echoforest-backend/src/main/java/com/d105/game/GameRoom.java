@@ -148,6 +148,11 @@ public class GameRoom implements Runnable {
 
         broadcastSystemMessage("PLAYER_DISCONNECTED", p.getUsername(), null);
 
+        // [FIX] 나간 플레이어가 일시정지 유발자였다면 목록에서 제거 및 게임 재개 체크
+        if (pausedPlayers.contains(p.getUsername())) {
+            resume(p.getUsername());
+        }
+
         if (sessionManager.isEmpty()) { // players도 비었는지 확인 필요. sessions가 비어도 재접속 대기자가 있으면 유지.
             // 활성 세션이 없으면 종료 고려, 하지만 재접속 대기 시간(3분) 동안은 유지.
             // 다만 players 맵이 완전히 비면 종료.
@@ -437,14 +442,28 @@ public class GameRoom implements Runnable {
         }
     }
 
+    // [NEW] Paused Players Tracking
+    private final Set<String> pausedPlayers = Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
     public void pause(String username) {
+        pausedPlayers.add(username);
         this.state = GameState.PAUSED;
+        // 가장 최근에 멈춘 사람 이름을 보냄 (UI 표시용)
         broadcastSystemMessage("GAME_PAUSED", username, null);
     }
 
     public void resume(String username) {
-        this.state = GameState.RUNNING;
-        broadcastSystemMessage("GAME_RESUMED", username, null);
+        pausedPlayers.remove(username);
+
+        if (pausedPlayers.isEmpty()) {
+            // 아무도 일시정지 상태가 아니면 게임 재개
+            this.state = GameState.RUNNING;
+            broadcastSystemMessage("GAME_RESUMED", username, null);
+        } else {
+            // 여전히 기다려야 하는 사람이 있다면, 그 사람의 이름으로 PAUSED 다시 전송 (UI 갱신)
+            String remainingPauser = pausedPlayers.iterator().next();
+            broadcastSystemMessage("GAME_PAUSED", remainingPauser, null);
+        }
     }
 
     public void broadcastRoomClosed() {
