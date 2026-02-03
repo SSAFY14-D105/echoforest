@@ -716,6 +716,40 @@ public class GameService {
     }
 
     /**
+     * 아이템 획득 처리 (ITEM_COLLECTED)
+     * 
+     * 1. 해당 아이템이 이미 획득되었는지 확인 (GameRoom 내부 상태 - 추후 구현 필요)
+     * 2. 획득되지 않았다면 획득 상태로 변경
+     * 3. 같은 방의 모든 플레이어에게 아이템 제거 메시지 전송 (ITEM_REMOVED)
+     */
+    public void handleItemCollected(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+        String itemId = message.getItemId();
+
+        if (roomId == null || username == null || itemId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // [TODO] GameRoom에 아이템 상태 관리 로직 추가 (중복 획득 방지)
+            // 현재는 클리이언트 신뢰: 요청이 오면 무조건 브로드캐스트
+
+            // ITEM_REMOVED 브로드캐스트
+            GameMessageDto removeMsg = new GameMessageDto();
+            removeMsg.setType("ITEM_REMOVED");
+            removeMsg.setRoomId(roomId);
+            removeMsg.setItemId(itemId);
+            removeMsg.setContent(itemId); // 호환성
+
+            // 모든 클라이언트에게 전송 (본인 포함 - 확실한 제거 보장)
+            room.broadcast(removeMsg, null);
+
+            log.info("🍄 Room {}: Item {} collected by {}", roomId, itemId, username);
+        }
+    }
+
+    /**
      * 중복 로그인 이벤트 처리
      * UserService에서 로그인 성공 시 발행
      * 

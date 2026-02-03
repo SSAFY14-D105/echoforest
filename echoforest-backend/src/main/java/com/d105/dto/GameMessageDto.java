@@ -16,7 +16,8 @@ import java.util.List;
 public class GameMessageDto {
     @Schema(description = "메시지 타입", example = "JOIN", allowableValues = { "CREATE", "JOIN", "MOVE", "PING", "ERROR",
             "ROOM_CREATED", "PAUSE_GAME", "GAME_PAUSED", "RESUME_GAME", "GAME_RESUMED", "PLAYER_DISCONNECTED",
-            "CURSE_STACK_UPDATE", "CURSE_TRIGGERED", "LIFT_CURSE_REQUEST", "CURSE_LIFTED" })
+            "CURSE_STACK_UPDATE", "CURSE_TRIGGERED", "LIFT_CURSE_REQUEST", "CURSE_LIFTED", "ITEM_COLLECTED",
+            "ITEM_REMOVED" })
     private String type;
 
     @Schema(description = "방 번호 (JOIN/MOVE 필수, CREATE는 선택)", example = "room_1")
@@ -84,4 +85,7 @@ public class GameMessageDto {
 
     @Schema(description = "현재 적용된 저주 목록 (Visual Sync)")
     private List<String> curses;
+
+    @Schema(description = "아이템 ID (Mushroom 등)", example = "1")
+    private String itemId; // [NEW] 아이템 동기화용
 }
