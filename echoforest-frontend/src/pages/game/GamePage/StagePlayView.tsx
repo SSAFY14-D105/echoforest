@@ -66,12 +66,12 @@ export default function StagePlayView({
         });
 
         const unsubscribeConnected = liveKitService.onConnected(() => {
-            console.log('StagePlayView: LiveKit Connected');
+            // console.log('StagePlayView: LiveKit Connected');
             setIsLiveKitConnected(true);
         });
 
         const unsubscribeDisconnected = liveKitService.onDisconnected(() => {
-            console.log('StagePlayView: LiveKit Disconnected');
+            // console.log('StagePlayView: LiveKit Disconnected');
             setIsLiveKitConnected(false);
         });
 
@@ -82,7 +82,7 @@ export default function StagePlayView({
         // WaitingRoom을 거치지 않고 바로 들어온 경우 연결이 끊겨있을 수 있음
         const ensureConnection = async () => {
             if (!liveKitService.isConnected && roomId && nickname) {
-                console.log('[StagePlayView] LiveKit not connected (refresh detected). Connecting...');
+                // console.log('[StagePlayView] LiveKit not connected (refresh detected). Connecting...');
                 try {
                     await liveKitService.connect(roomId, nickname);
                 } catch (e) {
@@ -195,7 +195,7 @@ export default function StagePlayView({
         // console.log('[StagePlayView] handleCaptureComplete called with', captures.length, 'captures');
 
         if (captures.length === 0) {
-            console.warn('[StagePlayView] No captures to upload!');
+            // console.warn('[StagePlayView] No captures to upload!');
             return;
         }
 
@@ -209,7 +209,7 @@ export default function StagePlayView({
             // console.log('[StagePlayView] Upload params:', { loginId, userId, stageNumber, roomId });
 
             if (!userId || isNaN(userId) || userId <= 0) {
-                console.warn('[StagePlayView] loginId not found in localStorage, skipping upload');
+                // console.warn('[StagePlayView] loginId not found in localStorage, skipping upload');
                 // console.log('[StagePlayView] Available localStorage keys:', Object.keys(localStorage));
                 return;
             }
@@ -232,7 +232,7 @@ export default function StagePlayView({
                 const msg = JSON.stringify({ type: 'IMAGE_UPLOADED', stage: stageNum, userId });
                 await liveKitService.sendData(msg);
             } else {
-                console.warn('[StagePlayView] LiveKit not connected, cannot send upload signal.');
+                // console.warn('[StagePlayView] LiveKit not connected, cannot send upload signal.');
             }
 
             // [HOST SELF CHECK] 내가 호스트라면 내 업로드도 카운트에 포함
@@ -311,13 +311,13 @@ export default function StagePlayView({
     // 스테이지 변경 시 로딩 시작
     useEffect(() => {
         setIsLoading(true);
-        console.log(`[StagePlayView] Stage changed to ${stageNum}, Loading Started`);
+        // console.log(`[StagePlayView] Stage changed to ${stageNum}, Loading Started`);
 
         // 안전장치: 5초 후에도 로딩이 안 끝나면 강제 종료
         if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
         loadingTimeoutRef.current = setTimeout(() => {
             if (isLoading) {
-                console.warn('[StagePlayView] Loading timeout - Forcing loading finish');
+                // console.warn('[StagePlayView] Loading timeout - Forcing loading finish');
                 setIsLoading(false);
             }
         }, 5000);
@@ -328,7 +328,7 @@ export default function StagePlayView({
     }, [stageNum]);
 
     const handleSceneReady = useCallback(() => {
-        console.log('[StagePlayView] Scene Ready Signal Received');
+        // console.log('[StagePlayView] Scene Ready Signal Received');
         // 최소 로딩 시간 보장을 위해 약간의 지연 후 해제 (선택 사항)
         // setTimeout(() => setIsLoading(false), 500); 
         setIsLoading(false);

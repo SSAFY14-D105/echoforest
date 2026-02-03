@@ -60,7 +60,7 @@ export function useGameWebSocket() {
                         try {
                             // [PROTOCOL v2] Array Based Protocol
                             // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
-                            const serverPlayers: any[] = JSON.parse(msg.content);
+                            const serverPlayers: any[] = msg.parsedData || JSON.parse(msg.content);
                             const currentPlayers = useGameStore.getState().players;
 
                             let shouldUpdate = false;

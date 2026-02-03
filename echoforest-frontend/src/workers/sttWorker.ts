@@ -109,7 +109,7 @@ function processTranscript(text: string, isFinal: boolean, isCursed: boolean) {
     // 욕설 감지를 위해서는 저주가 없을 때도 서버로 전송해야 함
     if (isFinal) {
         speechQueue.push(cleanText);
-        console.log('[STT Worker] 배치 큐에 추가:', cleanText, '/ 큐 크기:', speechQueue.length);
+        // console.log('[STT Worker] 배치 큐에 추가:', cleanText, '/ 큐 크기:', speechQueue.length);
 
         self.postMessage({
             type: 'QUEUE_UPDATE',

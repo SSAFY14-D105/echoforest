@@ -58,7 +58,7 @@ export class LiveKitService {
             try {
                 callback(this.getParticipants());
             } catch (error) {
-                console.warn('[LiveKitService] Initial participant callback failed:', error);
+                // console.warn('[LiveKitService] Initial participant callback failed:', error);
             }
         }
 
@@ -119,7 +119,7 @@ export class LiveKitService {
     // 데이터 전송 (DataChannel)
     async sendData(data: string | Uint8Array, reliable: boolean = true) {
         if (!this.room || !this.room.localParticipant) {
-            console.warn('[LiveKitService] Cannot send data: not connected');
+            // console.warn('[LiveKitService] Cannot send data: not connected');
             return;
         }
         const payload = typeof data === 'string' ? new TextEncoder().encode(data) : data;
@@ -256,7 +256,7 @@ export class LiveKitService {
     async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
         this.disconnect();
         const myId = ++this.connectionOpId;
-        console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${_roomName}, User: ${_username}`);
+        // console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${_roomName}, User: ${_username}`);
 
         try {
             // 2. Room 생성 및 연결
@@ -278,7 +278,7 @@ export class LiveKitService {
                 return;
             }
 
-            console.log('✅ LiveKit 연결 성공 (OpId:', myId, ')');
+            // console.log('✅ LiveKit 연결 성공 (OpId:', myId, ')');
 
             // [FIX] 트랙 설정 대기 (최대 5초)
             try {
@@ -286,7 +286,7 @@ export class LiveKitService {
                 // 트랙 설정 완료 후 이벤트 발생
                 this.notifyLocalTrackPublished();
             } catch (trackError) {
-                console.warn('[LiveKitService] Setup local tracks failed but connected:', trackError);
+                // console.warn('[LiveKitService] Setup local tracks failed but connected:', trackError);
             }
 
             this.connectedCallbacks.forEach(cb => cb());
@@ -335,12 +335,12 @@ export class LiveKitService {
 
         // [FIX] Reconnection Handling to prevent Negotiation Errors
         this.room.on(RoomEvent.Reconnecting, () => {
-            console.log('[LiveKitService] Reconnecting...');
+            // console.log('[LiveKitService] Reconnecting...');
             // Wait for reconnection before attempting updates
         });
 
         this.room.on(RoomEvent.Reconnected, () => {
-            console.log('[LiveKitService] Reconnected!');
+            // console.log('[LiveKitService] Reconnected!');
             this.notifyParticipantUpdate();
             // Re-verify local tracks if needed
             if (this.isLocalTrackReady) {
@@ -373,11 +373,11 @@ export class LiveKitService {
                     }
 
                     audioElement.play().catch(e => {
-                        console.warn('오디오 자동재생 실패:', e);
+                        // console.warn('오디오 자동재생 실패:', e);
                         // [NEW] 사용자에게 알림 (toast 등은 여기서 직접 못하므로 로그만)
                     });
                 } catch (e) {
-                    console.warn('[LiveKitService] Audio attach error:', e);
+                    // console.warn('[LiveKitService] Audio attach error:', e);
                 }
             }
 
@@ -496,7 +496,7 @@ export class LiveKitService {
                             // await this.room.localParticipant.unpublishTrack(pub.track);
                             // unpublishTrack는 오래 걸릴 수 있으므로 track.stop()만으로도 충분할 수 있음
                         } catch (e) {
-                            console.warn('Track stop failed:', e);
+                            // console.warn('Track stop failed:', e);
                         }
                     }
                 }
@@ -543,7 +543,7 @@ export class LiveKitService {
                 }
             }
         } catch (publishErr) {
-            console.warn('트랙 발행 중 오류 (연결 해제됨?):', publishErr);
+            // console.warn('트랙 발행 중 오류 (연결 해제됨?):', publishErr);
         }
     }
 
@@ -571,7 +571,7 @@ export class LiveKitService {
     private async attemptReconnect() {
         if (!this.lastRoomId || !this.lastUsername) return;
         if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-            console.warn('[LiveKitService] Max reconnect attempts reached');
+            // console.warn('[LiveKitService] Max reconnect attempts reached');
             return;
         }
 
@@ -584,7 +584,7 @@ export class LiveKitService {
                 try {
                     await this.connect(this.lastRoomId, this.lastUsername);
                 } catch (e) {
-                    console.warn('[LiveKitService] Reconnect failed:', e);
+                    // console.warn('[LiveKitService] Reconnect failed:', e);
                     // 재귀적으로 다시 시도하고 싶다면 여기서 호출 (하지 않으면 다음 시도는 없음)
                     // 현재 로직상 connect 내부 오류는 throw되므로, 여기서 잡아서 다시 시도 가능
                     this.attemptReconnect();
@@ -603,7 +603,7 @@ export class LiveKitService {
         // this.stopSyncInterval(); // [FIX] 폴링 제거
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
-            console.log('[LiveKitService] 연결 종료');
+            // console.log('[LiveKitService] 연결 종료');
             this.room.disconnect();
             this.room = null;
         }
@@ -658,7 +658,7 @@ export class LiveKitService {
     // 비디오 해상도 변경 (엔딩 미션용)
     async setVideoResolution(preset: 'h540' | 'h720'): Promise<void> {
         if (!this.room || !this.room.localParticipant) {
-            console.warn('[LiveKitService] Cannot change resolution: not connected');
+            // console.warn('[LiveKitService] Cannot change resolution: not connected');
             return;
         }
 
@@ -689,7 +689,7 @@ export class LiveKitService {
     // 카메라 강제 켜기 (엔딩 미션용)
     async forceCameraOn(): Promise<boolean> {
         if (!this.room || !this.room.localParticipant) {
-            console.warn('[LiveKitService] Cannot force camera on: not connected');
+            // console.warn('[LiveKitService] Cannot force camera on: not connected');
             return false;
         }
 

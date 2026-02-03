@@ -95,11 +95,11 @@ export default class FlowerPoseGesture extends BaseGesture {
 
         // [DEBUG] 디버그 정보 출력 (10초마다 한 번씩)
         if (allHands.length > 0 && Date.now() % 10000 < 100) {
-            console.log('[FlowerPoseGesture] Debug:', {
-                faceSize: faceSize.toFixed(3),
-                handsCount: allHands.length,
-                debugInfo
-            });
+            // console.log('[FlowerPoseGesture] Debug:', {
+            //     faceSize: faceSize.toFixed(3),
+            //     handsCount: allHands.length,
+            //     debugInfo
+            // });
         }
 
         if (detectedHands > 0) {
@@ -113,7 +113,7 @@ export default class FlowerPoseGesture extends BaseGesture {
                 finalScore = Math.min(0.95, finalScore + 0.1);
             }
 
-            console.log(`[FlowerPoseGesture] ✅ Detected! hands=${detectedHands}, score=${finalScore.toFixed(2)}`);
+            // console.log(`[FlowerPoseGesture] ✅ Detected! hands=${detectedHands}, score=${finalScore.toFixed(2)}`);
 
             return {
                 detected: true,

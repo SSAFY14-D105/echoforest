@@ -19,9 +19,9 @@ export async function httpClient(endpoint: string, options: RequestInit = {}): P
 
     if (token) {
         headers.set('Authorization', `Bearer ${token}`);
-        console.log('[httpClient] Token attached:', token.substring(0, 10) + '...');
+        // console.log('[httpClient] Token attached:', token.substring(0, 10) + '...');
     } else {
-        console.warn('[httpClient] No token found in localStorage');
+        // console.warn('[httpClient] No token found in localStorage');
     }
 
     // Content-Type 기본값 설정 (없으면 JSON)

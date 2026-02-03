@@ -36,7 +36,7 @@ export default function PermissionCheckPage() {
                 // 단, 거부 상태면 에러나므로 try-catch 필수. 
                 // 여기서는 prompt가 뜰 위험이 있어 Permissions API만 우선 신뢰
             } catch (e) {
-                console.warn('[PermissionCheck] Auto-check failed:', e);
+                // console.warn('[PermissionCheck] Auto-check failed:', e);
             }
         };
 
@@ -48,13 +48,13 @@ export default function PermissionCheckPage() {
         setError(null);
 
         try {
-            console.log('[PermissionCheck] Requesting getUserMedia...');
+            // console.log('[PermissionCheck] Requesting getUserMedia...');
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
             // 성공 시 스트림 바로 해제 (브라우저는 권한 허용 상태를 기억함)
             stream.getTracks().forEach(track => track.stop());
 
-            console.log('[PermissionCheck] Permission granted!');
+            // console.log('[PermissionCheck] Permission granted!');
             setHasMediaPermission(true);
             navigate('/lobby', { replace: true });
 

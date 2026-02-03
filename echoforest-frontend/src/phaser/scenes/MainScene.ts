@@ -135,7 +135,7 @@ export default class MainScene extends Phaser.Scene {
 
             // console.log(`[MainScene] Player added: ${storePlayer.nickname} (${isLocalPlayer ? 'local' : 'remote'})`);
         } catch (error) {
-            console.warn(`[MainScene] Failed to add player (physics not ready): ${storePlayer.nickname}`);
+            // console.warn(`[MainScene] Failed to add player (physics not ready): ${storePlayer.nickname}`);
         }
     }
 

@@ -307,7 +307,7 @@ function RemoteVideo({
                 await videoEl.play();
                 // console.log(`[RemoteVideo] Playing ${nickname}`);
             } catch (e) {
-                console.warn(`[RemoteVideo] Autoplay failed for ${nickname}:`, e);
+                // console.warn(`[RemoteVideo] Autoplay failed for ${nickname}:`, e);
             }
         };
         playVideo();
