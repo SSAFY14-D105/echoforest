@@ -32,14 +32,13 @@ export default class FistGesture extends BaseGesture {
         const closedList = [isIndexClosed, isMiddleClosed, isRingClosed, isPinkyClosed];
         const closedCount = closedList.filter(Boolean).length;
 
-        // [수정] 주먹은 4손가락이 모두 접혀 있어야 함 (하나라도 펴지면 주먹 아님)
-        if (closedCount === 4) {
-            let score = 0.95;
-            if (isThumbClosed) score += 0.04;
+        // [엄격] 5손가락 모두 접혀 있어야 함 (엄지 포함)
+        if (closedCount === 4 && isThumbClosed) {
+            let score = 0.99;
 
             return {
                 detected: true,
-                score: Math.min(0.99, score),
+                score: score,
                 label: this.label
             };
         }
