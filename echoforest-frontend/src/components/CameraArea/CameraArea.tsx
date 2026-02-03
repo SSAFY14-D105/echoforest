@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { liveKitService } from '../../socket/LiveKitService';
@@ -15,7 +15,7 @@ interface CameraAreaProps {
     isLiveKitConnected?: boolean;
 }
 
-export default function CameraArea({
+const CameraArea = memo(function CameraArea({
     startSlot = 0,
     endSlot = MAX_PLAYERS,
     participantInfos: externalParticipantInfos,
@@ -81,29 +81,26 @@ export default function CameraArea({
         }
     }, [isConnected]);
 
-    // [FIX] 연결 상태 변경 시 비디오 attach + 트랙 준비될 때까지 폴링
+    // [FIX] 연결 상태 변경 시 비디오 attach + 트랙 감지 이벤트 리스너 등록
     useEffect(() => {
         if (!isConnected) return;
 
-        // 즉시 시도
+        // 1. 즉시 시도 (이미 트랙이 준비된 경우)
         if (localVideoRef.current) {
             liveKitService.setLocalVideoElement(localVideoRef.current);
         }
 
-        // 트랙이 준비될 때까지 폴링 (최대 3초)
-        let attempts = 0;
-        const maxAttempts = 6;
-        const interval = setInterval(() => {
-            attempts++;
-            if (localVideoRef.current && liveKitService.isLocalTrackReady) {
+        // 2. 트랙이 나중에 준비될 경우를 대비해 이벤트 구독
+        const unsubscribe = liveKitService.onLocalTrackPublished(() => {
+            // console.log('[CameraArea] Local track published event received');
+            if (localVideoRef.current) {
                 liveKitService.setLocalVideoElement(localVideoRef.current);
-                clearInterval(interval);
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
             }
-        }, 500);
+        });
 
-        return () => clearInterval(interval);
+        return () => {
+            unsubscribe();
+        };
     }, [isConnected]);
 
     const handleToggleMic = async () => {
@@ -264,7 +261,9 @@ export default function CameraArea({
             })}
         </div >
     );
-}
+});
+
+export default CameraArea;
 
 // [FIX] Separate Component for Remote Video to ensure Ref stability
 // 부모 리렌더링 시에도 ref가 유지되도록 컴포넌트 분리
@@ -296,8 +295,10 @@ function RemoteVideo({
         videoEl.play().catch(e => console.warn(`[RemoteVideo] Play failed for ${nickname}:`, e));
 
         return () => {
-            // Detach handled by LiveKit usually, but we can be explicit if needed
-            // participantInfo.videoTrack?.detach(videoEl);
+            // [FIX] Explicitly detach to prevent WebMediaPlayer leak
+            if (participantInfo && participantInfo.videoTrack) {
+                participantInfo.videoTrack.detach(videoEl);
+            }
         };
     }, [participantInfo?.videoTrack, nickname, slotIndex]);
 
