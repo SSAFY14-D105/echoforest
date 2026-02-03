@@ -189,7 +189,16 @@ export const useSttStore = create<SttState>((set, get) => ({
     },
 
     onCurseReleased: (releasedPlayerId: string, word: string) => {
+        // [FIX] 본인의 저주가 풀렸을 때만 UI 업데이트
+        const { nickname } = useGameStoreCompat();
 
+        if (releasedPlayerId !== nickname) {
+            // 다른 사람의 저주 해제는 무시 (내 저주 상태에 영향 없음)
+            console.log(`[STT] ${releasedPlayerId}님의 저주 해제 (본인 아님, UI 무시)`);
+            return;
+        }
+
+        // 본인의 저주 해제 → UI 업데이트
         set({
             curseState: {
                 ...get().curseState,
