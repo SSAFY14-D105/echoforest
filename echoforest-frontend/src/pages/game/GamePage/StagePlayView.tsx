@@ -313,6 +313,7 @@ export default function StagePlayView({
                     endSlot={2}
                     participantInfos={participantInfos}
                     isLiveKitConnected={isLiveKitConnected}
+                    refreshKey={isEndingMission ? 'ending' : 'playing'} // [FIX] 미션 종료 후 비디오 다시 점유
                 />
 
                 {/* 정보 패널 */}
@@ -337,6 +338,7 @@ export default function StagePlayView({
                     endSlot={4}
                     participantInfos={participantInfos}
                     isLiveKitConnected={isLiveKitConnected}
+                    refreshKey={isEndingMission ? 'ending' : 'playing'} // [FIX] 미션 종료 후 비디오 다시 점유
                 />
             </div>
 

@@ -13,13 +13,15 @@ interface CameraAreaProps {
     endSlot?: number;
     participantInfos?: ParticipantInfo[];
     isLiveKitConnected?: boolean;
+    refreshKey?: string; // [FIX] 외부에서 재연결 트리거 (예: 미션 종료 후)
 }
 
 const CameraArea = memo(function CameraArea({
     startSlot = 0,
     endSlot = MAX_PLAYERS,
     participantInfos: externalParticipantInfos,
-    isLiveKitConnected: externalIsConnected
+    isLiveKitConnected: externalIsConnected,
+    refreshKey // [NEW]
 }: CameraAreaProps) {
     // 1. Stable State (Primitive values)
     // const nickname = useGameStore(state => state.nickname);
@@ -82,6 +84,7 @@ const CameraArea = memo(function CameraArea({
     }, [isConnected]);
 
     // [FIX] 연결 상태 변경 시 비디오 attach + 트랙 감지 이벤트 리스너 등록
+    // + [FIX] refreshKey 변경 시에도 실행 (미션 종료 후 비디오 재점유)
     useEffect(() => {
         if (!isConnected) {
             // 연결 끊김 시 로컬 비디오 정리 (선택적)
@@ -91,6 +94,7 @@ const CameraArea = memo(function CameraArea({
 
         // 1. 연결 복구 시 즉시 시도 (중요: 재접속 시 트랙을 다시 붙여야 함)
         if (localVideoRef.current) {
+            // console.log(`[CameraArea] Refreshing local video (key=${refreshKey})`);
             liveKitService.setLocalVideoElement(localVideoRef.current);
         }
 
@@ -105,7 +109,7 @@ const CameraArea = memo(function CameraArea({
         return () => {
             unsubscribe();
         };
-    }, [isConnected]); // isConnected가 false -> true로 변할 때 실행됨
+    }, [isConnected, refreshKey]); // isConnected가 false -> true로 변할 때 실행됨
 
     const handleToggleMic = async () => {
         const newState = await liveKitService.toggleMic();
