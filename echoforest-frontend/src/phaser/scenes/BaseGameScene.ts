@@ -670,6 +670,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private handleSupportStart(pair: any): void {
         const bodyA = pair.bodyA;
         const bodyB = pair.bodyB;
+        const normal = pair.collision.normal;
+
+        // [FIX] 수직 충돌 검사 강화 (측면 비비기 방지)
+        // Matter.js의 Normal은 bodyA에서 bodyB를 향하는 벡터일 수도 있고 반대일 수도 있음
+        // 따라서 Normal의 Y값이 수직에 가까운지(0.9 이상) 확인해야 함
+        if (Math.abs(normal.y) < 0.9) {
+            // 수직이 아니면(측면이거나 대각선) 지지 관계 아님
+            return;
+        }
 
         // 정규화된 상하 관계 파악 (Y 위치로 판단)
         let top = bodyA;
