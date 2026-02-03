@@ -11,6 +11,7 @@ import { useGameStore } from '../../../store/useGameStore';
 import { useToastStore } from '../../../store/useToastStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
+import { liveKitService } from '../../../socket/LiveKitService'; // [FIX] Import LiveKitService
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
@@ -77,6 +78,15 @@ export default function GamePage() {
     };
     addPlayer(myPlayer);
   }, [isSoloMode]);
+
+  // [FIX] 게임 페이지 언마운트 시 LiveKit 연결 해제
+  // (Lobby로 돌아가거나 할 때 확실하게 끊어주어야 함)
+  useEffect(() => {
+    return () => {
+      // console.log('[GamePage] Unmounting: Disconnecting LiveKit');
+      liveKitService.disconnect();
+    };
+  }, []);
 
   // Player state 전송 (Phaser -> React -> Socket)
   const handleSendState = useCallback((x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) => {
