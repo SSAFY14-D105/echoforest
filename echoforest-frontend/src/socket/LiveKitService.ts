@@ -1,17 +1,17 @@
-
 import {
     Room,
     RoomEvent,
-    Track,
     RemoteParticipant,
-    RemoteTrack,
     RemoteTrackPublication,
-    VideoPresets,
+    RemoteTrack,
+    Track,
     createLocalTracks,
-    DataPacket_Kind
+    DataPacket_Kind,
+    DisconnectReason,
 } from 'livekit-client';
 import { LIVEKIT_SERVER_URL as API_LIVEKIT_SERVER_URL, getLiveKitToken } from '../apis/livekitApi';
 import { LIVEKIT_URL as CONFIG_LIVEKIT_URL } from '../config';
+import { useGameStore } from '../store/useGameStore';
 
 // LiveKit 서버 URL (Docker 로컬 또는 배포 서버)
 const LIVEKIT_URL = CONFIG_LIVEKIT_URL || API_LIVEKIT_SERVER_URL;
@@ -42,6 +42,12 @@ export class LiveKitService {
     private onErrorCallback: ErrorCallback | null = null;
     // [FIX] DataReceived 콜백도 다중 구독 지원 (Set)
     private dataReceivedCallbacks: Set<(payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void> = new Set();
+
+    // [NEW] 재접속을 위한 상태 저장
+    private lastRoomId: string | null = null;
+    private lastUsername: string | null = null;
+    private reconnectAttempts = 0;
+    private readonly MAX_RECONNECT_ATTEMPTS = 5;
 
     // 콜백 설정 메서드들 (구독 패턴 - 여러 컴포넌트가 동시에 구독 가능)
     onParticipantsChange(callback: ParticipantUpdateCallback): () => void {
@@ -191,7 +197,7 @@ export class LiveKitService {
     }
 
     // NodeJS.Timeout 대신 ReturnType<typeof setInterval> 사용 (환경 호환성)
-    private syncInterval: ReturnType<typeof setInterval> | null = null;
+    // private syncInterval: ReturnType<typeof setInterval> | null = null;
     private lastParticipantInfos: ParticipantInfo[] = [];
 
     // 참가자 업데이트 통지 (모든 구독자에게 알림)
@@ -200,7 +206,6 @@ export class LiveKitService {
         const currentInfos = this.getParticipants();
 
         // [FIX] 중복 업데이트 방지 (Change Detection)
-        // 1초 폴링이 돌아도 실제 데이터가 변하지 않았으면 리렌더링 유발 안 함
         if (this.areParticipantInfosEqual(this.lastParticipantInfos, currentInfos)) {
             return;
         }
@@ -227,6 +232,7 @@ export class LiveKitService {
         return true;
     }
 
+    /*
     private startSyncInterval() {
         if (this.syncInterval) clearInterval(this.syncInterval);
         // 1초마다 상태 동기화 (이벤트 누락 방지 및 상태 수렴용)
@@ -243,6 +249,8 @@ export class LiveKitService {
             this.syncInterval = null;
         }
     }
+    */
+
 
     // LiveKit Room 연결 (토큰 직접 입력 - 테스트용)
     async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
@@ -256,7 +264,7 @@ export class LiveKitService {
                 adaptiveStream: true,
                 dynacast: true,
                 videoCaptureDefaults: {
-                    resolution: VideoPresets.h540.resolution,
+                    resolution: { width: 960, height: 540, frameRate: 30 },
                 }
             });
 
@@ -282,7 +290,7 @@ export class LiveKitService {
             }
 
             this.connectedCallbacks.forEach(cb => cb());
-            this.startSyncInterval(); // [FIX] 폴링 시작
+            // this.startSyncInterval(); // [FIX] 폴링 제거 - 이벤트 기반으로 변경
             this.notifyParticipantUpdate();
 
         } catch (err: any) {
@@ -294,8 +302,22 @@ export class LiveKitService {
         }
     }
 
-    // [FIX] Audio Element 관리를 위한 Set 추가
-    private createdAudioElements: Set<HTMLMediaElement> = new Set();
+    // [FIX] Audio Element 관리를 위한 Map (Identity -> AudioElements[])
+    private audioElements: Map<string, HTMLMediaElement[]> = new Map();
+
+    // [NEW] 참가자 볼륨 조절
+    setParticipantVolume(identity: string, volume: number) {
+        // volume: 0 ~ 100
+        const normalizedVolume = Math.max(0, Math.min(1, volume / 100));
+        const elements = this.audioElements.get(identity);
+
+        if (elements) {
+            elements.forEach(el => {
+                el.volume = normalizedVolume;
+            });
+            // console.log(`[LiveKitService] Set volume for ${identity}: ${volume}%`);
+        }
+    }
 
     // LiveKit Room 연결 (API 사용)
     private setupRoomEvents() {
@@ -333,8 +355,27 @@ export class LiveKitService {
             if (track.kind === Track.Kind.Audio) {
                 try {
                     const audioElement = track.attach();
-                    this.createdAudioElements.add(audioElement); // [FIX] 요소 추적
-                    audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
+
+                    // [FIX] 요소 추적 (Identity 기반)
+                    // this.createdAudioElements.add(audioElement); 
+                    const identity = participant.identity;
+                    const elements = this.audioElements.get(identity) || [];
+                    elements.push(audioElement);
+                    this.audioElements.set(identity, elements);
+
+                    // [NEW] 초기 볼륨 적용
+                    const store = useGameStore.getState();
+                    const player = store.players.find(p => p.nickname === identity);
+                    if (player && player.colorIndex !== undefined && player.colorIndex >= 0) {
+                        const initialVol = store.playerVolumes[player.colorIndex] ?? 70;
+                        audioElement.volume = initialVol / 100;
+                        // console.log(`[LiveKitService] Applied initial volume for ${identity}: ${initialVol}%`);
+                    }
+
+                    audioElement.play().catch(e => {
+                        console.warn('오디오 자동재생 실패:', e);
+                        // [NEW] 사용자에게 알림 (toast 등은 여기서 직접 못하므로 로그만)
+                    });
                 } catch (e) {
                     console.warn('[LiveKitService] Audio attach error:', e);
                 }
@@ -354,7 +395,17 @@ export class LiveKitService {
                     const detachedElements = track.detach();
                     detachedElements.forEach(el => {
                         el.remove();
-                        this.createdAudioElements.delete(el); // [FIX] 추적 제거
+                        // [FIX] 추적 제거
+                        const identity = participant.identity;
+                        const elements = this.audioElements.get(identity);
+                        if (elements) {
+                            const newElements = elements.filter(e => e !== el);
+                            if (newElements.length > 0) {
+                                this.audioElements.set(identity, newElements);
+                            } else {
+                                this.audioElements.delete(identity);
+                            }
+                        }
                     });
                 } catch (e) {
                     // Ignore 'failed to remove track' warnings if already removed
@@ -396,11 +447,20 @@ export class LiveKitService {
             this.notifyParticipantUpdate();
         });
 
-        this.room.on(RoomEvent.Disconnected, () => {
-            // console.log('🔌 연결 종료');
+        this.room.on(RoomEvent.Disconnected, (reason) => {
+            // console.log('🔌 연결 종료', reason);
             this.cleanupAudioElements(); // [FIX] 연결 종료 시 모든 오디오 정리
             this.lastParticipantInfos = []; // [FIX] 이전 참가자 정보 초기화 (재접속 시 갱신 보장)
             this.disconnectedCallbacks.forEach(cb => cb());
+
+            // [NEW] 자동 재접속 로직 (비정상 종료 시)
+            // if (reason !== DisconnectReason.CLIENT_INITIATED) { ... }
+            // LiveKit Client SDK가 자체적으로 Reconnecting/Reconnected 이벤트를 처리하므로,
+            // 여기서 Disconnected는 '완전히 끊김'을 의미합니다.
+            // 필요한 경우 여기서 재접속 시도 로직을 트리거할 수 있습니다.
+            if (reason && reason !== DisconnectReason.CLIENT_INITIATED && reason !== DisconnectReason.DUPLICATE_IDENTITY) {
+                this.attemptReconnect();
+            }
         });
 
         this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind) => {
@@ -417,8 +477,10 @@ export class LiveKitService {
 
     // [FIX] 생성된 모든 오디오 엘리먼트 정리
     private cleanupAudioElements() {
-        this.createdAudioElements.forEach(el => el.remove());
-        this.createdAudioElements.clear();
+        this.audioElements.forEach(elements => {
+            elements.forEach(el => el.remove());
+        });
+        this.audioElements.clear();
     }
 
     private async setupLocalTracks(opId: number) {
@@ -431,9 +493,10 @@ export class LiveKitService {
                     if (pub.track) {
                         try {
                             pub.track.stop(); // 미디어 스트림 정지
-                            await this.room.localParticipant.unpublishTrack(pub.track);
+                            // await this.room.localParticipant.unpublishTrack(pub.track);
+                            // unpublishTrack는 오래 걸릴 수 있으므로 track.stop()만으로도 충분할 수 있음
                         } catch (e) {
-                            console.warn('Track unpublish failed:', e);
+                            console.warn('Track stop failed:', e);
                         }
                     }
                 }
@@ -488,6 +551,11 @@ export class LiveKitService {
 
     // LiveKit Room 연결 (API 사용)
     async connect(roomName: string, username: string): Promise<void> {
+        // [NEW] 재접속 정보 저장
+        this.lastRoomId = roomName;
+        this.lastUsername = username;
+        this.reconnectAttempts = 0;
+
         // 내부적으로 connectWithToken과 동일한 흐름을 타도록 토큰만 발급하고 위임
         try {
             const { token } = await getLiveKitToken({ roomId: roomName, username });
@@ -499,9 +567,40 @@ export class LiveKitService {
         }
     }
 
+    // [NEW] 재접속 시도 로직
+    private async attemptReconnect() {
+        if (!this.lastRoomId || !this.lastUsername) return;
+        if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+            console.warn('[LiveKitService] Max reconnect attempts reached');
+            return;
+        }
+
+        this.reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000); // Exponential backoff
+        // console.log(`[LiveKitService] Attempting reconnect #${this.reconnectAttempts} in ${delay}ms...`);
+
+        setTimeout(async () => {
+            if (this.lastRoomId && this.lastUsername) {
+                try {
+                    await this.connect(this.lastRoomId, this.lastUsername);
+                } catch (e) {
+                    console.warn('[LiveKitService] Reconnect failed:', e);
+                    // 재귀적으로 다시 시도하고 싶다면 여기서 호출 (하지 않으면 다음 시도는 없음)
+                    // 현재 로직상 connect 내부 오류는 throw되므로, 여기서 잡아서 다시 시도 가능
+                    this.attemptReconnect();
+                }
+            }
+        }, delay);
+    }
+
     // 연결 종료
     disconnect() {
-        this.stopSyncInterval(); // [FIX] 폴링 중지
+        // [NEW] 명시적 종료 시 재접속 정보 초기화
+        this.lastRoomId = null;
+        this.lastUsername = null;
+        this.reconnectAttempts = 0;
+
+        // this.stopSyncInterval(); // [FIX] 폴링 제거
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
         if (this.room) {
             console.log('[LiveKitService] 연결 종료');
@@ -564,8 +663,8 @@ export class LiveKitService {
         }
 
         const resolution = preset === 'h720'
-            ? VideoPresets.h720.resolution
-            : VideoPresets.h540.resolution;
+            ? { width: 1280, height: 720, frameRate: 30 }
+            : { width: 960, height: 540, frameRate: 30 };
 
         try {
             // 현재 카메라 트랙 찾기
