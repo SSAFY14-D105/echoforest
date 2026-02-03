@@ -4,6 +4,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import PhaserGame from '../../../phaser/PhaserGame';
+import splashStyles from '../../../components/SplashScreen/SplashScreen.module.css';
+
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
 import CurseStackBar from '../../../components/stt/CurseStackBar';
@@ -302,8 +304,61 @@ export default function StagePlayView({
         }
     };
 
+    // [NEW] 씬 로딩 상태 관리
+    const [isLoading, setIsLoading] = useState(false);
+    const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 스테이지 변경 시 로딩 시작
+    useEffect(() => {
+        setIsLoading(true);
+        console.log(`[StagePlayView] Stage changed to ${stageNum}, Loading Started`);
+
+        // 안전장치: 5초 후에도 로딩이 안 끝나면 강제 종료
+        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = setTimeout(() => {
+            if (isLoading) {
+                console.warn('[StagePlayView] Loading timeout - Forcing loading finish');
+                setIsLoading(false);
+            }
+        }, 5000);
+
+        return () => {
+            if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+        };
+    }, [stageNum]);
+
+    const handleSceneReady = useCallback(() => {
+        console.log('[StagePlayView] Scene Ready Signal Received');
+        // 최소 로딩 시간 보장을 위해 약간의 지연 후 해제 (선택 사항)
+        // setTimeout(() => setIsLoading(false), 500); 
+        setIsLoading(false);
+    }, []);
+
+    // ... (rest of the component)
+
     return (
         <div className={styles.gameContainer}>
+            {/* [NEW] 로딩 화면 오버레이 */}
+            {/* [NEW] 로딩 화면 오버레이 */}
+            {isLoading && (
+                <div className={splashStyles.container}>
+                    <img
+                        src="/assets/ui/leaf.png"
+                        alt="Loading..."
+                        className={splashStyles.leafLoader}
+                    />
+                    <div
+                        className={splashStyles.loadingText}
+                        style={{
+                            fontFamily: 'Galmuri9',
+                            textAlign: 'center'
+                        }}
+                    >
+                        숲이 변하고 있습니다...
+                    </div>
+                </div>
+            )}
+
             <PauseOverlay pausedBy={pausedBy} />
             {/* [FIX] participantInfos 전달하여 원격 비디오 표시 */}
             {/* 상단 영역: 카메라 2개 + 정보 패널 + 카메라 2개 */}
@@ -348,6 +403,8 @@ export default function StagePlayView({
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}
                     isSoloMode={isSoloMode}
+                    roomId={roomId}
+                    onSceneReady={handleSceneReady} // [NEW] 콜백 전달
                 />
                 <button
                     className={styles.testClearBtn}
