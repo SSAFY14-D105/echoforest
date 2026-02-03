@@ -37,7 +37,7 @@ interface EndingMissionOverlayProps {
     onClose?: () => void;
 }
 
-const PLAYER_COLORS = ['#4CAF50', '#4CAF50', '#4CAF50', '#4CAF50'];
+
 
 export default function EndingMissionOverlay({
     participantInfos = [],
@@ -138,7 +138,7 @@ export default function EndingMissionOverlay({
         participantStates.forEach(state => {
             if (state.identity === nickname && state.isCleared && !clearedSentRef.current.has(nickname)) {
                 liveKitService.sendData('POSE_CLEARED').catch(err => {
-                    // console.warn('[EndingMissionOverlay] Send data failed:', err);
+                    console.warn('[EndingMissionOverlay] Send data failed:', err);
                 });
                 clearedSentRef.current.add(nickname);
             }
@@ -429,7 +429,10 @@ function ParticipantCameraBox({
     return (
         <div
             className={`${styles.cameraBox} ${displayState?.isCleared ? styles.cleared : ''}`}
-            style={{ borderColor: displayState?.isCleared ? '#4CAF50' : PLAYER_COLORS[0] }}
+            style={{
+                borderColor: (displayState?.isCleared && !isDummy) ? '#4CAF50' : '#ffeeb0',
+                borderRadius: '12px'
+            }}
         >
             {targetPose && !isDummy && (
                 <div className={styles.targetPose}>
