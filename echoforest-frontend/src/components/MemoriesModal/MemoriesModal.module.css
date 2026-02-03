@@ -49,8 +49,11 @@
 
 .boardWrapper {
     width: 80%;
+    /* 원래대로 복구 */
     max-width: 1000px;
+    /* 원래대로 복구 */
     height: 85vh;
+    /* 원래대로 복구 */
     /* 높이를 조금 더 늘려서 공간 확보 */
     border-radius: 20px;
     display: flex;
@@ -60,20 +63,20 @@
     position: relative;
     position: relative;
 
-    /* CSS로 칠판 스타일 구현 (배경 이미지의 칠판 크기 제약을 극복) */
-    background: #2F3530;
-    /* 칠판색 (진한 녹회색) */
-    border: 16px solid #5D4037;
-    /* 나무 테두리 색상 */
-    border-radius: 16px;
+    /* 칠판 스타일 구현 (픽셀 아트 테마) */
+    background: #3a4a3b;
+    /* 칠판색 (조금 더 초록빛) */
+    /* 픽셀 느낌의 나무 테두리 */
+    border: 8px solid #5D4037;
     box-shadow:
-        inset 0 0 20px rgba(0, 0, 0, 0.5),
-        /* 안쪽 그림자 */
-        0 20px 50px rgba(0, 0, 0, 0.6);
-    /* 바깥 그림자 */
-
-    /* 기존 투명/위치 조정 제거하고 중앙 정렬 */
-    /* transform: translate(-40px); -> 제거 */
+        0 0 0 4px #3E2723,
+        /* 안쪽 테두리 느낌 */
+        inset 0 0 0 4px #263327,
+        /* 칠판 안쪽 그림자 */
+        10px 10px 0px rgba(0, 0, 0, 0.5);
+    /* 하드 쉐도우 */
+    border-radius: 4px;
+    /* 픽셀 느낌을 위해 둥근 모서리 줄임 */
 }
 
 .boardContent {
@@ -93,11 +96,8 @@
     margin-bottom: 20px;
     /* 제목 아래 여백 줄임 */
     font-weight: bold;
-    text-shadow:
-        3px 3px 0px #000,
-        -1px -1px 0px #000,
-        1px -1px 0px #000,
-        -1px 1px 0px #000;
+    text-shadow: 2px 2px 0 #333;
+    font-family: var(--font-title);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -107,20 +107,21 @@
     width: 100%;
     /* 높이를 유동적으로 하지 않고 고정하거나, flex-grow로 채움 */
     flex: 1;
-    overflow-y: auto;
-    display: grid;
-    /* 4 columns fixed */
-    grid-template-columns: repeat(4, 1fr);
-    /* 2 rows implies we might want to limit height or just let it stack via pagination */
-    /* If we strictly want 2 rows visual, pagination handles 8 items. */
-    grid-template-rows: repeat(2, 1fr);
-    /* 행 간격을 조금 더 넓게 */
-    row-gap: 36px;
-    column-gap: 24px;
-    /* 스크롤바 제거 후 좌우 대칭 패딩 적용 */
-    padding: 10px 60px;
     overflow-y: hidden;
-    /* 스크롤바 숨김 */
+    /* 스크롤바 강제 숨김 */
+    display: grid;
+    /* 4 columns fixed width (작게 고정) */
+    grid-template-columns: repeat(4, 180px);
+    /* 2 rows */
+    grid-template-rows: repeat(2, max-content);
+    /* 중앙 정렬 */
+    justify-content: center;
+    align-content: center;
+
+    row-gap: 30px;
+    column-gap: 30px;
+    padding: 10px;
+    /* 패딩 초기화 */
 }
 
 
@@ -128,22 +129,33 @@
 .gridItem {
     position: relative;
     aspect-ratio: 16/9;
-    border-radius: 10px;
-    overflow: hidden;
+    /* 폴라로이드 사진 느낌 */
+    background: #fff;
+    padding: 6px 6px 24px 6px;
+    /* 하단 여백을 더 줘서 폴라로이드 느낌 */
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
     cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-    background: #000;
+    transition: transform 0.2s;
+    transform: rotate(0deg);
+    /* 기본 */
 }
 
 .gridItem:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05) rotate(-2deg);
+    z-index: 10;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* 짝수 아이템은 반대로 회전하는 느낌 (선택적) */
+.gridItem:nth-child(even):hover {
+    transform: scale(1.05) rotate(2deg);
 }
 
 .gridItem.selected {
-    border-color: #66ff66;
-    box-shadow: 0 0 10px rgba(102, 255, 102, 0.5);
+    /* 선택 시 테두리 강조 (형광펜 느낌) */
+    box-shadow: 0 0 0 4px #ffeb3b, 6px 6px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+    z-index: 5;
 }
 
 .image {
@@ -249,20 +261,22 @@
 
 .sendButton {
     padding: 12px 30px;
-    border-radius: 25px;
-    border: none;
-    background: linear-gradient(135deg, #74b760, #5a9446);
-    color: white;
+    /* border-radius: 25px; <- 제거 */
+    border: 2px solid #333;
+    background: #76c442;
+    /* Frog Green */
+    color: #333;
     font-size: 1.1rem;
     font-weight: bold;
+    font-family: var(--font-main);
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+    transition: all 0.1s;
 }
 
 .sendButton:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
 }
 
 .sendButton:disabled {
