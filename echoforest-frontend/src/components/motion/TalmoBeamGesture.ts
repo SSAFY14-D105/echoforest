@@ -33,7 +33,19 @@ export default class TalmoBeamGesture extends BaseGesture {
             const thumbExt = isFingerExtended(hand, 4, 3) &&
                 (distance(hand[4], hand[5]) / palm > 0.5 || distance(hand[4], hand[0]) / palm > 1.2);
             const indexExt = isFingerExtended(hand, 8, 7);
-            return thumbExt && indexExt;
+
+            // [중요] 중지, 약지, 새끼는 반드시 접혀 있어야 함
+            // isFingerClosed(tip, mcp)
+            const middleFolded = this.isFingerClosed(hand, 12, 9);
+            const ringFolded = this.isFingerClosed(hand, 16, 13);
+            const pinkyFolded = this.isFingerClosed(hand, 20, 17);
+
+            // [추가] 엄지가 중지 두번째 마디(PIP, 10번)와 너무 가까우면 안 됨 (주먹 쥔 상태 방지)
+            // L자는 엄지가 펴져서 중지와 멀어야 함.
+            const thumbToMiddleDist = distance(hand[4], hand[10]) / palm;
+            const thumbIsFarFromMiddle = thumbToMiddleDist > 0.3; // 기준값 0.3 (테스트 필요)
+
+            return thumbExt && indexExt && middleFolded && ringFolded && pinkyFolded && thumbIsFarFromMiddle;
         };
 
         const isLShape1 = isLShape(hand1);
@@ -42,23 +54,10 @@ export default class TalmoBeamGesture extends BaseGesture {
         // 조건: 엄지끼리 적당히 떨어져 있어야 함 (탈모빔은 관자놀이 쪽이니까)
         // 기준: 0.5 (손바닥 절반) 이상 떨어져야 인정
         if (thumbDist > 0.5 && isLShape1 && isLShape2) {
-
-            // [추가] 높이 조건: 손이 이마보다 낮으면(y값이 크면) 탈모빔 아님
-            const face = metadata.faceLandmarks;
-            if (face) {
-                const forehead = face[10];
-                // 손가락 끝(8)이 이마보다 확실히 위에 있거나, 적어도 눈보다는 위여야 함.
-                // y는 아래로 갈수록 커짐. 따라서 hand.y < forehead.y * 1.3 (약간의 여유)
-                if (hand1[8].y > forehead.y * 1.5 || hand2[8].y > forehead.y * 1.5) {
-                    return { detected: false, score: 0 };
-                }
-            }
-
             return {
                 detected: true,
                 score: 0.95,
-                label: this.label,
-                // extra: { showEffect: true } // TS Interface issue, omit or extend
+                label: this.label
             };
         }
 
