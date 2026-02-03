@@ -32,11 +32,10 @@ export default class FistGesture extends BaseGesture {
         const closedList = [isIndexClosed, isMiddleClosed, isRingClosed, isPinkyClosed];
         const closedCount = closedList.filter(Boolean).length;
 
-        // 검지 포함 4손가락 중 3개 이상 접힘
-        if (closedCount >= 3) {
-            let score = 0.85;
-            if (closedCount === 4) score += 0.1;
-            if (isThumbClosed) score += 0.05;
+        // [수정] 주먹은 4손가락이 모두 접혀 있어야 함 (하나라도 펴지면 주먹 아님)
+        if (closedCount === 4) {
+            let score = 0.95;
+            if (isThumbClosed) score += 0.04;
 
             return {
                 detected: true,
