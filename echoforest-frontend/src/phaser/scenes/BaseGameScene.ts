@@ -1829,6 +1829,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
         const visited = new Set<string>(queue); // 큐에 넣은 것은 방문 처리
 
+        // [DEBUG] 체인 감지 디버깅용
+        const chainDebug: string[] = [];
+
         while (queue.length > 0) {
             const current = queue.shift()!;
 
@@ -1842,11 +1845,21 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         // 식별된 객체가 플레이어라면 카운트 목록에 추가
                         if (this.players.has(topLabel)) {
                             playersFound.add(topLabel);
+                            chainDebug.push(`${current}->${topLabel}`);
                         }
                         // 연쇄 감지를 위해 큐에 추가
                         queue.push(topLabel);
                     }
                 });
+            }
+        }
+
+        // [DEBUG] 엘리베이터 인원 인식 로그 (활성화)
+        if (bottomLabel.startsWith('elevator-') && playersFound.size > 0) {
+            console.log(`[Elevator Audit] ${bottomLabel} Count: ${playersFound.size}`);
+            console.log(` - Players(Total): ${Array.from(playersFound).join(', ')}`);
+            if (chainDebug.length > 0) {
+                console.log(` - Chain Detail: ${chainDebug.join(' | ')}`);
             }
         }
 
