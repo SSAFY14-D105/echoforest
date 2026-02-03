@@ -700,52 +700,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (key && !key.getIsCollected()) {
             key.collect();
 
+            // [NEW] 서버에 획득 알림 전송
+            const roomId = useGameStore.getState().roomId;
+            if (roomId) {
+                gameWebSocket.sendItemCollected(roomId, keyId);
+            }
+
             // 연결된 모든 자물쇠 열기 (filter 사용)
             const targetLocks = this.locks.filter(l => l.id === key.linkedLockId);
-
-            targetLocks.forEach(lock => {
-                if (lock.getIsUnlocked()) return;
-
-                lock.unlock();
-
-                if (lock.targetGoalId !== undefined) {
-                    // Tiled의 targetGoalId 속성값이 일치하는 모든 Goal 활성화
-                    const targetGoals = this.goals.filter(g => g.targetGoalId === lock.targetGoalId);
-
-                    if (targetGoals.length > 0) {
-                        targetGoals.forEach(targetGoal => {
-                            targetGoal.setVisible(true);
-                            // console.log(`[${this.getSceneKey()}] Goal activated (Prop targetGoalId: ${lock.targetGoalId}) via Lock: ${lock.id}`);
-                        });
-                    } else {
-                        console.warn(`[${this.getSceneKey()}] No goals found with targetGoalId: ${lock.targetGoalId}`);
-                    }
-                } else if (this.shouldSpawnGoalOnUnlock()) {
-                    // 하위 호환성: Lock이 있던 자리에 Goal 생성
-                    const fallbackGoalId = `goal-lock-${lock.id}`;
-                    const existingGoal = this.goals.find(g => g.id === fallbackGoalId);
-
-                    if (!existingGoal) {
-                        const pos = lock.getPosition();
-                        const config = this.getGoalConfig();
-
-                        const goal = new Goal(
-                            this,
-                            pos.x,
-                            pos.y,
-                            fallbackGoalId,
-                            this.getRequiredPlayers(),
-                            config.width || 48,
-                            config.height || 64,
-                            config.texture,
-                            config.frame
-                        );
-                        goal.setVisible(true); // 명시적으로 보이게 설정
-                        this.goals.push(goal);
-                        // console.log(`[${this.getSceneKey()}] Goal spawned at Lock position: ${lock.id}`);
-                    }
-                }
-            });
+            targetLocks.forEach(lock => this.unlockAndSpawnGoal(lock));
         }
     }
 
@@ -950,6 +913,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             mushroom.trigger();
 
+            // [NEW] 서버에 획득 알림 전송 (다른 플레이어들도 제거하도록)
+            const roomId = useGameStore.getState().roomId;
+            if (roomId) {
+                gameWebSocket.sendItemCollected(roomId, mushroomId);
+            }
+
             // 버섯을 밟은 본인에게 저주 적용
             const randomCurse = getRandomCurseId();
             // console.log(`[PoisonMushroom] Applying curse '${randomCurse}' to self (${this.myPlayerId})`);
@@ -960,6 +929,64 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (myPlayer) {
                 const pos = myPlayer.getPosition();
                 this.showFloatingText(pos.x, pos.y - 40, `독버섯 저주: ${randomCurse}!`, 0x9B59B6);
+            }
+        }
+    }
+
+    /**
+     * 서버로부터 아이템 제거 메시지 수신 시 처리
+     */
+    private handleItemRemoved(itemId: string): void {
+        // 1. 버섯 확인
+        const mushroom = this.poisonMushrooms.find(m => m.id === itemId);
+        if (mushroom && !mushroom.getIsTriggered()) {
+            mushroom.trigger();
+            return;
+        }
+
+        // 2. 열쇠 확인
+        const key = this.keys.find(k => k.id === itemId);
+        if (key && !key.getIsCollected()) {
+            key.collect();
+            // 연결된 자물쇠 열기 (trigger 로직 포함)
+            const targetLocks = this.locks.filter(l => l.id === key.linkedLockId);
+            targetLocks.forEach(lock => this.unlockAndSpawnGoal(lock));
+        }
+    }
+
+    /**
+     * [Refactor] 자물쇠 해제 및 골 생성 로직 분리
+     */
+    private unlockAndSpawnGoal(lock: Lock): void {
+        if (lock.getIsUnlocked()) return;
+
+        lock.unlock();
+
+        if (lock.targetGoalId !== undefined) {
+            const targetGoals = this.goals.filter(g => g.targetGoalId === lock.targetGoalId);
+            if (targetGoals.length > 0) {
+                targetGoals.forEach(targetGoal => targetGoal.setVisible(true));
+            }
+        } else if (this.shouldSpawnGoalOnUnlock()) {
+            const fallbackGoalId = `goal-lock-${lock.id}`;
+            const existingGoal = this.goals.find(g => g.id === fallbackGoalId);
+
+            if (!existingGoal) {
+                const pos = lock.getPosition();
+                const config = this.getGoalConfig();
+                const goal = new Goal(
+                    this,
+                    pos.x,
+                    pos.y,
+                    fallbackGoalId,
+                    this.getRequiredPlayers(),
+                    config.width || 48,
+                    config.height || 64,
+                    config.texture,
+                    config.frame
+                );
+                goal.setVisible(true);
+                this.goals.push(goal);
             }
         }
     }
@@ -1629,6 +1656,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.on('GAME_RESET', this.onGameReset);
         // [PERFORMANCE] Phaser 직접 수신으로 스토어 거치지 않고 위치 동기화
         gameWebSocket.on('UPDATE', this.onPlayerUpdate);
+
+        // 아이템(버섯) 제거 동기화 리스너
+        gameWebSocket.on('ITEM_REMOVED', (message) => {
+            if (message.itemId) {
+                this.handleItemRemoved(message.itemId);
+            }
+        });
     }
 
     private cleanupSocketListeners(): void {
