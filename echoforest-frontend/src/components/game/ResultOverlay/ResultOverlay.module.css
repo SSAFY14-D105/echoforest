@@ -13,9 +13,22 @@
 }
 
 .container {
-    background-color: #2c3e50;
+    /* 칠판 스타일 구현 (픽셀 아트 테마) */
+    background: #3a4a3b;
+    /* 칠판색 (조금 더 초록빛) */
+    /* 픽셀 느낌의 나무 테두리 */
+    border: 8px solid #5D4037;
+    box-shadow:
+        0 0 0 4px #3E2723,
+        /* 안쪽 테두리 느낌 */
+        inset 0 0 0 4px #263327,
+        /* 칠판 안쪽 그림자 */
+        10px 10px 0px rgba(0, 0, 0, 0.5);
+    /* 하드 쉐도우 */
+    border-radius: 4px;
+    /* 픽셀 느낌을 위해 둥근 모서리 줄임 */
+
     padding: 1.5rem;
-    border-radius: 20px;
     width: 90%;
     max-width: 900px;
     height: 90vh;
@@ -23,24 +36,32 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     /* Prevent scrolling */
+    font-family: var(--font-main);
+    color: #ffeeb0;
 }
 
 .title {
-    color: #f1c40f;
+    color: #ffeeb0;
+    /* 분필 색상 */
     font-size: 2rem;
     margin-bottom: 0.5rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 2px 2px 0 #333;
     flex-shrink: 0;
+    font-family: var(--font-title);
+    border-bottom: 2px dashed rgba(255, 238, 176, 0.4);
+    padding-bottom: 10px;
+    width: 90%;
+    text-align: center;
 }
 
 .subtitle {
-    color: #ecf0f1;
+    color: #ddd;
     font-size: 1rem;
     margin-bottom: 1rem;
     flex-shrink: 0;
+    font-family: var(--font-main);
 }
 
 .grid {
@@ -61,9 +82,11 @@
 }
 
 .imageCard {
-    background-color: #34495e;
-    padding: 8px;
-    border-radius: 10px;
+    background-color: #fff;
+    /* 폴라로이드 배경 */
+    padding: 8px 8px 40px 8px;
+    /* 하단 여백 추가 (폴라로이드 느낌) */
+    /* border-radius: 10px; */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -71,6 +94,9 @@
     transition: transform 0.2s;
     height: 100%;
     overflow: hidden;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+    position: relative;
+    border: 1px solid #ddd;
 }
 
 .imageCard:hover {
@@ -81,16 +107,21 @@
     max-width: 100%;
     max-height: 85%;
     /* Leave room for label */
-    border-radius: 5px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    /* border-radius: 5px; */
+    border: 1px solid #eee;
     object-fit: contain;
 }
 
 .stageLabel {
-    margin-top: 5px;
-    color: #bdc3c7;
+    /* margin-top: 5px; */
+    position: absolute;
+    bottom: 10px;
+    color: #333;
+    /* 사진 밑 글씨 */
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 1.2rem;
+    font-family: var(--font-hand);
+    /* 손글씨 폰트 있으면 좋음, 없으면 title */
     flex-shrink: 0;
 }
 
@@ -102,19 +133,22 @@
 .finishBtn {
     background-color: #e74c3c;
     color: white;
-    border: none;
+    border: 3px solid #333;
+    /* 픽셀 테두리 */
     padding: 15px 40px;
     font-size: 1.3rem;
     font-weight: bold;
-    border-radius: 50px;
+    font-family: var(--font-title);
+    /* border-radius: 50px; */
     cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+    transition: all 0.1s;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
 }
 
 .finishBtn:hover:not(:disabled) {
     background-color: #c0392b;
-    transform: scale(1.05);
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0 rgba(0, 0, 0, 0.5);
 }
 
 .finishBtn:disabled {

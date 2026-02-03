@@ -37,7 +37,7 @@ interface EndingMissionOverlayProps {
     onClose?: () => void;
 }
 
-const PLAYER_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0'];
+const PLAYER_COLORS = ['#4CAF50', '#4CAF50', '#4CAF50', '#4CAF50'];
 
 export default function EndingMissionOverlay({
     participantInfos = [],
@@ -345,7 +345,7 @@ export default function EndingMissionOverlay({
     return (
         <div className={styles.overlay}>
             <div className={styles.container}>
-                <h2 className={styles.title}>🎉 스테이지 클리어!</h2>
+                <h2 className={styles.title}>스테이지 클리어!</h2>
 
                 {!isLoaded && !captureComplete && (
                     <p className={styles.loadingText}>🔄 포즈 인식 준비 중...</p>
@@ -429,7 +429,7 @@ function ParticipantCameraBox({
     return (
         <div
             className={`${styles.cameraBox} ${displayState?.isCleared ? styles.cleared : ''}`}
-            style={{ borderColor: displayState?.isCleared ? '#4CAF50' : PLAYER_COLORS[index] }}
+            style={{ borderColor: displayState?.isCleared ? '#4CAF50' : PLAYER_COLORS[0] }}
         >
             {targetPose && !isDummy && (
                 <div className={styles.targetPose}>
@@ -438,12 +438,14 @@ function ParticipantCameraBox({
                 </div>
             )}
 
-            {isDummy && (
-                <div className={styles.targetPose}>
-                    <span className={styles.poseEmoji}>💤</span>
-                    <span className={styles.poseName}>대기 중</span>
-                </div>
-            )}
+            {
+                isDummy && (
+                    <div className={styles.targetPose}>
+                        <span className={styles.poseEmoji}>💤</span>
+                        <span className={styles.poseName}>대기 중</span>
+                    </div>
+                )
+            }
 
             <video
                 ref={onVideoRef}
@@ -456,21 +458,25 @@ function ParticipantCameraBox({
                 }}
             />
 
-            {!isDummy && displayState?.currentGesture && !displayState.isCleared && (
-                <div className={styles.detectionStatus}>
-                    감지: {displayState.currentGesture}
-                </div>
-            )}
+            {
+                !isDummy && displayState?.currentGesture && !displayState.isCleared && (
+                    <div className={styles.detectionStatus}>
+                        감지: {displayState.currentGesture}
+                    </div>
+                )
+            }
 
-            {displayState?.isCleared && (
-                <div className={styles.clearedOverlay}>
-                    <span className={styles.checkmark}>{isDummy ? '💤' : '✅'}</span>
-                </div>
-            )}
+            {
+                displayState?.isCleared && (
+                    <div className={styles.clearedOverlay}>
+                        <span className={styles.checkmark}>{isDummy ? '💤' : '✅'}</span>
+                    </div>
+                )
+            }
 
             <span className={styles.playerLabel}>
                 P{index + 1}: {participant.identity === nickname ? '나' : participant.identity}{isDummy ? ' (대기)' : ''}
             </span>
-        </div>
+        </div >
     );
 }
