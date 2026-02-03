@@ -241,7 +241,7 @@ const CameraArea = memo(function CameraArea({
                                         className={styles.btn}
                                         onClick={() => setShowVolumeSlider(showVolumeSlider === slotIndex ? null : slotIndex)}
                                     >
-                                        <div className={styles.speakerIcon}></div>
+                                        <div className={styles.micIcon}></div>
                                     </button>
                                     {showVolumeSlider === slotIndex && (
                                         <div className={styles.volumeSliderContainer} onClick={(e) => e.stopPropagation()}>
