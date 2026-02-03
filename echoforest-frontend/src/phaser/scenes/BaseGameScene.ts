@@ -434,8 +434,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // bottom을 false로 설정하여 별도 바닥 플랫폼 사용
 
         // [DEBUG] 물리 바디 시각화 (디버깅용) - 배포 시 false로 변경
-        this.matter.world.createDebugGraphic();
-        this.matter.world.drawDebug = true;
+        // this.matter.world.createDebugGraphic();
+        this.matter.world.drawDebug = false;
 
         // 바닥 플랫폼 (별도 생성)
         if (this.shouldCreateDefaultFloor()) {
@@ -1094,56 +1094,116 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 this.activeSignboard = isStart ? signboard : null;
 
                 if (!isStart) {
-                    this.hideMessagePopup();
+                    // [Redesign] 범위 벗어나도 자동 닫힘 안 함 (X 버튼으로만 닫기)
+                    // this.hideMessagePopup();
+                    this.activeSignboard = null;
                 }
             }
         }
     }
+    // [New] 닫기 버튼 독립 관리 (입력 버그 방지)
+    private popupCloseBtn: Phaser.GameObjects.Container | null = null;
+
     protected showMessagePopup(text: string): void {
         if (this.popupContainer) return;
 
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
-        this.popupContainer = this.add.container(centerX, centerY).setDepth(100).setScrollFactor(0);
+        // [FIX] Depth를 2010으로 높여서 플레이어보다 확실하게 앞에 오도록 함
+        this.popupContainer = this.add.container(centerX, centerY).setDepth(2010).setScrollFactor(0);
 
-        // [Redesign] 칠판 스타일 배경 박스
+        // [Redesign] 칠판 스타일 배경 박스 (600x300, 1.5배 확대)
         const bg = this.add.graphics();
 
         // 1. 배경 (짙은 칠판색)
         bg.fillStyle(0x2C2E2B, 0.95);
-        bg.fillRoundedRect(-200, -100, 400, 200, 10); // 400x200 크기
+        bg.fillRoundedRect(-300, -150, 600, 300, 15);
 
         // 2. 외부 테두리 (밝은 갈색 나무)
-        bg.lineStyle(6, 0x8D6E63, 1);
-        bg.strokeRoundedRect(-203, -103, 406, 206, 12);
+        bg.lineStyle(8, 0x8D6E63, 1);
+        bg.strokeRoundedRect(-304, -154, 608, 308, 18);
 
         // 3. 내부 테두리 (진한 갈색 그림자/음영)
-        bg.lineStyle(4, 0x3E2723, 1);
-        bg.strokeRoundedRect(-200, -100, 400, 200, 10);
+        bg.lineStyle(5, 0x3E2723, 1);
+        bg.strokeRoundedRect(-300, -150, 600, 300, 15);
 
-        // 메시지 텍스트 (크기 확대 및 줄바꿈 여유 확보)
-        const msg = this.add.text(0, -10, text, {
-            fontSize: '20px',
-            fontFamily: 'Monospace', // 픽셀 느낌을 위해 Monospace 계열 시도
+        // 동적 폰트 크기 계산 (길이에 따라 조절)
+        let fontSize = '28px';
+        if (text.length > 100) fontSize = '20px';
+        else if (text.length > 50) fontSize = '24px';
+
+        // 메시지 텍스트 (NeoDunggeunmo폰트, 왼쪽 정렬)
+        const msg = this.add.text(-270, 0, text, {
+            fontSize: fontSize,
+            fontFamily: 'NeoDunggeunmo',
             color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: 360 } // 텍스트 영역 360px
-        }).setOrigin(0.5);
+            align: 'left',
+            wordWrap: { width: 540 } // 텍스트 영역 540px
+        }).setOrigin(0, 0.5); // 왼쪽 중앙 기준
 
-        // 닫기 안내 (하단으로 이동)
-        const closeHint = this.add.text(0, 80, '(범위를 벗어나면 닫힙니다)', {
-            fontSize: '14px',
-            color: '#aaaaaa'
-        }).setOrigin(0.5);
+        this.popupContainer.add([bg, msg]);
 
-        this.popupContainer.add([bg, msg, closeHint]);
+        // [New] 닫기 버튼 독립 생성 (부모 컨테이너 밖으로 빼냄 -> 입력 확실 보장)
+        // 위치: 화면 중앙 기준에서 우측 상단 오프셋만큼 이동
+        const btnX = centerX + 270;
+        const btnY = centerY - 120;
+
+        this.popupCloseBtn = this.add.container(btnX, btnY).setDepth(2100).setScrollFactor(0);
+
+        // 버튼 배경 (나무 질감 원형)
+        const closeBg = this.add.graphics();
+        closeBg.fillStyle(0x8D6E63, 1);
+        closeBg.fillCircle(0, 0, 20); // 로컬 0,0에 그림
+        closeBg.lineStyle(2, 0x3E2723, 1);
+        closeBg.strokeCircle(0, 0, 20);
+
+        // X 표시 Text
+        const closeText = this.add.text(0, 0, 'X', {
+            fontSize: '24px',
+            fontFamily: 'NeoDunggeunmo',
+            color: '#3E2723', // 진한 갈색 글자
+            fontStyle: 'bold'
+        }).setOrigin(0.5); // 로컬 0,0에 배치
+
+        // 상호작용 설정 (컨테이너가 아닌 그래픽스에 걸어도 되고, 컨테이너에 걸어도 됨. 여기선 컨테이너에)
+        const hitArea = new Phaser.Geom.Circle(0, 0, 25);
+        this.popupCloseBtn.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
+
+        this.popupCloseBtn.on('pointerdown', () => {
+            this.hideMessagePopup();
+        });
+
+        // 커서 변경 (hover 효과)
+        this.popupCloseBtn.on('pointerover', () => {
+            this.input.setDefaultCursor('pointer');
+            closeBg.clear();
+            closeBg.fillStyle(0xA1887F, 1); // 호버 시 조금 더 밝게
+            closeBg.fillCircle(0, 0, 20);
+            closeBg.lineStyle(2, 0x3E2723, 1);
+            closeBg.strokeCircle(0, 0, 20);
+        });
+
+        this.popupCloseBtn.on('pointerout', () => {
+            this.input.setDefaultCursor('default');
+            closeBg.clear();
+            closeBg.fillStyle(0x8D6E63, 1); // 복구
+            closeBg.fillCircle(0, 0, 20);
+            closeBg.lineStyle(2, 0x3E2723, 1);
+            closeBg.strokeCircle(0, 0, 20);
+        });
+
+        this.popupCloseBtn.add([closeBg, closeText]);
     }
 
     protected hideMessagePopup(): void {
         if (this.popupContainer) {
             this.popupContainer.destroy();
             this.popupContainer = null;
+        }
+        if (this.popupCloseBtn) {
+            this.popupCloseBtn.destroy();
+            this.popupCloseBtn = null;
         }
     }
 
