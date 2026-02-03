@@ -57,6 +57,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // [FIX] 상태 전송 콜백 시그니처 변경 (isDead, curses 추가)
     public sendStateCallback?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     public updateReadyStatusCallback?: (isReady: boolean) => void;
+    // [NEW] 씬 로딩 완료 콜백 (React로 신호 전송)
+    public sceneReadyCallback?: () => void;
+    public setSceneReadyCallback(callback: (() => void) | null) {
+        this.sceneReadyCallback = callback || undefined;
+    }
 
     // 지지 관계 추적 (밑에 있는 것의 label -> 위에 있는 것들의 label Set)
     private supportMap: Map<string, Set<string>> = new Map();
@@ -202,12 +207,22 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 this.forceSyncState();
             });
 
+            // [NEW] 렌더링 안정화 후 로딩 완료 신호 전송 (500ms 딜레이)
+            this.time.delayedCall(500, () => {
+                if (this.sceneReadyCallback) {
+                    console.log(`[BaseGameScene] ${this.getSceneKey()} is ready!`);
+                    this.sceneReadyCallback();
+                }
+            });
+
             // [LIFECYCLE] Scene Created Log
             // console.log(`[LIFECYCLE] ${this.getSceneKey()} Created`);
         } catch (e) {
             console.error(`[CRITICAL] Error in ${this.getSceneKey()} create():`, e);
         }
     }
+
+
 
 
 

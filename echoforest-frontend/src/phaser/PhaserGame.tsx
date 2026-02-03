@@ -16,9 +16,10 @@ interface PhaserGameProps {
     onSendState?: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     isSoloMode?: boolean;
     roomId?: string; // [FIX] Added roomId
+    onSceneReady?: () => void; // [NEW] 씬 로딩 완료 콜백
 }
 
-export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isSoloMode = false, roomId }: PhaserGameProps) {
+export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isSoloMode = false, roomId, onSceneReady }: PhaserGameProps) {
     const gameRef = useRef<Phaser.Game | null>(null);
     const parentRef = useRef<HTMLDivElement>(null);
 
@@ -28,18 +29,14 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
         if (game) {
             // 현재 실행 중인 씬 찾기
             const scene = game.scene.getScene(startScene);
-            if (scene && 'setSendStateCallback' in scene) {
-                // BaseGameScene으로 캐스팅 대신 메서드 존재 여부 확인 후 호출 (덕 타이핑)
-                (scene as any).setSendStateCallback(onSendState || null);
-            }
-            if (scene && 'setIsSoloMode' in scene) {
-                (scene as any).setIsSoloMode(isSoloMode);
-            }
-            if (scene && 'setRoomId' in scene) {
-                (scene as any).setRoomId(roomId || null);
+            if (scene) {
+                if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
+                if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
+                if ('setRoomId' in scene) (scene as any).setRoomId(roomId || null);
+                if ('setSceneReadyCallback' in scene) (scene as any).setSceneReadyCallback(onSceneReady || null); // [NEW]
             }
         }
-    }, [startScene, onSendState, isSoloMode, roomId]);
+    }, [startScene, onSendState, isSoloMode, roomId, onSceneReady]);
 
     useEffect(() => {
         // 부모 컴포넌트나 엘리먼트가 없으면 중단
@@ -84,7 +81,6 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                 },
                 scene: [], // 씬은 수동으로 추가
             };
-
             gameRef.current = new Phaser.Game(config);
 
             // 모든 씬 등록
@@ -120,6 +116,7 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                         if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
                         if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
                         if ('setRoomId' in scene) (scene as any).setRoomId(roomId || null);
+                        if ('setSceneReadyCallback' in scene) (scene as any).setSceneReadyCallback(onSceneReady || null); // [NEW]
                     }
                 }, 100);
             }
@@ -152,11 +149,12 @@ export default function PhaserGame({ startScene = 'LobbyScene', onSendState, isS
                         if ('setSendStateCallback' in scene) (scene as any).setSendStateCallback(onSendState || null);
                         if ('setIsSoloMode' in scene) (scene as any).setIsSoloMode(isSoloMode);
                         if ('setRoomId' in scene) (scene as any).setRoomId(roomId || null);
+                        if ('setSceneReadyCallback' in scene) (scene as any).setSceneReadyCallback(onSceneReady || null); // [NEW]
                     }
                 }, 100);
             }
         }
-    }, [startScene, onSendState, isSoloMode]);
+    }, [startScene, onSendState, isSoloMode, onSceneReady]);
 
     // 언마운트 시 게임 완전 제거
     useEffect(() => {
