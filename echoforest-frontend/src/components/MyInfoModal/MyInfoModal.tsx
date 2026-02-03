@@ -199,8 +199,8 @@ export default function MyInfoModal({ onClose }: MyInfoModalProps) {
                                 </div>
                                 <p className={`${styles.statusMessage} ${nicknameCheckStatus !== 'unchecked' ? styles[nicknameCheckStatus] : ''}`}>
                                     {nicknameCheckStatus === 'checking' && '확인 중...'}
-                                    {nicknameCheckStatus === 'available' && '사용 가능한'}
-                                    {nicknameCheckStatus === 'duplicate' && '이미 사용 중'}
+                                    {nicknameCheckStatus === 'available' && '사용 가능한 닉네임입니다.'}
+                                    {nicknameCheckStatus === 'duplicate' && '이미 사용 중인 닉네임입니다.'}
                                 </p>
                             </div>
 
