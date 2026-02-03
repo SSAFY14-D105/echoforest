@@ -286,11 +286,12 @@ export default function StagePlayView({
 
                 {/* 정보 패널 */}
                 <div className={styles.infoPanel}>
-                    <div className={styles.roomInfo}>
-                        <span>Stage {stageNum}</span>
-                        <span style={{ margin: '0 8px', color: '#ccc' }}>|</span>
-                        <span>Room: <span className={styles.roomId}>{roomId}</span></span>
-                        <button className={styles.copyBtn} onClick={onCopyRoomId} title="방 코드 복사">📋</button>
+                    <div
+                        className={styles.roomInfo}
+                        onClick={onCopyRoomId}
+                        title="클릭하여 방 코드 복사"
+                    >
+                        🎮 Stage {stageNum} | Room: <span className={styles.roomId}>{roomId}</span>
                     </div>
                     {/* 저주 스택 바 이동 */}
                     <CurseStackBar

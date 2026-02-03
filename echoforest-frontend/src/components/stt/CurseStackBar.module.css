@@ -3,21 +3,27 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
-    border-radius: 8px;
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    padding: 6px 8px;
+    /* 패딩 축소 */
+    background: #fff;
+    /* border: 3px solid #333; <- 픽셀 테두리 제거 요청 */
+    border: 1px solid #ddd;
+    /* RoomInfo와 동일한 테두리 */
+    border-radius: 4px;
+    /* RoomInfo와 동일한 둥근 모서리 */
+    /* box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2); <- 그림자 제거 */
+    box-shadow: none;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    /* 간격 축소 */
 }
 
-/* 오버레이 모드 (필요 시 사용) */
+/* 오버레이 모드 (필요 시 사용) - 위치 조정 */
 .overlay {
     position: absolute;
-    top: 8px;
+    top: 15px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
@@ -37,22 +43,28 @@
 }
 
 .label {
-    font-size: 12px;
-    color: #c4b5fd;
-    font-weight: 500;
+    font-size: 11px;
+    /* 폰트 축소 */
+    color: #333;
+    font-family: var(--font-title);
+    font-weight: bold;
 }
 
 .value {
-    font-size: 14px;
-    color: white;
+    font-size: 13px;
+    /* 폰트 축소 */
+    color: #333;
     font-weight: 700;
     margin-left: auto;
+    font-family: var(--font-main);
 }
 
 .listeningBadge {
-    font-size: 10px;
+    font-size: 12px;
     color: #00b894;
+    font-weight: bold;
     animation: pulse 1.5s ease-in-out infinite;
+    text-shadow: 1px 1px 0 #fff;
 }
 
 @keyframes pulse {
@@ -70,60 +82,76 @@
 .barContainer {
     position: relative;
     height: 8px;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 4px;
-    overflow: hidden;
+    /* 높이 축소 */
+    background: #eee;
+    border: 2px solid #333;
+    /* border-radius: 4px; <- 제거 */
 }
 
 .barFill {
     height: 100%;
-    border-radius: 4px;
-    transition: width 0.5s ease, background-color 0.3s ease;
-    box-shadow: 0 0 10px currentColor;
+    /* border-radius: 4px; <- 제거 */
+    transition: width 0.3s steps(5);
+    /* 픽셀 느낌의 단계적 전환 */
+    background-color: #667eea;
+    border-right: 2px solid rgba(0, 0, 0, 0.2);
 }
 
 .marker {
     position: absolute;
     top: 0;
-    width: 1px;
+    width: 2px;
     height: 100%;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .cursedAlert {
-    margin-top: 8px;
-    padding: 6px 12px;
-    background: rgba(231, 76, 60, 0.2);
-    border: 1px solid rgba(231, 76, 60, 0.5);
-    border-radius: 8px;
-    color: #e74c3c;
-    font-size: 12px;
+    margin-top: 4px;
+    /* 간격 축소 */
+    padding: 2px 6px;
+    /* 패딩 축소 */
+    background: #ffe6e6;
+    /* 연한 빨강 */
+    border: 2px solid #e74c3c;
+    color: #c0392b;
+    font-size: 11px;
+    /* 폰트 축소 */
+    font-weight: bold;
     text-align: center;
+    box-shadow: 2px 2px 0 #e74c3c;
     animation: alertPulse 1.5s ease-in-out infinite;
+    font-family: var(--font-title);
+    word-break: keep-all;
+    /* 단어 단위 줄바꿈 */
+    line-height: 1.2;
 }
 
 .dangerAlert {
     margin-top: 8px;
     padding: 6px 12px;
-    background: rgba(255, 170, 0, 0.2);
-    border: 1px solid rgba(255, 170, 0, 0.5);
-    border-radius: 8px;
-    color: #ffaa00;
-    font-size: 12px;
+    background: #fff8e1;
+    /* 연한 노랑 */
+    border: 2px solid #ffaa00;
+    color: #e67e22;
+    font-size: 15px;
+    /* 폰트 크기 증가 */
+    font-weight: bold;
     text-align: center;
+    box-shadow: 2px 2px 0 #ffaa00;
     animation: alertPulse 0.8s ease-in-out infinite;
+    font-family: var(--font-title);
+    word-break: keep-all;
+    line-height: 1.4;
 }
 
 @keyframes alertPulse {
 
     0%,
     100% {
-        opacity: 1;
         transform: scale(1);
     }
 
     50% {
-        opacity: 0.8;
         transform: scale(1.02);
     }
 }
@@ -137,10 +165,10 @@
     }
 
     .label {
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .value {
-        font-size: 12px;
+        font-size: 14px;
     }
 }

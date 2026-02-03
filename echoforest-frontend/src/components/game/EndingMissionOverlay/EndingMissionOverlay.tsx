@@ -225,6 +225,27 @@ export default function EndingMissionOverlay({
                 }
             }
         } else {
+            // [FIX] 언마운트 시 트랙에서 detach하여 WebMediaPlayer 누수 방지
+            const existingEl = videoRefs.current.get(identity);
+            if (existingEl) {
+                if (isLocal) {
+                    try {
+                        liveKitService.detachLocalVideo(existingEl);
+                    } catch (e) {
+                        console.warn('Detach local video failed:', e);
+                    }
+                } else {
+                    const info = (participantInfosRef.current || []).find(p => p.identity === identity);
+                    if (info && info.videoTrack) {
+                        try {
+                            info.videoTrack.detach(existingEl);
+                        } catch (e) {
+                            console.warn('Detach remote video failed:', e);
+                        }
+                    }
+                }
+            }
+
             videoRefs.current.delete(identity);
             if (isLocal) {
                 localVideoRefs.current.delete(identity);

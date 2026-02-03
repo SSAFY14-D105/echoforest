@@ -114,6 +114,16 @@ export class LiveKitService {
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
     setLocalVideoElement(element: HTMLVideoElement | null) {
+        // [FIX] 기존 엘리먼트가 있다면 트랙에서 분리 (누수 방지)
+        if (this.localVideoElement && this.localVideoElement !== element) {
+            if (this.room?.localParticipant) {
+                const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+                if (cameraPublication?.track) {
+                    cameraPublication.track.detach(this.localVideoElement);
+                }
+            }
+        }
+
         this.localVideoElement = element;
 
         // [FIX] 트랙이 있으면 바로 연결, 없으면 대기 (notifyLocalTrackPublished에서 처리됨)
@@ -276,6 +286,9 @@ export class LiveKitService {
         }
     }
 
+    // [FIX] Audio Element 관리를 위한 Set 추가
+    private createdAudioElements: Set<HTMLMediaElement> = new Set();
+
     // LiveKit Room 연결 (API 사용)
     private setupRoomEvents() {
         if (!this.room) return;
@@ -312,6 +325,7 @@ export class LiveKitService {
             if (track.kind === Track.Kind.Audio) {
                 try {
                     const audioElement = track.attach();
+                    this.createdAudioElements.add(audioElement); // [FIX] 요소 추적
                     audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
                 } catch (e) {
                     console.warn('[LiveKitService] Audio attach error:', e);
@@ -329,7 +343,11 @@ export class LiveKitService {
             if (track.kind === Track.Kind.Audio) {
                 try {
                     // Safe detach: check if track is valid
-                    track.detach().forEach(el => el.remove());
+                    const detachedElements = track.detach();
+                    detachedElements.forEach(el => {
+                        el.remove();
+                        this.createdAudioElements.delete(el); // [FIX] 추적 제거
+                    });
                 } catch (e) {
                     // Ignore 'failed to remove track' warnings if already removed
                     // console.warn('[LiveKitService] Audio detach warning:', e);
@@ -372,6 +390,7 @@ export class LiveKitService {
 
         this.room.on(RoomEvent.Disconnected, () => {
             // console.log('🔌 연결 종료');
+            this.cleanupAudioElements(); // [FIX] 연결 종료 시 모든 오디오 정리
             this.onDisconnectedCallback?.();
         });
 
@@ -385,6 +404,12 @@ export class LiveKitService {
                 }
             });
         });
+    }
+
+    // [FIX] 생성된 모든 오디오 엘리먼트 정리
+    private cleanupAudioElements() {
+        this.createdAudioElements.forEach(el => el.remove());
+        this.createdAudioElements.clear();
     }
 
     private async setupLocalTracks(opId: number) {

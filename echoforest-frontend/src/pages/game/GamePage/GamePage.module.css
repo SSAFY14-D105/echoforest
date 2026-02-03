@@ -5,7 +5,8 @@
     display: flex;
     flex-direction: column;
     padding: 12px;
-    background: #e0e6ed;
+    background: #F3FDF4;
+    /* WaitingRoom과 동일한 배경 */
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -18,7 +19,9 @@
     border-radius: 12px;
     margin-bottom: 0;
     /* 하단 카메라 제거로 인해 마진 0 */
-    background: #000;
+    background: #000 !important;
+    /* [FIX] 글로벌 스타일(pixel-box)의 흰색 배경을 덮어쓰기 위해 !important 사용 */
+    /* WaitingRoom과 동일한 회색 배경 */
     /* [FIX] 블랙 배경으로 변경하여 레터박스 이질감 제거 */
     min-height: 0;
     /* flex 자식에서 중요 */
@@ -38,6 +41,14 @@
     display: block;
     object-fit: contain;
     /* 비율 유지하며 꽉 채우기 (필요 시 cover) */
+}
+
+/* 게임 내 BGM 컨트롤러 위치 */
+.gameAudioController {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 100;
 }
 
 /* 게임 정보 오버레이 */
@@ -241,16 +252,20 @@
     flex-shrink: 0;
     margin-bottom: 12px;
     height: 140px;
+    /* 높이 고정으로 롤백 */
     /* Force height to match camera */
+    align-items: center;
+    /* 수직 중앙 정렬 */
 }
 
 /* 정보 패널 */
+/* WaitingRoom의 infoPanel 스타일 적용 */
 .infoPanel {
     flex-shrink: 0;
-    width: 250px;
-    background: #fff;
-    border: 2px solid #333;
-    border-radius: 8px;
+    width: 280px;
+    /* WaitingRoom과 동일하게 280px로 수정 */
+    background: transparent;
+    border: none;
     padding: 10px;
     display: flex;
     flex-direction: column;
@@ -264,11 +279,25 @@
     font-weight: bold;
     text-align: center;
     padding: 6px;
-    background: #f0f0f0;
+    background: #fff;
+    border: 1px solid #ddd;
     border-radius: 4px;
     width: 100%;
     box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 8px;
+    /* 간격 추가 */
+    white-space: nowrap;
+    /* 줄바꿈 방지 */
+    cursor: pointer;
+    /* 클릭 가능 표시 */
+    transition: all 0.2s ease;
+}
+
+.roomInfo:hover {
+    transform: scale(1.05);
+    background: #f0f0f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
