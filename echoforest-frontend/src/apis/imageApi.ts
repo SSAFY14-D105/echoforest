@@ -246,11 +246,22 @@ export async function getRoomGeneratedImages(roomCode: string): Promise<ImageRes
     return response.json();
 }
 
+export interface PlayerGameStats {
+    username: string;
+    kissCount: number;
+    curseCount: number;
+}
+
+export interface FinishResponseDto {
+    message: string;
+    stats?: PlayerGameStats[];
+}
+
 /**
  * 최종 결과 이메일 발송 요청
  * @param roomId 방 코드/ID
  */
-export async function sendFinishEmail(roomId: string): Promise<void> {
+export async function sendFinishEmail(roomId: string): Promise<FinishResponseDto> {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/ai/finish/${roomId}`, {
         method: 'POST',
@@ -260,4 +271,5 @@ export async function sendFinishEmail(roomId: string): Promise<void> {
     if (!response.ok) {
         throw new Error('이메일 발송 요청 실패');
     }
+    return response.json();
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getRoomGeneratedImages, sendFinishEmail, ImageResponseDto } from '../../../apis/imageApi';
+import { getRoomGeneratedImages, sendFinishEmail, ImageResponseDto, PlayerGameStats } from '../../../apis/imageApi';
+import GameStatisticsView from './GameStatisticsView';
 import { API_BASE_URL } from '../../../config';
 import styles from './ResultOverlay.module.css';
 
@@ -12,7 +13,9 @@ export default function ResultOverlay({ roomId, onClose }: ResultOverlayProps) {
     const [images, setImages] = useState<ImageResponseDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [sendingEmail, setSendingEmail] = useState(false);
-    const [emailSent, setEmailSent] = useState(false);
+    // const [emailSent, setEmailSent] = useState(false); // Removed in favor of stats view
+    const [gameStats, setGameStats] = useState<PlayerGameStats[] | null>(null);
+    const [showStats, setShowStats] = useState(false);
 
     useEffect(() => {
         loadImages();
@@ -47,18 +50,30 @@ export default function ResultOverlay({ roomId, onClose }: ResultOverlayProps) {
     const handleFinish = async () => {
         setSendingEmail(true);
         try {
-            await sendFinishEmail(roomId);
-            setEmailSent(true);
-            // 3초 후 닫기
-            setTimeout(() => {
-                onClose();
-            }, 3000);
+            const response = await sendFinishEmail(roomId);
+            // setEmailSent(true); 
+            // 통계 데이터가 있으면 통계 화면으로 전환
+            if (response.stats) {
+                setGameStats(response.stats);
+                setShowStats(true);
+            } else {
+                // 통계가 없으면 3초 후 종료 (기존 로직 Fallback)
+                alert('이메일이 발송되었습니다. (통계 없음)');
+                setTimeout(() => {
+                    onClose();
+                }, 3000);
+            }
         } catch (error) {
             console.error('Failed to send email:', error);
             alert('이메일 발송에 실패했습니다.');
+        } finally {
             setSendingEmail(false);
         }
     };
+
+    if (showStats && gameStats) {
+        return <GameStatisticsView stats={gameStats} onReturnToLobby={onClose} />;
+    }
 
     return (
         <div className={styles.overlay}>
@@ -90,17 +105,13 @@ export default function ResultOverlay({ roomId, onClose }: ResultOverlayProps) {
                 )}
 
                 <div className={styles.actions}>
-                    {emailSent ? (
-                        <p className={styles.successMessage}>✅ 이메일이 발송되었습니다!</p>
-                    ) : (
-                        <button
-                            className={styles.finishBtn}
-                            onClick={handleFinish}
-                            disabled={sendingEmail || loading}
-                        >
-                            {sendingEmail ? '이메일 전송 중...' : '이메일로 받기 & 종료'}
-                        </button>
-                    )}
+                    <button
+                        className={styles.finishBtn}
+                        onClick={handleFinish}
+                        disabled={sendingEmail || loading}
+                    >
+                        {sendingEmail ? '이메일 전송 및 통계 확인 중...' : '이메일로 받기 & 결과 보기'}
+                    </button>
                 </div>
             </div>
         </div>
