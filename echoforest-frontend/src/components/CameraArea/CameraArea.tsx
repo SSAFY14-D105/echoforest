@@ -49,8 +49,12 @@ const CameraArea = memo(function CameraArea({
     // Remote Participants State (fallback for standalone usage, e.g., in game)
     const [internalParticipantInfos, setInternalParticipantInfos] = useState<ParticipantInfo[]>([]);
 
-    const [playerVolumes, setPlayerVolumes] = useState([70, 70, 70]);
     const [showVolumeSlider, setShowVolumeSlider] = useState<number | null>(null);
+
+    const { playerVolumes, setPlayerVolume } = useGameStore(useShallow(state => ({
+        playerVolumes: state.playerVolumes,
+        setPlayerVolume: state.setPlayerVolume
+    })));
 
     // Use external participantInfos if provided (from WaitingRoom), otherwise use internal
     const displayParticipantInfos = externalParticipantInfos ?? internalParticipantInfos;
@@ -121,10 +125,11 @@ const CameraArea = memo(function CameraArea({
         setIsCameraEnabled(newState);
     };
 
-    const handlePlayerVolumeChange = (playerIndex: number, volume: number) => {
-        const newVolumes = [...playerVolumes];
-        newVolumes[playerIndex] = volume;
-        setPlayerVolumes(newVolumes);
+    const handlePlayerVolumeChange = (playerIndex: number, volume: number, nickname: string | undefined) => {
+        setPlayerVolume(playerIndex, volume);
+        if (nickname) {
+            liveKitService.setParticipantVolume(nickname, volume);
+        }
     };
 
     return (
@@ -254,11 +259,11 @@ const CameraArea = memo(function CameraArea({
                                     {showVolumeSlider === slotIndex && (
                                         <div className={styles.volumeSliderContainer} onClick={(e) => e.stopPropagation()}>
                                             <input
-                                                type="range" min="0" max="100" value={playerVolumes[slotIndex - 1] ?? 70}
-                                                onChange={(e) => handlePlayerVolumeChange(slotIndex - 1, Number(e.target.value))}
+                                                type="range" min="0" max="100" value={playerVolumes[slotIndex] ?? 70}
+                                                onChange={(e) => handlePlayerVolumeChange(slotIndex, Number(e.target.value), playerNickname)}
                                                 className={styles.verticalSlider}
                                             />
-                                            <span className={styles.volumeText}>{playerVolumes[slotIndex - 1] ?? 70}%</span>
+                                            <span className={styles.volumeText}>{playerVolumes[slotIndex] ?? 70}%</span>
                                         </div>
                                     )}
                                 </div>

@@ -45,6 +45,10 @@ interface GameState {
     hasMediaPermission: boolean;
     setHasMediaPermission: (granted: boolean) => void;
 
+    // 볼륨 설정 (사용자별 볼륨, 0~100)
+    playerVolumes: number[]; // [p1, p2, p3] assuming p0 is me (or mapped by slot)
+    setPlayerVolume: (index: number, volume: number) => void;
+
     // 액션(함수)들
     setNickname: (name: string) => void;
     setGamePaused: (username: string | null) => void; // 일시정지/재개 설정 (null=재개)
@@ -88,7 +92,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     isEndingMission: false,
     hasMediaPermission: false,
 
+    // 볼륨 초기값: 70% (4명)
+    playerVolumes: [70, 70, 70, 70],
+
     setHasMediaPermission: (granted: boolean) => set({ hasMediaPermission: granted }),
+    setPlayerVolume: (index, volume) => set((state) => {
+        const newVolumes = [...state.playerVolumes];
+        // 인덱스 안전장치 (최대 4명)
+        if (index >= 0 && index < 4) {
+            newVolumes[index] = volume;
+        }
+        return { playerVolumes: newVolumes };
+    }),
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
     setEndingMission: (active) => set({ isEndingMission: active }),
 
