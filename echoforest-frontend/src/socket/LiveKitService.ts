@@ -290,16 +290,32 @@ export class LiveKitService {
             this.notifyParticipantUpdate();
         });
 
+        // [FIX] Reconnection Handling to prevent Negotiation Errors
+        this.room.on(RoomEvent.Reconnecting, () => {
+            console.log('[LiveKitService] Reconnecting...');
+            // Wait for reconnection before attempting updates
+        });
+
+        this.room.on(RoomEvent.Reconnected, () => {
+            console.log('[LiveKitService] Reconnected!');
+            this.notifyParticipantUpdate();
+            // Re-verify local tracks if needed
+            if (this.isLocalTrackReady) {
+                this.notifyLocalTrackPublished();
+            }
+        });
+
         this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
             // console.log('🎥 트랙 구독:', track.kind, participant.identity);
 
             // 오디오 트랙은 자동으로 재생되도록 attach
             if (track.kind === Track.Kind.Audio) {
-                const audioElement = track.attach();
-                audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
-
-                // [FIX] Audio Element cleanup tracking
-                // 트랙에 element 참조가 내부적으로 있겠지만, 명시적으로 관리하지 않으면 누적될 수 있음
+                try {
+                    const audioElement = track.attach();
+                    audioElement.play().catch(e => console.warn('오디오 자동재생 실패:', e));
+                } catch (e) {
+                    console.warn('[LiveKitService] Audio attach error:', e);
+                }
             }
 
             // [FIX] 약간의 지연 후 업데이트 (내부 상태 반영 대기)
@@ -311,7 +327,13 @@ export class LiveKitService {
         this.room.on(RoomEvent.TrackUnsubscribed, (track, _publication, participant) => {
             // [FIX] 오디오 트랙 구독 해제 시 detach하여 WebMediaPlayer 해제
             if (track.kind === Track.Kind.Audio) {
-                track.detach().forEach(el => el.remove());
+                try {
+                    // Safe detach: check if track is valid
+                    track.detach().forEach(el => el.remove());
+                } catch (e) {
+                    // Ignore 'failed to remove track' warnings if already removed
+                    // console.warn('[LiveKitService] Audio detach warning:', e);
+                }
             }
             this.notifyParticipantUpdate();
         });
