@@ -66,63 +66,79 @@
 
 .grid {
     display: grid;
-    /* [FIX] Limit Card width to 400px and center the grid */
-    grid-template-columns: repeat(2, minmax(300px, 400px));
+    /* [FIX] Smaller grid items (300px max) */
+    grid-template-columns: repeat(2, minmax(200px, 280px));
     grid-template-rows: 1fr 1fr;
     justify-content: center;
-    gap: 40px;
-    /* Wider gap */
+    gap: 30px;
     width: 100%;
     flex: 1;
-    /* Take remaining space */
     min-height: 0;
-    /* Important for flex child scrolling/sizing */
-    margin-bottom: 3rem;
-    /* Increased spacing before button */
+    margin-bottom: 2rem;
+    overflow-y: auto;
+    /* Allow scrolling if needed */
+    padding: 10px;
+}
+
+/* Custom scrollbar for grid */
+.grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.grid::-webkit-scrollbar-thumb {
+    background: #5D4037;
+    border-radius: 4px;
 }
 
 .imageCard {
-    background-color: #fff;
-    /* 폴라로이드 배경 */
-    padding: 8px 8px 40px 8px;
-    /* 하단 여백 추가 (폴라로이드 느낌) */
-    /* border-radius: 10px; */
+    background-color: transparent;
+    /* Remove white background */
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     transition: transform 0.2s;
-    height: 100%;
-    overflow: hidden;
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+    height: auto;
     position: relative;
-    border: 1px solid #ddd;
+    border: none;
+    /* Remove border */
+    box-shadow: none;
+    /* Remove box shadow */
 }
 
 .imageCard:hover {
-    transform: scale(1.02);
+    transform: scale(1.05);
 }
 
 .image {
-    max-width: 100%;
-    max-height: 85%;
-    /* Leave room for label */
-    /* border-radius: 5px; */
-    border: 1px solid #eee;
+    width: 100%;
+    height: auto;
+    /* Aspect ratio preservation */
+    aspect-ratio: 1/1;
     object-fit: contain;
+
+    /* Pixel theme border */
+    border: 4px solid #5D4037;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+    background-color: #000;
 }
 
 .stageLabel {
-    /* margin-top: 5px; */
-    position: absolute;
-    bottom: 10px;
-    color: #333;
-    /* 사진 밑 글씨 */
+    margin-top: 10px;
+    position: static;
+    /* Flow naturally below image */
+    color: #ffeeb0;
+    /* Chalk color */
     font-weight: bold;
     font-size: 1.2rem;
     font-family: var(--font-hand);
-    /* 손글씨 폰트 있으면 좋음, 없으면 title */
-    flex-shrink: 0;
+    text-shadow: 1px 1px 0 #000;
 }
 
 .actions {
