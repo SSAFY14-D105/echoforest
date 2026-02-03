@@ -656,15 +656,19 @@ export class LiveKitService {
     }
 
     // 비디오 해상도 변경 (엔딩 미션용)
-    async setVideoResolution(preset: 'h540' | 'h720'): Promise<void> {
+    async setVideoResolution(preset: 'h360' | 'h540' | 'h720'): Promise<void> {
         if (!this.room || !this.room.localParticipant) {
             // console.warn('[LiveKitService] Cannot change resolution: not connected');
             return;
         }
 
-        const resolution = preset === 'h720'
-            ? { width: 1280, height: 720, frameRate: 30 }
-            : { width: 960, height: 540, frameRate: 30 };
+        let resolution = { width: 640, height: 360, frameRate: 30 }; // Default h360
+
+        if (preset === 'h720') {
+            resolution = { width: 1280, height: 720, frameRate: 30 };
+        } else if (preset === 'h540') {
+            resolution = { width: 960, height: 540, frameRate: 30 };
+        } // else h360
 
         try {
             // 현재 카메라 트랙 찾기

@@ -68,6 +68,8 @@ export default function StagePlayView({
         const unsubscribeConnected = liveKitService.onConnected(() => {
             // console.log('StagePlayView: LiveKit Connected');
             setIsLiveKitConnected(true);
+            // [OPTIMIZATION] 게임 플레이 중에는 대역폭 절약을 위해 360p 사용
+            liveKitService.setVideoResolution('h360');
         });
 
         const unsubscribeDisconnected = liveKitService.onDisconnected(() => {
