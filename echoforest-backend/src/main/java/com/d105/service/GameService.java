@@ -604,21 +604,23 @@ public class GameService {
     /**
      * 저주 발동 처리 (큐 시스템)
      *
-     * 1. 랜덤 플레이어 선택
+     * 1. 저주 안 걸린 플레이어 중에서 랜덤 선택
      * 2. 저주 큐에 추가
      * 3. 저주 효과 적용
      * 4. 스택 초기화 (다음 저주를 위해)
      * 5. CURSE_TRIGGERED 브로드캐스트
      */
     private void triggerCurse(GameRoom room) {
-        // 랜덤 플레이어 선택
-        String cursedUsername = room.getRandomPlayerUsername();
+        // ✅ 저주 안 걸린 플레이어 중에서 랜덤 선택
+        String cursedUsername = room.getRandomNonCursedPlayerUsername();
         if (cursedUsername == null) {
-            log.warn("저주 발동 실패: 플레이어 없음");
+            log.warn("저주 발동 실패: 저주 가능한 플레이어 없음 (모두 저주 상태이거나 플레이어 없음)");
+            // 스택은 초기화 (다음 기회를 위해)
+            room.resetCurseStack();
             return;
         }
 
-        // 저주 큐에 추가 (중복 체크는 CurseManager에서 처리)
+        // 저주 큐에 추가
         room.addToCurseQueue(cursedUsername);
 
         // 저주 효과 적용
