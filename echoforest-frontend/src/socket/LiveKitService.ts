@@ -36,8 +36,9 @@ export class LiveKitService {
     private _cameraEnabledPreference = true; // 사용자 카메라 ON/OFF 상태 저장
 
     private participantCallbacks: Set<ParticipantUpdateCallback> = new Set();
-    private onConnectedCallback: ConnectionCallback | null = null;
-    private onDisconnectedCallback: ConnectionCallback | null = null;
+    // [FIX] Connection/Disconnection 콜백도 다중 구독 지원 (Set)
+    private connectedCallbacks: Set<ConnectionCallback> = new Set();
+    private disconnectedCallbacks: Set<ConnectionCallback> = new Set();
     private onErrorCallback: ErrorCallback | null = null;
     // [FIX] DataReceived 콜백도 다중 구독 지원 (Set)
     private dataReceivedCallbacks: Set<(payload: Uint8Array, participant: RemoteParticipant | undefined, kind: DataPacket_Kind) => void> = new Set();
@@ -61,14 +62,21 @@ export class LiveKitService {
         };
     }
 
-    onConnected(callback: ConnectionCallback) {
-        this.onConnectedCallback = callback;
-        return this;
+    onConnected(callback: ConnectionCallback): () => void {
+        this.connectedCallbacks.add(callback);
+        if (this.isConnected) {
+            callback();
+        }
+        return () => {
+            this.connectedCallbacks.delete(callback);
+        };
     }
 
-    onDisconnected(callback: ConnectionCallback) {
-        this.onDisconnectedCallback = callback;
-        return this;
+    onDisconnected(callback: ConnectionCallback): () => void {
+        this.disconnectedCallbacks.add(callback);
+        return () => {
+            this.disconnectedCallbacks.delete(callback);
+        };
     }
 
     onError(callback: ErrorCallback) {
@@ -273,7 +281,7 @@ export class LiveKitService {
                 console.warn('[LiveKitService] Setup local tracks failed but connected:', trackError);
             }
 
-            this.onConnectedCallback?.();
+            this.connectedCallbacks.forEach(cb => cb());
             this.startSyncInterval(); // [FIX] 폴링 시작
             this.notifyParticipantUpdate();
 
@@ -391,7 +399,8 @@ export class LiveKitService {
         this.room.on(RoomEvent.Disconnected, () => {
             // console.log('🔌 연결 종료');
             this.cleanupAudioElements(); // [FIX] 연결 종료 시 모든 오디오 정리
-            this.onDisconnectedCallback?.();
+            this.lastParticipantInfos = []; // [FIX] 이전 참가자 정보 초기화 (재접속 시 갱신 보장)
+            this.disconnectedCallbacks.forEach(cb => cb());
         });
 
         this.room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant, kind?: DataPacket_Kind) => {
@@ -415,6 +424,21 @@ export class LiveKitService {
     private async setupLocalTracks(opId: number) {
 
         try {
+            // [FIX] 기존 트랙 정리 (재연결 시 중복 발행 방지)
+            if (this.room?.localParticipant) {
+                const existingTracks = Array.from(this.room.localParticipant.trackPublications.values());
+                for (const pub of existingTracks) {
+                    if (pub.track) {
+                        try {
+                            pub.track.stop(); // 미디어 스트림 정지
+                            await this.room.localParticipant.unpublishTrack(pub.track);
+                        } catch (e) {
+                            console.warn('Track unpublish failed:', e);
+                        }
+                    }
+                }
+            }
+
             // LiveKit 음성 채팅 활성화
             // React Strict Mode 제거 후 STT와 공존 가능한지 테스트
             const tracks = await createLocalTracks({
