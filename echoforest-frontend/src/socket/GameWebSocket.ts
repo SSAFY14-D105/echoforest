@@ -55,6 +55,10 @@ export type MessageType =
     | 'RESUME_GAME'   // Client->Server: 재개 요청
     | 'GAME_PAUSED'   // Server->All: 게임 일시정지 알림 (content: username)
     | 'GAME_RESUMED'  // Server->All: 게임 재개 알림 (content: username)
+    | 'GAME_RESUMED'  // Server->All: 게임 재개 알림 (content: username)
+    // 아이템 동기화
+    | 'ITEM_COLLECTED' // Client->Server: 아이템 획득 (content: itemId)
+    | 'ITEM_REMOVED'   // Server->All: 아이템 제거 알림 (content: itemId)
     // 엔딩 미션 (서버 동기화)
     | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
     | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
@@ -106,6 +110,7 @@ export interface GameMessage {
     isDead?: boolean;           // 플레이어 상태 동기화용
     isHidden?: boolean;         // [NEW] 플레이어 숨김 상태 동기화용
     curses?: string[];          // 플레이어 상태 동기화용
+    itemId?: string;            // [NEW] 아이템 동기화용
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -547,6 +552,20 @@ class GameWebSocket {
             content: ''
         };
         this.send(message);
+    }
+
+    /**
+     * 아이템 획득 알림 (Client -> Server)
+     */
+    sendItemCollected(roomId: string, itemId: string) {
+        if (!this.isConnected()) return;
+        this.send({
+            type: 'ITEM_COLLECTED',
+            roomId: roomId,
+            username: this.username,
+            itemId: itemId, // 명시적 필드 사용
+            content: itemId // 호환성을 위해 content에도 담음
+        });
     }
 
     // PING 전송 (Keep-alive)
