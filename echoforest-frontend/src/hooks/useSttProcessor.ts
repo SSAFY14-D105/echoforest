@@ -18,7 +18,7 @@ export interface UseSttProcessorReturn {
     interimTranscript: string;
     curseState: {
         stack: number;
-        cursedPlayer: string | null;
+        cursedPlayers: string[];
         isCollecting: boolean;
         queueCount: number;
         countdown: number;
@@ -49,7 +49,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     // 로컬 플레이어의 저주 상태 확인 (버섯 저주 포함)
     const localPlayer = players.find(p => p.nickname === nickname);
     const hasIndividualCurse = (localPlayer?.curses?.length ?? 0) > 0;
-    const isCursed = curseState.cursedPlayer !== null || hasIndividualCurse;
+    const isCursed = curseState.cursedPlayers.length > 0 || hasIndividualCurse;
 
     const lastProcessedRef = useRef('');
     const prevGameStartedRef = useRef(false);

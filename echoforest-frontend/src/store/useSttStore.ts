@@ -23,7 +23,7 @@ export interface WarningModal {
 
 export interface CurseState {
     stack: number;
-    cursedPlayer: string | null;
+    cursedPlayers: string[];
     isCollecting: boolean;
     queueCount: number;
     countdown: number;
@@ -181,19 +181,27 @@ export const useSttStore = create<SttState>((set, get) => ({
 
     onCurseTriggered: (cursedPlayerId: string, mapId: number) => {
         const currentCursedPlayers = get().curseState.cursedPlayers;
+        const { nickname } = useGameStoreCompat();
+
+        // [DEBUG] 저주 발동 이벤트 수신 로그
+        console.log(`[STT] onCurseTriggered 호출: cursedPlayerId=${cursedPlayerId}, mapId=${mapId}`);
+        console.log(`[STT] 현재 저주 플레이어 목록:`, currentCursedPlayers);
+        console.log(`[STT] 내 닉네임: ${nickname}`);
 
         // 중복 방지: 이미 저주 걸린 플레이어는 추가하지 않음
-        // [FIX] 백엔드에서 이미 필터링하므로 이론상 발생하지 않지만, 발생 시 로그만 남김
         if (currentCursedPlayers.includes(cursedPlayerId)) {
-            console.warn(`[STT] ${cursedPlayerId}님은 이미 저주 상태입니다 (백엔드 필터링 누락?)`);
-            // 스택만 초기화하고 계속 진행
+            console.warn(`[STT] ${cursedPlayerId}님은 이미 저주 상태입니다 (중복 무시)`);
+            return; // [FIX] 중복 시 아예 처리하지 않음
         }
+
+        const updatedCursedPlayers = [...currentCursedPlayers, cursedPlayerId];
+        console.log(`[STT] 💀 저주 추가됨! 업데이트된 목록:`, updatedCursedPlayers);
 
         set({
             curseState: {
                 ...get().curseState,
                 stack: 0,
-                cursedPlayers: [...currentCursedPlayers, cursedPlayerId], // 배열에 추가
+                cursedPlayers: updatedCursedPlayers,
             },
             warningModal: {
                 isVisible: true,
@@ -218,38 +226,46 @@ export const useSttStore = create<SttState>((set, get) => ({
         const { nickname } = useGameStoreCompat();
         const cursedPlayers = get().curseState.cursedPlayers;
 
-        // [FIX] 저주 상태는 모든 클라이언트에서 동기화되어야 함
-        // 배열에서 해제된 플레이어 제거
-        if (cursedPlayers.includes(releasedPlayerId)) {
-            const updatedCursedPlayers = cursedPlayers.filter((id: string) => id !== releasedPlayerId);
+        // [DEBUG] 저주 해제 이벤트 수신 로그
+        console.log(`[STT] onCurseReleased 호출: releasedPlayerId=${releasedPlayerId}, word=${word}`);
+        console.log(`[STT] 현재 저주 플레이어 목록:`, cursedPlayers);
+        console.log(`[STT] 내 닉네임: ${nickname}`);
 
+        // [FIX] 저주 상태는 모든 클라이언트에서 동기화되어야 함
+        // 배열에서 해제된 플레이어 제거 (항상 실행)
+        const updatedCursedPlayers = cursedPlayers.filter((id: string) => id !== releasedPlayerId);
+
+        // 실제로 제거되었는지 확인
+        const wasRemoved = updatedCursedPlayers.length < cursedPlayers.length;
+        console.log(`[STT] 저주 해제 결과: wasRemoved=${wasRemoved}, 업데이트된 목록:`, updatedCursedPlayers);
+
+        set({
+            curseState: {
+                ...get().curseState,
+                cursedPlayers: updatedCursedPlayers,
+            }
+        });
+
+        // 본인 해제 시 알림
+        if (releasedPlayerId === nickname) {
+            console.log(`[STT] ✨ 내 저주가 해제됨!`);
             set({
-                curseState: {
-                    ...get().curseState,
-                    cursedPlayers: updatedCursedPlayers,
-                }
+                warningModal: {
+                    isVisible: true,
+                    level: 0,
+                    emoji: '✨',
+                    title: '해방!',
+                    message: `팀원의 도움으로 저주가 풀렸습니다!`,
+                    keyword: word,
+                },
             });
 
-            // 본인 해제 시 알림
-            if (releasedPlayerId === nickname) {
-                set({
-                    warningModal: {
-                        isVisible: true,
-                        level: 0,
-                        emoji: '✨',
-                        title: '해방!',
-                        message: `팀원의 도움으로 저주가 풀렸습니다!`,
-                        keyword: word,
-                    },
-                });
-
-                setTimeout(() => {
-                    set({ warningModal: { ...get().warningModal, isVisible: false } });
-                }, 3000);
-            }
+            setTimeout(() => {
+                set({ warningModal: { ...get().warningModal, isVisible: false } });
+            }, 3000);
         }
 
-        // Phaser 씬에 저주 해제 이벤트 전달
+        // Phaser 씬에 저주 해제 이벤트 전달 (항상 실행)
         window.dispatchEvent(new CustomEvent('curse-released', {
             detail: { playerId: releasedPlayerId, word }
         }));
@@ -267,7 +283,7 @@ export const useSttStore = create<SttState>((set, get) => ({
             wordType: null,
             curseState: {
                 stack: 0,
-                cursedPlayer: null,
+                cursedPlayers: [],
                 isCollecting: false,
                 queueCount: 0,
                 countdown: 0,

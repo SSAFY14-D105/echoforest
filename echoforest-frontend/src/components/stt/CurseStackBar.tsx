@@ -4,7 +4,7 @@ import styles from './CurseStackBar.module.css';
 interface CurseStackBarProps {
     stack: number;           // 0~10
     maxStack?: number;
-    cursedPlayer?: string | null;
+    cursedPlayers?: string[];  // [변경] 다중 저주 지원
     isListening?: boolean;
 }
 
@@ -17,7 +17,7 @@ interface CurseStackBarProps {
 export default function CurseStackBar({
     stack,
     maxStack = 10,
-    cursedPlayer,
+    cursedPlayers = [],
     isListening = false,
 }: CurseStackBarProps) {
     const percentage = Math.min((stack / maxStack) * 100, 100);
@@ -60,15 +60,15 @@ export default function CurseStackBar({
                 ))}
             </div>
 
-            {/* 저주 상태 표시 */}
-            {cursedPlayer && (
+            {/* 저주 상태 표시 (다중 저주 지원) */}
+            {cursedPlayers.length > 0 && (
                 <div className={styles.cursedAlert}>
-                    💀 {cursedPlayer}님 저주 중!
+                    💀 {cursedPlayers.join(', ')}님 저주 중!
                 </div>
             )}
 
             {/* 위험 경고 */}
-            {stack >= 8 && !cursedPlayer && (
+            {stack >= 8 && cursedPlayers.length === 0 && (
                 <div className={styles.dangerAlert}>
                     ⚠️ 저주 발동 임박!
                 </div>

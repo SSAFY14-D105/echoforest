@@ -26,7 +26,7 @@ interface StagePlayViewProps {
     isSoloMode: boolean;
     curseState: {
         stack: number;
-        cursedPlayer: string | null;
+        cursedPlayers: string[];  // [변경] 다중 저주 지원
     };
     isListening: boolean;
     onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
@@ -301,7 +301,7 @@ export default function StagePlayView({
         // [B안] 스테이지 4는 모두 완료 후에만 로딩 화면 표시
         // 개인 완료 시점에는 포즈 오버레이에 머무름 ("✅ 촬영 완료!" 표시)
         // 로딩은 ALL_UPLOADS_COMPLETE 신호 수신 시 handleDataReceived에서 표시
-        const isFinalStage = stageNum === '4';
+        // const isFinalStage = stageNum === '4';
         // (Stage 4에서는 여기서 setIsLoading(true) 안 함)
 
         if (captures.length === 0) {
@@ -470,7 +470,7 @@ export default function StagePlayView({
                     {/* 저주 스택 바 이동 */}
                     <CurseStackBar
                         stack={curseState.stack}
-                        cursedPlayer={curseState.cursedPlayer}
+                        cursedPlayers={curseState.cursedPlayers}
                         isListening={isListening}
                     />
                 </div>

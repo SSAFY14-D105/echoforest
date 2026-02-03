@@ -11,7 +11,7 @@ interface SoloPlayViewProps {
     currentStage: string;
     curseState: {
         stack: number;
-        cursedPlayer: string | null;
+        cursedPlayers: string[];  // [변경] 다중 저주 지원
     };
     isListening: boolean;
     onLeave: () => void;
@@ -39,7 +39,7 @@ export default function SoloPlayView({
                 </button>
                 <CurseStackBar
                     stack={curseState.stack}
-                    cursedPlayer={curseState.cursedPlayer}
+                    cursedPlayers={curseState.cursedPlayers}
                     isListening={isListening}
                 />
             </div>

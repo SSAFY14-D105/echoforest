@@ -29,7 +29,7 @@ export default function BackgroundMusic() {
             if (isPlaying) {
                 const playPromise = audioRef.current.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch((error) => {
+                    playPromise.catch(() => {
                         // console.warn("BGM Auto-play blocked:", error);
                     });
                 }
@@ -48,7 +48,7 @@ export default function BackgroundMusic() {
             // 준비된 상태에서만 재생 시도
             const playPromise = audioRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch((error) => {
+                playPromise.catch(() => {
                     // console.warn("BGM Play prevented:", error);
                     // 브라우저 정책으로 막힌 경우, 사용자 상호작용 후 재생되도록 유도 가능
                 });

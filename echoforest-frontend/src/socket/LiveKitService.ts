@@ -372,7 +372,7 @@ export class LiveKitService {
                         // console.log(`[LiveKitService] Applied initial volume for ${identity}: ${initialVol}%`);
                     }
 
-                    audioElement.play().catch(e => {
+                    audioElement.play().catch(() => {
                         // console.warn('오디오 자동재생 실패:', e);
                         // [NEW] 사용자에게 알림 (toast 등은 여기서 직접 못하므로 로그만)
                     });
