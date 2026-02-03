@@ -77,6 +77,14 @@ public class GameService {
         GameRoom room = gameRepository.getRoom(roomId);
         if (room == null) {
             room = new GameRoom(roomId, objectMapper, null);
+
+            // [FIX] Redis에 저장된 진행 상황 복구
+            int savedStage = redisRoomService.getCurrentStage(roomId);
+            if (savedStage > 0) {
+                room.setCurrentMapId(savedStage);
+                log.info("Restored Room {} stage to {}", roomId, savedStage);
+            }
+
             gameRepository.addRoom(roomId, room);
             executor.submit(room);
         }
