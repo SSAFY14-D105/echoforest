@@ -21,8 +21,8 @@ export default function GameStatisticsView({ stats, onReturnToLobby }: GameStati
                 <div className={styles.statsGrid}>
                     <div className={styles.headerRow}>
                         <div className={styles.colName}>플레이어</div>
-                        <div className={styles.colStat}>😘 칭찬(Kiss)</div>
-                        <div className={styles.colStat}>🤬 저주(Curse)</div>
+                        <div className={styles.colStat}>😘 칭찬</div>
+                        <div className={styles.colStat}>🤬 저주</div>
                     </div>
                     {stats.length === 0 ? (
                         <div className={styles.empty}>통계 데이터가 없습니다.</div>
