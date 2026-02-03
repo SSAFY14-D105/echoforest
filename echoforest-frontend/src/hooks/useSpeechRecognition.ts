@@ -94,7 +94,7 @@ function initGlobalRecognition() {
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
     globalRecognition = new SpeechRecognitionClass();
 
-    console.log('[STT] 글로벌 SpeechRecognition 인스턴스 생성');
+    // console.log('[STT] 글로벌 SpeechRecognition 인스턴스 생성');
 
     globalRecognition.continuous = true;
     globalRecognition.interimResults = true;
@@ -103,22 +103,22 @@ function initGlobalRecognition() {
 
     globalRecognition.onstart = () => {
         globalIsListening = true;
-        console.log('[STT] ✅ 음성 인식 시작됨 - 마이크 사용 중');
+        // console.log('[STT] ✅ 음성 인식 시작됨 - 마이크 사용 중');
         onStateChangeCallback?.(true, null);
     };
 
     // 오디오 스트림 이벤트 로깅 (디버깅용)
     globalRecognition.onaudiostart = () => {
-        console.log('[STT] 🎤 오디오 스트림 시작 - 마이크 입력 감지');
+        // console.log('[STT] 🎤 오디오 스트림 시작 - 마이크 입력 감지');
     };
     globalRecognition.onaudioend = () => {
-        console.log('[STT] 🎤 오디오 스트림 종료');
+        // console.log('[STT] 🎤 오디오 스트림 종료');
     };
     globalRecognition.onspeechstart = () => {
-        console.log('[STT] 🗣️ 음성 감지 시작');
+        // console.log('[STT] 🗣️ 음성 감지 시작');
     };
     globalRecognition.onspeechend = () => {
-        console.log('[STT] 🗣️ 음성 감지 종료');
+        // console.log('[STT] 🗣️ 음성 감지 종료');
     };
 
     globalRecognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -131,7 +131,7 @@ function initGlobalRecognition() {
 
             if (result.isFinal) {
                 finalTranscript += text.trim();
-                console.log('[STT] 인식:', text.trim());
+                // console.log('[STT] 인식:', text.trim());
             } else {
                 interimText += text;
             }
@@ -146,7 +146,7 @@ function initGlobalRecognition() {
 
         switch (errorMsg) {
             case 'no-speech':
-                console.warn('[STT] ⚠️ 음성이 감지되지 않았습니다 (말을 하지 않음)');
+                // console.warn('[STT] ⚠️ 음성이 감지되지 않았습니다 (말을 하지 않음)');
                 break;
             case 'aborted':
                 console.error('[STT] 🚫 ABORTED - 인식이 즉시 중단됨 (마이크 접근 실패 가능성)');
@@ -173,7 +173,7 @@ function initGlobalRecognition() {
                 console.error('[STT] 🌐 네트워크 오류 - 인터넷 연결을 확인하세요');
                 break;
             default:
-                console.warn(`[STT] ⚠️ 알 수 없는 오류: ${errorMsg}`);
+            // console.warn(`[STT] ⚠️ 알 수 없는 오류: ${errorMsg}`);
         }
     };
 
@@ -241,7 +241,7 @@ function startGlobalListening() {
 
     try {
         globalRecognition.start();
-        console.log('[STT] 시작');
+        // console.log('[STT] 시작');
     } catch (e: any) {
         if (!e.message?.includes('already started')) {
             immediateRestart();
@@ -256,7 +256,7 @@ function startGlobalListening() {
 function stopGlobalListening() {
     if (!globalRecognition) return;
 
-    console.log('[STT] 수동 중지');
+    // console.log('[STT] 수동 중지');
     if (globalRestartTimeout) {
         clearTimeout(globalRestartTimeout);
         globalRestartTimeout = null;
@@ -276,7 +276,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        console.log('[STT] useSpeechRecognition 훅 마운트');
+        // console.log('[STT] useSpeechRecognition 훅 마운트');
 
         if (!globalRecognition) {
             initGlobalRecognition();

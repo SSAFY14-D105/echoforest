@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Player } from '../../../store/useGameStore';
 import { useGameStore } from '../../../store/useGameStore';
 import { liveKitService } from '../../../socket/LiveKitService';
@@ -17,13 +18,10 @@ import styles from './WaitingRoom.module.css';
 
 interface WaitingRoomProps {
     roomId: string;
-    players: Player[];
-    readyPlayers: string[];
     isHost: boolean;
     isSoloMode: boolean;
     pausedBy: string | null;
     myReady: boolean;
-    allReady: boolean;
     onSendState: (x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden?: boolean) => void;
     onCopyRoomId: () => void;
     onLeave: () => void;
@@ -34,19 +32,23 @@ interface WaitingRoomProps {
 
 export default function WaitingRoom({
     roomId,
-    players,
-    readyPlayers,
     isHost,
     isSoloMode,
     pausedBy,
     myReady,
-    allReady,
     onSendState,
     onCopyRoomId,
     onToggleReady,
     onStartGame,
 }: WaitingRoomProps) {
-    const nickname = useGameStore(state => state.nickname);
+    const { nickname, players, readyPlayers } = useGameStore(useShallow(state => ({
+        nickname: state.nickname,
+        players: state.players,
+        readyPlayers: state.readyPlayers
+    })));
+    // check allReady inside component
+    const { isAllReady } = useGameStore.getState();
+    const allReady = isAllReady();
 
     // LiveKit 참가자 정보 (WaitingRoom에서 관리하여 CameraArea에 전달)
     const [participantInfos, setParticipantInfos] = useState<ParticipantInfo[]>([]);
@@ -64,12 +66,12 @@ export default function WaitingRoom({
 
         // [FIX] 연결 상태 구독 (다중 구독 지원)
         const unsubscribeConnected = liveKitService.onConnected(() => {
-            console.log('WaitingRoom: LiveKit Connected');
+            // console.log('WaitingRoom: LiveKit Connected');
             setIsLiveKitConnected(true);
         });
 
         const unsubscribeDisconnected = liveKitService.onDisconnected(() => {
-            console.log('WaitingRoom: LiveKit Disconnected');
+            // console.log('WaitingRoom: LiveKit Disconnected');
             setIsLiveKitConnected(false);
         });
 

@@ -81,9 +81,9 @@ export function useMultiMotionDetector({
     // 초기 상태 설정
     useEffect(() => {
         const initialStates: ParticipantPoseState[] = [];
-        console.log('[MultiMotionDetector] Initializing participant states...', {
-            assignmentsCount: poseAssignments.size
-        });
+        // console.log('[MultiMotionDetector] Initializing participant states...', {
+        //     assignmentsCount: poseAssignments.size
+        // });
         poseAssignments.forEach((pose, identity) => {
             initialStates.push({
                 identity,
@@ -97,13 +97,13 @@ export function useMultiMotionDetector({
             const GestureClass = GESTURE_CLASS_MAP[pose.gestureClass];
             if (GestureClass) {
                 gestureInstancesRef.current.set(identity, new GestureClass());
-                console.log(`[MultiMotionDetector] Created gesture instance for ${identity}: ${pose.gestureClass} (${pose.emoji})`);
+                // console.log(`[MultiMotionDetector] Created gesture instance for ${identity}: ${pose.gestureClass} (${pose.emoji})`);
             } else {
                 console.error(`[MultiMotionDetector] Gesture class not found: ${pose.gestureClass}`);
             }
         });
         setParticipantStates(initialStates);
-        console.log('[MultiMotionDetector] Initialized states:', initialStates);
+        // console.log('[MultiMotionDetector] Initialized states:', initialStates);
     }, [poseAssignments]);
 
     // MediaPipe 모델 로딩
@@ -137,7 +137,7 @@ export function useMultiMotionDetector({
                 });
 
                 setIsLoaded(true);
-                console.log('[MultiMotionDetector] Models loaded');
+                // console.log('[MultiMotionDetector] Models loaded');
             } catch (error) {
                 console.error('[MultiMotionDetector] Failed to load models:', error);
             }
@@ -171,7 +171,7 @@ export function useMultiMotionDetector({
         if (!videoMap || videoMap.size === 0) {
             // [DEBUG] 비디오가 없는 경우 로그 (처음 한 번만)
             if (!isLooping.current) {
-                console.warn('[MultiMotionDetector] No videos in videoMap');
+                // console.warn('[MultiMotionDetector] No videos in videoMap');
             }
             requestAnimationFrame(detect);
             return;
@@ -234,7 +234,7 @@ export function useMultiMotionDetector({
 
             // [DEBUG] 감지 루프 실행 확인 (주기적으로 로그 - 10초마다 한 번씩)
             if (Date.now() % 10000 < 100) {
-                console.log(`[MultiMotionDetector] Detecting for ${identity}: hands=${hasHands}, face=${hasFace}, readyState=${video.readyState}`);
+                // console.log(`[MultiMotionDetector] Detecting for ${identity}: hands=${hasHands}, face=${hasFace}, readyState=${video.readyState}`);
             }
 
             if (gestureInstance && (hasHands || hasFace)) {
@@ -244,10 +244,10 @@ export function useMultiMotionDetector({
 
                 // [DEBUG] 인식 상태 로그 (개발 중 확인용)
                 if (result.detected) {
-                    console.log(`[MultiMotionDetector] ✅ ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
+                    // console.log(`[MultiMotionDetector] ✅ ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
                 } else if (hasHands || hasFace) {
                     // [DEBUG] 손/얼굴은 감지됐지만 제스처가 인식되지 않은 경우
-                    console.log(`[MultiMotionDetector] ❌ ${identity}: Not matched (score: ${result.score.toFixed(2)})`);
+                    // console.log(`[MultiMotionDetector] ❌ ${identity}: Not matched (score: ${result.score.toFixed(2)})`);
                 }
 
                 setParticipantStates(prev => {
@@ -279,14 +279,14 @@ export function useMultiMotionDetector({
     // 감지 루프 시작/중지
     useEffect(() => {
         if (isLoaded && enabled) {
-            console.log('[MultiMotionDetector] Starting detection loop');
+            // console.log('[MultiMotionDetector] Starting detection loop');
             isLooping.current = true;
             detect();
         } else {
-            console.log('[MultiMotionDetector] Detection loop not started:', { isLoaded, enabled });
+            // console.log('[MultiMotionDetector] Detection loop not started:', { isLoaded, enabled });
         }
         return () => {
-            console.log('[MultiMotionDetector] Stopping detection loop');
+            // console.log('[MultiMotionDetector] Stopping detection loop');
             isLooping.current = false;
         };
     }, [isLoaded, enabled, detect]);

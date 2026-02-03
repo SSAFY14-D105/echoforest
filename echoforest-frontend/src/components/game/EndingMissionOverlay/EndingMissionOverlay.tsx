@@ -138,7 +138,7 @@ export default function EndingMissionOverlay({
         participantStates.forEach(state => {
             if (state.identity === nickname && state.isCleared && !clearedSentRef.current.has(nickname)) {
                 liveKitService.sendData('POSE_CLEARED').catch(err => {
-                    console.warn('[EndingMissionOverlay] Send data failed:', err);
+                    // console.warn('[EndingMissionOverlay] Send data failed:', err);
                 });
                 clearedSentRef.current.add(nickname);
             }
@@ -161,7 +161,7 @@ export default function EndingMissionOverlay({
                 liveKitService.setVideoResolution('h540');
                 liveKitService.restoreCameraState();
             } catch (e) {
-                console.warn('Camera restore error:', e);
+                // console.warn('Camera restore error:', e);
             }
         };
     }, []);
@@ -171,26 +171,26 @@ export default function EndingMissionOverlay({
         // 마운트 후 짧게 폴링하여 로컬 비디오가 확실히 연결되도록 함
         let attempts = 0;
         const maxAttempts = 10;
-        console.log('[EndingMissionOverlay] Starting local video polling...');
+        // console.log('[EndingMissionOverlay] Starting local video polling...');
         const interval = setInterval(() => {
             attempts++;
             const localEl = localVideoRefs.current.get(nickname);
             if (localEl) {
-                console.log(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl found`, {
-                    readyState: localEl.readyState,
-                    videoWidth: localEl.videoWidth,
-                    videoHeight: localEl.videoHeight
-                });
+                // console.log(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl found`, {
+                //     readyState: localEl.readyState,
+                //     videoWidth: localEl.videoWidth,
+                //     videoHeight: localEl.videoHeight
+                // });
                 const success = liveKitService.attachLocalVideo(localEl);
                 if (success) {
-                    console.log('[EndingMissionOverlay] ✅ Local video attached via polling');
+                    // console.log('[EndingMissionOverlay] ✅ Local video attached via polling');
                     clearInterval(interval);
                 }
             } else {
-                console.warn(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl NOT found`);
+                // console.warn(`[EndingMissionOverlay] Polling attempt ${attempts}: localEl NOT found`);
             }
             if (attempts >= maxAttempts) {
-                console.warn('[EndingMissionOverlay] Max polling attempts reached');
+                // console.warn('[EndingMissionOverlay] Max polling attempts reached');
                 clearInterval(interval);
             }
         }, 300);
@@ -232,7 +232,7 @@ export default function EndingMissionOverlay({
                     try {
                         liveKitService.detachLocalVideo(existingEl);
                     } catch (e) {
-                        console.warn('Detach local video failed:', e);
+                        // console.warn('Detach local video failed:', e);
                     }
                 } else {
                     const info = (participantInfosRef.current || []).find(p => p.identity === identity);
@@ -240,7 +240,7 @@ export default function EndingMissionOverlay({
                         try {
                             info.videoTrack.detach(existingEl);
                         } catch (e) {
-                            console.warn('Detach remote video failed:', e);
+                            // console.warn('Detach remote video failed:', e);
                         }
                     }
                 }
@@ -283,12 +283,12 @@ export default function EndingMissionOverlay({
             if (localParticipant) {
                 const videoEl = videoRefs.current.get(localParticipant.identity);
                 if (videoEl) {
-                    console.log('[EndingMissionOverlay] 📸 Capturing pose completion moment:', localParticipant.identity);
+                    // console.log('[EndingMissionOverlay] 📸 Capturing pose completion moment:', localParticipant.identity);
                     const captures = await captureAllParticipants([videoEl]);
                     onCaptureComplete?.(captures);
                     setCaptureComplete(true);
                 } else {
-                    console.warn('[EndingMissionOverlay] Local video element not found for capture');
+                    // console.warn('[EndingMissionOverlay] Local video element not found for capture');
                 }
             }
         } catch (error) {
@@ -306,7 +306,7 @@ export default function EndingMissionOverlay({
 
         // 이전에는 클리어 안됐는데 지금 클리어됨 → 즉시 캡처!
         if (localState && !previousLocalState?.isCleared && localState.isCleared) {
-            console.log('[EndingMissionOverlay] ✅ Pose completed! Capturing immediately...');
+            // console.log('[EndingMissionOverlay] ✅ Pose completed! Capturing immediately...');
             handleInstantCapture().then(() => {
                 onMotionCleared?.();
                 // 3초 후 닫기

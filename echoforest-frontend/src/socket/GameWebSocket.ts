@@ -111,6 +111,7 @@ export interface GameMessage {
     isHidden?: boolean;         // [NEW] 플레이어 숨김 상태 동기화용
     curses?: string[];          // 플레이어 상태 동기화용
     itemId?: string;            // [NEW] 아이템 동기화용
+    parsedData?: any;           // [PERFORMANCE] 미리 파싱된 데이터 (UPDATE 등 빈번한 메시지용)
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -224,6 +225,16 @@ class GameWebSocket {
                 this.ws.onmessage = (event) => {
                     try {
                         const message: GameMessage = JSON.parse(event.data);
+
+                        // [PERFORMANCE] UPDATE 메시지는 여기서 한 번만 파싱하여 재사용
+                        if (message.type === 'UPDATE' && message.content) {
+                            try {
+                                message.parsedData = JSON.parse(message.content);
+                            } catch (e) {
+                                // Content parse error - ignore
+                            }
+                        }
+
                         // UPDATE 메시지는 너무 빈번하므로 로그에서 제외
                         if (message.type !== 'UPDATE') {
                             // console.log('📩 수신:', message);
