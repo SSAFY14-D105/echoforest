@@ -5,6 +5,7 @@ import { gameWebSocket } from '../../../socket/GameWebSocket';
 import type { GameMessage } from '../../../socket/GameWebSocket';
 import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
 import SettingsModal from '../../../components/SettingsModal/SettingsModal';
+import SplashScreen from '../../../components/SplashScreen/SplashScreen';
 import AudioController from '../../../components/common/AudioController';
 import styles from './LobbyPage.module.css';
 
@@ -33,6 +34,9 @@ export default function LobbyPage() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // 로딩 상태 (SplashScreen)
+  const [isLoading, setIsLoading] = useState(true);
 
   // 방 만들기 (WebSocket CREATE 메시지 전송)
   const handleHost = async () => {
@@ -125,6 +129,9 @@ export default function LobbyPage() {
 
   return (
     <div className={styles.container}>
+      {/* 로딩 화면 (SplashScreen) */}
+      {isLoading && <SplashScreen onFinished={() => setIsLoading(false)} />}
+
       <AudioController />
       {/* 배경 이미지 */}
       <img
