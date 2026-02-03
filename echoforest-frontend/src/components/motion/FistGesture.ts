@@ -2,15 +2,11 @@ import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGes
 import { isFingerExtended, type Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
-    private thresholds: any;
 
-    constructor(config: any = {}) {
-        super(config);
+    constructor() {
+        super();
         this.label = '주먹';
         this.emoji = '✊';
-        this.thresholds = {
-            ...config
-        };
     }
 
     check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
