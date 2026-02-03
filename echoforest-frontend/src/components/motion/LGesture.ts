@@ -44,11 +44,10 @@ export default class LGesture extends BaseGesture {
 
         fingers.thumb.extended = thumbReallyExtended;
 
-        // 3. L 조건: 엄지, 검지 펴짐 + 나머지 접힘
-        // [FIX] 나머지 손가락이 '완벽하게' 접히지 않아도 허용 (중지가 살짝 펴져도 OK)
-        // 약지(ring)와 소지(pinky)만 확실히 접혀있으면 됨
+        // 3. L 조건: 엄지, 검지 펴짐 + 중지, 약지, 새끼 접힘
+        // [FIX] 중지도 접혀야 L로 인정 (볼콕 오인식 방지)
         const isL = fingers.thumb.extended && fingers.index.extended &&
-            !fingers.ring.extended && !fingers.pinky.extended;
+            !fingers.middle.extended && !fingers.ring.extended && !fingers.pinky.extended;
 
         if (isL) {
             return {
