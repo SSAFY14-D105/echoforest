@@ -83,9 +83,13 @@ const CameraArea = memo(function CameraArea({
 
     // [FIX] 연결 상태 변경 시 비디오 attach + 트랙 감지 이벤트 리스너 등록
     useEffect(() => {
-        if (!isConnected) return;
+        if (!isConnected) {
+            // 연결 끊김 시 로컬 비디오 정리 (선택적)
+            // if (localVideoRef.current) liveKitService.detachLocalVideo(localVideoRef.current);
+            return;
+        }
 
-        // 1. 즉시 시도 (이미 트랙이 준비된 경우)
+        // 1. 연결 복구 시 즉시 시도 (중요: 재접속 시 트랙을 다시 붙여야 함)
         if (localVideoRef.current) {
             liveKitService.setLocalVideoElement(localVideoRef.current);
         }
@@ -101,7 +105,7 @@ const CameraArea = memo(function CameraArea({
         return () => {
             unsubscribe();
         };
-    }, [isConnected]);
+    }, [isConnected]); // isConnected가 false -> true로 변할 때 실행됨
 
     const handleToggleMic = async () => {
         const newState = await liveKitService.toggleMic();
@@ -278,29 +282,34 @@ function RemoteVideo({
     slotIndex: number,
     className: string
 }) {
+    // [FIX] Ref stability and track attachment
     const videoRef = useRef<HTMLVideoElement>(null);
+    const trackSid = participantInfo?.videoTrack?.sid;
 
     useEffect(() => {
         const videoEl = videoRef.current;
-        if (!videoEl) return;
+        if (!videoEl || !participantInfo?.videoTrack) return;
 
-        if (!participantInfo?.videoTrack) {
-            return;
-        }
-
-        // Track Attachment
+        // console.log(`[RemoteVideo] Attaching track ${participantInfo.videoTrack.sid} to video element`);
         participantInfo.videoTrack.attach(videoEl);
 
-        // Ensure playback
-        videoEl.play().catch(e => console.warn(`[RemoteVideo] Play failed for ${nickname}:`, e));
+        const playVideo = async () => {
+            try {
+                await videoEl.play();
+                // console.log(`[RemoteVideo] Playing ${nickname}`);
+            } catch (e) {
+                console.warn(`[RemoteVideo] Autoplay failed for ${nickname}:`, e);
+            }
+        };
+        playVideo();
 
         return () => {
-            // [FIX] Explicitly detach to prevent WebMediaPlayer leak
-            if (participantInfo && participantInfo.videoTrack) {
+            // [FIX] Clean up attachment
+            if (participantInfo.videoTrack) {
                 participantInfo.videoTrack.detach(videoEl);
             }
         };
-    }, [participantInfo?.videoTrack, nickname, slotIndex]);
+    }, [participantInfo?.videoTrack, trackSid]); // trackSid가 바뀌면 재실행
 
     const isVideoVisible = participantInfo?.videoTrack && participantInfo.isCameraEnabled;
 
@@ -308,6 +317,7 @@ function RemoteVideo({
         <div className={styles.cameraContent}>
             <video
                 ref={videoRef}
+                key={trackSid} // [FIX] 트랙이 바뀌면 비디오 엘리먼트 재생성
                 autoPlay
                 playsInline
                 className={className}

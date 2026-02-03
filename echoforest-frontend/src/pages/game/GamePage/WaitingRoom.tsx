@@ -58,21 +58,30 @@ export default function WaitingRoom({
         if (!roomId || !nickname) return;
 
         // 참가자 변경 구독 (먼저 등록해야 연결 완료 시 바로 업데이트 받음)
-        const unsubscribe = liveKitService.onParticipantsChange((infos) => {
+        const unsubscribeParticipants = liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
+        });
+
+        // [FIX] 연결 상태 구독 (다중 구독 지원)
+        const unsubscribeConnected = liveKitService.onConnected(() => {
+            console.log('WaitingRoom: LiveKit Connected');
+            setIsLiveKitConnected(true);
+        });
+
+        const unsubscribeDisconnected = liveKitService.onDisconnected(() => {
+            console.log('WaitingRoom: LiveKit Disconnected');
+            setIsLiveKitConnected(false);
         });
 
         // 이미 연결되어 있으면 현재 상태 즉시 반영
         if (liveKitService.isConnected) {
             setIsLiveKitConnected(true);
-            // 이미 연결된 경우 현재 참가자 정보를 수동으로 트리거
-            // (구독 콜백은 변경 시에만 호출되므로 초기값 필요)
         } else {
             // 아직 연결되지 않았으면 연결 시도
             const connectLiveKit = async () => {
                 try {
                     await liveKitService.connect(roomId, nickname);
-                    setIsLiveKitConnected(true);
+                    // 성공 시 onConnected 콜백이 호출됨
                 } catch (error) {
                     console.error('LiveKit connection failed:', error);
                 }
@@ -81,7 +90,9 @@ export default function WaitingRoom({
         }
 
         return () => {
-            unsubscribe();
+            unsubscribeParticipants();
+            unsubscribeConnected();
+            unsubscribeDisconnected();
             // 연결 해제는 GamePage에서 처리 (WaitingRoom이 언마운트되도 게임으로 전환될 수 있음)
         };
     }, [roomId, nickname, isSoloMode]);

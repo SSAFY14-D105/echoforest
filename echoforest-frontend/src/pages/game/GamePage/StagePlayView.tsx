@@ -52,13 +52,50 @@ export default function StagePlayView({
     // [NEW] 최종 결과 오버레이 상태
     const [showResultOverlay, setShowResultOverlay] = useState(false);
 
-    // LiveKit 참가자 정보 구독
+    // [FIX] LiveKit 연결 상태 추적
+    const [isLiveKitConnected, setIsLiveKitConnected] = useState(liveKitService.isConnected);
+    // const { nickname } = useGameStore(); // 이미 상단에서 가져옴
+
+    // LiveKit 참가자 정보 및 연결 상태 구독 + [FIX] 재접속(새로고침) 시 연결 복구
     useEffect(() => {
-        const unsubscribe = liveKitService.onParticipantsChange((infos) => {
+        // 1. 이벤트 구독
+        const unsubscribeParticipants = liveKitService.onParticipantsChange((infos) => {
             setParticipantInfos(infos);
         });
-        return unsubscribe;
-    }, []);
+
+        const unsubscribeConnected = liveKitService.onConnected(() => {
+            console.log('StagePlayView: LiveKit Connected');
+            setIsLiveKitConnected(true);
+        });
+
+        const unsubscribeDisconnected = liveKitService.onDisconnected(() => {
+            console.log('StagePlayView: LiveKit Disconnected');
+            setIsLiveKitConnected(false);
+        });
+
+        // 2. 초기 상태 동기화
+        setIsLiveKitConnected(liveKitService.isConnected);
+
+        // 3. [Critical Fix] 게임 중 새로고침 시 LiveKit 직접 연결 시도
+        // WaitingRoom을 거치지 않고 바로 들어온 경우 연결이 끊겨있을 수 있음
+        const ensureConnection = async () => {
+            if (!liveKitService.isConnected && roomId && nickname) {
+                console.log('[StagePlayView] LiveKit not connected (refresh detected). Connecting...');
+                try {
+                    await liveKitService.connect(roomId, nickname);
+                } catch (e) {
+                    console.error('[StagePlayView] Failed to reconnect LiveKit:', e);
+                }
+            }
+        };
+        ensureConnection();
+
+        return () => {
+            unsubscribeParticipants();
+            unsubscribeConnected();
+            unsubscribeDisconnected();
+        };
+    }, [roomId, nickname]);
 
     // 종료 처리 중복 방지 락
     const isProcessingEndRef = useRef(false);
@@ -281,7 +318,7 @@ export default function StagePlayView({
                     startSlot={0}
                     endSlot={2}
                     participantInfos={participantInfos}
-                    isLiveKitConnected={liveKitService.isConnected}
+                    isLiveKitConnected={isLiveKitConnected}
                 />
 
                 {/* 정보 패널 */}
@@ -305,7 +342,7 @@ export default function StagePlayView({
                     startSlot={2}
                     endSlot={4}
                     participantInfos={participantInfos}
-                    isLiveKitConnected={liveKitService.isConnected}
+                    isLiveKitConnected={isLiveKitConnected}
                 />
             </div>
 
