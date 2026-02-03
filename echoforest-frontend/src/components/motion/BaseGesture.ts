@@ -19,6 +19,8 @@ export interface GestureResult {
     label?: string; // 제스처 이름
     emoji?: string; // 이모지
     extra?: any;    // 추가 데이터 (각도, 거리 등)
+    left?: GestureResult;  // 왼쪽 볼 (CheekHeart, BothCheekPoke용)
+    right?: GestureResult; // 오른쪽 볼 (CheekHeart, BothCheekPoke용)
 }
 
 export default class BaseGesture {
@@ -35,7 +37,7 @@ export default class BaseGesture {
      * @param landmarks MediaPipe 손 랜드마크 (0~20)
      * @param metadata 추가 정보 (손바닥 크기 등)
      */
-    check(landmarks: Landmark[], metadata: GestureMetadata): GestureResult {
+    check(_landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
         throw new Error("check() method must be implemented");
     }
 
