@@ -100,19 +100,26 @@ export default function StagePlayView({
         const handleDataReceived = (payload: Uint8Array) => {
             try {
                 const message = new TextDecoder().decode(payload);
-                const data = JSON.parse(message);
 
-                if (data.type === 'IMAGE_UPLOADED' && data.stage === stageNum) {
-                    console.log(`[StagePlayView] User ${data.userId} uploaded image for stage ${stageNum}`);
+                // [FIX] JSON 파싱 시도, 실패하면 plain text로 처리
+                try {
+                    const data = JSON.parse(message);
 
-                    // 호스트라면 업로드 카운트 추적 및 합성 트리거
-                    if (isHost) {
-                        uploadedUserIdsRef.current.add(data.userId);
-                        checkAndGenerateComposite();
+                    if (data.type === 'IMAGE_UPLOADED' && data.stage === stageNum) {
+                        console.log(`[StagePlayView] User ${data.userId} uploaded image for stage ${stageNum}`);
+
+                        // 호스트라면 업로드 카운트 추적 및 합성 트리거
+                        if (isHost) {
+                            uploadedUserIdsRef.current.add(data.userId);
+                            checkAndGenerateComposite();
+                        }
                     }
+                } catch (parseErr) {
+                    // Plain text 메시지 (예: "POSE_CLEARED")는 무시
+                    // 다른 컴포넌트(EndingMissionOverlay)에서 처리함
                 }
             } catch (err) {
-                console.error('[StagePlayView] Failed to parse data message:', err);
+                console.error('[StagePlayView] Failed to decode data message:', err);
             }
         };
 
