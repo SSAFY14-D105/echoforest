@@ -16,7 +16,8 @@ export default class LeftPokeGesture extends BaseGesture {
 
         // 왼쪽 볼 영역 (MediaPipe 기준 Right Side Index들)
         // 280번대가 화면 왼쪽(사용자의 왼쪽)에 해당
-        this.cheekPoints = [280, 425, 291, 411];
+        // [개선] 입가 + 턱 + 볼 중앙까지 커버리지 확대
+        this.cheekPoints = [280, 425, 291, 411, 365, 379, 330, 347, 323];
     }
 
     check(multiHandLandmarks: any[], metadata: GestureMetadata): GestureResult {
@@ -63,7 +64,9 @@ export default class LeftPokeGesture extends BaseGesture {
             }
 
             if (minDist < this.thresholds.pokeDistance) {
-                const score = Math.max(0.1, 1 - (minDist / this.thresholds.pokeDistance));
+                // [점수 부스팅] 범위 안에만 들어오면 최소 0.6점 보장 + 거리에 따라 추가 점수
+                const ratio = minDist / this.thresholds.pokeDistance;
+                const score = 0.6 + (1 - ratio) * 0.4;
                 if (score > bestScore) {
                     bestScore = score;
                     detected = true;

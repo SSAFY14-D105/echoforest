@@ -39,8 +39,9 @@ export default class TalmoBeamGesture extends BaseGesture {
         const isLShape1 = isLShape(hand1);
         const isLShape2 = isLShape(hand2);
 
-        // 조건: 엄지끼리 가깝고(1.0 이하), 양손 모두 L자 형태(또는 검지/엄지 펴짐)
-        if (thumbDist < 1.0 && isLShape1 && isLShape2) {
+        // 조건: 엄지끼리 적당히 떨어져 있어야 함 (탈모빔은 관자놀이 쪽이니까)
+        // 기준: 0.5 (손바닥 절반) 이상 떨어져야 인정
+        if (thumbDist > 0.5 && isLShape1 && isLShape2) {
 
             // [추가] 높이 조건: 손이 이마보다 낮으면(y값이 크면) 탈모빔 아님
             const face = metadata.faceLandmarks;

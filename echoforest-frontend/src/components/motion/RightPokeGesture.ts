@@ -16,7 +16,8 @@ export default class RightPokeGesture extends BaseGesture {
 
         // 오른쪽 볼 영역 (MediaPipe 기준 Left Side Index들)
         // 거울모드 특성상 50번대가 화면 오른쪽(사용자의 오른쪽)에 해당할 수 있음
-        this.cheekPoints = [50, 205, 61, 187];
+        // [개선] 입가 + 턱 + 볼 중앙까지 커버리지 확대
+        this.cheekPoints = [50, 205, 61, 187, 136, 150, 101, 118, 93];
     }
 
     check(multiHandLandmarks: any[], metadata: GestureMetadata): GestureResult {
@@ -63,7 +64,9 @@ export default class RightPokeGesture extends BaseGesture {
             }
 
             if (minDist < this.thresholds.pokeDistance) {
-                const score = Math.max(0.1, 1 - (minDist / this.thresholds.pokeDistance));
+                // [점수 부스팅] 범위 안에만 들어오면 최소 0.6점 보장 + 거리에 따라 추가 점수
+                const ratio = minDist / this.thresholds.pokeDistance;
+                const score = 0.6 + (1 - ratio) * 0.4;
                 if (score > bestScore) {
                     bestScore = score;
                     detected = true;

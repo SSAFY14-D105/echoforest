@@ -95,7 +95,8 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 const normLeft = minL / faceSize;
 
                 if (normLeft < this.thresholds.pokeDistance) {
-                    const score = Math.max(0.1, 1 - (normLeft / this.thresholds.pokeDistance));
+                    const lRatio = normLeft / this.thresholds.pokeDistance;
+                    const score = 0.6 + (1 - lRatio) * 0.4;
                     if (score > result.left.score) {
                         result.left = { detected: true, score: score };
                     }
@@ -110,7 +111,8 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 const normRight = minR / faceSize;
 
                 if (normRight < this.thresholds.pokeDistance) {
-                    const score = Math.max(0.1, 1 - (normRight / this.thresholds.pokeDistance));
+                    const rRatio = normRight / this.thresholds.pokeDistance;
+                    const score = 0.6 + (1 - rRatio) * 0.4;
                     if (score > result.right.score) {
                         result.right = { detected: true, score: score };
                     }
