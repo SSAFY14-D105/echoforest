@@ -4,7 +4,6 @@
 
 import { useState, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { Player } from '../../../store/useGameStore';
 import { useGameStore } from '../../../store/useGameStore';
 import { liveKitService } from '../../../socket/LiveKitService';
 import type { ParticipantInfo } from '../../../socket/LiveKitService';
