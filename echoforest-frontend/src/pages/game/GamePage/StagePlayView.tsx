@@ -92,7 +92,7 @@ export default function StagePlayView({
         uploadedUserIdsRef.current.clear();
         hasGeneratedImageRef.current = false;
         isUploadingRef.current = false;
-        console.log(`[StagePlayView] State reset for new Stage: ${stageNum}`);
+        isProcessingEndRef.current = false; // [FIX] 스테이지 변경 시 종료 처리 락 해제
     }, [stageNum]);
 
     // [NEW] LiveKit 데이터 수신 (IMAGE_UPLOADED)
@@ -106,8 +106,6 @@ export default function StagePlayView({
                     const data = JSON.parse(message);
 
                     if (data.type === 'IMAGE_UPLOADED' && data.stage === stageNum) {
-                        console.log(`[StagePlayView] User ${data.userId} uploaded image for stage ${stageNum}`);
-
                         // 호스트라면 업로드 카운트 추적 및 합성 트리거
                         if (isHost) {
                             uploadedUserIdsRef.current.add(data.userId);
@@ -135,10 +133,7 @@ export default function StagePlayView({
         // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 (participantInfos.length + 1) 체크 (participantInfos는 원격 참가자만 포함하므로)
         const requiredCount = isSoloMode ? 1 : (participantInfos.length + 1);
 
-        console.log(`[StagePlayView] Check Generation: ${currentCount}/${requiredCount} uploaded. (isSolo=${isSoloMode}, remotes=${participantInfos.length})`);
-
         if (currentCount >= requiredCount) {
-            console.log('[StagePlayView] All participants uploaded! Generating composite...');
             hasGeneratedImageRef.current = true;
 
             try {
@@ -146,7 +141,6 @@ export default function StagePlayView({
                 const hostUserId = storedUserId ? parseInt(storedUserId, 10) : 0;
                 // 호스트가 대표로 요청
                 await generateCompositeImage(roomId, hostUserId, parseInt(stageNum));
-                console.log('[StagePlayView] Composite generation requested successfully.');
             } catch (error) {
                 console.error('[StagePlayView] Composite generation failed:', error);
             }
