@@ -145,7 +145,9 @@ public class RedisRoomService {
 
             log.info("[STATS DEBUG] Leaving user: {}, Kiss: {}, Curse: {}", userName, kissCount, curseCount);
 
-            userService.saveGameStats(userName, kissCount, curseCount);
+            // [FIX] RedisRoomService uses Nickname as identifier, so we must save by
+            // nickname
+            userService.saveGameStatsByNickname(userName, kissCount, curseCount);
 
             // 중복 저장 방지를 위해 Redis에서 해당 유저 통계 제거
             redisTemplate.opsForHash().delete(ROOM_KEY + roomId + KISS_SUFFIX, userName);

@@ -130,20 +130,31 @@ public class UserService {
     }
 
     // 게임 종료 후 통계 일괄 저장
+    // 게임 종료 후 통계 일괄 저장 (Username 기준)
     @Transactional
     public void saveGameStats(String username, int kissCount, int curseCount) {
+        saveStatsInternal(userRepository.findByUsername(username).orElse(null), username, kissCount, curseCount);
+    }
+
+    // 게임 종료 후 통계 일괄 저장 (Nickname 기준 - RedisRoomService에서 사용)
+    @Transactional
+    public void saveGameStatsByNickname(String nickname, int kissCount, int curseCount) {
+        saveStatsInternal(userRepository.findByNickname(nickname).orElse(null), nickname, kissCount, curseCount);
+    }
+
+    private void saveStatsInternal(User user, String identifier, int kissCount, int curseCount) {
         // 0건이면 업데이트 불필요
         if (kissCount == 0 && curseCount == 0) {
             return;
         }
 
-        userRepository.findByUsername(username).ifPresentOrElse(
-                user -> {
-                    user.updateGameStats(kissCount, curseCount);
-                    log.info("Updated stats for user {}: +{} kisses, +{} curses",
-                            username, kissCount, curseCount);
-                },
-                () -> log.warn("Failed to update stats: User {} not found", username));
+        if (user != null) {
+            user.updateGameStats(kissCount, curseCount);
+            log.info("Updated stats for user {} ({}): +{} kisses, +{} curses",
+                    user.getUsername(), user.getNickname(), kissCount, curseCount);
+        } else {
+            log.warn("Failed to update stats: User with identifier '{}' not found", identifier);
+        }
     }
 
     // 로그아웃
