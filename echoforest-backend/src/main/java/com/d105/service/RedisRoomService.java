@@ -143,6 +143,8 @@ public class RedisRoomService {
             int kissCount = getKissCount(roomId, userName);
             int curseCount = getCurseCount(roomId, userName);
 
+            log.info("[STATS DEBUG] Leaving user: {}, Kiss: {}, Curse: {}", userName, kissCount, curseCount);
+
             userService.saveGameStats(userName, kissCount, curseCount);
 
             // 중복 저장 방지를 위해 Redis에서 해당 유저 통계 제거
