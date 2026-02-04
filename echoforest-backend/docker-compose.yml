@@ -184,6 +184,38 @@ services:
     networks:
       - echo-net
 
+  # ==========================================
+  # 7. Prometheus (Metrics Collector)
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: echoforest-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 8. Grafana (Dashboard)
+  # ==========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: echoforest-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      # Nginx 서브디렉토리(/monitor) 뒤에서 서빙하기 위한 설정
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitor/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./grafana_data:/var/lib/grafana # 데이터 영구 저장
+    networks:
+      - echo-net
+
 networks:
   echo-net:
     driver: bridge
