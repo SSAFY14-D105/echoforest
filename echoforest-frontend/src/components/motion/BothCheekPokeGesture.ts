@@ -54,25 +54,21 @@ export default class BothCheekPokeGesture extends BaseGesture {
                 const isRingFolded = distance(hand[16], wrist) < distance(hand[13], wrist);
                 const isFistPoke = isMiddleFolded && isRingFolded;
 
-                if (!isFistPoke) {
-                    // 엄지 위치 체크 (볼하트 오인식 방지)
-                    const thumbTip = hand[4];
-                    const jawPoints = [365, 379, 400, 352, 136, 150, 176, 123];
-                    let minThumbDist = Infinity;
+                // [FIX] 엄지가 검지/중지 PIP(두번째 마디)와 가까워야 "콕" 모양
+                // 볼하트처럼 손가락이 쫙 펴진 상태면 차단
+                const thumbTip = hand[4];
+                const indexPIP = hand[6];   // 검지 두번째 마디
+                const middlePIP = hand[10]; // 중지 두번째 마디
+                const palmSize = distance(hand[0], hand[9]);
 
-                    for (const jIdx of jawPoints) {
-                        const jp = faceLandmarks[jIdx];
-                        if (jp) {
-                            const d = distance(thumbTip, jp);
-                            if (d < minThumbDist) minThumbDist = d;
-                        }
-                    }
-                    const normThumb = minThumbDist / faceSize;
+                const thumbToIndexPIP = distance(thumbTip, indexPIP) / palmSize;
+                const thumbToMiddlePIP = distance(thumbTip, middlePIP) / palmSize;
 
-                    if (normThumb < 0.35) {
-                        continue;
-                    }
-                }
+                // 엄지가 검지/중지 PIP 중 하나라도 가까워야 함 (0.8 이하)
+                // 또는 주먹을 쥔 상태(isFistPoke)여야 함
+                const isPokeShape = thumbToIndexPIP < 0.8 || thumbToMiddlePIP < 0.8 || isFistPoke;
+
+                if (!isPokeShape) continue;
 
                 const indexTip = hand[8];
 
