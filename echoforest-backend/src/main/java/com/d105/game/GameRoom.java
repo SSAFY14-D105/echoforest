@@ -383,8 +383,20 @@ public class GameRoom implements Runnable {
                 p.setDead(isDead);
             if (isHidden != null)
                 p.setHidden(isHidden);
-            if (curses != null)
-                p.setVisibleCurses(curses);
+            if (isHidden != null)
+                p.setHidden(isHidden);
+
+            // [FIX] Server Authority for Curses
+            // 클라이언트가 보내는 저주 상태(visualCurses)를 무조건 신뢰하지 않고,
+            // 서버의 CurseManager 상태와 대조하여 유효한 경우에만 적용.
+            // 이를 통해 스테이지 변경 후 클라이언트의 잔여 패킷으로 인한 저주 재발 방지.
+            if (curseManager.isPlayerCursed(p.getUsername())) {
+                if (curses != null)
+                    p.setVisibleCurses(curses);
+            } else {
+                // 서버가 "저주 없음"으로 판단하면 시각적 저주도 강제 제거
+                p.setVisibleCurses(null);
+            }
 
             p.updateInputTimestamp();
         }
