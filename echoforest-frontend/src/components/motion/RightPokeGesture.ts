@@ -50,6 +50,20 @@ export default class RightPokeGesture extends BaseGesture {
         for (const hand of allHands) {
             if (!isFingerExtended(hand, 8, 6)) continue;
 
+            // [FIX] 엄지가 검지/중지 PIP(두번째 마디)와 가까워야 "콕" 모양
+            // 볼하트처럼 손가락이 쫙 펴진 상태면 차단
+            const thumbTip = hand[4];
+            const indexPIP = hand[6];   // 검지 두번째 마디
+            const middlePIP = hand[10]; // 중지 두번째 마디
+            const palmSize = distance(hand[0], hand[9]);
+
+            const thumbToIndexPIP = distance(thumbTip, indexPIP) / palmSize;
+            const thumbToMiddlePIP = distance(thumbTip, middlePIP) / palmSize;
+
+            // 엄지가 검지/중지 PIP 중 하나라도 가까워야 함 (0.8 이하)
+            const isPokeShape = thumbToIndexPIP < 0.8 || thumbToMiddlePIP < 0.8;
+            if (!isPokeShape) continue;
+
             const indexTip = hand[8];
             let minDist = Infinity;
             for (const idx of this.cheekPoints) {
