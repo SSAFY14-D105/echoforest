@@ -83,9 +83,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 플레이어 상태
     protected isDead: boolean = false;
 
-    // 저주 지속성 관리 (playerId -> curseId)
-    // drain 저주는 제외하고 매 세션(씬 재시작)마다 유지됩니다.
-    private static persistentCurses: Map<string, string> = new Map();
+
 
     // ===== Authoritative Server 모델용 =====
 
@@ -112,9 +110,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private isInitialPlacement: boolean = true;
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
-    public static resetPersistentCurses(): void {
-        BaseGameScene.persistentCurses.clear();
-    }
+
 
     // 서브클래스에서 구현해야 할 추상 메서드
     protected abstract getSceneKey(): string;
@@ -333,7 +329,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const myPlayer = this.players.get(this.myPlayerId);
             if (myPlayer && myPlayer.hasCurse()) {
                 myPlayer.removeCurse();
-                BaseGameScene.persistentCurses.delete(this.myPlayerId);
+                // BaseGameScene.persistentCurses.delete(this.myPlayerId);
                 // console.log(`[Curse] ✨ 저주 해제 완료: ${this.myPlayerId}`);
             }
         }
@@ -352,7 +348,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (myPlayer && !myPlayer.hasCurse()) {
                 const randomCurse = getRandomCurseId();
                 myPlayer.applyCurse(randomCurse);
-                BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
+                // BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
                 // console.log(`[Curse] 💀 저주 적용 완료: ${this.myPlayerId}, 저주: ${randomCurse}`);
             }
         }
@@ -1332,10 +1328,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             player.setOnDeathCallback(() => this.triggerDeath('curse'));
 
             // 저장된 저주가 있다면 복구 (drain 제외)
-            const savedCurseId = BaseGameScene.persistentCurses.get(storePlayer.nickname);
-            if (savedCurseId) {
-                // console.log(`[Curse] Restoring saved curse '${savedCurseId}' for ${storePlayer.nickname}`);
-                player.applyCurse(savedCurseId);
+            // [FIX] 저장된 저주 복구 로직 변경
+            // 기존: Local persistentCurses 사용 -> 삭제 (서버 권한 무시되는 문제)
+            // 변경: Store(Server) 상태를 신뢰하여 초기화
+            const serverCurses = (storePlayer as any).curses;
+            if (serverCurses && Array.isArray(serverCurses) && serverCurses.length > 0) {
+                // console.log(`[Curse] Init curse from server for ${storePlayer.nickname}: ${serverCurses}`);
+                // 마지막 저주 적용 (단순화)
+                player.applyCurse(serverCurses[serverCurses.length - 1]);
             }
 
             // nickname을 키로 저장 (서버와 일치)
@@ -1362,7 +1362,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
             player.destroy();
             this.players.delete(nickname);
-            BaseGameScene.persistentCurses.delete(nickname);
+            // BaseGameScene.persistentCurses.delete(nickname);
             // console.log(`[${this.getSceneKey()}] Player removed: ${nickname} `);
         }
     }
@@ -2237,7 +2237,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('ONE'))) {
             if (myPlayer && myPlayer.hasCurse()) {
                 myPlayer.removeCurse();
-                BaseGameScene.persistentCurses.delete(this.myPlayerId);
+                // BaseGameScene.persistentCurses.delete(this.myPlayerId);
             }
         }
 
@@ -2250,7 +2250,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                 // Persistence (except drain)
                 if (randomCurse !== 'drain') {
-                    BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
+                    // BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
                 }
             }
         }
@@ -2348,7 +2348,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             targetPlayer.applyCurse(curseId);
             // Persistence (except drain)
             if (curseId !== 'drain') {
-                BaseGameScene.persistentCurses.set(targetPlayer.id, curseId);
+                // BaseGameScene.persistentCurses.set(targetPlayer.id, curseId);
             }
         }
     }
@@ -2362,7 +2362,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             myPlayer.applyCurse(curseId);
             // Persistence (except drain)
             if (curseId !== 'drain') {
-                BaseGameScene.persistentCurses.set(this.myPlayerId, curseId);
+                // BaseGameScene.persistentCurses.set(this.myPlayerId, curseId);
             }
         }
     }
