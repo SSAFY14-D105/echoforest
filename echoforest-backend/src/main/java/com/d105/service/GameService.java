@@ -1,10 +1,12 @@
 package com.d105.service;
 
 import com.d105.dto.GameMessageDto;
+import com.d105.entity.User;
 import com.d105.game.GameRoom;
 import com.d105.game.PlayerState;
 import com.d105.manager.WebSocketSessionManager;
 import com.d105.repository.GameRepository;
+import com.d105.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class GameService {
 
     // 의존성 주입
     private final GameRepository gameRepository;
+    private final UserRepository userRepository;
     private final RedisRoomService redisRoomService;
     private final AiSentimentService aiSentimentService;
     private final ObjectMapper objectMapper;
@@ -774,11 +777,25 @@ public class GameService {
             GameMessageDto resetMsg = new GameMessageDto();
             resetMsg.setType("GAME_RESET");
             resetMsg.setRoomId(roomId);
+            // [FIX] 리셋을 유발한 유저 닉네임 조회 (프론트엔드 알림용)
+            String senderUsername = (String) session.getAttributes().get("username");
+            String displayNickname = senderUsername; // 기본값: ID
+
+            // DB에서 닉네임 조회 시도 (항상 수행)
+            if (senderUsername != null) {
+                User user = userRepository.findByUsername(senderUsername).orElse(null);
+                if (user != null) {
+                    displayNickname = user.getNickname();
+                }
+            }
+
+            // DTO의 username 필드에 닉네임을 담아서 전송
+            resetMsg.setUsername(displayNickname);
             resetMsg.setContent("reset");
             room.broadcast(resetMsg, null);
 
-            log.info("🔄 Room {}: Game Reset triggered by {}", roomId,
-                    (String) session.getAttributes().get("username"));
+            log.info("🔄 Room {}: Game Reset triggered by {} (Nickname: {})",
+                    roomId, senderUsername, displayNickname);
         }
     }
 
