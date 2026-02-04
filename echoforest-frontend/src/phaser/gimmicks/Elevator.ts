@@ -31,6 +31,8 @@ export class Elevator {
 
     private currentWeight: number = 0;
     private speed: number = 2;
+    // [NEW] Debounce timer for weight check
+    private lastSufficientWeightTime: number = 0;
 
     constructor(scene: Phaser.Scene, config: ElevatorConfig) {
         this.scene = scene;
@@ -89,9 +91,14 @@ export class Elevator {
             const coMOffsetX = this.body.position.x;
             const coMOffsetY = this.body.position.y;
 
+            // [FIX] Store Initial CoM Offset
+            this.coMOffsetX = this.body.position.x - this.x;
+            this.coMOffsetY = this.body.position.y - this.initialY;
+            // console.log(`Elevator ${this.id} CoM Offset: ${this.coMOffsetX}, ${this.coMOffsetY}`);
+
             this.scene.matter.body.setPosition(this.body, {
-                x: this.x + coMOffsetX,
-                y: this.initialY + coMOffsetY
+                x: this.x + this.coMOffsetX,
+                y: this.initialY + this.coMOffsetY
             });
 
             this.scene.matter.world.add(this.body);
@@ -128,7 +135,9 @@ export class Elevator {
     // 서버 동기화용 목표 위치
     private serverTarget: { x: number, y: number } | null = null;
 
-    public deltaY: number = 0;
+    // [NEW] Center of Mass Offsets
+    private coMOffsetX: number = 0;
+    private coMOffsetY: number = 0;
 
     /**
      * 엘리베이터 업데이트 루프
@@ -137,30 +146,33 @@ export class Elevator {
      */
     public update(weight: number, isHost: boolean = false): void {
         this.currentWeight = weight;
-        const currentPosY = this.body.position.y;
+        // [FIX] Use body position relative to visual position (subtract offset) to get "logical" Y
+        const currentPosY = this.body.position.y - this.coMOffsetY;
         let nextY = currentPosY;
 
         // [Client] 비-호스트는 무조건 서버 동기화 값만 따름 (로컬 예측 금지)
         if (!isHost) {
             if (this.serverTarget) {
-                // [Client] 서버에서 받은 위치로 동기화
-                const diff = Math.abs(currentPosY - this.serverTarget.y);
-
-                // [FIX] 위치 차이가 크면 즉시 보정 (Snap)하여 추락 방지
-                if (diff > 5) {
-                    nextY = this.serverTarget.y;
-                } else {
-                    // 작으면 부드럽게 추종 (반응 속도 상향: 0.15 -> 0.3)
-                    const lerpFactor = 0.3;
-                    nextY = Phaser.Math.Linear(currentPosY, this.serverTarget.y, lerpFactor);
-                }
+                // [Client] 서버에서 받은 위치로 보간 이동
+                // Snap 로직 제거 (항상 부드럽게 추종)
+                const lerpFactor = 0.5; // 반응성 좋게 유지
+                nextY = Phaser.Math.Linear(currentPosY, this.serverTarget.y, lerpFactor);
             }
         }
         else {
             // [Host] 직접 로직 오쏘리티 (인원에 따른 이동)
 
+            // [NEW] 인원 인식 Debounce (0.2초 유예 시간)
+            // 네트워크 렉으로 인해 순간적으로 인원이 0명으로 인식되더라도 즉시 추락하지 않도록 함
+            if (this.currentWeight >= this.requiredPlayers) {
+                this.lastSufficientWeightTime = this.scene.time.now;
+            }
+
+            // 최근 200ms 내에 인원이 충족된 적이 있다면 올라감
+            const isActive = (this.scene.time.now - this.lastSufficientWeightTime) < 200;
+
             // 목표 위치 결정
-            const finalTargetY = this.currentWeight >= this.requiredPlayers ? this.targetY : this.initialY;
+            const finalTargetY = isActive ? this.targetY : this.initialY;
 
             // 부드러운 위치 이동 (목표 지점을 지나치지 않도록 스냅 로직 적용)
             const distance = Math.abs(currentPosY - finalTargetY);
@@ -175,7 +187,8 @@ export class Elevator {
 
         // Apply Movement
         if (nextY !== currentPosY) {
-            this.scene.matter.body.setPosition(this.body, { x: this.x, y: nextY });
+            // [FIX] Apply CoM Offset when setting position
+            this.scene.matter.body.setPosition(this.body, { x: this.x + this.coMOffsetX, y: nextY + this.coMOffsetY });
         }
 
         // Calculate Delta for Sticky Logic
@@ -185,7 +198,8 @@ export class Elevator {
     }
 
     private updateVisuals(): void {
-        const y = this.body.position.y;
+        // [FIX] Visuals follow the "Logical" position (body position - offset)
+        const y = this.body.position.y - this.coMOffsetY;
 
         if (this.sprite) {
             this.sprite.setPosition(this.x, y);
@@ -214,7 +228,8 @@ export class Elevator {
     }
 
     public getPosition(): { x: number, y: number } {
-        return { x: this.body.position.x, y: this.body.position.y };
+        // Return LOGICAL position
+        return { x: this.body.position.x - this.coMOffsetX, y: this.body.position.y - this.coMOffsetY };
     }
 
     public destroy(): void {
@@ -239,8 +254,8 @@ export class Elevator {
      * 초기 상태로 리셋 (사망 시)
      */
     public reset(): void {
-        // 물리 바디 위치 강제 이동
-        this.scene.matter.body.setPosition(this.body, { x: this.x, y: this.initialY });
+        // 물리 바디 위치 강제 이동 [FIX] Apply Offset
+        this.scene.matter.body.setPosition(this.body, { x: this.x + this.coMOffsetX, y: this.initialY + this.coMOffsetY });
         this.currentWeight = 0;
         this.serverTarget = null;
         this.updateVisuals();

@@ -1388,6 +1388,19 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // [PHYSICS] 수동 업데이트
             // Delta 시간을 최대 50ms로 더 타이트하게 제한
             const clampedDelta = Math.min(delta, 50);
+
+            // [FIX] Update Elevators BEFORE Physics Step
+            // 엘리베이터 이동 -> 물리 엔진 계산 -> 렌더링 순서로 변경하여
+            // 물리 바디 이동 후 즉시 충돌 처리가 되도록 함 (1프레임 딜레이/떨림 방지)
+            const state = useGameStore.getState();
+            const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
+
+            this.elevators.forEach(elevator => {
+                // 무게 계산은 위쪽 루프(heavyLogicTimer)에서 미리 캐싱됨
+                const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
+                elevator.update(weight, amIHost);
+            });
+
             this.matter.world.step(clampedDelta);
         }
 
@@ -1432,15 +1445,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.heavyLogicTimer = 0;
         }
 
-        // [FIX] 호스트 권한 확인
-        const state = useGameStore.getState();
-        const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
 
-        // 엘리베이터 무게 적용 (매 프레임 호출하되, 계산된 캐시값 사용)
-        this.elevators.forEach(elevator => {
-            const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
-            elevator.update(weight, amIHost);
-        });
 
         // [FIX] Sticky Physics Implementation
         this.applyElevatorStickyPhysics();
@@ -1919,8 +1924,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private applyElevatorStickyPhysics(): void {
         this.elevators.forEach(elevator => {
             const dy = elevator.deltaY;
-            // 하강(dy > 0)하거나 상승(dy < 0)할 때 모두 적용 (특히 하강 시 중요)
-            if (Math.abs(dy) < 0.001) return;
+            // [Modified] 상승(dy < 0) 시에는 물리 엔진 충돌이 자연스럽게 밀어주므로 Sticky 로직 불필요
+            // 상승 시 Sticky를 적용하면 점프 시 바닥에 붙여버리는(Choppy) 부작용 발생
+            // 하강(dy > 0) 할 때만 적용하여 바닥에서 뜨는 것 방지
+            if (dy <= 0.001) return;
 
             const elevatorBounds = elevator.getBody().bounds;
             // 감지 영역: 엘리베이터 바로 위
@@ -1946,7 +1953,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     // 엘리베이터 이동량만큼 플레이어 강제 이동
                     const currentPos = player.getPosition();
                     player.setPosition(currentPos.x, currentPos.y + dy);
-                    // 가속도 초기화 방지 등을 위해 setPosition 사용 (Physics Velocity는 유지됨)
+
+                    // [FIX] 강제 이동 시 물리 엔진이 "바닥 떨어짐"으로 인식하여 점프 불가 상태가 되는 것을 방지
+                    // 엘리베이터 위에 붙어있으므로 강제로 grounded 상태 갱신
+                    this.groundedFrames.set(player.nickname, this.COYOTE_FRAMES);
                 }
             });
         });
