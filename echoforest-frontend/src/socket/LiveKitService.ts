@@ -254,7 +254,7 @@ export class LiveKitService {
 
     // LiveKit Room 연결 (토큰 직접 입력 - 테스트용)
     async connectWithToken(_roomName: string, token: string, _username: string = 'Guest'): Promise<void> {
-        this.disconnect();
+        this.disconnect(false); // [FIX] 재접속 정보 유지
         const myId = ++this.connectionOpId;
         // console.log(`[LiveKitService] 연결 시도 #${myId} - Room: ${_roomName}, User: ${_username}`);
 
@@ -593,12 +593,14 @@ export class LiveKitService {
         }, delay);
     }
 
-    // 연결 종료
-    disconnect() {
-        // [NEW] 명시적 종료 시 재접속 정보 초기화
-        this.lastRoomId = null;
-        this.lastUsername = null;
-        this.reconnectAttempts = 0;
+    // 레거시 호환성을 위해 파라미터 기본값 설정
+    disconnect(clearReconnectionInfo: boolean = true) {
+        // [FIX] 명시적 종료 시에만 재접속 정보 초기화 (connect 내부 호출 시에는 유지)
+        if (clearReconnectionInfo) {
+            this.lastRoomId = null;
+            this.lastUsername = null;
+            this.reconnectAttempts = 0;
+        }
 
         // this.stopSyncInterval(); // [FIX] 폴링 제거
         this.connectionOpId++; // 진행 중인 연결 시도 모두 무효화
