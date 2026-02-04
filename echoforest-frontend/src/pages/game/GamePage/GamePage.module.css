@@ -304,3 +304,59 @@
     background: #f0f0f0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* 리스폰 알림 (중앙 상단) */
+.respawnNotification {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    color: #ffeeb0;
+    /* 로그인/로비 버튼 노란색 */
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 20px;
+    /* 폰트 크기 키움 (가시성 확보) */
+    font-weight: bold;
+    font-family: 'MulmaruMono', monospace;
+    /* 폰트 변경 유지 */
+    z-index: 2000;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: slideDownFade 3s ease-in-out forwards;
+    border: none;
+    box-shadow: none;
+    text-shadow:
+        2px 2px 0px #000,
+        -1px -1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000,
+        1px 1px 0px #000;
+}
+
+@keyframes slideDownFade {
+    0% {
+        top: 20px;
+        opacity: 0;
+        transform: translateX(-50%) scale(0.9);
+    }
+
+    15% {
+        top: 40px;
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    85% {
+        top: 40px;
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    100% {
+        top: 30px;
+        opacity: 0;
+        transform: translateX(-50%) scale(0.95);
+    }
+}
