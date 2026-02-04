@@ -42,7 +42,7 @@ class AiServiceIntegrationTest {
         // 여기서는 "AI 요청이 성공적으로 전송되는지"까지만 확인하기 위해
         // 서비스 내부 로직 에러(유저 없음 등)는 발생할 수 있음을 감안합니다.
         try {
-            aiGenerationService.generateAndSaveImage(mockImages, roomId, userId);
+            aiGenerationService.generateAndSaveImage(mockImages, roomId, userId, 1);
         } catch (Exception e) {
             // "User not found" 에러는 AI 통신 성공 이후 로직이므로 통신 자체는 성공했다고 판단 가능
             // 하지만 "AI API Error"나 "Connection refused"가 뜨면 실패임
