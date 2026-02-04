@@ -59,4 +59,11 @@ public class GameRepository {
     public int getActiveRoomCount() {
         return rooms.size();
     }
+
+    /**
+     * 모든 방 조회 (Zombie Check용)
+     */
+    public java.util.Collection<GameRoom> getAllRooms() {
+        return rooms.values();
+    }
 }
