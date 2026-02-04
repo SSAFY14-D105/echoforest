@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.io.IOException;
 
 import java.util.List;
@@ -36,6 +39,21 @@ public class GameService {
     // 가상 스레드 실행기 (각 GameRoom의 Tick Loop를 돌리기 위함)
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
+    // Metrics
+    private final MeterRegistry meterRegistry;
+    private Counter roomCreatedCounter;
+
+    @jakarta.annotation.PostConstruct
+    public void initMetrics() {
+        // 1. 방 생성 누적 카운터
+        this.roomCreatedCounter = Counter.builder("livekit.rooms.created")
+                .description("Total number of created game rooms")
+                .register(meterRegistry);
+
+        // 2. 활성 방 개수 게이지 (GameRepository 상태 실시간 반영)
+        meterRegistry.gauge("livekit.rooms.active", gameRepository, GameRepository::getActiveRoomCount);
+    }
+
     /**
      * 방 생성 (CREATE)
      */
@@ -57,6 +75,12 @@ public class GameService {
 
         // 5. 방 생성 완료 알림 (방 코드 전송)
         sendSystemMessage(session, "ROOM_CREATED", roomId);
+
+        // [Metric] 방 생성 카운트 증가
+        if (roomCreatedCounter != null) {
+            roomCreatedCounter.increment();
+        }
+
         log.info("Created GameRoom: {} by host: {}", roomId, username);
     }
 
@@ -390,7 +414,7 @@ public class GameService {
         if (room != null) {
             // [FIX] 게임 시작 시 저주 상태 초기화 (이전 게임의 저주 상태 제거)
             room.resetCurseState();
-            
+
             GameMessageDto startMsg = new GameMessageDto();
             startMsg.setType("GAME_START");
             startMsg.setRoomId(roomId);
@@ -830,7 +854,7 @@ public class GameService {
         String roomId = (String) session.getAttributes().get("roomId");
         String username = (String) session.getAttributes().get("username");
         String playerId = message.getPlayerId(); // 저주 대상 (본인)
-        String curseId = message.getCurseId();   // 저주 종류
+        String curseId = message.getCurseId(); // 저주 종류
 
         if (roomId == null || playerId == null)
             return;
