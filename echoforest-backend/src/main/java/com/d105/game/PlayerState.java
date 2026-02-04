@@ -91,6 +91,8 @@ public class PlayerState {
 
     public void clearCurses() {
         activeCurses.clear();
+        // [FIX] 시각적 저주 상태도 함께 초기화해야 클라이언트에서 저주 효과가 사라짐
+        this.visibleCurses.clear();
     }
 
     // Client-Reported Visual Curses (for broadcasting to others)
