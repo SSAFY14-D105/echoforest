@@ -1525,6 +1525,28 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
 
+        // 6. 엘리베이터 위치 동기화 (Host -> Server)
+        // 호스트만 보냄 (30ms 간격)
+        // [FIX] 호스트 권한으로 엘리베이터 위치 강제 동기화
+        const amIHost = this.myPlayerId && useGameStore.getState().host === this.myPlayerId;
+        if (amIHost && this.elevators.length > 0) {
+            const currentTime = this.time.now;
+            if (currentTime - this.lastGimmickUpdateTime > 30) {
+                const elevatorData = this.elevators.map(e => ({
+                    id: e.id,
+                    x: e.getPosition().x,
+                    y: e.getPosition().y
+                }));
+                // [OPTIMIZATION] 움직이지 않는 엘리베이터는 보낼 필요 없으나, 
+                // 플레이어가 탑승하거나 미세한 움직임이 있을 수 있으므로 일단 전체 전송 (데이터 양 적음)
+                const roomId = this.roomId || useGameStore.getState().roomId;
+                if (roomId) {
+                    gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
+                }
+                this.lastGimmickUpdateTime = currentTime;
+            }
+        }
+
         this.updateCamera();
         this.handleLocalPlayerInput();
         // [REMOVED] 개별 카메라 모드에서는 플레이어가 카메라 밖으로 나갈 수 있어야 함
