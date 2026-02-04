@@ -276,11 +276,11 @@ export default function StagePlayView({
                 // [FIX] 로딩 화면이 떠있다면 강제로 닫기 (죽었을 때 로딩화면 뜨는 문제 해결)
                 setIsLoading(false);
 
-                const players = useGameStore.getState().players;
-                const player = players.find(p => p.id === message.username || p.nickname === message.username);
-                const nickname = player ? player.nickname : message.username;
+                // const players = useGameStore.getState().players;
+                // const player = players.find(p => p.id === message.username || p.nickname === message.username);
+                // const nickname = player ? player.nickname : message.username;
 
-                setRespawnMessage(`${nickname}님이 미아가 되었습니다`);
+                setRespawnMessage(`난쟁이가 미아가 되었습니다`);
 
                 // 3초 후 제거 (애니메이션 시간과 맞춤)
                 setTimeout(() => {
