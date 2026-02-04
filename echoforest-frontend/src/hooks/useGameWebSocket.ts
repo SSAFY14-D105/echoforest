@@ -235,6 +235,10 @@ export function useGameWebSocket() {
 
                 case 'ERROR':
                     console.error(`🎮 [Game] ❌ 에러: ${msg.content}`);
+                    if (msg.content && msg.content.includes('Room not found')) {
+                        // alert('이미 종료된 방이거나 존재하지 않는 방입니다.'); // 사용자 요청으로 알림 제거
+                        leaveGame();
+                    }
                     break;
 
                 // === STT 저주 시스템 (✅[STT] 로그) ===
@@ -266,7 +270,13 @@ export function useGameWebSocket() {
 
         if (!gameWebSocket.isConnected()) {
             gameWebSocket.setUser(nickname);
-            gameWebSocket.connect().catch(err => {
+            gameWebSocket.connect().then(() => {
+                // [NEW] 리프레시 등으로 인한 재연결 시, 이미 방 정보가 있다면 JOIN 요청
+                if (roomId) {
+                    console.log('[useGameWebSocket] Re-joining room:', roomId);
+                    gameWebSocket.joinRoom(roomId);
+                }
+            }).catch(err => {
                 console.error('WebSocket 재연결 실패:', err);
             });
         }

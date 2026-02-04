@@ -14,7 +14,6 @@ export default function LobbyPage() {
     nickname,
     roomId,
     joinGame,
-    leaveGame
   } = useGameStore();
 
   const navigate = useNavigate();
@@ -23,13 +22,13 @@ export default function LobbyPage() {
   // [NEW] URL 쿼리 파라미터로 모달 상태 제어
   const showSettings = searchParams.get('settings') === 'true';
 
-  // [NEW] 뒤로가기로 로비 진입 시 게임 상태 정리
+  // [FIX] roomId가 있으면 게임 페이지로 리다이렉트 (새로고침으로 세션 복구된 경우)
+  // 의도적으로 로비에 온 경우(뒤로가기 등)는 roomId가 없음
   useEffect(() => {
     if (roomId) {
-      leaveGame();
-      gameWebSocket.disconnect();
+      navigate('/game', { replace: true });
     }
-  }, []);
+  }, [roomId, navigate]);
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinError, setJoinError] = useState('');
