@@ -25,6 +25,7 @@ export interface Player {
 interface GameState {
     nickname: string;
     roomId: string;
+    host: string | null; // [FIX] 호스트 여부 확인용
     isHost: boolean;
     players: Player[];
     readyPlayers: string[];  // Ready 상태인 플레이어 닉네임 목록
@@ -131,6 +132,7 @@ const initialSession = getInitialSessionState();
 export const useGameStore = create<GameState>((set, get) => ({
     nickname: localStorage.getItem('nickname') || '',
     roomId: initialSession?.roomId || '',
+    host: null, // [FIX] 초기값 null
     isHost: initialSession?.isHost || false,
     players: initialSession?.players || [],
     readyPlayers: [],  // Ready 상태인 플레이어 닉네임 목록

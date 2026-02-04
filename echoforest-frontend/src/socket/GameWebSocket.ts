@@ -59,6 +59,7 @@ export type MessageType =
     // 아이템 동기화
     | 'ITEM_COLLECTED' // Client->Server: 아이템 획득 (content: itemId)
     | 'ITEM_REMOVED'   // Server->All: 아이템 제거 알림 (content: itemId)
+    | 'ITEM_SYNC'      // Server->Client: 초기 아이템 동기화 (content: itemId[])
     // 엔딩 미션 (서버 동기화)
     | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
     | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
