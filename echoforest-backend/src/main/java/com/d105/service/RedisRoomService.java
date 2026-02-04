@@ -410,7 +410,7 @@ public class RedisRoomService {
      *
      * @param roomId
      */
-    private void saveRoomStatsToDB(String roomId) {
+    public void saveRoomStatsToDB(String roomId) {
         try {
             // 1. 방에 기록된 모든 플레이어 조회 (이미 나간 유저도 통계가 남아있을 수 있으므로 KISS/CURSE 키 기준 조회 권장하나,
             // 현재 구조상 플레이어 목록(Set)에 있는 사람 혹은 통계 키를 순회해야 함.
