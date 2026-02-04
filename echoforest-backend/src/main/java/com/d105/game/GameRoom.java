@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class GameRoom implements Runnable {
 
     // Constants
-    private static final long RECONNECT_TIMEOUT_MS = 3 * 60 * 1000; // 3분
+    // Reconnect timeout removed
 
     // Managers
     private final RoomSessionManager sessionManager;
@@ -158,16 +158,17 @@ public class GameRoom implements Runnable {
             return;
         }
 
-        // 일반 유저: Soft Disconnect
-        log.info("Player {} disconnected (waiting reconnect).", p.getUsername());
-        p.setDisconnected(true);
-        p.setDisconnectTime(System.currentTimeMillis());
-        sessionManager.removeSession(sessionId); // 맵에서만 제거 (PlayerState는 유지 필요? -> RoomSessionManager 구조상 분리가 까다로움)
-        // [FIX] RoomSessionManager에서 removeSession은 players에서도 제거함.
-        // 재접속 지원을 위해서는 players에는 남겨둬야 함.
-        // RoomSessionManager를 수정하거나, 여기서 로직을 조정해야 함.
-        // 현재 RoomSessionManager.removeSession은 sessions 만 제거하고 players는 두는 것으로 가정.
-        // (실제 코드 확인 필요 -> 위에서 sessions.remove, players 언급 주석 있음)
+        // 일반 유저: 즉시 퇴장 처리 (No Reconnect)
+        log.info("Player {} left (Immediate Removal).", p.getUsername());
+
+        // 세션 및 플레이어 정보 완전 제거 (슬롯도 해제됨)
+        sessionManager.removeSessionAndPlayer(sessionId);
+
+        // 슬롯 명시적 해제 (removeSessionAndPlayer가 Map만 지운다면 슬롯도 지워야 함)
+        // RoomSessionManager.removeSessionAndPlayer는 Map만 지우므로 슬롯 정리는 별도 필요할 수 있으나
+        // RoomSessionManager 확인 결과 slots 관리는 addSession/assignSlot에서 하고
+        // clearSlot 메서드가 있음. removeSessionAndPlayer 코드에는 clearSlot 호출이 없었으므로 여기서 호출.
+        sessionManager.clearSlot(sessionId);
 
         // 플레이어가 0명이 되면 빈 방 타이머 기록
         if (sessionManager.getPlayerCount() == 0) {
@@ -175,7 +176,8 @@ public class GameRoom implements Runnable {
             log.info("Room {} is now empty. TTL timer started.", roomId);
         }
 
-        broadcastSystemMessage("PLAYER_DISCONNECTED", p.getUsername(), null);
+        // PLAYER_LEFT 메시지로 즉시 퇴장 알림
+        broadcastSystemMessage("PLAYER_LEFT", p.getUsername(), null);
 
         // [FIX] 나간 플레이어가 일시정지 유발자였다면 목록에서 제거 및 게임 재개 체크
         if (pausedPlayers.contains(p.getUsername())) {
@@ -191,8 +193,9 @@ public class GameRoom implements Runnable {
 
         WebSocketSession session = sessionManager.getSession(sessionId);
 
-        // Remove from manager
-        sessionManager.removeSession(sessionId);
+        // Remove from manager immediately
+        sessionManager.removeSessionAndPlayer(sessionId);
+        sessionManager.clearSlot(sessionId);
 
         if (session != null && session.isOpen()) {
             try {
@@ -265,26 +268,8 @@ public class GameRoom implements Runnable {
             // AFK Check
             p.checkAfkStatus();
 
-            // Timeout Check
-            if (p.isDisconnected()) {
-                if (now - p.getDisconnectTime() > RECONNECT_TIMEOUT_MS) {
-                    it.remove(); // 진짜 퇴장
-                    sessionManager.clearSlot(entry.getKey());
-                    broadcastSystemMessage("PLAYER_LEFT", p.getUsername(), "Timeout");
-                }
-            } else if (p.shouldDisconnect()) {
-                // Soft Disconnect Logic (timeout while connected)
-                p.setDisconnected(true);
-                p.setDisconnectTime(now);
-                WebSocketSession s = sessionManager.getSession(entry.getKey());
-                if (s != null)
-                    try {
-                        s.close();
-                    } catch (Exception e) {
-                    }
-                sessionManager.removeSession(entry.getKey());
-                broadcastSystemMessage("PLAYER_DISCONNECTED", p.getUsername(), "Inactivity");
-            }
+            // Reconnect Timeout Check 제거됨 (즉시 퇴장하므로)
+            // if (p.isDisconnected()) { ... } 로직 제거
 
             // Physics (Optional based on requirements, currenly Client-Authoritative
             // mostly)
@@ -442,7 +427,15 @@ public class GameRoom implements Runnable {
      * 저주 상태 전체 초기화 (게임 시작 / 스테이지 변경 시)
      */
     public void resetCurseState() {
+        // 1. 매니저(전역 스택/큐) 초기화
         curseManager.resetAll();
+
+        // 2. [FIX] 모든 플레이어의 개인 저주 상태 제거
+        for (PlayerState p : sessionManager.getPlayers().values()) {
+            p.clearCurses();
+            // p.setVisibleCurses(null); // 클라이언트 동기화를 위해 필요할 수도 있음 (보통 다음 업데이트 때 처리됨)
+        }
+        log.info("🧹 Room {}: Curse state fully reset (Manager + Players)", roomId);
     }
 
     public void addTeamCurseStack(int delta) {
