@@ -83,8 +83,17 @@ export default class FlowerPoseGesture extends BaseGesture {
 
             if (minToJaw < this.thresholds.distance) {
                 // 3. 모양 체크 (손이 펴져 있어야 함, 주먹이면 안됨)
-                // [FIX] 2개 이상의 손가락이 펴져 있으면 인정 (3개 → 2개로 완화)
+                // [FIX] 2개 이상의 손가락이 펴져 있어야 함
                 if (extendedCount >= 2) {
+
+                    // [FIX] 볼하트 오인식 방지: 엄지와 검지가 가까우면(C모양/집게모양) 꽃받침 아님
+                    // 꽃받침은 손바닥을 펴서 턱을 받치는 자세이므로 엄지-검지가 멀어야 함
+                    const thumbIndexDist = distance(hand[4], hand[8]) / faceSize;
+                    if (thumbIndexDist < 0.3) {
+                        // C모양이면 꽃받침 점수 인정 안 함
+                        continue;
+                    }
+
                     detectedHands++;
                     // 거리가 가까울수록 점수 높음
                     const score = Math.max(0.2, 1.0 - (minToJaw / this.thresholds.distance));

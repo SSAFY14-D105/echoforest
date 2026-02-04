@@ -19,8 +19,15 @@ export default class CheekHeartGesture extends BaseGesture {
         };
 
         // 볼/광대 근처 좌표
-        this.leftCheekZone = [280, 425, 361, 288, 323, 376];
-        this.rightCheekZone = [50, 205, 132, 58, 93, 147];
+        // 볼/광대 근처 좌표 (광대 + 볼 중앙 + 하관 + 턱 라인까지 빽빽하게 채움)
+        this.leftCheekZone = [
+            280, 425, 361, 288, 323, 376, 411, 264, 347, 330,
+            435, 367, 364, 397, 379, 365, 400, 377, 454, 356, 389, 251
+        ];
+        this.rightCheekZone = [
+            50, 205, 132, 58, 93, 147, 187, 34, 118, 101,
+            215, 138, 135, 172, 150, 136, 176, 148, 234, 127, 162, 21
+        ];
 
         // 턱 라인 좌표 (엄지용)
         this.leftJawZone = [365, 379, 378, 400];
@@ -71,10 +78,9 @@ export default class CheekHeartGesture extends BaseGesture {
                 let lAvgScore = 0;
                 let rAvgScore = 0;
 
-                // [FIX] OK 제스처 오인식 방지
-                // 엄지와 검지가 붙어있으면(OK 모양) 볼하트가 아님 (볼하트는 엄지-검지가 벌어져서 하트 반쪽을 만듦)
-                const thumbIndexDist = distance(hand[4], hand[8]) / (metadata.palmSize || 1);
-                if (thumbIndexDist < 0.15) continue;
+                // [REMOVED] OK 제스처 오인식 방지 로직 제거 (사용자 요청: 인식이 너무 안 돼서 삭제)
+                // const thumbIndexDist = distance(hand[4], hand[8]) / (metadata.palmSize || 1);
+                // if (thumbIndexDist < 0.05) continue;
 
                 for (const tipIdx of fingers) {
                     const tip = hand[tipIdx];
@@ -88,24 +94,24 @@ export default class CheekHeartGesture extends BaseGesture {
                 const lThumbScore = this._checkProximity(hand[4], faceLandmarks, this.leftJawZone, faceSize);
                 const rThumbScore = this._checkProximity(hand[4], faceLandmarks, this.rightJawZone, faceSize);
 
-                if (lCheekTouchCount >= 2 && lThumbScore > 0) {
+                if (lCheekTouchCount >= 1 && lThumbScore > 0) {
                     const finalScore = (lAvgScore / lCheekTouchCount + lThumbScore) / 2;
                     if (finalScore > (result.left?.score || 0)) {
                         result.left = { detected: true, score: finalScore, label: '왼쪽 볼하트! 🫶', emoji: '🫶' };
                     }
-                } else if (lCheekTouchCount >= 3) {
+                } else if (lCheekTouchCount >= 2) {
                     const finalScore = lAvgScore / lCheekTouchCount;
                     if (finalScore > (result.left?.score || 0)) {
                         result.left = { detected: true, score: finalScore, label: '왼쪽 볼하트! 🫶', emoji: '🫶' };
                     }
                 }
 
-                if (rCheekTouchCount >= 2 && rThumbScore > 0) {
+                if (rCheekTouchCount >= 1 && rThumbScore > 0) {
                     const finalScore = (rAvgScore / rCheekTouchCount + rThumbScore) / 2;
                     if (finalScore > (result.right?.score || 0)) {
                         result.right = { detected: true, score: finalScore, label: '오른쪽 볼하트! 🫶', emoji: '🫶' };
                     }
-                } else if (rCheekTouchCount >= 3) {
+                } else if (rCheekTouchCount >= 2) {
                     const finalScore = rAvgScore / rCheekTouchCount;
                     if (finalScore > (result.right?.score || 0)) {
                         result.right = { detected: true, score: finalScore, label: '오른쪽 볼하트! 🫶', emoji: '🫶' };
