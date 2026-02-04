@@ -403,6 +403,13 @@ public class GameRoom implements Runnable {
         return curseManager.isCurseQueueEmpty();
     }
 
+    /**
+     * 저주 상태 전체 초기화 (게임 시작 / 스테이지 변경 시)
+     */
+    public void resetCurseState() {
+        curseManager.resetAll();
+    }
+
     public void addTeamCurseStack(int delta) {
         if (curseManager.addTeamCurseStack(delta)) {
             String victim = curseManager.triggerRandomCurse(sessionManager.getPlayers());
@@ -697,8 +704,8 @@ public class GameRoom implements Runnable {
             // p.setX(0); p.setY(0);
         });
 
-        // 3. 기믹/저주 상태 리셋
-        curseManager.resetCurseStack();
+        // 3. 기믹/저주 상태 리셋 (스택 + 저주 큐 모두 초기화)
+        curseManager.resetAll();
 
         // 4. 전환 메시지 브로드캐스트 (클라이언트가 씬을 바꾸도록)
         GameMessageDto msg = new GameMessageDto();

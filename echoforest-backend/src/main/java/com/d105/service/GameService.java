@@ -371,6 +371,9 @@ public class GameService {
         // 게임 시작 브로드캐스트
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
+            // [FIX] 게임 시작 시 저주 상태 초기화 (이전 게임의 저주 상태 제거)
+            room.resetCurseState();
+            
             GameMessageDto startMsg = new GameMessageDto();
             startMsg.setType("GAME_START");
             startMsg.setRoomId(roomId);
