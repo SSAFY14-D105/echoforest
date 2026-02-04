@@ -542,6 +542,9 @@ public class GameService {
         // 모든 플레이어에게 브로드캐스트
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
+            // [FIX] 스테이지 변경 시 저주 상태 초기화
+            room.resetCurseState();
+
             GameMessageDto stageMsg = new GameMessageDto();
             stageMsg.setType("STAGE_CHANGE");
             stageMsg.setRoomId(roomId);
