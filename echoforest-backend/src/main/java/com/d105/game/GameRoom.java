@@ -518,6 +518,32 @@ public class GameRoom implements Runnable {
         return sessionManager.getPlayer(key).getUsername();
     }
 
+    /**
+     * 저주 안 걸린 플레이어 중에서 랜덤 선택
+     * 모든 플레이어가 저주 걸려있으면 null 반환
+     */
+    public String getRandomNonCursedPlayerUsername() {
+        List<PlayerState> allPlayers = new ArrayList<>(sessionManager.getPlayers().values());
+        if (allPlayers.isEmpty()) {
+            return null;
+        }
+
+        // 저주 안 걸린 플레이어만 필터링
+        List<PlayerState> nonCursedPlayers = allPlayers.stream()
+                .filter(p -> !curseManager.isPlayerCursed(p.getUsername()))
+                .filter(p -> !p.isDisconnected()) // 연결 끊긴 플레이어 제외
+                .toList();
+
+        if (nonCursedPlayers.isEmpty()) {
+            log.warn("모든 플레이어가 이미 저주 상태입니다. (Room: {})", roomId);
+            return null;
+        }
+
+        // 랜덤 선택
+        PlayerState selected = nonCursedPlayers.get(new Random().nextInt(nonCursedPlayers.size()));
+        return selected.getUsername();
+    }
+
     public void setCurrentMapId(int id) {
         this.currentMapId = id;
     }

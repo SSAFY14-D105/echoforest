@@ -612,21 +612,23 @@ public class GameService {
     /**
      * 저주 발동 처리 (큐 시스템)
      *
-     * 1. 랜덤 플레이어 선택
+     * 1. 저주 안 걸린 플레이어 중에서 랜덤 선택
      * 2. 저주 큐에 추가
      * 3. 저주 효과 적용
      * 4. 스택 초기화 (다음 저주를 위해)
      * 5. CURSE_TRIGGERED 브로드캐스트
      */
     private void triggerCurse(GameRoom room) {
-        // 랜덤 플레이어 선택
-        String cursedUsername = room.getRandomPlayerUsername();
+        // ✅ 저주 안 걸린 플레이어 중에서 랜덤 선택
+        String cursedUsername = room.getRandomNonCursedPlayerUsername();
         if (cursedUsername == null) {
-            log.warn("저주 발동 실패: 플레이어 없음");
+            log.warn("저주 발동 실패: 저주 가능한 플레이어 없음 (모두 저주 상태이거나 플레이어 없음)");
+            // 스택은 초기화 (다음 기회를 위해)
+            room.resetCurseStack();
             return;
         }
 
-        // 저주 큐에 추가 (중복 체크는 CurseManager에서 처리)
+        // 저주 큐에 추가
         room.addToCurseQueue(cursedUsername);
 
         // 저주 효과 적용
@@ -790,6 +792,58 @@ public class GameService {
 
             log.info("🍄 Room {}: Item {} collected by {}", roomId, itemId, username);
         }
+    }
+
+    /**
+     * 독버섯 저주 처리 (MUSHROOM_CURSE)
+     * 
+     * 독버섯을 먹은 플레이어에게 저주를 적용하고,
+     * 긍정어로 해제 가능하도록 저주 큐에 추가합니다.
+     * 
+     * [로직]
+     * 1. 클라이언트에서 보낸 playerId (저주 대상) 수신
+     * 2. 이미 저주 큐에 있으면 무시 (중복 방지)
+     * 3. 저주 큐에 추가
+     * 4. CURSE_TRIGGERED 브로드캐스트 (모든 클라이언트 동기화)
+     */
+    public void handleMushroomCurse(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+        String playerId = message.getPlayerId(); // 저주 대상 (본인)
+        String curseId = message.getCurseId();   // 저주 종류
+
+        if (roomId == null || playerId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room == null)
+            return;
+
+        // 이미 저주 큐에 있으면 무시 (중복 저주 방지)
+        if (room.isPlayerCursed(playerId)) {
+            log.warn("🍄 Room {}: {} 는 이미 저주 상태 (독버섯 저주 무시)", roomId, playerId);
+            return;
+        }
+
+        // 저주 큐에 추가 (긍정어로 해제 가능하게)
+        room.addToCurseQueue(playerId);
+
+        // 저주 효과 적용 (세션 ID로 이벤트 발생)
+        String sessionId = room.findSessionIdByUsername(playerId);
+        if (sessionId != null) {
+            room.triggerCurseEvent(sessionId, false); // isPositive = false
+        }
+
+        // CURSE_TRIGGERED 브로드캐스트 (모든 클라이언트에게 동기화)
+        GameMessageDto curseMsg = new GameMessageDto();
+        curseMsg.setType("CURSE_TRIGGERED");
+        curseMsg.setRoomId(roomId);
+        curseMsg.setCursedPlayerId(playerId);
+        curseMsg.setMapId(room.getCurrentMapId());
+        room.broadcast(curseMsg, null);
+
+        log.info("🍄💀 Room {}: 독버섯으로 {} 에게 저주 발동! (저주: {}, 발동자: {})",
+                roomId, playerId, curseId, username);
     }
 
     /**

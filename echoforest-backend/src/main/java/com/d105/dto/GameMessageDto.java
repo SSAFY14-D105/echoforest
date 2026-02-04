@@ -88,4 +88,11 @@ public class GameMessageDto {
 
     @Schema(description = "아이템 ID (Mushroom 등)", example = "1")
     private String itemId; // [NEW] 아이템 동기화용
+
+    // ===== 독버섯 저주용 필드 =====
+    @Schema(description = "MUSHROOM_CURSE: 저주 대상 플레이어 ID")
+    private String playerId;
+
+    @Schema(description = "MUSHROOM_CURSE: 저주 종류 (giant/drain/reverse)", example = "giant")
+    private String curseId;
 }
