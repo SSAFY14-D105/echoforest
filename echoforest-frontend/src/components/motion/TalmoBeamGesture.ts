@@ -28,7 +28,7 @@ export default class TalmoBeamGesture extends BaseGesture {
         const isLShape = (hand: any[]) => {
             const palm = distance(hand[0], hand[9]);
             const thumbExt = isFingerExtended(hand, 4, 3) &&
-                (distance(hand[4], hand[5]) / palm > 0.5 || distance(hand[4], hand[0]) / palm > 1.2);
+                (distance(hand[4], hand[5]) / palm > 0.3 || distance(hand[4], hand[0]) / palm > 0.8);
             const indexExt = isFingerExtended(hand, 8, 7);
 
             // [중요] 중지, 약지, 새끼는 반드시 접혀 있어야 함

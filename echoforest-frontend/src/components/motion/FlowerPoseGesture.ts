@@ -102,16 +102,12 @@ export default class FlowerPoseGesture extends BaseGesture {
             // });
         }
 
-        if (detectedHands > 0) {
+        // [FIX] 양손 필수로 변경 - 한손 꽃받침은 인식 안 함
+        if (detectedHands >= 2) {
             // [FIX] 점수 계산 개선
             let finalScore = totalScore / detectedHands;
-            if (detectedHands >= 2) {
-                // 양손이면 점수 가산 (보너스 증가)
-                finalScore = Math.min(0.99, finalScore + 0.3);
-            } else {
-                // [FIX] 한손 꽃받침도 충분히 높은 점수 (0.9 → 0.95)
-                finalScore = Math.min(0.95, finalScore + 0.1);
-            }
+            // 양손이면 점수 가산
+            finalScore = Math.min(0.99, finalScore + 0.3);
 
             // console.log(`[FlowerPoseGesture] ✅ Detected! hands=${detectedHands}, score=${finalScore.toFixed(2)}`);
 

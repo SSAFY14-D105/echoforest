@@ -36,7 +36,10 @@ export default class BigHeartGesture extends BaseGesture {
         // 3. 높이 체크 (손이 이마보다 위에 있는지)
         const isAbove = (hand1[12].y < forehead.y * 1.2) && (hand2[12].y < forehead.y * 1.2);
 
-        if (!isAbove) return { detected: false, score: 0 };
+        // 4. 검지 끝(8번)이 이마(10번)보다 높아야 함 (BigHeart와 일반 Heart 구분)
+        const isIndexAboveForehead = (hand1[8].y < forehead.y) && (hand2[8].y < forehead.y);
+
+        if (!isAbove || !isIndexAboveForehead) return { detected: false, score: 0 };
 
         // **판별 핵심: 삼각형 구조**
         // 손목이 손끝보다 이마에서 훨씬 멀어야 함 (팔을 벌림)
