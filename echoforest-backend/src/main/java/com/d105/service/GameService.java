@@ -77,6 +77,14 @@ public class GameService {
         GameRoom room = gameRepository.getRoom(roomId);
         if (room == null) {
             room = new GameRoom(roomId, objectMapper, null);
+
+            // [FIX] Redis에 저장된 진행 상황 복구
+            int savedStage = redisRoomService.getCurrentStage(roomId);
+            if (savedStage > 0) {
+                room.setCurrentMapId(savedStage);
+                log.info("Restored Room {} stage to {}", roomId, savedStage);
+            }
+
             gameRepository.addRoom(roomId, room);
             executor.submit(room);
         }
@@ -533,8 +541,14 @@ public class GameService {
 
     /**
      * 저주 해제 요청 처리 (CURSE_RELEASE)
-     * 
+     *
      * 긍정어(뽀뽀/사랑해/좋아해)로 저주 해제 시도
+     *
+     * [로직]
+     * 1. 발화자가 저주 걸려있으면 해제 불가 (본인 저주는 풀 수 없음)
+     * 2. 저주 큐에서 FIFO로 첫 번째 플레이어 선택
+     * 3. 선택된 플레이어의 저주 효과 제거
+     * 4. CURSE_RELEASED 브로드캐스트
      */
     public void handleCurseRelease(WebSocketSession session, GameMessageDto message) {
         String roomId = (String) session.getAttributes().get("roomId");
@@ -554,29 +568,55 @@ public class GameService {
         String word = message.getWord();
         log.info("💖 Room {}: CURSE_RELEASE from {} with word '{}'", roomId, username, word);
 
-        // 발화자의 저주 해제 처리
-        String sessionId = room.findSessionIdByUsername(username);
-        if (sessionId != null) {
-            room.triggerCurseEvent(sessionId, true); // isPositive = true
-
-            // [NEW] 뽀뽀 횟수(긍정적인 말) 증가
-            redisRoomService.incrementKiss(roomId, username);
-            log.info("😘 User {} incremented Kiss Count", username);
-
-            // CURSE_RELEASED 브로드캐스트
-            GameMessageDto releaseMsg = new GameMessageDto();
-            releaseMsg.setType("CURSE_RELEASED");
-            releaseMsg.setRoomId(roomId);
-            releaseMsg.setReleasedPlayerId(username);
-            releaseMsg.setWord(word);
-            room.broadcast(releaseMsg, null);
-
-            log.info("✨ Room {}: {} 의 저주 해제됨 (긍정어: {})", roomId, username, word);
+        // 1. 발화자가 저주 걸려있는지 확인
+        if (room.isPlayerCursed(username)) {
+            log.warn("🚫 Room {}: {} 는 저주 상태라 다른 사람의 저주를 풀 수 없음", roomId, username);
+            // 클라이언트에서 이미 처리하지만, 안전장치로 서버에서도 체크
+            return;
         }
+
+        // 2. 저주 큐가 비어있으면 해제할 대상이 없음
+        if (room.isCurseQueueEmpty()) {
+            log.info("ℹ️ Room {}: 저주 큐가 비어있음 (해제할 대상 없음)", roomId);
+            return;
+        }
+
+        // 3. 저주 큐에서 FIFO로 첫 번째 플레이어 선택
+        String releasedUsername = room.releaseFromCurseQueue();
+        if (releasedUsername == null) {
+            log.warn("⚠️ Room {}: 저주 큐에서 플레이어 가져오기 실패", roomId);
+            return;
+        }
+
+        // 4. 선택된 플레이어의 저주 효과 제거
+        String releasedSessionId = room.findSessionIdByUsername(releasedUsername);
+        if (releasedSessionId != null) {
+            room.triggerCurseEvent(releasedSessionId, true); // isPositive = true
+        }
+
+        // 5. 뽀뽀 횟수(긍정적인 말) 증가
+        redisRoomService.incrementKiss(roomId, username);
+        log.info("😘 User {} incremented Kiss Count", username);
+
+        // 6. CURSE_RELEASED 브로드캐스트
+        GameMessageDto releaseMsg = new GameMessageDto();
+        releaseMsg.setType("CURSE_RELEASED");
+        releaseMsg.setRoomId(roomId);
+        releaseMsg.setReleasedPlayerId(releasedUsername); // ✅ 해제된 플레이어 (FIFO)
+        releaseMsg.setWord(word);
+        room.broadcast(releaseMsg, null);
+
+        log.info("✨ Room {}: {} 의 저주 해제됨 (긍정어: '{}', 발화자: {})", roomId, releasedUsername, word, username);
     }
 
     /**
-     * 저주 발동 처리
+     * 저주 발동 처리 (큐 시스템)
+     *
+     * 1. 랜덤 플레이어 선택
+     * 2. 저주 큐에 추가
+     * 3. 저주 효과 적용
+     * 4. 스택 초기화 (다음 저주를 위해)
+     * 5. CURSE_TRIGGERED 브로드캐스트
      */
     private void triggerCurse(GameRoom room) {
         // 랜덤 플레이어 선택
@@ -586,13 +626,16 @@ public class GameService {
             return;
         }
 
-        // 저주 적용
+        // 저주 큐에 추가 (중복 체크는 CurseManager에서 처리)
+        room.addToCurseQueue(cursedUsername);
+
+        // 저주 효과 적용
         String sessionId = room.findSessionIdByUsername(cursedUsername);
         if (sessionId != null) {
             room.triggerCurseEvent(sessionId, false); // isPositive = false
         }
 
-        // 스택 초기화
+        // 스택 초기화 (다음 저주를 위해)
         room.resetCurseStack();
 
         // CURSE_TRIGGERED 브로드캐스트
@@ -712,6 +755,40 @@ public class GameService {
             // 개별 플레이어 완료 처리 (GameRoom에서 모든 플레이어 완료 시 전환)
             room.handleEndingMissionComplete(username);
             log.info("📸 Room {}: {} sent ENDING_MISSION_END", roomId, username);
+        }
+    }
+
+    /**
+     * 아이템 획득 처리 (ITEM_COLLECTED)
+     * 
+     * 1. 해당 아이템이 이미 획득되었는지 확인 (GameRoom 내부 상태 - 추후 구현 필요)
+     * 2. 획득되지 않았다면 획득 상태로 변경
+     * 3. 같은 방의 모든 플레이어에게 아이템 제거 메시지 전송 (ITEM_REMOVED)
+     */
+    public void handleItemCollected(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String username = (String) session.getAttributes().get("username");
+        String itemId = message.getItemId();
+
+        if (roomId == null || username == null || itemId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // [TODO] GameRoom에 아이템 상태 관리 로직 추가 (중복 획득 방지)
+            // 현재는 클리이언트 신뢰: 요청이 오면 무조건 브로드캐스트
+
+            // ITEM_REMOVED 브로드캐스트
+            GameMessageDto removeMsg = new GameMessageDto();
+            removeMsg.setType("ITEM_REMOVED");
+            removeMsg.setRoomId(roomId);
+            removeMsg.setItemId(itemId);
+            removeMsg.setContent(itemId); // 호환성
+
+            // 모든 클라이언트에게 전송 (본인 포함 - 확실한 제거 보장)
+            room.broadcast(removeMsg, null);
+
+            log.info("🍄 Room {}: Item {} collected by {}", roomId, itemId, username);
         }
     }
 
