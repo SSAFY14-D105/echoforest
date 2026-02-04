@@ -41,6 +41,17 @@ public class GameRoom implements Runnable {
     // Input Queue
     private final Queue<InputEvent> inputQueue = new ConcurrentLinkedQueue<>();
 
+    // [NEW] Collected Items Persistence (Sync for late joiners)
+    private final Set<String> collectedItems = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public void collectItem(String itemId) {
+        collectedItems.add(itemId);
+    }
+
+    public Set<String> getCollectedItems() {
+        return collectedItems;
+    }
+
     // Host Info
     @Getter
     private String hostUsername;

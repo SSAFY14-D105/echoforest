@@ -140,6 +140,23 @@ public class GameService {
         joinMsg.setAnim("idle_down");
 
         room.broadcast(joinMsg, session.getId());
+
+        // [FIX] Late Joiner Item Sync
+        // 이미 획득된 아이템 목록을 전송하여 신규 유저 화면에서 제거
+        java.util.Set<String> collectedItems = room.getCollectedItems();
+        if (!collectedItems.isEmpty()) {
+            try {
+                GameMessageDto syncMsg = new GameMessageDto();
+                syncMsg.setType("ITEM_SYNC");
+                syncMsg.setRoomId(roomId);
+                syncMsg.setContent(objectMapper.writeValueAsString(collectedItems));
+
+                sendMessage(session, syncMsg);
+                log.info("Sent ITEM_SYNC to {}: {} items", username, collectedItems.size());
+            } catch (Exception e) {
+                log.error("Failed to send ITEM_SYNC", e);
+            }
+        }
     }
 
     /**
@@ -775,8 +792,8 @@ public class GameService {
 
         GameRoom room = gameRepository.getRoom(roomId);
         if (room != null) {
-            // [TODO] GameRoom에 아이템 상태 관리 로직 추가 (중복 획득 방지)
-            // 현재는 클리이언트 신뢰: 요청이 오면 무조건 브로드캐스트
+            // [FIX] GameRoom에 아이템 상태 영구 저장 (중복 획득 방지 및 동기화)
+            room.collectItem(itemId);
 
             // ITEM_REMOVED 브로드캐스트
             GameMessageDto removeMsg = new GameMessageDto();
