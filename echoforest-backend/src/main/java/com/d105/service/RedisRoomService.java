@@ -138,6 +138,22 @@ public class RedisRoomService {
      * @return true: 방이 폭파됨 (방장 퇴장), false: 일반 퇴장
      */
     public boolean leaveRoom(String roomId, String userName) {
+        // [FIX] 나가는 유저의 통계 즉시 저장 (DB 반영)
+        try {
+            int kissCount = getKissCount(roomId, userName);
+            int curseCount = getCurseCount(roomId, userName);
+
+            userService.saveGameStats(userName, kissCount, curseCount);
+
+            // 중복 저장 방지를 위해 Redis에서 해당 유저 통계 제거
+            redisTemplate.opsForHash().delete(ROOM_KEY + roomId + KISS_SUFFIX, userName);
+            redisTemplate.opsForHash().delete(ROOM_KEY + roomId + CURSE_SUFFIX, userName);
+
+            log.info("Saved stats for leaving user {}: {} kisses, {} curses", userName, kissCount, curseCount);
+        } catch (Exception e) {
+            log.error("Failed to save stats for leaving user {}", userName, e);
+        }
+
         // 방장인지 확인
         String hostId = getHostId(roomId);
 
@@ -152,6 +168,7 @@ public class RedisRoomService {
 
         // 방장이 나가면 방 폭파
         if (hostId != null && hostId.equals(userName)) {
+            // 남은 사람들 통계 일괄 저장
             saveRoomStatsToDB(roomId);
 
             // 남은 플레이어들의 유저-방 매핑도 제거
