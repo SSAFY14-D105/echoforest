@@ -1,18 +1,12 @@
-import BaseGesture, { GestureMetadata, GestureResult } from './BaseGesture';
-import { distance, isFingerExtended, Landmark } from '../../utils/gesture-helpers';
+import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
+import { isFingerExtended, type Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
-    label: string;
-    emoji: string;
-    thresholds: any;
 
-    constructor(config: any = {}) {
-        super(config);
+    constructor() {
+        super();
         this.label = '주먹';
         this.emoji = '✊';
-        this.thresholds = {
-            ...config
-        };
     }
 
     check(landmarks: Landmark[], _metadata: GestureMetadata): GestureResult {
@@ -34,12 +28,11 @@ export default class FistGesture extends BaseGesture {
 
         // [엄격] 5손가락 모두 접혀 있어야 함 (엄지 포함)
         if (closedCount === 4 && isThumbClosed) {
-            let score = 0.99;
-
             return {
                 detected: true,
-                score: score,
-                label: this.label
+                score: 0.99,
+                label: this.label,
+                emoji: this.emoji
             };
         }
 

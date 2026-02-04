@@ -4,8 +4,9 @@ import BothCheekPokeGesture from '../components/motion/BothCheekPokeGesture';
 import CatEarsGesture from '../components/motion/CatEarsGesture';
 import FlowerPoseGesture from '../components/motion/FlowerPoseGesture';
 import FistGesture from '../components/motion/FistGesture';
-// import HeartGesture from '../components/motion/HeartGesture';
-// import KissGesture from '../components/motion/KissGesture';
+import HeartGesture from '../components/motion/HeartGesture';
+import KissGesture from '../components/motion/KissGesture';
+import CheekHeartGesture from '../components/motion/CheekHeartGesture';
 import LGesture from '../components/motion/LGesture';
 import LeftPokeGesture from '../components/motion/LeftPokeGesture';
 import OKGesture from '../components/motion/OKGesture';
@@ -32,8 +33,9 @@ export default class PoseManager {
             new CatEarsGesture(),
             new FlowerPoseGesture(), // CheekHeart -> FlowerPose 교체
             new FistGesture(),
-            // new HeartGesture(),
-            // new KissGesture(),
+            new HeartGesture(),
+            new KissGesture(),
+            new CheekHeartGesture(),
             new LGesture(),
             new LeftPokeGesture(),
             new OKGesture(),
@@ -59,8 +61,8 @@ export default class PoseManager {
             try {
                 const result = gesture.check(landmarks, metadata);
                 if (result.detected && result.score > maxScore) {
-                    // 임계값 체크 (0.4 이상이면 인식)
-                    if (result.score >= 0.4) {
+                    // 임계값 체크 (0.5 이상이면 인식)
+                    if (result.score >= 0.5) {
                         maxScore = result.score;
                         bestResult = result;
                     }
