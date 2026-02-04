@@ -210,7 +210,7 @@ services:
       - "3000:3000"
     environment:
       # Nginx 서브디렉토리(/monitor) 뒤에서 서빙하기 위한 설정
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/monitor/
+      - GF_SERVER_ROOT_URL=https://i14d105.p.ssafy.io/monitor/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - ./grafana_data:/var/lib/grafana # 데이터 영구 저장
