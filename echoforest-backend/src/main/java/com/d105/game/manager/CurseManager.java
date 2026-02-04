@@ -76,6 +76,23 @@ public class CurseManager {
     }
 
     /**
+     * 저주 큐 초기화 (스테이지 변경 시)
+     */
+    public void clearCurseQueue() {
+        int size = cursedPlayersQueue.size();
+        cursedPlayersQueue.clear();
+        log.info("🔮 Room {}: 저주 큐 초기화 (기존 {} 명 해제)", roomId, size);
+    }
+
+    /**
+     * 스택과 큐 모두 초기화 (스테이지 변경 시 통합 호출)
+     */
+    public void resetAll() {
+        resetCurseStack();
+        clearCurseQueue();
+    }
+
+    /**
      * 저주 큐에 플레이어 추가 (스택 10 도달 시)
      *
      * @param username 저주 걸린 플레이어
