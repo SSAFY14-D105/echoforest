@@ -265,6 +265,35 @@ export default function StagePlayView({
 
     // [NEW] 로딩 화면 오버레이
     const [loadingMessage, setLoadingMessage] = useState("숲이 변하고 있습니다...");
+    // [NEW] 리스폰 알림 메시지 상태
+    const [respawnMessage, setRespawnMessage] = useState<string | null>(null);
+
+    // [NEW] GAME_RESET 수신 시 리스폰 알림 표시
+    useEffect(() => {
+        const handleGameReset = (message: any) => {
+            // content가 'reset'이고 username이 있으면 표시
+            if (message.username) {
+                // [FIX] 로딩 화면이 떠있다면 강제로 닫기 (죽었을 때 로딩화면 뜨는 문제 해결)
+                setIsLoading(false);
+
+                const players = useGameStore.getState().players;
+                const player = players.find(p => p.id === message.username || p.nickname === message.username);
+                const nickname = player ? player.nickname : message.username;
+
+                setRespawnMessage(`${nickname}님이 미아가 되었습니다`);
+
+                // 3초 후 제거 (애니메이션 시간과 맞춤)
+                setTimeout(() => {
+                    setRespawnMessage(null);
+                }, 3000);
+            }
+        };
+
+        gameWebSocket.on('GAME_RESET', handleGameReset);
+        return () => {
+            gameWebSocket.off('GAME_RESET', handleGameReset);
+        };
+    }, []);
 
     // [NEW] 씬 로딩 상태 관리 (복구)
     const [isLoading, setIsLoading] = useState(false);
@@ -486,6 +515,12 @@ export default function StagePlayView({
 
             <div className={`pixel-box ${styles.canvasWrapper}`}>
                 <AudioController className={styles.gameAudioController} />
+                {/* [NEW] 리스폰 알림 오버레이 */}
+                {respawnMessage && (
+                    <div className={styles.respawnNotification}>
+                        {respawnMessage}
+                    </div>
+                )}
                 <PhaserGame
                     startScene={`Stage${stageNum}Scene`}
                     onSendState={onSendState}
