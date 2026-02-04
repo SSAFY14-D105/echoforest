@@ -75,77 +75,168 @@ interface GameState {
     setOnMoveCallback: (callback: ((x: number, y: number, anim?: string) => void) | null) => void;
     broadcastMove: (x: number, y: number) => void;  // 로컬 플레이어 이동 브로드캐스트
     logout: () => void; // 로그아웃 액션
+    restoreSession: () => void; // [NEW] 세션 복구 액션
 }
+
+// [NEW] 세션 저장 헬퍼
+const saveSessionToStorage = (state: GameState) => {
+    sessionStorage.setItem('game_session', JSON.stringify({
+        nickname: state.nickname,
+        roomId: state.roomId,
+        isHost: state.isHost,
+        isSoloMode: state.isSoloMode,
+        isGameStarted: state.isGameStarted,
+        currentStage: state.currentStage,
+        clearedStages: state.clearedStages,
+        isEndingMission: state.isEndingMission
+    }));
+};
+
+// [NEW] 스토어 초기화 시 동기적으로 세션 복원
+const getInitialSessionState = () => {
+    const storedNickname = localStorage.getItem('nickname');
+    const stored = sessionStorage.getItem('game_session');
+
+    if (stored && storedNickname) {
+        try {
+            const session = JSON.parse(stored);
+            // 닉네임 유효성 체크
+            if (session.nickname && session.nickname === storedNickname) {
+                return {
+                    roomId: session.roomId || '',
+                    isHost: session.isHost || false,
+                    isSoloMode: session.isSoloMode || false,
+                    isGameStarted: session.isGameStarted || false,
+                    currentStage: session.currentStage || null,
+                    clearedStages: session.clearedStages || [],
+                    isEndingMission: session.isEndingMission || false,
+                    players: [{
+                        id: session.nickname,
+                        nickname: session.nickname,
+                        isHost: session.isHost || false,
+                        isLocal: true
+                    }]
+                };
+            }
+        } catch (e) {
+            console.warn('[Store] Failed to parse session:', e);
+        }
+    }
+    return null;
+};
+
+// 초기 세션 상태 (스토어 생성 전에 동기적으로 실행)
+const initialSession = getInitialSessionState();
 
 export const useGameStore = create<GameState>((set, get) => ({
     nickname: localStorage.getItem('nickname') || '',
-    roomId: '',
-    isHost: false,
-    players: [],
+    roomId: initialSession?.roomId || '',
+    isHost: initialSession?.isHost || false,
+    players: initialSession?.players || [],
     readyPlayers: [],  // Ready 상태인 플레이어 닉네임 목록
-    isGameStarted: false,
-    isSoloMode: false,
-    currentStage: null,
-    clearedStages: [],
+    isGameStarted: initialSession?.isGameStarted || false,
+    isSoloMode: initialSession?.isSoloMode || false,
+    currentStage: initialSession?.currentStage || null,
+    clearedStages: initialSession?.clearedStages || [],
     onMoveCallback: null,
     pausedBy: null,
-    isEndingMission: false,
+    isEndingMission: initialSession?.isEndingMission || false,
     hasMediaPermission: false,
 
     // 볼륨 초기값: 70% (4명)
     playerVolumes: [70, 70, 70, 70],
 
+    // [NEW] 세션 복구 액션
+    restoreSession: () => {
+        const stored = sessionStorage.getItem('game_session');
+        if (stored) {
+            try {
+                const session = JSON.parse(stored);
+                // 닉네임 유효성 체크
+                const currentNickname = localStorage.getItem('nickname');
+                if (session.nickname && session.nickname === currentNickname) {
+                    set({
+                        roomId: session.roomId,
+                        isHost: session.isHost,
+                        isSoloMode: session.isSoloMode,
+                        isGameStarted: session.isGameStarted,
+                        currentStage: session.currentStage,
+                        clearedStages: session.clearedStages || [],
+                        isEndingMission: session.isEndingMission || false,
+                        players: [{ // 최소한 본인은 복구
+                            id: session.nickname,
+                            nickname: session.nickname,
+                            isHost: session.isHost,
+                            isLocal: true
+                        }]
+                    });
+                }
+            } catch (e) {
+                console.warn('[Store] Failed to restore session:', e);
+            }
+        }
+    },
+
     setHasMediaPermission: (granted: boolean) => set({ hasMediaPermission: granted }),
     setPlayerVolume: (index, volume) => set((state) => {
         const newVolumes = [...state.playerVolumes];
-        // 인덱스 안전장치 (최대 4명)
         if (index >= 0 && index < 4) {
             newVolumes[index] = volume;
         }
         return { playerVolumes: newVolumes };
     }),
     setGamePaused: (nickname) => set({ pausedBy: nickname }),
-    setEndingMission: (active) => set({ isEndingMission: active }),
+    setEndingMission: (active) => {
+        set({ isEndingMission: active });
+        saveSessionToStorage(get());
+    },
 
     setNickname: (name) => {
-        localStorage.setItem('nickname', name); // [FIX] 닉네임 영구 저장
+        localStorage.setItem('nickname', name);
         set({ nickname: name });
     },
     joinGame: (roomId, isHost, initialStage = 0) => {
         const { nickname } = get();
         const newPlayer: Player = {
-            id: nickname,  // nickname을 id로 사용 (서버와 일치)
+            id: nickname,
             nickname: nickname,
             isHost: isHost
         };
+
         set({
             roomId,
             isHost,
             players: [newPlayer],
-            readyPlayers: [],  // 방 입장 시 Ready 상태 초기화
+            readyPlayers: [],
             isSoloMode: false,
-            // 중간 난입 지원: 스테이지가 0보다 크면 게임 시작 상태로 설정
             isGameStarted: initialStage > 0,
             currentStage: initialStage > 0 ? `MULTI_${initialStage}` : null
         });
+        saveSessionToStorage(get());
     },
     leaveGame: () => {
-        // [FIX] 게임 퇴장 시 정리 작업
         const currentRoomId = get().roomId;
 
-        // WebSocket 퇴장 메시지 전송
         import('../socket/GameWebSocket').then(({ gameWebSocket }) => {
             if (currentRoomId && gameWebSocket.isConnected()) {
                 gameWebSocket.sendLeave(currentRoomId);
             }
-        }).catch((/* e */) => { /* console.warn(e) */ });
+        }).catch((/* e */) => { });
 
-        // LiveKit 연결 해제
         import('../socket/LiveKitService').then(({ liveKitService }) => {
             liveKitService.disconnect();
-        }).catch((/* e */) => { /* console.warn(e) */ });
+        }).catch((/* e */) => { });
 
-        set({ roomId: '', isHost: false, players: [], isGameStarted: false, isSoloMode: false, currentStage: null });
+        sessionStorage.removeItem('game_session');
+        set({
+            roomId: '',
+            isHost: false,
+            players: [],
+            isGameStarted: false,
+            isSoloMode: false,
+            currentStage: null,
+            clearedStages: []
+        });
     },
     addPlayer: (player) => set((state) => ({
         players: state.players.some(p => p.id === player.id)
@@ -154,19 +245,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
     setPlayers: (players) => set({ players }),
     syncPlayersFromServer: (serverPlayers) => set((state) => {
-
-        // 서버에서 받은 플레이어 상태를 기존 목록과 병합
-
-
         // [FIX] 서버 데이터를 전적으로 신뢰하여 동기화
-        // 클라이언트 임의 정렬이 아닌, 서버가 보낸 colorIndex(Slot Index)를 기준/정렬 키로 사용
         const nextPlayers: Player[] = serverPlayers.map((serverPlayer) => {
             const serverId = serverPlayer.id || serverPlayer.username || "unknown";
             const existingPlayer = state.players.find(p => p.nickname === serverId);
 
-            // [CRITICAL] 서버에서 할당된 colorIndex와 isHost 정보를 사용
-            // 기존에는 배열 인덱스(index)를 사용했으나, 네트워크 순서 보장이 안 될 경우를 대비해 명시적 필드 사용
-            const colorIndex = serverPlayer.colorIndex ?? 0; // fallback 0
+            const colorIndex = serverPlayer.colorIndex ?? 0;
             const isHost = serverPlayer.isHost ?? (colorIndex === 0);
 
             if (existingPlayer) {
@@ -211,7 +295,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         });
 
-        // 3. 로컬 플레이어 식별
         const myNickname = state.nickname;
         if (myNickname) {
             const me = nextPlayers.find(p => p.nickname === myNickname);
@@ -220,15 +303,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
-        // 4. ColorIndex 기준으로 오름차순 정렬 (Slot 0, 1, 2, 3 순서 보장)
-        // CameraArea 등에서 index를 사용하여 렌더링하므로 순서가 매우 중요함
         nextPlayers.sort((a, b) => (a.colorIndex || 0) - (b.colorIndex || 0));
 
         return { players: nextPlayers };
     }),
     removePlayerByNickname: (nickname) => set((state) => ({
         players: state.players.filter(p => p.nickname !== nickname),
-        readyPlayers: state.readyPlayers.filter(n => n !== nickname)  // Ready 목록에서도 제거
+        readyPlayers: state.readyPlayers.filter(n => n !== nickname)
     })),
     updatePlayerPosition: (nickname, x, y) => set((state) => ({
         players: state.players.map(p =>
@@ -237,7 +318,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 : p
         )
     })),
-    // Ready 상태 관리
     setPlayerReady: (nickname, isReady) => set((state) => ({
         readyPlayers: isReady
             ? state.readyPlayers.includes(nickname)
@@ -248,36 +328,51 @@ export const useGameStore = create<GameState>((set, get) => ({
     clearReadyPlayers: () => set({ readyPlayers: [] }),
     isAllReady: () => {
         const { players, readyPlayers, nickname } = get();
-        // 방장 제외한 모든 플레이어가 Ready 상태인지 확인
         const nonHostPlayers = players.filter(p => !p.isHost && p.nickname !== nickname);
-        if (nonHostPlayers.length === 0) return false; // 혼자면 시작 불가
+        if (nonHostPlayers.length === 0) return false;
         return nonHostPlayers.every(p => readyPlayers.includes(p.nickname));
     },
-    startGame: () => set({ isGameStarted: true, currentStage: null, readyPlayers: [] }),
-    startGameFromServer: (stage) => set({
-        isGameStarted: true,
-        currentStage: `MULTI_${stage}`,
-        readyPlayers: []  // 게임 시작 시 Ready 상태 초기화
-    }),
-    startSoloGame: async () => {
-        // 테스트용: 혼자서 멀티플레이 방 생성
-        // WebSocket 연결 및 방 생성 로직은 LobbyPage에서 처리
+    startGame: () => {
+        set({ isGameStarted: true, currentStage: null, readyPlayers: [] });
+        saveSessionToStorage(get());
+    },
+    startGameFromServer: (stage) => {
         set({
-            isSoloMode: true,  // 솔로 모드 플래그 유지 (UI 구분용)
+            isGameStarted: true,
+            currentStage: `MULTI_${stage}`,
+            readyPlayers: []
+        });
+        saveSessionToStorage(get());
+    },
+    startSoloGame: async () => {
+        set({
+            isSoloMode: true,
             isHost: true,
         });
+        // Solo mode doesn't need session save? Or maybe it does if we want refresh to work.
+        // Let's safe-guard it.
+        saveSessionToStorage(get());
     },
-    selectStage: (stageId) => set({
-        currentStage: stageId,
-        isEndingMission: false // [FIX] 새 스테이지 시작 시 엔딩 미션 상태 초기화하여 루프 방지
-    }),
-    clearStage: (stageId) => set((state) => ({
-        clearedStages: state.clearedStages.includes(stageId)
-            ? state.clearedStages
-            : [...state.clearedStages, stageId],
-        currentStage: null // 스테이지 선택 화면으로 돌아감
-    })),
-    backToStageSelect: () => set({ currentStage: null }),
+    selectStage: (stageId) => {
+        set({
+            currentStage: stageId,
+            isEndingMission: false
+        });
+        saveSessionToStorage(get());
+    },
+    clearStage: (stageId) => {
+        set((state) => ({
+            clearedStages: state.clearedStages.includes(stageId)
+                ? state.clearedStages
+                : [...state.clearedStages, stageId],
+            currentStage: null
+        }));
+        saveSessionToStorage(get());
+    },
+    backToStageSelect: () => {
+        set({ currentStage: null });
+        saveSessionToStorage(get());
+    },
     setOnMoveCallback: (callback) => set({ onMoveCallback: callback }),
     broadcastMove: (x: number, y: number) => {
         const { onMoveCallback } = get();
@@ -286,30 +381,21 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
     },
     logout: async () => {
-        // [FIX] 서버 세션 제거 요청 (실패해도 로컬 로그아웃은 진행)
         try {
             const { logout } = await import('../apis/authApi');
             await logout();
-        } catch (e) {
-            // console.warn("로그아웃 API 호출 실패:", e);
-        }
+        } catch (e) { }
 
-        // 1. localStorage 정리
         localStorage.removeItem('token');
         localStorage.removeItem('loginId');
         localStorage.removeItem('nickname');
+        sessionStorage.removeItem('game_session');
 
-        // 2. WebSocket 연결 종료 및 싱글톤 초기화
-        // 순환 참조 방지를 위해 동적 import 사용 가능하지만, GameWebSocket은 이미 싱글톤 export 중
-        // 여기서는 GameWebSocket 클래스의 static 메서드 호출
         try {
             const { GameWebSocket } = await import('../socket/GameWebSocket');
             GameWebSocket.resetInstance();
-        } catch (e) {
-            // console.warn("WebSocket 초기화 실패:", e);
-        }
+        } catch (e) { }
 
-        // 3. 상태 초기화
         set({
             nickname: '',
             roomId: '',

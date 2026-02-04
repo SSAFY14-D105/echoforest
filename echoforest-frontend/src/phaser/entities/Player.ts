@@ -45,6 +45,7 @@ export class Player {
     private hpDrainTimer: Phaser.Time.TimerEvent | null = null;
     private hpBarGraphics: Phaser.GameObjects.Graphics | null = null;
     private visualProxy: Phaser.GameObjects.Graphics | null = null; // [FALLBACK] 비주얼 백업
+    private reverseCurseEffect: Phaser.GameObjects.Graphics | null = null; // 반전 저주 시각 효과
     private onDeathCallback: (() => void) | null = null;
 
     // 밀치기(Knockback) 및 스턴 상태
@@ -209,6 +210,11 @@ export class Player {
         // HP 바 업데이트 (drain 저주가 있을 때만)
         if (this.hpBarGraphics) {
             this.drawHPBar();
+        }
+
+        // 반전 저주 이펙트 업데이트
+        if (this.reverseCurseEffect) {
+            this.updateReverseCurseEffect();
         }
 
         // 비주얼 프록시(도형) 업데이트 - 비활성화
@@ -441,6 +447,11 @@ export class Player {
         this.jumpMultiplier = curse.jumpMultiplier ?? 1;
         this.reverseControls = curse.reverseControls ?? false;
 
+        // 반전 저주 시각 효과 생성
+        if (curse.reverseControls) {
+            this.createReverseCurseEffect();
+        }
+
         // HP 저주 처리
         if (curse.hasDrainEffect) {
             this.curseHP = 100;
@@ -495,6 +506,116 @@ export class Player {
         }
     }
 
+    // 소용돌이 애니메이션 각도
+    private swirlAngle: number = 0;
+
+    /**
+     * 반전 저주 시각 효과 생성 (회전하는 보라색 소용돌이 + 반전 화살표)
+     */
+    private createReverseCurseEffect(): void {
+        // 기존 효과 제거
+        this.removeReverseCurseEffect();
+
+        this.reverseCurseEffect = this.scene.add.graphics();
+        this.reverseCurseEffect.setDepth(2001); // 플레이어 스프라이트보다 위에 표시
+        this.swirlAngle = 0;
+        this.updateReverseCurseEffect();
+    }
+
+    /**
+     * 반전 저주 시각 효과 업데이트 (혼란/어지러움 - 물음표와 회전하는 별)
+     */
+    private updateReverseCurseEffect(): void {
+        const graphics = this.reverseCurseEffect;
+        if (!graphics) return;
+
+        graphics.clear();
+
+        const { x, y } = this.body.position;
+        const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+
+        // 머리 위 위치 계산
+        // 물음표가 위아래로 둥둥 떠다니는(Floating) 애니메이션
+        const floatY = Math.sin(this.scene.time.now / 200) * 3;
+        const centerY = y - size / 2 - 35 + floatY;
+
+        // 회전 각도 업데이트
+        this.swirlAngle += 0.05;
+
+        // 픽셀 단위 크기 (도트 느낌을 위해 3배 확대)
+        const p = 3;
+
+        // === 1. 중앙 픽셀 물음표 (?) 그리기 ===
+        // 색상: 밝은 보라색 + 흰색 하이라이트
+        graphics.fillStyle(0xE0B0FF, 1); // Mauve (연보라)
+
+        // 물음표 모양 데이터 (5x7 픽셀)
+        //   XXX
+        //  X   X
+        //      X
+        //    XX
+        //    X
+        //
+        //    X
+        const qMarkPixels = [
+            { dx: 0, dy: -3 }, { dx: 1, dy: -3 }, { dx: -1, dy: -3 }, // Top bar
+            { dx: -2, dy: -2 }, { dx: 2, dy: -2 },                    // Top sides
+            { dx: 2, dy: -1 },                                        // Right side 1
+            { dx: 1, dy: 0 }, { dx: 0, dy: 1 },                       // Curve in
+            { dx: 0, dy: 2 },                                         // Stem
+            { dx: 0, dy: 4 }                                          // Dot
+        ];
+
+        qMarkPixels.forEach(pixel => {
+            graphics.fillRect(
+                x + pixel.dx * p - p / 2,
+                centerY + pixel.dy * p - p / 2,
+                p, p
+            );
+        });
+
+        // === 2. 주위를 도는 픽셀 별 (어지러움 표현) ===
+        // 타원형으로 회전
+        const radiusX = 25;
+        const radiusY = 10;
+
+        const colors = [0xDA70D6, 0xBA55D3]; // Orchid, MediumOrchid
+
+        for (let i = 0; i < 2; i++) {
+            // 별 2개가 180도 차이로 회전
+            const angle = this.swirlAngle + (i * Math.PI);
+
+            const starX = x + Math.cos(angle) * radiusX;
+            const starY = centerY + Math.sin(angle) * radiusY + 5; // 물음표 허리쯤에서 회전
+
+            // 별 모양 (십자 픽셀)
+            //  X
+            // XXX
+            //  X
+            graphics.fillStyle(colors[i], 1);
+            const starP = 2; // 별 픽셀 크기
+
+            // 중앙
+            graphics.fillRect(starX - starP / 2, starY - starP / 2, starP, starP);
+            // 상하좌우
+            graphics.fillRect(starX - starP / 2, starY - starP / 2 - starP, starP, starP);
+            graphics.fillRect(starX - starP / 2, starY - starP / 2 + starP, starP, starP);
+            graphics.fillRect(starX - starP / 2 - starP, starY - starP / 2, starP, starP);
+            graphics.fillRect(starX - starP / 2 + starP, starY - starP / 2, starP, starP);
+        }
+    }
+
+    /**
+     * 반전 저주 시각 효과 제거
+     */
+    private removeReverseCurseEffect(): void {
+        if (this.reverseCurseEffect) {
+            this.reverseCurseEffect.clear();
+            this.reverseCurseEffect.destroy();
+            this.reverseCurseEffect = null;
+        }
+    }
+
     public removeCurse(): void {
         if (!this.currentCurseId) return;
 
@@ -504,6 +625,9 @@ export class Player {
         this.speedMultiplier = 1;
         this.jumpMultiplier = 1;
         this.reverseControls = false;
+
+        // 반전 저주 시각 효과 제거
+        this.removeReverseCurseEffect();
 
         this.stopHPDrain();
 
@@ -755,6 +879,10 @@ export class Player {
         if (this.hpBarGraphics) {
             this.hpBarGraphics.destroy();
             this.hpBarGraphics = null;
+        }
+        if (this.reverseCurseEffect) {
+            this.reverseCurseEffect.destroy();
+            this.reverseCurseEffect = null;
         }
         if (this.visualProxy) {
             this.visualProxy.clear();
