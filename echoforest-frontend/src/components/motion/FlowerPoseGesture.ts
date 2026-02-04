@@ -83,8 +83,17 @@ export default class FlowerPoseGesture extends BaseGesture {
 
             if (minToJaw < this.thresholds.distance) {
                 // 3. 모양 체크 (손이 펴져 있어야 함, 주먹이면 안됨)
-                // [FIX] 2개 이상의 손가락이 펴져 있으면 인정 (3개 → 2개로 완화)
+                // [FIX] 2개 이상의 손가락이 펴져 있어야 함
                 if (extendedCount >= 2) {
+
+                    // [FIX] 볼하트 오인식 방지: 엄지와 검지가 가까우면(C모양/집게모양) 꽃받침 아님
+                    // 꽃받침은 손바닥을 펴서 턱을 받치는 자세이므로 엄지-검지가 멀어야 함
+                    const thumbIndexDist = distance(hand[4], hand[8]) / faceSize;
+                    if (thumbIndexDist < 0.3) {
+                        // C모양이면 꽃받침 점수 인정 안 함
+                        continue;
+                    }
+
                     detectedHands++;
                     // 거리가 가까울수록 점수 높음
                     const score = Math.max(0.2, 1.0 - (minToJaw / this.thresholds.distance));
@@ -103,13 +112,23 @@ export default class FlowerPoseGesture extends BaseGesture {
         }
 
         // [FIX] 양손 필수로 변경 - 한손 꽃받침은 인식 안 함
+        // [FIX] 양손 필수로 변경 - 한손 꽃받침은 인식 안 함
         if (detectedHands >= 2) {
+            // [FIX] 손하트 오인식 방지: 양손 검지/중지 끝이 붙어 있으면(하트 모양) 꽃받침 아님
+            // 하트는 손끝이 붙어있고, 꽃받침은 손목이 붙어있고 손끝은 벌어짐
+            const hand1 = allHands[0];
+            const hand2 = allHands[1];
+            const indexTipDist = distance(hand1[8], hand2[8]) / faceSize;
+
+            // 손끝이 너무 가까우면(0.2 미만) 하트로 간주하고 차단
+            if (indexTipDist < 0.2) {
+                return { detected: false, score: 0 };
+            }
+
             // [FIX] 점수 계산 개선
             let finalScore = totalScore / detectedHands;
             // 양손이면 점수 가산
             finalScore = Math.min(0.99, finalScore + 0.3);
-
-            // console.log(`[FlowerPoseGesture] ✅ Detected! hands=${detectedHands}, score=${finalScore.toFixed(2)}`);
 
             return {
                 detected: true,
