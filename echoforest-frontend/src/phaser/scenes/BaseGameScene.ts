@@ -949,6 +949,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // console.log(`[PoisonMushroom] Applying curse '${randomCurse}' to self (${this.myPlayerId})`);
             this.applyCurseToPlayer(this.myPlayerId, randomCurse);
 
+            // [NEW] 서버에 독버섯 저주 알림 → 긍정어로 해제 가능하도록 cursedPlayers 동기화
+            if (roomId) {
+                gameWebSocket.sendMushroomCurse(roomId, this.myPlayerId, randomCurse);
+            }
+
             // 피드백 텍스트
             const myPlayer = this.players.get(this.myPlayerId);
             if (myPlayer) {

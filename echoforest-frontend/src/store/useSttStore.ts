@@ -246,8 +246,8 @@ export const useSttStore = create<SttState>((set, get) => ({
             }
         });
 
-        // 본인 해제 시 알림
-        if (releasedPlayerId === nickname) {
+        // 본인 해제 시 알림 (실제로 저주 목록에 있었던 경우만)
+        if (releasedPlayerId === nickname && wasRemoved) {
             console.log(`[STT] ✨ 내 저주가 해제됨!`);
             set({
                 warningModal: {
