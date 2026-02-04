@@ -36,7 +36,6 @@ export default class LGesture extends BaseGesture {
 
         // [FIX] 엄지 확장 조건 완화
         const thumbTipToIndexMcp = distance(landmarks[4], landmarks[5]) / palmSize;
-        const thumbTipToWrist = distance(landmarks[4], landmarks[0]) / palmSize;
 
         // [FIX] 엄지 인식 로직 개선: 각도(직선) + 거리(벌림) 체크
         // isFingerExtended는 엄지의 경우 부정확할 수 있음
