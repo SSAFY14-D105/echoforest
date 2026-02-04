@@ -113,6 +113,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 case "ITEM_COLLECTED": // 아이템 획득 (Client -> Server)
                     gameService.handleItemCollected(session, messageDto);
                     break;
+                case "MUSHROOM_CURSE": // 독버섯 저주 발동 (Client -> Server) - 긍정어로 해제 가능하게
+                    gameService.handleMushroomCurse(session, messageDto);
+                    break;
                 // ===== 강제 동기화 요청 =====
 
                 default:

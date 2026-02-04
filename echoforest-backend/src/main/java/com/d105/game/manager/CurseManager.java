@@ -81,10 +81,17 @@ public class CurseManager {
      * @param username 저주 걸린 플레이어
      */
     public void addToCurseQueue(String username) {
-        if (username == null || cursedPlayersQueue.contains(username)) {
-            log.warn("🔮 Room {}: 이미 저주 큐에 있거나 잘못된 플레이어: {}", roomId, username);
+        if (username == null) {
+            log.warn("🔮 Room {}: null 플레이어는 저주 큐에 추가할 수 없음", roomId);
             return;
         }
+
+        // [방어적 프로그래밍] 이론상 발생하지 않아야 하지만 중복 체크
+        if (cursedPlayersQueue.contains(username)) {
+            log.error("🔮 Room {}: {} 이미 저주 큐에 있음! (이론상 발생 불가, 버그 가능성)", roomId, username);
+            return;
+        }
+
         cursedPlayersQueue.add(username);
         log.info("💀 Room {}: {} 저주 큐에 추가 (큐 크기: {})", roomId, username, cursedPlayersQueue.size());
     }
