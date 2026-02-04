@@ -211,6 +211,7 @@ services:
     environment:
       # Grafana가 자신의 공개 주소를 알도록 설정 (링크 생성용)
       - GF_SERVER_ROOT_URL=https://i14d105.p.ssafy.io/monitor/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - ./grafana_data:/var/lib/grafana # 데이터 영구 저장
     networks:
