@@ -144,7 +144,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     hasMediaPermission: false,
 
     // 볼륨 초기값: 70% (4명)
-    playerVolumes: [70, 70, 70, 70],
+    playerVolumes: [90, 90, 90, 90],
 
     // [NEW] 세션 복구 액션
     restoreSession: () => {

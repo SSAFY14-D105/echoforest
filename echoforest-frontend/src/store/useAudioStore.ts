@@ -20,7 +20,7 @@ export const useAudioStore = create<AudioState>()(
         (set, get) => ({
             isPlaying: false,
             isMuted: false,
-            volume: 0.5,
+            volume: 0.3,
             currentTrack: null,
 
             play: () => set({ isPlaying: true }),
