@@ -37,9 +37,9 @@ export function isFingerExtended(landmarks: Landmark[], tipIdx: number, pipIdx: 
     const pip = landmarks[pipIdx];
     const wrist = landmarks[0];
 
-    // 손가락 끝이 손목보다 멀리 있으면 펴진 것으로 간주
-    // (단순화된 로직, 필요시 각도 계산 등으로 고도화 가능)
-    return distance(tip, wrist) > distance(pip, wrist);
+    // [FIX] Z축(깊이) 영향 제거를 위해 2D 거리 계산(distanceAR) 사용
+    // 주먹을 쥘 때 카메라 쪽으로 내밀어야(Z축 변화) 인식되는 문제 해결
+    return distanceAR(tip, wrist) > distanceAR(pip, wrist);
 }
 
 // 캡처 및 분석용 손가락 거리 데이터 통합 계산

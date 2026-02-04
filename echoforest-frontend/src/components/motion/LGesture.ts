@@ -21,12 +21,12 @@ export default class LGesture extends BaseGesture {
             // 얼굴 크기 (이마-턱) - 동적 faceSize가 있으면 그거 사용
             const faceSize = metadata.faceSize || distance(metadata.faceLandmarks[10], metadata.faceLandmarks[152]);
 
-            // [FIX] 얼굴 근처 차단 기준 대폭 완화 (1.2배 -> 0.6배)
-            // 얼굴에 너무 가까이 대도 L사인이면 인식되도록 수정
-            if (distToNose < faceSize * 0.6) {
-                // 하지만 여전히 '볼콕'과 헷갈릴 수 있으므로 점수만 깎고 완전히 차단하진 않음
-                // return { detected: false, score: 0 }; 
-            }
+            // [FIX] 얼굴 근처(볼콕 거리)에서는 L인식 차단 (볼콕 우선)
+            // 엄지-중지 거리 체크가 추가되었으므로, 얼굴 거리 제한은 다시 완화하거나 제거해도 됨
+            // 하지만 안전장치로 아주 가까운 경우(0.4)만 차단
+            // if (distToNose < faceSize * 0.4) {
+            //    return { detected: false, score: 0 }; 
+            // }
         }
 
         // 2. 손가락 상태 계산
@@ -45,9 +45,14 @@ export default class LGesture extends BaseGesture {
         // 엄지가 검지 기저부(5)에서 충분히 떨어져 있어야 함 (L자 모양 = 벌림)
         const isThumbAbducted = thumbTipToIndexMcp > 0.25;
 
+        // [중요] 볼콕과 구분하기 위해, 엄지가 중지 두번째 마디(PIP, 10)에서 멀어야 함
+        // 볼콕은 엄지가 주먹쥐듯 말려들어가있음
+        const thumbTipToMiddlePIP = distance(landmarks[4], landmarks[10]) / palmSize;
+        const isThumbFarFromMiddle = thumbTipToMiddlePIP > 0.4;
+
         // 기존 OR 조건(||)은 엄지가 검지에 붙어있어도(Adducted) 길이가 길면(WristDistance) 통과되는 문제 있었음
         // -> AND 조건(&&)으로 변경하여 확실히 벌려진 상태만 인식
-        const thumbReallyExtended = isThumbStraight && isThumbAbducted;
+        const thumbReallyExtended = isThumbStraight && isThumbAbducted && isThumbFarFromMiddle;
 
         fingers.thumb.extended = thumbReallyExtended;
 

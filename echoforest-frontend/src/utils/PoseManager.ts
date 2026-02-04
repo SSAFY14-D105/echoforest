@@ -84,4 +84,23 @@ export default class PoseManager {
 
         return null;
     }
+    /**
+     * 모든 제스처의 판별 결과(점수 포함)를 반환 (디버깅용)
+     */
+    detectWithDetails(landmarks: Landmark[], metadata: any): GestureResult[] {
+        const results: GestureResult[] = [];
+        for (const gesture of this.gestures) {
+            try {
+                const res = gesture.check(landmarks, metadata);
+                // [FIX] 실패한 결과에도 라벨/이모지 주입 (디버깅용)
+                if (!res.label) res.label = gesture.label;
+                if (!(res as any).emoji) (res as any).emoji = gesture.emoji;
+                results.push(res);
+            } catch (e) {
+                console.warn(`Gesture check failed for ${gesture.constructor.name}`, e);
+            }
+        }
+        // 점수 높은 순 정렬
+        return results.sort((a, b) => b.score - a.score);
+    }
 }

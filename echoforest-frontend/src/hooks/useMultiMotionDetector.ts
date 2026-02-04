@@ -46,6 +46,9 @@ export default function useMultiMotionDetector() {
         load();
     }, []);
 
+    // 디버그용: 각 유저별 모든 제스처 인식 결과 (점수 포함)
+    const [debugInfo, setDebugInfo] = useState<Map<string, any[]>>(new Map());
+
     const detectPose = useCallback((video: HTMLVideoElement, userId: string) => {
         if (!gestureRecognizerRef.current || !faceLandmarkerRef.current || !poseManagerRef.current || !video || video.readyState < 2) return;
 
@@ -79,6 +82,15 @@ export default function useMultiMotionDetector() {
 
                 const pose = poseManagerRef.current.detect(landmarks, metadata);
 
+                // [DEBUG] 모든 제스처 결과 가져오기
+                const details = poseManagerRef.current.detectWithDetails(landmarks, metadata);
+
+                setDebugInfo(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(userId, details);
+                    return newMap;
+                });
+
                 if (pose) {
                     setDetectedPoses(prev => {
                         const newMap = new Map(prev);
@@ -97,7 +109,7 @@ export default function useMultiMotionDetector() {
                     });
                 }
             } else {
-                // 손이 감지되지 않음 -> 해당 유저 삭제
+                // 손이 감지되지 않음 -> 해당 유저 삭제 및 디버그 정보 초기화
                 setDetectedPoses(prev => {
                     const newMap = new Map(prev);
                     if (newMap.has(userId)) {
@@ -106,11 +118,16 @@ export default function useMultiMotionDetector() {
                     }
                     return prev;
                 });
+                setDebugInfo(prev => {
+                    const newMap = new Map(prev);
+                    if (newMap.has(userId)) newMap.delete(userId);
+                    return newMap;
+                });
             }
         } catch (e) {
             console.error("Pose detection error:", e);
         }
     }, [isLoaded]);
 
-    return { isLoaded, detectPose, detectedPoses, poseManager: poseManagerRef.current };
+    return { isLoaded, detectPose, detectedPoses, poseManager: poseManagerRef.current, debugInfo };
 }

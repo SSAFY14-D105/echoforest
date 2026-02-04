@@ -71,6 +71,11 @@ export default class CheekHeartGesture extends BaseGesture {
                 let lAvgScore = 0;
                 let rAvgScore = 0;
 
+                // [FIX] OK 제스처 오인식 방지
+                // 엄지와 검지가 붙어있으면(OK 모양) 볼하트가 아님 (볼하트는 엄지-검지가 벌어져서 하트 반쪽을 만듦)
+                const thumbIndexDist = distance(hand[4], hand[8]) / (metadata.palmSize || 1);
+                if (thumbIndexDist < 0.15) continue;
+
                 for (const tipIdx of fingers) {
                     const tip = hand[tipIdx];
                     const lCalc = this._checkProximity(tip, faceLandmarks, this.leftCheekZone, faceSize);

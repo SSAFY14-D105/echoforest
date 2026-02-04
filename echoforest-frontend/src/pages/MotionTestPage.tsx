@@ -4,7 +4,7 @@ import PoseManager from '../utils/PoseManager';
 
 const MotionTestPage = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
-    const { isLoaded, detectPose, detectedPoses, poseManager } = useMultiMotionDetector();
+    const { isLoaded, detectPose, detectedPoses, poseManager, debugInfo } = useMultiMotionDetector();
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [selectedGesture, setSelectedGesture] = useState<any>(null);
     const [thresholds, setThresholds] = useState<any>({});
@@ -41,8 +41,8 @@ const MotionTestPage = () => {
         const gesture = poseManager.getGestures().find((g: any) => g.constructor.name === gestureName);
         if (gesture) {
             setSelectedGesture(gesture);
-            setThresholds({ ...gesture.thresholds }); // 복사
-            console.log("Selected:", gestureName, gesture.thresholds);
+            setThresholds({ ...(gesture as any).thresholds }); // 복사
+            console.log("Selected:", gestureName, (gesture as any).thresholds);
         }
     };
 
@@ -55,7 +55,7 @@ const MotionTestPage = () => {
             const newT = { ...prev, [key]: numVal };
             // 실제 객체에 반영
             if (selectedGesture) {
-                selectedGesture.thresholds = newT;
+                (selectedGesture as any).thresholds = newT;
             }
             return newT;
         });
@@ -93,6 +93,37 @@ const MotionTestPage = () => {
                                 </div>
                             </div>
                         )}
+
+                        {/* [DEBUG] 전체 점수판 표시 */}
+                        {debugInfo && debugInfo.get('local-user') && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 20, left: 20,
+                                background: 'rgba(0,0,0,0.7)',
+                                color: 'white',
+                                padding: '10px',
+                                borderRadius: 8,
+                                fontSize: 12,
+                                pointerEvents: 'none'
+                            }}>
+                                <h4 style={{ margin: '0 0 5px 0', borderBottom: '1px solid #777' }}>📊 Scoreboard</h4>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                    {debugInfo.get('local-user').slice(0, 8).map((res: any, idx: number) => (
+                                        <li key={idx} style={{
+                                            display: 'flex', justifyContent: 'space-between', gap: '10px',
+                                            color: res.score >= 0.5 ? '#4f9' : '#aaa',
+                                            fontWeight: res.score >= 0.5 ? 'bold' : 'normal'
+                                        }}>
+                                            <span>
+                                                {res.detected ? '✅ ' : '❌ '}
+                                                {res.emoji || ''} {res.label || res.constructor?.name}
+                                            </span>
+                                            <span>{(res.score * 100).toFixed(0)}%</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -106,7 +137,7 @@ const MotionTestPage = () => {
                                 style={{ width: '100%', padding: 10, marginBottom: 20, fontSize: 16 }}
                             >
                                 <option value="">제스처 선택...</option>
-                                {poseManager.getGestures().map((g: any) => (
+                                {poseManager?.getGestures().map((g: any) => (
                                     <option key={g.constructor.name} value={g.constructor.name}>
                                         {g.label || g.constructor.name}
                                     </option>
@@ -141,6 +172,37 @@ const MotionTestPage = () => {
                                         💡 슬라이더를 움직이면 즉시 반영됩니다.<br />
                                         손하트가 잘 안되면 <b>tipDistance</b>를 늘려보세요!
                                     </div>
+
+                                    {/* [DEBUG] 선택된 제스처의 실시간 데이터 표시 */}
+                                    {debugInfo && debugInfo.get('local-user') && (() => {
+                                        const results = debugInfo.get('local-user');
+                                        const myRes = results?.find((r: any) => r.label === selectedGesture.label);
+
+                                        if (myRes) {
+                                            return (
+                                                <div style={{ marginTop: 20, padding: 15, background: '#222', borderRadius: 8, border: '1px solid #555' }}>
+                                                    <h4 style={{ margin: '0 0 10px 0', color: '#aaa' }}>🔍 Real-time Analysis</h4>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                                                        <span>Current Score:</span>
+                                                        <span style={{ color: myRes.score >= 0.5 ? '#4f9' : 'orange', fontWeight: 'bold' }}>
+                                                            {(myRes.score * 100).toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                    {myRes.extra && (
+                                                        <div style={{ marginTop: 10, fontSize: 11, fontFamily: 'monospace', color: '#ddd' }}>
+                                                            {Object.entries(myRes.extra).map(([k, v]) => (
+                                                                <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <span>{k}:</span>
+                                                                    <span>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </div>
                             ) : (
                                 <p>위 목록에서 튜닝할 제스처를 선택하세요.</p>
