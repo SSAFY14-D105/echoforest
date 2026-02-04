@@ -1095,8 +1095,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 this.activeSignboard = isStart ? signboard : null;
 
                 if (!isStart) {
-                    // [Redesign] 범위 벗어나도 자동 닫힘 안 함 (X 버튼으로만 닫기)
-                    // this.hideMessagePopup();
+                    // [Redesign] 플레이어가 Signboard 영역 밖으로 이탈하면 자동으로 안내판 닫기
+                    this.hideMessagePopup();
                     this.activeSignboard = null;
                 }
             }
@@ -1135,7 +1135,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         else if (text.length > 50) fontSize = '24px';
 
         // 메시지 텍스트 (NeoDunggeunmo폰트, 왼쪽 정렬)
-        const msg = this.add.text(-270, 0, text, {
+        const msg = this.add.text(-270, -20, text, {
             fontSize: fontSize,
             fontFamily: 'NeoDunggeunmo',
             color: '#ffffff',
@@ -1143,58 +1143,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             wordWrap: { width: 540 } // 텍스트 영역 540px
         }).setOrigin(0, 0.5); // 왼쪽 중앙 기준
 
-        this.popupContainer.add([bg, msg]);
-
-        // [New] 닫기 버튼 독립 생성 (부모 컨테이너 밖으로 빼냄 -> 입력 확실 보장)
-        // 위치: 화면 중앙 기준에서 우측 상단 오프셋만큼 이동
-        const btnX = centerX + 270;
-        const btnY = centerY - 120;
-
-        this.popupCloseBtn = this.add.container(btnX, btnY).setDepth(2100).setScrollFactor(0);
-
-        // 버튼 배경 (나무 질감 원형)
-        const closeBg = this.add.graphics();
-        closeBg.fillStyle(0x8D6E63, 1);
-        closeBg.fillCircle(0, 0, 20); // 로컬 0,0에 그림
-        closeBg.lineStyle(2, 0x3E2723, 1);
-        closeBg.strokeCircle(0, 0, 20);
-
-        // X 표시 Text
-        const closeText = this.add.text(0, 0, 'X', {
-            fontSize: '24px',
+        // 하단 안내 텍스트 (자동 닫힘 안내)
+        const hintText = this.add.text(0, 120, '(영역 밖으로 나가면 자동으로 닫힙니다.)', {
+            fontSize: '16px',
             fontFamily: 'NeoDunggeunmo',
-            color: '#3E2723', // 진한 갈색 글자
-            fontStyle: 'bold'
-        }).setOrigin(0.5); // 로컬 0,0에 배치
+            color: '#aaaaaa',
+            align: 'center'
+        }).setOrigin(0.5, 0.5);
 
-        // 상호작용 설정 (컨테이너가 아닌 그래픽스에 걸어도 되고, 컨테이너에 걸어도 됨. 여기선 컨테이너에)
-        const hitArea = new Phaser.Geom.Circle(0, 0, 25);
-        this.popupCloseBtn.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
-
-        this.popupCloseBtn.on('pointerdown', () => {
-            this.hideMessagePopup();
-        });
-
-        // 커서 변경 (hover 효과)
-        this.popupCloseBtn.on('pointerover', () => {
-            this.input.setDefaultCursor('pointer');
-            closeBg.clear();
-            closeBg.fillStyle(0xA1887F, 1); // 호버 시 조금 더 밝게
-            closeBg.fillCircle(0, 0, 20);
-            closeBg.lineStyle(2, 0x3E2723, 1);
-            closeBg.strokeCircle(0, 0, 20);
-        });
-
-        this.popupCloseBtn.on('pointerout', () => {
-            this.input.setDefaultCursor('default');
-            closeBg.clear();
-            closeBg.fillStyle(0x8D6E63, 1); // 복구
-            closeBg.fillCircle(0, 0, 20);
-            closeBg.lineStyle(2, 0x3E2723, 1);
-            closeBg.strokeCircle(0, 0, 20);
-        });
-
-        this.popupCloseBtn.add([closeBg, closeText]);
+        this.popupContainer.add([bg, msg, hintText]);
     }
 
     protected hideMessagePopup(): void {
