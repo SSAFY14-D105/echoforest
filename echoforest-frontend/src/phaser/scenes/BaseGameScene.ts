@@ -111,6 +111,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 솔로 모드 여부 (로컬 물리 사용)
     protected isSoloMode: boolean = false;
 
+    // [FIX] 정적 메서드 추가: 저주 지속성 초기화 (Lobby 등에서 호출)
+    public static resetPersistentCurses(): void {
+        // 현재 Store 기반으로 저주 관리하므로 별도의 정적 Map은 사용하지 않지만
+        // 호환성을 위해 메서드는 유지하고 빈 구현으로 남김 (혹은 필요한 초기화 로직 추가)
+        // console.log('[BaseGameScene] Persistent curses reset requested.');
+    }
+
 
     // 서브클래스에서 구현해야 할 추상 메서드
     protected abstract getSceneKey(): string;
@@ -1425,11 +1432,18 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.heavyLogicTimer = 0;
         }
 
+        // [FIX] 호스트 권한 확인
+        const state = useGameStore.getState();
+        const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
+
         // 엘리베이터 무게 적용 (매 프레임 호출하되, 계산된 캐시값 사용)
         this.elevators.forEach(elevator => {
             const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
-            elevator.update(weight);
+            elevator.update(weight, amIHost);
         });
+
+        // [FIX] Sticky Physics Implementation
+        this.applyElevatorStickyPhysics();
 
         // 블록-블록 접촉 수동 감지 (Static 바디끼리는 물리 충돌 안 함)
         // [NOTE] 블록 관련 로직은 물리 안정성을 위해 매 프레임 수행
@@ -1464,8 +1478,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (roomId) {
                 // (A) Host controls automated gimmicks (Elevators)
 
-                const amIHost = useGameStore.getState().isHost;
-
                 if (amIHost && now - this.lastGimmickUpdateTime > this.SYNC_INTERVAL) {
                     if (this.elevators.length > 0) {
                         // [PERFORMANCE] 변경된 기믹만 전송 (Sparse Update)
@@ -1489,6 +1501,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                         if (elevatorData.length > 0) {
                             gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
+                            console.log(`[Host] Sent elevator data:`, elevatorData);
                         }
                     }
                     this.lastGimmickUpdateTime = now;
@@ -1524,6 +1537,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 }
             }
         }
+
+
 
         this.updateCamera();
         this.handleLocalPlayerInput();
@@ -1771,7 +1786,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // [FIX] 입장 시 즉시 동기화 (Host -> New Player)
     private onPlayerJoin = (_message: GameMessage) => {
-        const amIHost = this.myPlayerId && useGameStore.getState().host === this.myPlayerId;
+        const state = useGameStore.getState();
+        const amIHost = state.isHost || (this.myPlayerId && state.host === this.myPlayerId);
         if (!amIHost) return;
 
         // 1. Elevators Sync
@@ -1786,7 +1802,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const roomId = this.roomId || useGameStore.getState().roomId;
             if (roomId) {
                 gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
-                // console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
+                console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
             }
         }
 
@@ -1868,6 +1884,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (!msg.content) return;
         try {
             const updates = JSON.parse(msg.content);
+            // console.log(`[Client] Received gimmick update:`, updates.length);
             updates.forEach((data: any) => {
                 const elevator = this.elevators.find(e => e.id === data.id);
                 if (elevator) {
@@ -1897,6 +1914,43 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private onGameReset = () => {
         this.resetGame();
     };
+
+    // [FIX] 엘리베이터 Sticky Physics (하강 시 콩콩거림 방지)
+    private applyElevatorStickyPhysics(): void {
+        this.elevators.forEach(elevator => {
+            const dy = elevator.deltaY;
+            // 하강(dy > 0)하거나 상승(dy < 0)할 때 모두 적용 (특히 하강 시 중요)
+            if (Math.abs(dy) < 0.001) return;
+
+            const elevatorBounds = elevator.getBody().bounds;
+            // 감지 영역: 엘리베이터 바로 위
+            const checkBounds = {
+                minX: elevatorBounds.min.x + 5,
+                maxX: elevatorBounds.max.x - 5,
+                minY: elevatorBounds.min.y - 15, // 위쪽으로 15px
+                maxY: elevatorBounds.min.y + 5   // 살짝 내부까지
+            };
+
+            this.players.forEach(player => {
+                const playerBounds = player.getBody().bounds;
+
+                // AABB Overlap Check
+                const overlaps = (
+                    playerBounds.max.x > checkBounds.minX &&
+                    playerBounds.min.x < checkBounds.maxX &&
+                    playerBounds.max.y > checkBounds.minY &&
+                    playerBounds.max.y < checkBounds.maxY // 발이 영역 내에 있어야 함
+                );
+
+                if (overlaps) {
+                    // 엘리베이터 이동량만큼 플레이어 강제 이동
+                    const currentPos = player.getPosition();
+                    player.setPosition(currentPos.x, currentPos.y + dy);
+                    // 가속도 초기화 방지 등을 위해 setPosition 사용 (Physics Velocity는 유지됨)
+                }
+            });
+        });
+    }
 
     // 재귀적으로 위에 있는 모든 플레이어 수 계산 (AABB Overlap + Support Chain)
     private calculateTotalWeight(bottomLabel: string): number {
