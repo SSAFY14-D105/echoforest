@@ -22,13 +22,13 @@ export function setupTiledBackground(
 ): void {
     const texture = scene.textures.get(textureKey);
     if (!texture || texture.key === '__MISSING') {
-        console.warn(`[SceneHelper] Background texture '${textureKey}' not found.`);
+        // console.warn(`[SceneHelper] Background texture '${textureKey}' not found.`);
         return;
     }
 
     // 0 또는 NaN 체크 (첫 프레임 씬 로딩 시 예외 방지)
     if (!worldWidth || !worldHeight || isNaN(worldWidth) || isNaN(worldHeight)) {
-        console.warn(`[SceneHelper] Invalid world dimensions: ${worldWidth}x${worldHeight}`);
+        // console.warn(`[SceneHelper] Invalid world dimensions: ${worldWidth}x${worldHeight}`);
         return;
     }
 
@@ -39,7 +39,7 @@ export function setupTiledBackground(
     const scaledWidth = bgSource.width * scale;
 
     // [DEBUG] Texture Info
-    console.log(`[SceneHelper] Texture '${textureKey}': Source(${bgSource.width}x${bgSource.height})`);
+    // console.log(`[SceneHelper] Texture '${textureKey}': Source(${bgSource.width}x${bgSource.height})`);
 
     // [DEBUG] Background Debug Layer (Magenta)
     // If you see Magenta, it means the background images are missing or transparent.
@@ -61,7 +61,7 @@ export function setupTiledBackground(
     const effectiveWidth = scaledWidth - overlap;
 
     // [DEBUG] Tiling Info
-    console.log(`[SceneHelper] Setup BG: World(${worldWidth}x${worldHeight}), ScreenH(${screenHeight}), Scale(${scale.toFixed(4)}), ScaledW(${scaledWidth.toFixed(1)}), NumTiles(${numTiles})`);
+    // console.log(`[SceneHelper] Setup BG: World(${worldWidth}x${worldHeight}), ScreenH(${screenHeight}), Scale(${scale.toFixed(4)}), ScaledW(${scaledWidth.toFixed(1)}), NumTiles(${numTiles})`);
 
     // [FIX] 앞뒤로 여유 타일을 두어 끊김 현상 방지 (-10 ~ numTiles + 10)
     // -10부터 시작하여 왼쪽 공백(초반부) 완벽 커버

@@ -113,7 +113,7 @@ export default class ObjectFactory {
                 );
                 respawn.setScale(mapScale);
                 scene.spawnPoints.push(respawn);
-                console.log(`[ObjectFactory] Spawn registered: (${centerX}, ${centerY})`);
+                // console.log(`[ObjectFactory] Spawn registered: (${centerX}, ${centerY})`);
                 break;
             }
             case 'Signboard': {
@@ -264,7 +264,7 @@ export default class ObjectFactory {
                 );
                 respawn.setScale(mapScale);
                 scene.spawnPoints.push(respawn);
-                console.log(`[ObjectFactory] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
+                // console.log(`[ObjectFactory] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
                 break;
             }
             default: {

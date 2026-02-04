@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useGameStore } from './store/useGameStore';
-import MainPage from './pages/auth/MainPage/MainPage';
-import LoginPage from './pages/auth/LoginPage/LoginPage';
-import SignupPage from './pages/auth/SignupPage/SignupPage';
-import PermissionCheckPage from './pages/auth/PermissionCheckPage/PermissionCheckPage'; // [NEW]
-import LobbyPage from './pages/lobby/LobbyPage/LobbyPage.tsx';
-import GamePage from './pages/game/GamePage/GamePage.tsx';
 import { isTokenExpired } from './utils/authUtils';
 import ToastContainer from './components/ToastContainer/ToastContainer';
 import BackgroundMusic from './components/common/BackgroundMusic';
 import { useAudioStore } from './store/useAudioStore';
 import SplashScreen from './components/SplashScreen/SplashScreen';
+
+// [OPTIMIZATION] Lazy Load Pages to reduce initial bundle size
+const MainPage = lazy(() => import('./pages/auth/MainPage/MainPage'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage/LoginPage'));
+const SignupPage = lazy(() => import('./pages/auth/SignupPage/SignupPage'));
+const PermissionCheckPage = lazy(() => import('./pages/auth/PermissionCheckPage/PermissionCheckPage'));
+const LobbyPage = lazy(() => import('./pages/lobby/LobbyPage/LobbyPage.tsx'));
+const GamePage = lazy(() => import('./pages/game/GamePage/GamePage.tsx'));
 
 export default function App() {
   const { nickname, roomId, setNickname } = useGameStore();
@@ -32,7 +34,7 @@ export default function App() {
     const storedNickname = localStorage.getItem('nickname');
 
     if (token && isTokenExpired(token)) {
-      console.warn('[App] Token expired. Logging out.');
+      // console.warn('[App] Token expired. Logging out.');
       useGameStore.getState().logout();
     } else if (token && storedNickname && !nickname) {
       setNickname(storedNickname);
@@ -54,7 +56,7 @@ export default function App() {
         const handleStatusChange = () => {
           const camState = camQuery.state;
           const micState = micQuery.state;
-          console.log(`[App] Permission changed - Camera: ${camState}, Mic: ${micState}`);
+          // console.log(`[App] Permission changed - Camera: ${camState}, Mic: ${micState}`);
 
           // 둘 중 하나라도 허용되지 않으면 권한 박탈
           if (camState !== 'granted' || micState !== 'granted') {
@@ -66,7 +68,7 @@ export default function App() {
         camQuery.onchange = handleStatusChange;
         micQuery.onchange = handleStatusChange;
       } catch (e) {
-        console.warn('[App] Permission API error:', e);
+        // console.warn('[App] Permission API error:', e);
       }
     };
 
@@ -84,49 +86,51 @@ export default function App() {
       <ToastContainer />
       <BackgroundMusic />
 
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/" element={
-          nickname ? <Navigate to="/lobby" replace /> : <MainPage />
-        } />
-        <Route path="/login" element={
-          nickname ? <Navigate to="/lobby" replace /> : (
-            <LoginPage
-              onLoginSuccess={(id) => setNickname(id)}
-              onBack={() => navigate('/')}
-            />
-          )
-        } />
-        <Route path="/signup" element={
-          nickname ? <Navigate to="/lobby" replace /> : (
-            <SignupPage
-              onSignupSuccess={() => navigate('/login')}
-              onBack={() => navigate('/')}
-            />
-          )
-        } />
-
-        <Route path="/permission" element={
-          !nickname ? <Navigate to="/" replace /> : <PermissionCheckPage />
-        } />
-
-        {/* Protected Routes */}
-        <Route path="/lobby" element={
-          !nickname ? <Navigate to="/" replace /> : (
-            !useGameStore.getState().hasMediaPermission ? <Navigate to="/permission" replace /> : <LobbyPage />
-          )
-        } />
-        <Route path="/game" element={
-          !nickname ? <Navigate to="/" replace /> : (
-            !roomId ? <Navigate to="/lobby" replace /> : (
-              !useGameStore.getState().hasMediaPermission ? <Navigate to="/permission" replace /> : <GamePage />
+      <Suspense fallback={null}>
+        <Routes>
+          {/* Auth Routes */}
+          <Route path="/" element={
+            nickname ? <Navigate to="/lobby" replace /> : <MainPage />
+          } />
+          <Route path="/login" element={
+            nickname ? <Navigate to="/lobby" replace /> : (
+              <LoginPage
+                onLoginSuccess={(id) => setNickname(id)}
+                onBack={() => navigate('/')}
+              />
             )
-          )
-        } />
+          } />
+          <Route path="/signup" element={
+            nickname ? <Navigate to="/lobby" replace /> : (
+              <SignupPage
+                onSignupSuccess={() => navigate('/login')}
+                onBack={() => navigate('/')}
+              />
+            )
+          } />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="/permission" element={
+            !nickname ? <Navigate to="/" replace /> : <PermissionCheckPage />
+          } />
+
+          {/* Protected Routes */}
+          <Route path="/lobby" element={
+            !nickname ? <Navigate to="/" replace /> : (
+              !useGameStore.getState().hasMediaPermission ? <Navigate to="/permission" replace /> : <LobbyPage />
+            )
+          } />
+          <Route path="/game" element={
+            !nickname ? <Navigate to="/" replace /> : (
+              !roomId ? <Navigate to="/lobby" replace /> : (
+                !useGameStore.getState().hasMediaPermission ? <Navigate to="/permission" replace /> : <GamePage />
+              )
+            )
+          } />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

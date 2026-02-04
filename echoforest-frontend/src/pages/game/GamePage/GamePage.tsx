@@ -4,6 +4,10 @@
  * 리팩토링 완료:
  * - 커스텀 훅: useGameWebSocket, useSttProcessor, useGamePause
  * - View 컴포넌트: SoloPlayView, StagePlayView, WaitingRoom
+ * 
+ * [PERFORMANCE] 최적화:
+ * - useGameStore 전체 구독 -> useShallow 부분 구독으로 변경
+ * - players 배열(고빈도 업데이트) 구독 제거하여 프레임 드랍 방지
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,11 +15,12 @@ import { useGameStore } from '../../../store/useGameStore';
 import { useToastStore } from '../../../store/useToastStore';
 import type { Player } from '../../../store/useGameStore';
 import { gameWebSocket } from '../../../socket/GameWebSocket';
-import { liveKitService } from '../../../socket/LiveKitService'; // [FIX] Import LiveKitService
+import { liveKitService } from '../../../socket/LiveKitService';
 import StageSelectScreen from '../../../components/StageSelectScreen/StageSelectScreen';
 import CameraArea from '../../../components/CameraArea/CameraArea';
 import PauseOverlay from '../../../components/game/PauseOverlay';
 import styles from './GamePage.module.css';
+import { useShallow } from 'zustand/react/shallow';
 
 // 커스텀 훅
 import { useGameWebSocket } from '../../../hooks/useGameWebSocket';
@@ -30,13 +35,13 @@ import WaitingRoom from './WaitingRoom';
 const MAX_PLAYERS = 4;
 
 export default function GamePage() {
-  // === Store ===
+  // === Store Selector Optimization ===
+  // [PERFORMANCE] players 배열은 20-60FPS로 업데이트되므로 GamePage 레벨에서 구독하면 안 됨.
+  // WaitingRoom 등 필요한 곳에서만 구독하거나 Selectors를 사용해야 함.
   const {
     nickname,
     roomId,
     isHost,
-    players,
-    readyPlayers,
     isGameStarted,
     isSoloMode,
     currentStage,
@@ -47,7 +52,23 @@ export default function GamePage() {
     selectStage,
     clearStage,
     leaveGame,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      nickname: state.nickname,
+      roomId: state.roomId,
+      isHost: state.isHost,
+      isGameStarted: state.isGameStarted,
+      isSoloMode: state.isSoloMode,
+      currentStage: state.currentStage,
+      clearedStages: state.clearedStages,
+      pausedBy: state.pausedBy,
+      addPlayer: state.addPlayer,
+      startGame: state.startGame,
+      selectStage: state.selectStage,
+      clearStage: state.clearStage,
+      leaveGame: state.leaveGame,
+    }))
+  );
 
   // === Custom Hooks ===
   useGameWebSocket();
@@ -67,7 +88,8 @@ export default function GamePage() {
   // === 초기화 ===
   useEffect(() => {
     if (isSoloMode) return;
-    const alreadyExists = players.some(p => p.nickname === nickname);
+    const currentPlayers = useGameStore.getState().players;
+    const alreadyExists = currentPlayers.some(p => p.nickname === nickname);
     if (alreadyExists) return;
 
     const myPlayer: Player = {
@@ -77,13 +99,11 @@ export default function GamePage() {
       isLocal: true
     };
     addPlayer(myPlayer);
-  }, [isSoloMode]);
+  }, [isSoloMode, nickname, isHost, addPlayer]);
 
   // [FIX] 게임 페이지 언마운트 시 LiveKit 연결 해제
-  // (Lobby로 돌아가거나 할 때 확실하게 끊어주어야 함)
   useEffect(() => {
     return () => {
-      // console.log('[GamePage] Unmounting: Disconnecting LiveKit');
       liveKitService.disconnect();
     };
   }, []);
@@ -91,24 +111,23 @@ export default function GamePage() {
   // Player state 전송 (Phaser -> React -> Socket)
   const handleSendState = useCallback((x: number, y: number, vx: number, vy: number, anim: string, isDead: boolean, curses: string[], isHidden: boolean = false) => {
     if (isHost && roomId) {
-      // Host는 바로 전송
       gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
     } else if (roomId) {
-      // Client도 바로 전송 (서버 중계)
       gameWebSocket.sendPlayerState(roomId, x, y, vx, vy, anim, isDead, curses, isHidden);
     }
   }, [isHost, roomId]);
 
-  const handleToggleReady = () => {
+  const handleToggleReady = useCallback(() => {
     if (!roomId || isSoloMode) return;
     const newReady = !myReady;
     setMyReady(newReady);
     gameWebSocket.sendReady(roomId, newReady);
-  };
+  }, [roomId, isSoloMode, myReady]);
 
-  const handleStartGame = () => {
+  const handleStartGame = useCallback(() => {
     if (!isHost) return;
-    const { isAllReady } = useGameStore.getState();
+    // [PERFORMANCE] 렌더링 없이 최신 상태 조회
+    const { isAllReady, players } = useGameStore.getState();
 
     if (isSoloMode) {
       startGame();
@@ -119,9 +138,9 @@ export default function GamePage() {
       }
       gameWebSocket.sendStartGame(roomId);
     }
-  };
+  }, [isHost, isSoloMode, roomId, startGame]);
 
-  const handleSelectStage = (stageNum: number) => {
+  const handleSelectStage = useCallback((stageNum: number) => {
     const isUnlocked = stageNum === 1 || clearedStages.includes(`MULTI_${stageNum - 1}`);
     if (isUnlocked) {
       selectStage(getMultiStageId(stageNum));
@@ -129,15 +148,15 @@ export default function GamePage() {
         (gameWebSocket as any).selectStage(roomId, stageNum);
       }
     }
-  };
+  }, [clearedStages, isHost, roomId, selectStage]);
 
-  const handleClearStage = (stageId: string) => {
+  const handleClearStage = useCallback((stageId: string) => {
     const stageNum = parseInt(stageId.replace(/^(MULTI_|SOLO_)/, ''), 10) || 1;
     clearStage(stageId);
     if (isHost && roomId && 'clearStageSync' in gameWebSocket) {
       (gameWebSocket as any).clearStageSync(roomId, stageNum);
     }
-  };
+  }, [clearStage, isHost, roomId]);
 
   const { showToast } = useToastStore();
 
@@ -152,19 +171,16 @@ export default function GamePage() {
     }
   }, [roomId, showToast]);
 
-  const addTestPlayer = () => {
-    if (players.length < MAX_PLAYERS) {
+  const addTestPlayer = useCallback(() => {
+    const currentPlayers = useGameStore.getState().players;
+    if (currentPlayers.length < MAX_PLAYERS) {
       addPlayer({
         id: `test-player-${Date.now()}`,
-        nickname: `Player${players.length + 1}`,
+        nickname: `Player${currentPlayers.length + 1}`,
         isHost: false
       });
     }
-  };
-
-  // Ready 상태
-  const { isAllReady } = useGameStore.getState();
-  const allReady = isAllReady();
+  }, [addPlayer]);
 
   // ========== 렌더링 ==========
 
@@ -219,13 +235,10 @@ export default function GamePage() {
   return (
     <WaitingRoom
       roomId={roomId}
-      players={players}
-      readyPlayers={readyPlayers}
       isHost={isHost}
       isSoloMode={isSoloMode}
       pausedBy={pausedBy}
       myReady={myReady}
-      allReady={allReady}
       onSendState={handleSendState}
       onCopyRoomId={handleCopyRoomId}
       onLeave={leaveGame}

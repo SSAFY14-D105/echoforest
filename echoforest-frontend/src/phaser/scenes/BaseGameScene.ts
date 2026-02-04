@@ -103,6 +103,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private heavyLogicTimer: number = 0;
     private readonly HEAVY_LOGIC_INTERVAL: number = 50; // 3 frames (60fps)
     private cachedElevatorWeights: Map<string, number> = new Map();
+    // [PERFORMANCE] 기믹 동기화 최적화 (변경된 엘리베이터만 전송)
+    private lastSyncedElevatorPos: Map<string, { x: number, y: number }> = new Map();
     // [PERFORMANCE] GC 최적화를 위한 재사용 Set
     private processedBlocks: Set<string> = new Set();
 
@@ -210,7 +212,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // [NEW] 렌더링 안정화 후 로딩 완료 신호 전송 (500ms 딜레이)
             this.time.delayedCall(500, () => {
                 if (this.sceneReadyCallback) {
-                    console.log(`[BaseGameScene] ${this.getSceneKey()} is ready!`);
+                    // console.log(`[BaseGameScene] ${this.getSceneKey()} is ready!`);
                     this.sceneReadyCallback();
                 }
             });
@@ -401,6 +403,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         this.pushMapRight.clear();
         this.blockContactLeft.clear();
         this.blockContactRight.clear();
+        this.lastSyncedElevatorPos.clear();
         this.myPlayerId = '';
         this.isDead = false;
         this.isInitialPlacement = true; // 재시작 시 초기 배치 모드 활성화
@@ -434,8 +437,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // bottom을 false로 설정하여 별도 바닥 플랫폼 사용
 
         // [DEBUG] 물리 바디 시각화 (디버깅용) - 배포 시 false로 변경
-        this.matter.world.createDebugGraphic();
-        this.matter.world.drawDebug = true;
+        // this.matter.world.createDebugGraphic();
+        this.matter.world.drawDebug = false;
 
         // 바닥 플랫폼 (별도 생성)
         if (this.shouldCreateDefaultFloor()) {
@@ -495,18 +498,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     private subscribeToStore(): void {
         // 필히 감시해야 할 상태: players 배열 전체 및 본인 nickname
-        let prevPlayersJson = JSON.stringify(useGameStore.getState().players);
-        let prevNickname = useGameStore.getState().nickname;
-
-        this.storeUnsubscribe = useGameStore.subscribe((state) => {
-            const currentPlayersJson = JSON.stringify(state.players);
-            const currentNickname = state.nickname;
-
-            // 플레이어 목록이나 닉네임이 변경된 경우만 동기화
-            if (currentPlayersJson !== prevPlayersJson || currentNickname !== prevNickname) {
-                //console.log(`[${this.getSceneKey()}] Store state changed, syncing players...`);
-                prevPlayersJson = currentPlayersJson;
-                prevNickname = currentNickname;
+        this.storeUnsubscribe = useGameStore.subscribe((state, prevState) => {
+            // [PERFORMANCE] JSON.stringify 제거하고 참조 비교(Reference Equality) 사용
+            // Zustand는 불변성을 유지하므로 객체가 변경되면 참조가 바뀝니다.
+            if (state.players !== prevState.players || state.nickname !== prevState.nickname) {
                 this.syncPlayersFromStore();
             }
         });
@@ -1038,7 +1033,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         });
                         // console.log(`[${this.getSceneKey()}]Block(s) activated(Prop targetBlockId: ${button.targetBlockId}) via Button: ${button.id} `);
                     } else {
-                        console.warn(`[${this.getSceneKey()}] No blocks found with targetBlockId: ${button.targetBlockId} `);
+                        // console.warn(`[${this.getSceneKey()}] No blocks found with targetBlockId: ${button.targetBlockId} `);
                     }
                 } else if (button.spawnConfig) {
                     // 기존 방식: 버튼 발동 시 블록 소환
@@ -1094,56 +1089,116 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 this.activeSignboard = isStart ? signboard : null;
 
                 if (!isStart) {
-                    this.hideMessagePopup();
+                    // [Redesign] 범위 벗어나도 자동 닫힘 안 함 (X 버튼으로만 닫기)
+                    // this.hideMessagePopup();
+                    this.activeSignboard = null;
                 }
             }
         }
     }
+    // [New] 닫기 버튼 독립 관리 (입력 버그 방지)
+    private popupCloseBtn: Phaser.GameObjects.Container | null = null;
+
     protected showMessagePopup(text: string): void {
         if (this.popupContainer) return;
 
         const centerX = this.scale.width / 2;
         const centerY = this.scale.height / 2;
 
-        this.popupContainer = this.add.container(centerX, centerY).setDepth(100).setScrollFactor(0);
+        // [FIX] Depth를 2010으로 높여서 플레이어보다 확실하게 앞에 오도록 함
+        this.popupContainer = this.add.container(centerX, centerY).setDepth(2010).setScrollFactor(0);
 
-        // [Redesign] 칠판 스타일 배경 박스
+        // [Redesign] 칠판 스타일 배경 박스 (600x300, 1.5배 확대)
         const bg = this.add.graphics();
 
         // 1. 배경 (짙은 칠판색)
         bg.fillStyle(0x2C2E2B, 0.95);
-        bg.fillRoundedRect(-200, -100, 400, 200, 10); // 400x200 크기
+        bg.fillRoundedRect(-300, -150, 600, 300, 15);
 
         // 2. 외부 테두리 (밝은 갈색 나무)
-        bg.lineStyle(6, 0x8D6E63, 1);
-        bg.strokeRoundedRect(-203, -103, 406, 206, 12);
+        bg.lineStyle(8, 0x8D6E63, 1);
+        bg.strokeRoundedRect(-304, -154, 608, 308, 18);
 
         // 3. 내부 테두리 (진한 갈색 그림자/음영)
-        bg.lineStyle(4, 0x3E2723, 1);
-        bg.strokeRoundedRect(-200, -100, 400, 200, 10);
+        bg.lineStyle(5, 0x3E2723, 1);
+        bg.strokeRoundedRect(-300, -150, 600, 300, 15);
 
-        // 메시지 텍스트 (크기 확대 및 줄바꿈 여유 확보)
-        const msg = this.add.text(0, -10, text, {
-            fontSize: '20px',
-            fontFamily: 'Monospace', // 픽셀 느낌을 위해 Monospace 계열 시도
+        // 동적 폰트 크기 계산 (길이에 따라 조절)
+        let fontSize = '28px';
+        if (text.length > 100) fontSize = '20px';
+        else if (text.length > 50) fontSize = '24px';
+
+        // 메시지 텍스트 (NeoDunggeunmo폰트, 왼쪽 정렬)
+        const msg = this.add.text(-270, 0, text, {
+            fontSize: fontSize,
+            fontFamily: 'NeoDunggeunmo',
             color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: 360 } // 텍스트 영역 360px
-        }).setOrigin(0.5);
+            align: 'left',
+            wordWrap: { width: 540 } // 텍스트 영역 540px
+        }).setOrigin(0, 0.5); // 왼쪽 중앙 기준
 
-        // 닫기 안내 (하단으로 이동)
-        const closeHint = this.add.text(0, 80, '(범위를 벗어나면 닫힙니다)', {
-            fontSize: '14px',
-            color: '#aaaaaa'
-        }).setOrigin(0.5);
+        this.popupContainer.add([bg, msg]);
 
-        this.popupContainer.add([bg, msg, closeHint]);
+        // [New] 닫기 버튼 독립 생성 (부모 컨테이너 밖으로 빼냄 -> 입력 확실 보장)
+        // 위치: 화면 중앙 기준에서 우측 상단 오프셋만큼 이동
+        const btnX = centerX + 270;
+        const btnY = centerY - 120;
+
+        this.popupCloseBtn = this.add.container(btnX, btnY).setDepth(2100).setScrollFactor(0);
+
+        // 버튼 배경 (나무 질감 원형)
+        const closeBg = this.add.graphics();
+        closeBg.fillStyle(0x8D6E63, 1);
+        closeBg.fillCircle(0, 0, 20); // 로컬 0,0에 그림
+        closeBg.lineStyle(2, 0x3E2723, 1);
+        closeBg.strokeCircle(0, 0, 20);
+
+        // X 표시 Text
+        const closeText = this.add.text(0, 0, 'X', {
+            fontSize: '24px',
+            fontFamily: 'NeoDunggeunmo',
+            color: '#3E2723', // 진한 갈색 글자
+            fontStyle: 'bold'
+        }).setOrigin(0.5); // 로컬 0,0에 배치
+
+        // 상호작용 설정 (컨테이너가 아닌 그래픽스에 걸어도 되고, 컨테이너에 걸어도 됨. 여기선 컨테이너에)
+        const hitArea = new Phaser.Geom.Circle(0, 0, 25);
+        this.popupCloseBtn.setInteractive(hitArea, Phaser.Geom.Circle.Contains);
+
+        this.popupCloseBtn.on('pointerdown', () => {
+            this.hideMessagePopup();
+        });
+
+        // 커서 변경 (hover 효과)
+        this.popupCloseBtn.on('pointerover', () => {
+            this.input.setDefaultCursor('pointer');
+            closeBg.clear();
+            closeBg.fillStyle(0xA1887F, 1); // 호버 시 조금 더 밝게
+            closeBg.fillCircle(0, 0, 20);
+            closeBg.lineStyle(2, 0x3E2723, 1);
+            closeBg.strokeCircle(0, 0, 20);
+        });
+
+        this.popupCloseBtn.on('pointerout', () => {
+            this.input.setDefaultCursor('default');
+            closeBg.clear();
+            closeBg.fillStyle(0x8D6E63, 1); // 복구
+            closeBg.fillCircle(0, 0, 20);
+            closeBg.lineStyle(2, 0x3E2723, 1);
+            closeBg.strokeCircle(0, 0, 20);
+        });
+
+        this.popupCloseBtn.add([closeBg, closeText]);
     }
 
     protected hideMessagePopup(): void {
         if (this.popupContainer) {
             this.popupContainer.destroy();
             this.popupContainer = null;
+        }
+        if (this.popupCloseBtn) {
+            this.popupCloseBtn.destroy();
+            this.popupCloseBtn = null;
         }
     }
 
@@ -1249,7 +1304,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                         player.setColor(newColorIndex);
                     }
                 } else if (!player) {
-                    console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
+                    // console.warn(`[Scene] Sync failed: Player ${storePlayer.nickname} not found in scene map`);
                 }
             }
         });
@@ -1328,7 +1383,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
             // console.log(`[${this.getSceneKey()}] Player added: ${storePlayer.nickname} at(${xPos.toFixed(0)}, ${yPos.toFixed(0)})`);
         } catch (error) {
-            console.warn(`[${this.getSceneKey()}] Failed to add player: `, error);
+            // console.warn(`[${this.getSceneKey()}] Failed to add player: `, error);
         }
     }
 
@@ -1384,7 +1439,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const pos = player.getPosition();
             if (pos.y > mapBottomY) {
                 if (player.isLocalPlayer && !this.isDead) {
-                    console.warn(`[Physics] Player ${player.nickname} fell out of bounds (${pos.y.toFixed(0)}), triggering death.`);
+                    // console.warn(`[Physics] Player ${player.nickname} fell out of bounds (${pos.y.toFixed(0)}), triggering death.`);
                     this.triggerDeath('fall');
                 }
             }
@@ -1450,12 +1505,28 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                 if (amIHost && now - this.lastGimmickUpdateTime > this.SYNC_INTERVAL) {
                     if (this.elevators.length > 0) {
-                        const data = this.elevators.map(e => ({
-                            id: e.id,
-                            x: e.getPosition().x,
-                            y: e.getPosition().y
-                        }));
-                        gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(data));
+                        // [PERFORMANCE] 변경된 기믹만 전송 (Sparse Update)
+                        const elevatorData: any[] = [];
+
+                        this.elevators.forEach(e => {
+                            const currentPos = { x: e.getPosition().x, y: e.getPosition().y };
+                            const lastPos = this.lastSyncedElevatorPos.get(e.id);
+
+                            // 0.1px 이상 움직였을 때만 전송 (부동소수점 오차 무시)
+                            if (!lastPos || Math.abs(currentPos.x - lastPos.x) > 0.1 || Math.abs(currentPos.y - lastPos.y) > 0.1) {
+                                elevatorData.push({
+                                    id: e.id,
+                                    x: currentPos.x,
+                                    y: currentPos.y
+                                });
+                                // Update cached position
+                                this.lastSyncedElevatorPos.set(e.id, currentPos);
+                            }
+                        });
+
+                        if (elevatorData.length > 0) {
+                            gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
+                        }
                     }
                     this.lastGimmickUpdateTime = now;
                 }
@@ -1717,7 +1788,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         try {
             // [PROTOCOL v2] Array Based Protocol
             // [id, x, y, vx, vy, anim, isDead, isHidden, isDisconnected, colorIndex, curses, hp, isAfk]
-            const serverPlayers: any[] = JSON.parse(msg.content);
+            // [PERFORMANCE] GameWebSocket에서 미리 파싱한 데이터 사용
+            const serverPlayers: any[] = msg.parsedData || JSON.parse(msg.content);
 
             serverPlayers.forEach((pData) => {
                 // Array Index Mapping
@@ -1950,7 +2022,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // [DEBUG] 강제 상태 동기화 호출 추적
-        console.log(`[DEBUG] ⚡ forceSyncState called in ${this.getSceneKey()} for player: ${this.myPlayerId}`);
+        // console.log(`[DEBUG] ⚡ forceSyncState called in ${this.getSceneKey()} for player: ${this.myPlayerId}`);
         // isHidden을 강제로 false로 보내서 스테이지 클리어 상태가 아님을 알림
         this.sendStateCallback(x, y, velocity.x, velocity.y, syncAnim, this.isDead, curses, false);
 
@@ -1958,7 +2030,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 서버가 "모든 플레이어 골인" 상태를 유지하고 있을 경우를 대비함
         const roomId = this.roomId || useGameStore.getState().roomId;
         if (roomId && !this.isSoloMode) {
-            console.log(`[DEBUG] 📤 Sending STAGE_EXIT from forceSyncState for room: ${roomId}`);
+            // console.log(`[DEBUG] 📤 Sending STAGE_EXIT from forceSyncState for room: ${roomId}`);
             gameWebSocket.sendStageExit(roomId);
         }
     }
@@ -2199,7 +2271,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         const groundY = this.getWorldHeight() + this.offsetY;
         const defaultY = groundY - (this.shouldCreateDefaultFloor() ? 100 : 128);
         const fallbackX = 100 + (playerIndex * 100);
-        console.warn(`[BaseGameScene] NO spawn points found! Using fallback: (${fallbackX}, ${defaultY})`);
+        // console.warn(`[BaseGameScene] NO spawn points found! Using fallback: (${fallbackX}, ${defaultY})`);
         return {
             x: fallbackX,
             y: defaultY
@@ -2209,13 +2281,13 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     // 스테이지 클리어 시 호출 - 서브클래스에서 오버라이드 가능
     protected onStageComplete(): void {
         // [DEBUG] 스테이지 클리어 호출 추적
-        console.log(`[DEBUG] � onStageComplete called in ${this.getSceneKey()}`);
+        // console.log(`[DEBUG]  onStageComplete called in ${this.getSceneKey()}`);
 
         // [FIX] roomId가 설정되지 않았을 경우 Store에서 가져옴
         const roomId = this.roomId || useGameStore.getState().roomId;
 
         if (roomId && gameWebSocket.isConnected()) {
-            console.log(`[DEBUG] 📤 Sending STAGE_CLEAR to server for room: ${roomId}`);
+            // console.log(`[DEBUG] 📤 Sending STAGE_CLEAR to server for room: ${roomId}`);
             gameWebSocket.sendStageClear(roomId);
 
             // UI 피드백: "다른 멤버를 기다리는 중..."
@@ -2226,7 +2298,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 0x00ffff
             );
         } else {
-            console.warn('[Stage] Cannot send clear: Room ID missing or WS disconnected');
+            // console.warn('[Stage] Cannot send clear: Room ID missing or WS disconnected');
         }
     }
 
@@ -2283,7 +2355,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y)) {
             const now = Date.now();
             if (now - this.lastErrorLogTime > 1000) {
-                console.warn('[Camera] Invalid local player position (NaN/Infinity) detected! skipping update.');
+                // console.warn('[Camera] Invalid local player position (NaN/Infinity) detected! skipping update.');
                 this.lastErrorLogTime = now;
             }
             return;
@@ -2320,7 +2392,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         if (!Number.isFinite(newScrollX) || !Number.isFinite(newScrollY)) {
             const now = Date.now();
             if (now - this.lastErrorLogTime > 1000) {
-                console.warn(`[Camera] Scroll calculation failed! result: X = ${newScrollX}, Y = ${newScrollY} `);
+                // console.warn(`[Camera] Scroll calculation failed! result: X = ${newScrollX}, Y = ${newScrollY} `);
                 this.lastErrorLogTime = now;
             }
             // 안전한 값으로 강제 리셋

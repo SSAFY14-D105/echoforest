@@ -266,10 +266,12 @@
     /* WaitingRoom과 동일하게 280px로 수정 */
     background: transparent;
     border: none;
-    padding: 10px;
+    padding: 12px;
+    /* WaitingRoom과 동일하게 12px */
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    /* WaitingRoom과 동일하게 12px */
     justify-content: center;
     align-items: center;
 }
@@ -278,7 +280,8 @@
     font-size: 14px;
     font-weight: bold;
     text-align: center;
-    padding: 6px;
+    padding: 12px;
+    /* WaitingRoom과 동일하게 12px */
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;

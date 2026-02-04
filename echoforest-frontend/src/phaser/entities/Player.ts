@@ -74,7 +74,7 @@ export class Player {
 
         // TODO: 씬 준비 상태 체크 로직 개선 필요 - 임시 가드
         if (!this.scene.matter) {
-            console.warn('[Player] Scene matter physics not ready, skipping player creation:', config.id);
+            // console.warn('[Player] Scene matter physics not ready, skipping player creation:', config.id);
             throw new Error('Scene matter physics not initialized');
         }
 
@@ -435,7 +435,7 @@ export class Player {
     public applyCurse(curseId: string): void {
         const curse = CURSES[curseId];
         if (!curse) {
-            console.warn(`[Player] Unknown curse: ${curseId}`);
+            // console.warn(`[Player] Unknown curse: ${curseId}`);
             return;
         }
 

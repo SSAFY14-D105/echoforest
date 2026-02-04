@@ -18,7 +18,7 @@ export interface UseSttProcessorReturn {
     interimTranscript: string;
     curseState: {
         stack: number;
-        cursedPlayer: string | null;
+        cursedPlayers: string[];
         isCollecting: boolean;
         queueCount: number;
         countdown: number;
@@ -49,7 +49,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     // 로컬 플레이어의 저주 상태 확인 (버섯 저주 포함)
     const localPlayer = players.find(p => p.nickname === nickname);
     const hasIndividualCurse = (localPlayer?.curses?.length ?? 0) > 0;
-    const isCursed = curseState.cursedPlayer !== null || hasIndividualCurse;
+    const isCursed = curseState.cursedPlayers.length > 0 || hasIndividualCurse;
 
     const lastProcessedRef = useRef('');
     const prevGameStartedRef = useRef(false);
@@ -86,7 +86,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     useEffect(() => {
         if (workerInitializedRef.current) return;
 
-        console.log('[STT Processor] Worker 초기화');
+        // console.log('[STT Processor] Worker 초기화');
         sttWorkerService.initialize();
         workerInitializedRef.current = true;
 
@@ -99,7 +99,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
     // Web Speech API가 먼저 마이크에 접근하면 LiveKit이 공유받을 수 있음
     useEffect(() => {
         // 마운트 직후 바로 STT 시작 (LiveKit보다 먼저)
-        console.log('[STT Processor] STT 즉시 시작 (LiveKit 전)');
+        // console.log('[STT Processor] STT 즉시 시작 (LiveKit 전)');
         startListening();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // 마운트 시 한 번만 실행
