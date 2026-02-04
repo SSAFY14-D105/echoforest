@@ -65,6 +65,10 @@ public class RoomSessionManager {
         return players.size();
     }
 
+    public int getPlayerCount() {
+        return players.size();
+    }
+
     public boolean isEmpty() {
         return players.isEmpty() && sessions.isEmpty();
     }

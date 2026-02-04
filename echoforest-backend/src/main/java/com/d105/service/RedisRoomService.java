@@ -122,6 +122,17 @@ public class RedisRoomService {
     }
 
     /**
+     * 방 플레이어 목록 초기화 (Zombie Room Auto-Fix)
+     */
+    public void resetRoomPlayers(String roomId) {
+        redisTemplate.delete(ROOM_KEY + roomId + PLAYERS_SUFFIX);
+        redisTemplate.delete(ROOM_KEY + roomId + READY_SUFFIX);
+        // 유저-방 매핑은 일일이 찾아서 지우기 어려우므로 TTL에 의존하거나,
+        // 필요하다면 keys()로 찾아서 지워야 함. 여기서는 Players 집합만 초기화하여 입장을 허용.
+        log.warn("Room {} players reset (Zombie Auto-Fix)", roomId);
+    }
+
+    /**
      * 방 나가기
      *
      * @return true: 방이 폭파됨 (방장 퇴장), false: 일반 퇴장
