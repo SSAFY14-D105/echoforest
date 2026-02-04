@@ -883,7 +883,11 @@ public class GameService {
         if (room != null) {
             // 개별 플레이어 완료 처리 (GameRoom에서 모든 플레이어 완료 시 전환)
             room.handleEndingMissionComplete(username);
-            log.info("📸 Room {}: {} sent ENDING_MISSION_END", roomId, username);
+
+            // [FIX] 게임이 완전히 종료되었으므로(엔딩 미션 완료), 모든 플레이어의 통계를 DB에 즉시 저장
+            redisRoomService.saveRoomStatsToDB(roomId);
+
+            log.info("📸 Room {}: {} sent ENDING_MISSION_END (Stats Saved)", roomId, username);
         }
     }
 
