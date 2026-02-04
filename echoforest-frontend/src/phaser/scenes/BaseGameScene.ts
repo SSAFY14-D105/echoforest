@@ -692,8 +692,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             return;
         }
 
-        const topLabel = top.label;
-        const bottomLabel = bottom.label;
+        // [FIX] 복합 바디(Compound Body)의 경우, 부모 바디의 라벨을 확인해야 함 (cleanup과 일치시키기 위함)
+        const topLabel = (top.parent && top.parent.label) ? top.parent.label : (top.label || '');
+        const bottomLabel = (bottom.parent && bottom.parent.label) ? bottom.parent.label : (bottom.label || '');
 
         if (!this.supportMap.has(bottomLabel)) {
             this.supportMap.set(bottomLabel, new Set());
@@ -1771,11 +1772,12 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.on('UPDATE', this.onPlayerUpdate);
 
         // 아이템(버섯) 제거 동기화 리스너
-        gameWebSocket.on('ITEM_REMOVED', (message) => {
-            if (message.itemId) {
-                this.handleItemRemoved(message.itemId);
-            }
-        });
+        gameWebSocket.on('ITEM_REMOVED', this.onItemRemoved);
+        gameWebSocket.on('ITEM_SYNC', this.onItemSync);
+
+        // [FIX] Late Joiner Elevator Sync (Host Driven)
+        // 누군가 들어오면 호스트가 즉시 현재 기믹 상태를 전송
+        gameWebSocket.on('JOIN', this.onPlayerJoin);
     }
 
     private cleanupSocketListeners(): void {
@@ -1784,7 +1786,68 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.off('BLOCK_UPDATE', this.onBlockUpdate);
         gameWebSocket.off('GAME_RESET', this.onGameReset);
         gameWebSocket.off('UPDATE', this.onPlayerUpdate);
+        gameWebSocket.off('ITEM_REMOVED', this.onItemRemoved);
+        gameWebSocket.off('ITEM_SYNC', this.onItemSync);
+        gameWebSocket.off('JOIN', this.onPlayerJoin);
     }
+
+    // [New Handlers]
+    private onItemRemoved = (message: GameMessage) => {
+        if (message.itemId) {
+            this.handleItemRemoved(message.itemId);
+        }
+    };
+
+    private onItemSync = (message: GameMessage) => {
+        if (message.content) {
+            try {
+                const collectedItems: string[] = JSON.parse(message.content);
+                if (Array.isArray(collectedItems)) {
+                    collectedItems.forEach(itemId => this.handleItemRemoved(itemId));
+                    console.log(`[ItemSync] Synced ${collectedItems.length} collected items.`);
+                }
+            } catch (e) {
+                console.error('[ItemSync] Failed to parse items:', e);
+            }
+        }
+    };
+
+    // [FIX] 입장 시 즉시 동기화 (Host -> New Player)
+    private onPlayerJoin = (_message: GameMessage) => {
+        const amIHost = this.myPlayerId && useGameStore.getState().host === this.myPlayerId;
+        if (!amIHost) return;
+
+        // 1. Elevators Sync
+        if (this.elevators.length > 0) {
+            const elevatorData = this.elevators.map(e => ({
+                id: e.id,
+                x: e.getPosition().x,
+                y: e.getPosition().y
+            }));
+
+            // 본인 제외가 기본이지만, JOIN은 모두에게 오므로 그냥 덮어씌워도 무방 (Sparse Update 로직과 별개로 강제 전송)
+            const roomId = this.roomId || useGameStore.getState().roomId;
+            if (roomId) {
+                gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
+                // console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
+            }
+        }
+
+        // 2. Movable Blocks Sync
+        if (this.movableBlocks.length > 0) {
+            const blockData = this.movableBlocks.map(b => ({
+                id: b.id,
+                x: b.getPosition().x,
+                y: b.getPosition().y
+            }));
+
+            const roomId = this.roomId || useGameStore.getState().roomId;
+            if (roomId) {
+                gameWebSocket.sendBlockUpdate(roomId, JSON.stringify(blockData));
+                // console.log(`[SyncOnJoin] Sent ${blockData.length} blocks state for new joiner.`);
+            }
+        }
+    };
 
     // [PERFORMANCE] 고빈도 위치/상태 업데이트 직접 처리
     private onPlayerUpdate = (msg: GameMessage): void => {
