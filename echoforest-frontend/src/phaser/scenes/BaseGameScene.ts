@@ -1425,10 +1425,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             this.heavyLogicTimer = 0;
         }
 
+        // [FIX] 호스트 권한 확인
+        const state = useGameStore.getState();
+        const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
+
         // 엘리베이터 무게 적용 (매 프레임 호출하되, 계산된 캐시값 사용)
         this.elevators.forEach(elevator => {
             const weight = this.cachedElevatorWeights.get(elevator.getBody().label) || 0;
-            elevator.update(weight);
+            elevator.update(weight, amIHost);
         });
 
         // 블록-블록 접촉 수동 감지 (Static 바디끼리는 물리 충돌 안 함)
@@ -1464,8 +1468,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (roomId) {
                 // (A) Host controls automated gimmicks (Elevators)
 
-                const amIHost = useGameStore.getState().isHost;
-
                 if (amIHost && now - this.lastGimmickUpdateTime > this.SYNC_INTERVAL) {
                     if (this.elevators.length > 0) {
                         // [PERFORMANCE] 변경된 기믹만 전송 (Sparse Update)
@@ -1489,6 +1491,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                         if (elevatorData.length > 0) {
                             gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
+                            // console.log(`[Host] Sent elevator data:`, elevatorData);
                         }
                     }
                     this.lastGimmickUpdateTime = now;
@@ -1525,27 +1528,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        // 6. 엘리베이터 위치 동기화 (Host -> Server)
-        // 호스트만 보냄 (30ms 간격)
-        // [FIX] 호스트 권한으로 엘리베이터 위치 강제 동기화
-        const amIHost = this.myPlayerId && useGameStore.getState().host === this.myPlayerId;
-        if (amIHost && this.elevators.length > 0) {
-            const currentTime = this.time.now;
-            if (currentTime - this.lastGimmickUpdateTime > 30) {
-                const elevatorData = this.elevators.map(e => ({
-                    id: e.id,
-                    x: e.getPosition().x,
-                    y: e.getPosition().y
-                }));
-                // [OPTIMIZATION] 움직이지 않는 엘리베이터는 보낼 필요 없으나, 
-                // 플레이어가 탑승하거나 미세한 움직임이 있을 수 있으므로 일단 전체 전송 (데이터 양 적음)
-                const roomId = this.roomId || useGameStore.getState().roomId;
-                if (roomId) {
-                    gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
-                }
-                this.lastGimmickUpdateTime = currentTime;
-            }
-        }
+
 
         this.updateCamera();
         this.handleLocalPlayerInput();
@@ -1793,7 +1776,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
     // [FIX] 입장 시 즉시 동기화 (Host -> New Player)
     private onPlayerJoin = (_message: GameMessage) => {
-        const amIHost = this.myPlayerId && useGameStore.getState().host === this.myPlayerId;
+        const state = useGameStore.getState();
+        const amIHost = state.isHost || (this.myPlayerId && state.host === this.myPlayerId);
         if (!amIHost) return;
 
         // 1. Elevators Sync
@@ -1808,7 +1792,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const roomId = this.roomId || useGameStore.getState().roomId;
             if (roomId) {
                 gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
-                // console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
+                console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
             }
         }
 

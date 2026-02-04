@@ -128,24 +128,35 @@ export class Elevator {
     // 서버 동기화용 목표 위치
     private serverTarget: { x: number, y: number } | null = null;
 
+    public deltaY: number = 0;
+
     /**
      * 엘리베이터 업데이트 루프
      * @param weight 현재 탑승 인원 수 (Host용)
+     * @param isHost 호스트 여부 (권한 체크)
      */
-    public update(weight: number): void {
+    public update(weight: number, isHost: boolean = false): void {
         this.currentWeight = weight;
         const currentPosY = this.body.position.y;
+        let nextY = currentPosY;
 
-        if (this.serverTarget) {
-            // [Client] 서버에서 받은 위치로 보간 이동
-            // Lerp를 사용하여 부드럽게 추종
-            const lerpFactor = 0.15;
-            const newY = Phaser.Math.Linear(currentPosY, this.serverTarget.y, lerpFactor);
+        // [Client] 비-호스트는 무조건 서버 동기화 값만 따름 (로컬 예측 금지)
+        if (!isHost) {
+            if (this.serverTarget) {
+                // [Client] 서버에서 받은 위치로 동기화
+                const diff = Math.abs(currentPosY - this.serverTarget.y);
 
-            // X축은 고정, Y축만 동기화
-            this.scene.matter.body.setPosition(this.body, { x: this.x, y: newY });
-
-        } else {
+                // [FIX] 위치 차이가 크면 즉시 보정 (Snap)하여 추락 방지
+                if (diff > 5) {
+                    nextY = this.serverTarget.y;
+                } else {
+                    // 작으면 부드럽게 추종 (반응 속도 상향: 0.15 -> 0.3)
+                    const lerpFactor = 0.3;
+                    nextY = Phaser.Math.Linear(currentPosY, this.serverTarget.y, lerpFactor);
+                }
+            }
+        }
+        else {
             // [Host] 직접 로직 오쏘리티 (인원에 따른 이동)
 
             // 목표 위치 결정
@@ -156,12 +167,19 @@ export class Elevator {
             if (distance > 0.1) {
                 const moveStep = Math.min(distance, this.speed);
                 const direction = currentPosY < finalTargetY ? 1 : -1;
-                const nextY = currentPosY + (moveStep * direction);
-
-                // 실제 물리 바디 위치 업데이트
-                this.scene.matter.body.setPosition(this.body, { x: this.x, y: nextY });
+                nextY = currentPosY + (moveStep * direction);
+            } else {
+                nextY = finalTargetY; // Snap to exact target if close enough
             }
         }
+
+        // Apply Movement
+        if (nextY !== currentPosY) {
+            this.scene.matter.body.setPosition(this.body, { x: this.x, y: nextY });
+        }
+
+        // Calculate Delta for Sticky Logic
+        this.deltaY = nextY - currentPosY;
 
         this.updateVisuals();
     }
