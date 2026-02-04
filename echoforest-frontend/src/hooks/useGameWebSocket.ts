@@ -33,6 +33,7 @@ export function useGameWebSocket() {
         onStackUpdated,
         onCurseTriggered,
         onCurseReleased,
+        reset: resetSttStore, // [NEW] 게임 시작 시 저주 상태 초기화용
     } = useSttStore();
 
     const { showToast } = useToastStore();
@@ -167,6 +168,8 @@ export function useGameWebSocket() {
                 case 'GAME_START':
                     {
                         const stage = msg.content ? parseInt(msg.content, 10) : 1;
+                        // [FIX] 게임 시작 시 저주 상태 초기화 (이전 게임의 저주 상태 제거)
+                        resetSttStore();
                         startGameFromServer(stage);
                     }
                     break;
@@ -174,6 +177,8 @@ export function useGameWebSocket() {
                 case 'STAGE_CHANGE':
                     {
                         const stage = msg.content ? parseInt(msg.content, 10) : 1;
+                        // [FIX] 새 스테이지 진입 시 저주 초기화
+                        resetSttStore();
                         selectStage(getMultiStageId(stage));
                     }
                     break;
@@ -193,6 +198,8 @@ export function useGameWebSocket() {
 
                         lastProcessedStage = msg.content;
                         lastTransitionTime = now;
+                        // [FIX] 새 스테이지 진입 시 저주 초기화
+                        resetSttStore();
                         selectStage(msg.content);
                     }
                     break;

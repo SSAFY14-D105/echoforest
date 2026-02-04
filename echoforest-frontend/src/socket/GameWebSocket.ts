@@ -62,6 +62,8 @@ export type MessageType =
     // 엔딩 미션 (서버 동기화)
     | 'ENDING_MISSION_START'  // Server->All: 엔딩 미션 시작 (모든 플레이어 골 도달)
     | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
+    // 독버섯 저주 (긍정어로 해제 가능하도록 서버에 알림)
+    | 'MUSHROOM_CURSE'        // Client->Server: 독버섯 저주 발동 알림
 
 
 // ... (Interface declarations remain same) ...
@@ -112,6 +114,8 @@ export interface GameMessage {
     curses?: string[];          // 플레이어 상태 동기화용
     itemId?: string;            // [NEW] 아이템 동기화용
     parsedData?: any;           // [PERFORMANCE] 미리 파싱된 데이터 (UPDATE 등 빈번한 메시지용)
+    curseId?: string;           // [NEW] 독버섯 저주 종류 (MUSHROOM_CURSE용)
+    playerId?: string;          // [NEW] 저주 대상 플레이어 (MUSHROOM_CURSE용)
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -576,6 +580,21 @@ class GameWebSocket {
             username: this.username,
             itemId: itemId, // 명시적 필드 사용
             content: itemId // 호환성을 위해 content에도 담음
+        });
+    }
+
+    /**
+     * 독버섯 저주 발동 알림 (Client -> Server)
+     * 서버에서 cursedPlayers 큐에 추가하여 긍정어로 해제 가능하게 함
+     */
+    sendMushroomCurse(roomId: string, playerId: string, curseId: string) {
+        if (!this.isConnected()) return;
+        this.send({
+            type: 'MUSHROOM_CURSE',
+            roomId: roomId,
+            username: this.username,
+            playerId: playerId,
+            curseId: curseId
         });
     }
 
