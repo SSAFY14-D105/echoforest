@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Slf4j
 @Service
@@ -100,6 +101,15 @@ public class GameService {
         // 2. GameRoom 가져오기 (없으면 생성)
         GameRoom room = gameRepository.getRoom(roomId);
         if (room == null) {
+            // [ZOMBIE AUTO-FIX]
+            // 메모리에는 방이 없는데 Redis에 플레이어가 남아있다면 좀비 상태
+            long redisPlayerCount = redisRoomService.getPlayerCount(roomId);
+            if (redisPlayerCount > 0) {
+                log.warn("Zombie Room Detected: {} (Memory=null, RedisPlayers={}) -> Auto-Fixing...", roomId,
+                        redisPlayerCount);
+                redisRoomService.resetRoomPlayers(roomId);
+            }
+
             room = new GameRoom(roomId, objectMapper, null);
 
             // [FIX] Redis에 저장된 진행 상황 복구
@@ -313,34 +323,87 @@ public class GameService {
     /**
      * 퇴장 처리
      */
+    /**
+     * 퇴장 처리 (Safe Cleanup)
+     */
     public void handleLeave(WebSocketSession session) {
         String roomId = (String) session.getAttributes().get("roomId");
         String username = (String) session.getAttributes().get("username");
 
         if (roomId != null && username != null) {
-            // Redis에서 퇴장 처리 (방장이면 방 폭파)
-            boolean roomDestroyed = redisRoomService.leaveRoom(roomId, username);
+            try {
+                // Redis에서 퇴장 처리 (방장이면 방 폭파)
+                // Redis 에러가 나더라도 메모리 정리는 수행하기 위해 try-catch 외부에 로직 배치하려 했으나,
+                // Redis 결과(roomDestroyed)가 필요하므로 내부에서 처리하되 예외 처리 강화
+                boolean roomDestroyed = false;
+                try {
+                    roomDestroyed = redisRoomService.leaveRoom(roomId, username);
+                } catch (Exception e) {
+                    log.error("Redis error during leaveRoom for {}: {}", roomId, e.getMessage());
+                    // Redis 오류 시 보수적으로 방이 파괴되지 않았다고 가정하거나,
+                    // 상황에 따라 강제 처리. 여기서는 안전하게 진행.
+                }
 
-            // GameRoom에서도 제거
-            GameRoom room = gameRepository.getRoom(roomId);
-            if (room != null) {
-                if (roomDestroyed) {
-                    // 방 폭파: 남은 플레이어들에게 알림
-                    room.broadcastRoomClosed();
-                    gameRepository.removeRoom(roomId);
-                    log.info("Room {} destroyed (host left)", roomId);
-                } else {
-                    room.removePlayer(session);
-
-                    // 방에 사람이 없으면 방 삭제
-                    if (room.getPlayerCount() == 0) {
-                        redisRoomService.deleteRoom(roomId);
+                // GameRoom에서도 제거
+                GameRoom room = gameRepository.getRoom(roomId);
+                if (room != null) {
+                    if (roomDestroyed) {
+                        // 방 폭파: 남은 플레이어들에게 알림
+                        room.broadcastRoomClosed();
                         gameRepository.removeRoom(roomId);
-                        log.info("Room {} destroyed (empty)", roomId);
+                        log.info("Room {} destroyed (host left)", roomId);
+                    } else {
+                        room.removePlayer(session);
+
+                        // 방에 사람이 없으면 방 삭제
+                        if (room.getPlayerCount() == 0) {
+                            try {
+                                redisRoomService.deleteRoom(roomId);
+                            } catch (Exception e) {
+                                log.error("Redis deleteRoom failed for {}: {}", roomId, e.getMessage());
+                            }
+                            gameRepository.removeRoom(roomId);
+                            log.info("Room {} destroyed (empty)", roomId);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                log.error("Critical error in handleLeave for room {}: {}", roomId, e.getMessage(), e);
+                // 최소한 메모리 누수는 방지하기 위해 Repository에서 제거 시도 (선택 사항)
             }
             log.info("User {} left room {}", username, roomId);
+        }
+    }
+
+    /**
+     * 좀비 방 청소 스케줄러 (1분마다 실행)
+     * 60초 이상 비어있는 방을 강제 삭제
+     */
+    @Scheduled(fixedRate = 60000)
+    public void cleanupZombieRooms() {
+        var rooms = gameRepository.getAllRooms();
+        int removedCount = 0;
+
+        for (GameRoom room : rooms) {
+            // 60초(60000ms) 이상 비어있으면 삭제
+            if (room.isEmptyTimeout(60000)) {
+                String roomId = room.getRoomId();
+                try {
+                    // Redis 정리
+                    redisRoomService.deleteRoom(roomId);
+                } catch (Exception e) {
+                    log.warn("Failed to delete zombie room from Redis: {}", roomId);
+                }
+
+                // 메모리 정리
+                gameRepository.removeRoom(roomId);
+                removedCount++;
+                log.info("🧹 Zombie Room Cleaned: {}", roomId);
+            }
+        }
+
+        if (removedCount > 0) {
+            log.info("Cleanup Task: Removed {} zombie rooms.", removedCount);
         }
     }
 

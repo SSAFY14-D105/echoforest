@@ -52,11 +52,23 @@ public class GameRoom implements Runnable {
         return collectedItems;
     }
 
+    /**
+     * 방이 비어있는 상태로 특정 시간이 지났는지 확인
+     * 
+     * @param thresholdMillis 허용 시간 (밀리초)
+     */
+    public boolean isEmptyTimeout(long thresholdMillis) {
+        return lastEmptyTime > 0 && (System.currentTimeMillis() - lastEmptyTime > thresholdMillis);
+    }
+
     // Host Info
     @Getter
     private String hostUsername;
     @Getter
     private int currentMapId = 1;
+
+    // [NEW] 좀비 방 방지용 타임스탬프
+    private long lastEmptyTime = 0;
 
     public GameRoom(String roomId, ObjectMapper objectMapper, Map<String, Object> mapData) {
         this.roomId = roomId;
@@ -67,6 +79,9 @@ public class GameRoom implements Runnable {
         this.curseManager = new CurseManager(roomId);
         this.broadcaster = new GameBroadcaster(objectMapper, roomId);
         this.physicsEngine = new PlayerPhysicsEngine();
+
+        // 생성 시점부터 빈 방으로 간주
+        this.lastEmptyTime = System.currentTimeMillis();
     }
 
     // --- Player Management (Delegated to SessionManager) ---
@@ -120,6 +135,9 @@ public class GameRoom implements Runnable {
         newPlayer.setColorIndex(emptySlot);
         sessionManager.addSession(session, newPlayer);
 
+        // 플레이어 입장 시 빈 방 타이머 초기화
+        this.lastEmptyTime = 0;
+
         if (hostUsername == null) {
             hostUsername = username;
         }
@@ -150,6 +168,12 @@ public class GameRoom implements Runnable {
         // RoomSessionManager를 수정하거나, 여기서 로직을 조정해야 함.
         // 현재 RoomSessionManager.removeSession은 sessions 만 제거하고 players는 두는 것으로 가정.
         // (실제 코드 확인 필요 -> 위에서 sessions.remove, players 언급 주석 있음)
+
+        // 플레이어가 0명이 되면 빈 방 타이머 기록
+        if (sessionManager.getPlayerCount() == 0) {
+            this.lastEmptyTime = System.currentTimeMillis();
+            log.info("Room {} is now empty. TTL timer started.", roomId);
+        }
 
         broadcastSystemMessage("PLAYER_DISCONNECTED", p.getUsername(), null);
 
