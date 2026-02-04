@@ -150,27 +150,37 @@
     transform: scale(0.95);
 }
 
-/* 세로 볼륨 슬라이더 */
+/* 세로 볼륨 슬라이더 (AudioController와 동일 스타일 -> 절반 크기 & 위로 확장) */
 .volumeSliderContainer {
     position: absolute;
-    bottom: 45px;
+    bottom: 100%;
+    /* 위로 확장 */
+    top: auto;
+    margin-bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.85);
-    padding: 12px 8px;
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 0;
+    /* 패딩도 약간 줄임 */
+    border-radius: 20px;
+    width: 32px;
+    /* 너비도 약간 축소 */
+    height: 60px;
+    /* 높이 절반 (120px -> 60px) */
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.2s;
+    border: 1px solid #ffeeb0;
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    animation: fadeIn 0.2s ease;
 }
 
-@keyframes slideUp {
+@keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateX(-50%) translateY(10px);
+        /* 아래에서 위로 올라오는 느낌 */
     }
 
     to {
@@ -180,42 +190,48 @@
 }
 
 .verticalSlider {
-    writing-mode: vertical-lr;
-    direction: rtl;
-
-    -webkit-appearance: none;
-    appearance: none;
-
-    width: 8px;
-    height: 80px;
-    padding: 0;
+    writing-mode: bt-lr;
+    /* IE-specific syntax */
+    -webkit-appearance: slider-vertical;
+    /* WebKit */
+    appearance: slider-vertical;
+    /* Standard */
+    width: 6px;
+    /* 너비 약간 축소 */
+    height: 45px;
+    /* 높이 절반 (100px -> 45px) */
+    background: transparent;
+    cursor: pointer;
     margin: 0;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+}
+
+.verticalSlider:focus {
     outline: none;
 }
 
 .verticalSlider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: white;
+    border: none;
+    height: 12px;
+    /* 썸 크기도 약간 조정 */
+    width: 12px;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     cursor: pointer;
-    transition: transform 0.2s;
+    margin-left: 0;
+    opacity: 0;
 }
 
-.verticalSlider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+.verticalSlider::-webkit-slider-runnable-track {
+    width: 6px;
+    background: linear-gradient(to top, #ffeeb0 0%, #ffeeb0 var(--volume), #ffffff var(--volume), #ffffff 100%);
+    border-radius: 3px;
 }
 
 .volumeText {
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    min-width: 35px;
-    text-align: center;
+    display: none;
+    /* AudioController에는 텍스트 없음 */
 }
 
 /* 아이콘들 */

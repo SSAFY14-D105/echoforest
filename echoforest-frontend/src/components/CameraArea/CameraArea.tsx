@@ -262,8 +262,10 @@ const CameraArea = memo(function CameraArea({
                                                 type="range" min="0" max="100" value={playerVolumes[slotIndex] ?? 70}
                                                 onChange={(e) => handlePlayerVolumeChange(slotIndex, Number(e.target.value), playerNickname)}
                                                 className={styles.verticalSlider}
+                                                style={{ '--volume': `${playerVolumes[slotIndex] ?? 70}%` } as React.CSSProperties}
+                                                // @ts-ignore
+                                                orient="vertical"
                                             />
-                                            <span className={styles.volumeText}>{playerVolumes[slotIndex] ?? 70}%</span>
                                         </div>
                                     )}
                                 </div>
