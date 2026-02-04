@@ -42,13 +42,22 @@ export default class Stage4Scene extends BaseGameScene {
         this.load.image('background_image', 'assets/backgrounds/background_image.png');
     }
 
+    protected shouldCreateDefaultFloor(): boolean {
+        // Tiled Map에서 바닥(Solid)을 처리하므로 기본 바닥 생성 방지
+        return false;
+    }
+
     create() {
         // MapManager 초기화
         this.mapManager = new MapManager(this, 'stage_04_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 비동기 맵 초기화
-        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+        // 비동기 맵 초기화 (모든 타일셋 전달)
+        this.mapManager.initializeAsync(
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            'background_image'
+        )
             .then(() => {
                 super.create();
             });

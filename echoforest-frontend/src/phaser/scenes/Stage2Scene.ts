@@ -54,8 +54,12 @@ export default class Stage2Scene extends BaseGameScene {
         this.mapManager = new MapManager(this, 'stage_02_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 비동기 맵 초기화 (충돌체 생성 시 프레임 드롭 방지)
-        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image')
+        // 비동기 맵 초기화 (모든 타일셋 전달)
+        this.mapManager.initializeAsync(
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            'background_image'
+        )
             .then(() => {
                 // console.log('[Stage2Scene] Async map initialization complete');
                 super.create();

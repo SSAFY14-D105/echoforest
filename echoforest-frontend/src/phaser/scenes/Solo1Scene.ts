@@ -4,7 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 
 /**
  * Solo1Scene - 혼자하기 1 씬
- * test_map.tmj를 사용하며 MapManager를 통해 맵을 로드하고 기믹을 초기화합니다.
+ * stage_02.tmj를 사용하며 MapManager를 통해 맵을 로드하고 기믹을 초기화합니다.
  */
 export default class Solo1Scene extends BaseGameScene {
     private mapManager?: MapManager;
@@ -19,21 +19,29 @@ export default class Solo1Scene extends BaseGameScene {
 
     preload() {
         super.preload();
-        // 맵 로드 (test_map.tmj)
-        this.load.tilemapTiledJSON('test_map', 'assets/maps/test_map.tmj');
+        // 스테이지 2 맵 로드
+        this.load.tilemapTiledJSON('stage_02_map', 'assets/maps/stage_02.tmj');
+
+        // 타일셋 로드 (3종류)
+        this.load.spritesheet('tiles_tileset', 'assets/tilesets/tilemap.png', { frameWidth: 18, frameHeight: 18, spacing: 1 });
+        this.load.spritesheet('players_tileset', 'assets/tilesets/tilemap-characters.png', { frameWidth: 24, frameHeight: 24, spacing: 1 });
+        this.load.spritesheet('backgrounds_tileset', 'assets/tilesets/tilemap-backgrounds.png', { frameWidth: 16, frameHeight: 16, spacing: 1 });
 
         // 배경 이미지 로드
         this.load.image('background_image', 'assets/backgrounds/background_image.png');
-        // 기믹용 타일셋 로드
-        this.load.spritesheet('tiles_tileset', 'assets/tilesets/tilemap.png', { frameWidth: 18, frameHeight: 18, spacing: 1 });
     }
 
     protected getWorldWidth(): number {
-        return this.mapManager?.getWorldWidth() || 3000;
+        return this.mapManager?.getWorldWidth() || 0;
     }
 
     protected getWorldHeight(): number {
-        return this.mapManager?.getWorldHeight() || 720;
+        return this.mapManager?.getWorldHeight() || 0;
+    }
+
+    protected shouldCreateDefaultFloor(): boolean {
+        // Tiled Map에서 바닥(Solid)을 처리하므로 기본 바닥 생성 방지
+        return false;
     }
 
     protected getRequiredPlayers(): number {
@@ -41,24 +49,28 @@ export default class Solo1Scene extends BaseGameScene {
     }
 
     create() {
-        // console.log('[Solo1Scene] Initializing map from test_map.tmj using MapManager');
-
         // MapManager 초기화
-        this.mapManager = new MapManager(this, 'test_map');
+        this.mapManager = new MapManager(this, 'stage_02_map');
         this.offsetY = this.mapManager.getOffsetY();
 
-        // 맵 생성 및 초기화 (배경 이미지 포함)
-        this.mapManager.initializeAsync('tiles_tileset', 'tiles_tileset', 'background_image');
-
-        super.create();
+        // 비동기 맵 초기화 (모든 타일셋 전달)
+        this.mapManager.initializeAsync(
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            ['tiles_tileset', 'players_tileset', 'backgrounds_tileset'],
+            'background_image'
+        )
+            .then(() => {
+                super.create();
+            });
     }
 
     protected createGimmicks(): void {
-        if (this.mapManager) {
-            this.mapManager.createObjects();
-        } else {
-            // console.warn('[Solo1Scene] MapManager not initialized');
-        }
+        // [중요] 추가 타일셋 등록
+        // stage_02.tmj는 players_tileset과 backgrounds_tileset을 모두 사용함
+        this.mapManager?.getMap().addTilesetImage('players_tileset', 'players_tileset');
+        this.mapManager?.getMap().addTilesetImage('backgrounds_tileset', 'backgrounds_tileset');
+
+        this.mapManager?.createObjects();
     }
 
     protected shouldSpawnGoalOnUnlock(): boolean {
