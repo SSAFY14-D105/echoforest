@@ -39,6 +39,7 @@ export default function WaitingRoom({
     onCopyRoomId,
     onToggleReady,
     onStartGame,
+    onLeave,
 }: WaitingRoomProps) {
     const { nickname, players, readyPlayers } = useGameStore(useShallow(state => ({
         nickname: state.nickname,
@@ -97,6 +98,17 @@ export default function WaitingRoom({
             // 연결 해제는 GamePage에서 처리 (WaitingRoom이 언마운트되도 게임으로 전환될 수 있음)
         };
     }, [roomId, nickname, isSoloMode]);
+
+    // [NEW] 나가기 버튼 핸들러
+    const handleLeave = () => {
+        const message = isHost
+            ? '방장이 나가면 방이 사라집니다. 정말 나가시겠습니까?'
+            : '정말 대기실을 나가시겠습니까?';
+
+        if (window.confirm(message)) {
+            onLeave();
+        }
+    };
 
     return (
         <div className={styles.waitingRoomContainer}>
@@ -162,6 +174,14 @@ export default function WaitingRoom({
 
             {/* 하단 게임 영역 */}
             <div className={styles.gameSection}>
+                {/* [NEW] 나가기 버튼 */}
+                <button
+                    className={styles.gameLeaveButton}
+                    onClick={handleLeave}
+                >
+                    ← 숲 입구로 나가기
+                </button>
+
                 <AudioController className={styles.gameAudioController} />
                 <PhaserGame
                     startScene="LobbyScene"

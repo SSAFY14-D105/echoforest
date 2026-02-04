@@ -128,3 +128,32 @@
     right: 10px;
     z-index: 100;
 }
+
+/* [NEW] 게임 내 나가기 버튼 (왼쪽 상단) - 설정 페이지 뒤로가기 버튼과 동일 스타일 */
+.gameLeaveButton {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
+    /* MulmaruMono */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Added gap to keep layout sanity */
+
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+}
+
+.gameLeaveButton:hover {
+    color: #ffffff;
+    transform: translateX(-5px);
+}

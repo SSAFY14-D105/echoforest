@@ -40,7 +40,10 @@ export default function App() {
       setNickname(storedNickname);
     }
 
+    // [NEW] 게임 세션(룸ID 등) 복구
+    useGameStore.getState().restoreSession();
   }, []);
+
 
   // [NEW] 실시간 권한 변경 감지 (브라우저 설정에서 권한 해제 시 즉시 대응)
   useEffect(() => {
