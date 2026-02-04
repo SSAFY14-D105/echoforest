@@ -218,7 +218,7 @@ const CameraArea = memo(function CameraArea({
                                         <img src="/assets/ui/camera_off.png" alt="Camera Off" className={styles.cameraOffImage} />
                                     </div>
                                 )}
-                                <span className={styles.playerLabel}>나 {ANIMAL_ICONS[slotIndex]}</span>
+                                <span className={styles.playerLabel}>{playerNickname} {ANIMAL_ICONS[slotIndex]}</span>
                             </div>
                         ) : (
                             <RemoteVideo

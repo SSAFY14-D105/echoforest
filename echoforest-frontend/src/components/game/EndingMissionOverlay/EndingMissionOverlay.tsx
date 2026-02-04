@@ -364,7 +364,6 @@ export default function EndingMissionOverlay({
                                 displayState={displayState}
                                 targetPose={targetPose}
                                 handleVideoRef={handleVideoRef}
-                                nickname={nickname}
                                 participantInfosRef={participantInfosRef} // prop for remote track lookup if needed
                             />
                         );
@@ -400,7 +399,6 @@ interface ParticipantCameraBoxProps {
     displayState: any;
     targetPose: any;
     handleVideoRef: (el: HTMLVideoElement | null, identity: string, isLocal: boolean) => void;
-    nickname: string;
     participantInfosRef: React.MutableRefObject<ParticipantInfo[]>;
 }
 
@@ -410,7 +408,6 @@ function ParticipantCameraBox({
     displayState,
     targetPose,
     handleVideoRef,
-    nickname,
     participantInfosRef
 }: ParticipantCameraBoxProps) {
     const isDummy = participant.isDummy;
@@ -478,7 +475,7 @@ function ParticipantCameraBox({
             }
 
             <span className={styles.playerLabel}>
-                P{index + 1}: {participant.identity === nickname ? '나' : participant.identity}{isDummy ? ' (대기)' : ''}
+                P{index + 1}: {participant.identity}{isDummy ? ' (대기)' : ''}
             </span>
         </div >
     );
