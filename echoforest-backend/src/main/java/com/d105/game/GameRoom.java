@@ -1,7 +1,6 @@
 package com.d105.game;
 
 import com.d105.dto.GameMessageDto;
-import com.d105.dto.PlayerUpdateDto;
 import com.d105.game.manager.CurseManager;
 import com.d105.game.manager.RoomSessionManager;
 import com.d105.game.network.GameBroadcaster;
@@ -57,8 +56,6 @@ public class GameRoom implements Runnable {
         this.curseManager = new CurseManager(roomId);
         this.broadcaster = new GameBroadcaster(objectMapper, roomId);
         this.physicsEngine = new PlayerPhysicsEngine();
-
-        // Physics & Collision removed (Client-Authoritative)
     }
 
     // --- Player Management (Delegated to SessionManager) ---
@@ -126,12 +123,9 @@ public class GameRoom implements Runnable {
             return;
         }
 
-        // 방장이 나가면 방 폭파
+        // 방장이 나가면 방 폭파 (ROOM_CLOSED 브로드캐스트)
         if (p.getUsername().equals(hostUsername)) {
-            broadcastSystemMessage("PLAYER_LEFT", p.getUsername(), "Host left.");
-            this.isRunning = false;
-            // Clear All
-            // sessionManager logic to clear
+            broadcastRoomClosed(); // 게스트에게 ROOM_CLOSED 메시지 전송
             return;
         }
 
@@ -147,11 +141,6 @@ public class GameRoom implements Runnable {
         // (실제 코드 확인 필요 -> 위에서 sessions.remove, players 언급 주석 있음)
 
         broadcastSystemMessage("PLAYER_DISCONNECTED", p.getUsername(), null);
-
-        if (sessionManager.isEmpty()) { // players도 비었는지 확인 필요. sessions가 비어도 재접속 대기자가 있으면 유지.
-            // 활성 세션이 없으면 종료 고려, 하지만 재접속 대기 시간(3분) 동안은 유지.
-            // 다만 players 맵이 완전히 비면 종료.
-        }
     }
 
     // Wrapper for broadcast
@@ -649,8 +638,6 @@ public class GameRoom implements Runnable {
 
         // 3. 기믹/저주 상태 리셋
         curseManager.resetCurseStack();
-        // [FIX] Removed frontend reference (BaseGameScene)
-        // 백엔드에서는 저주 스택만 초기화하면 됨.
 
         // 4. 전환 메시지 브로드캐스트 (클라이언트가 씬을 바꾸도록)
         GameMessageDto msg = new GameMessageDto();
