@@ -2315,15 +2315,15 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         }
 
         // 숫자 1 키: 저주 해제 (임시 - 추후 긍정적 행동으로 대체)
-        if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('ONE'))) {
+        /* if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('ONE'))) {
             if (myPlayer && myPlayer.hasCurse()) {
                 myPlayer.removeCurse();
                 // BaseGameScene.persistentCurses.delete(this.myPlayerId);
             }
-        }
+        } */
 
         // 숫자 2 키: 랜덤 저주 적용 (테스트용 - 추후 부정적 언어 감지로 대체)
-        if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('TWO'))) {
+        /* if (this.input.keyboard && Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey('TWO'))) {
             if (myPlayer && !myPlayer.hasCurse()) {
                 const randomCurse = getRandomCurseId();
                 // console.log(`[Curse] Applying random curse: ${randomCurse} `);
@@ -2334,7 +2334,7 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     // BaseGameScene.persistentCurses.set(this.myPlayerId, randomCurse);
                 }
             }
-        }
+        } */
     }
 
 
