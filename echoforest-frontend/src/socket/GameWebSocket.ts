@@ -65,6 +65,8 @@ export type MessageType =
     | 'ENDING_MISSION_END'    // Server->All: 엔딩 미션 종료
     // 독버섯 저주 (긍정어로 해제 가능하도록 서버에 알림)
     | 'MUSHROOM_CURSE'        // Client->Server: 독버섯 저주 발동 알림
+    // 스프링 애니메이션 동기화
+    | 'SPRING_TRIGGERED'      // Client->Server->All: 스프링 밟음 알림
 
 
 // ... (Interface declarations remain same) ...
@@ -117,6 +119,7 @@ export interface GameMessage {
     parsedData?: any;           // [PERFORMANCE] 미리 파싱된 데이터 (UPDATE 등 빈번한 메시지용)
     curseId?: string;           // [NEW] 독버섯 저주 종류 (MUSHROOM_CURSE용)
     playerId?: string;          // [NEW] 저주 대상 플레이어 (MUSHROOM_CURSE용)
+    springId?: string;          // [NEW] 스프링 동기화용 (SPRING_TRIGGERED용)
 }
 
 type MessageHandler = (message: GameMessage) => void;
@@ -596,6 +599,20 @@ class GameWebSocket {
             username: this.username,
             playerId: playerId,
             curseId: curseId
+        });
+    }
+
+    /**
+     * 스프링 밟음 알림 (Client -> Server -> All)
+     * 로컬 플레이어가 스프링을 밟았을 때 다른 플레이어들에게 애니메이션 동기화
+     */
+    sendSpringTriggered(roomId: string, springId: string) {
+        if (!this.isConnected()) return;
+        this.send({
+            type: 'SPRING_TRIGGERED',
+            roomId: roomId,
+            username: this.username,
+            springId: springId
         });
     }
 
