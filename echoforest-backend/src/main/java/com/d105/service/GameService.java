@@ -978,6 +978,26 @@ public class GameService {
     }
 
     /**
+     * 스프링 애니메이션 동기화 (SPRING_TRIGGERED)
+     *
+     * 플레이어가 스프링을 밟았을 때, 해당 스프링의 애니메이션을
+     * 같은 방의 모든 플레이어에게 브로드캐스트합니다.
+     */
+    public void handleSpringTriggered(WebSocketSession session, GameMessageDto message) {
+        String roomId = (String) session.getAttributes().get("roomId");
+        String springId = message.getSpringId();
+
+        if (roomId == null || springId == null)
+            return;
+
+        GameRoom room = gameRepository.getRoom(roomId);
+        if (room != null) {
+            // 모든 클라이언트에게 브로드캐스트 (본인 제외 - 이미 애니메이션 재생함)
+            room.broadcast(message, session.getId());
+        }
+    }
+
+    /**
      * 중복 로그인 이벤트 처리
      * UserService에서 로그인 성공 시 발행
      * 
