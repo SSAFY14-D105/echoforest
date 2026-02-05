@@ -121,13 +121,21 @@ export class Spring {
         const target = this.sprite || this.graphics;
         if (!target) return;
 
+        // [FIX] 기존 트윈이 진행 중이면 중지하고 원래 스케일로 복원
+        this.scene.tweens.killTweensOf(target);
+        target.setScale(target.scaleX, 1); // 원래 scaleY로 복원
+
         // 간단한 스케일 애니메이션
         this.scene.tweens.add({
             targets: target,
             scaleY: 0.5,
             duration: 50,
             yoyo: true,
-            ease: 'Quad.easeOut'
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                // [FIX] 애니메이션 완료 시 확실하게 원래 스케일로 복원
+                target.setScale(target.scaleX, 1);
+            }
         });
     }
 
