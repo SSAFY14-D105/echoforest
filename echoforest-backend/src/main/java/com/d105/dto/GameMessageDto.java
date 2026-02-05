@@ -95,4 +95,8 @@ public class GameMessageDto {
 
     @Schema(description = "MUSHROOM_CURSE: 저주 종류 (giant/drain/reverse)", example = "giant")
     private String curseId;
+
+    // ===== 스프링 동기화용 필드 =====
+    @Schema(description = "SPRING_TRIGGERED: 스프링 ID", example = "spring-1")
+    private String springId;
 }
