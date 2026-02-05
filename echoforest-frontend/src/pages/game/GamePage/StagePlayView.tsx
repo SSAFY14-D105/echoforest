@@ -528,12 +528,12 @@ export default function StagePlayView({
                     roomId={roomId}
                     onSceneReady={handleSceneReady} // [NEW] 콜백 전달
                 />
-                <button
+                {/* <button
                     className={styles.testClearBtn}
                     onClick={handleTestEndingMission}
                 >
                     🏆 테스트: 엔딩 미션 시작
-                </button>
+                </button> */}
             </div>
             {/* CameraArea moved to top */}
 
