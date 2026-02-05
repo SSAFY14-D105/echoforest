@@ -267,6 +267,80 @@ export default class ObjectFactory {
                 // console.log(`[ObjectFactory] Added Respawn: (${centerX}, ${centerY}), ID: ${obj.id}, P-Index: ${playerIndex}, Default: ${isDefault}`);
                 break;
             }
+            // [NEW] Decoration: 이미지만 표시, 충돌 없음 (순수 장식용)
+            case 'Decoration':
+            case 'Visual': {
+                if (gid > 0) {
+                    const sprite = scene.add.sprite(centerX, centerY, texture, frame);
+
+                    const currentFrame = sprite.frame;
+                    if (currentFrame) {
+                        const baseW = currentFrame.width;
+                        const baseH = currentFrame.height;
+                        const scaleX = baseW > 0 ? (width / baseW) : mapScale;
+                        const scaleY = baseH > 0 ? (height / baseH) : mapScale;
+                        sprite.setScale(scaleX, scaleY);
+                    } else {
+                        sprite.setScale(mapScale);
+                    }
+
+                    sprite.setRotation(Phaser.Math.DegToRad(rotation));
+                    sprite.setDepth(depth);
+
+                    if (obj.name) sprite.setName(obj.name);
+
+                    // console.log(`[ObjectFactory] Created Decoration: ${obj.name || obj.id}`);
+                }
+                break;
+            }
+            // [NEW] Prop: 이미지 + 충돌 (정적 오브젝트)
+            case 'Prop':
+            case 'StaticObject': {
+                if (gid > 0) {
+                    const sprite = scene.add.sprite(centerX, centerY, texture, frame);
+
+                    const currentFrame = sprite.frame;
+                    if (currentFrame) {
+                        const baseW = currentFrame.width;
+                        const baseH = currentFrame.height;
+                        const scaleX = baseW > 0 ? (width / baseW) : mapScale;
+                        const scaleY = baseH > 0 ? (height / baseH) : mapScale;
+                        sprite.setScale(scaleX, scaleY);
+                    } else {
+                        sprite.setScale(mapScale);
+                    }
+
+                    sprite.setRotation(Phaser.Math.DegToRad(rotation));
+                    sprite.setDepth(depth);
+
+                    if (obj.name) sprite.setName(obj.name);
+
+                    // 정적 충돌체 추가
+                    const collisionData = TiledHelper.getCollisionDataForGID(map, gid);
+                    if (collisionData && collisionData.length > 0) {
+                        // Tileset에 정의된 커스텀 충돌 영역 사용
+                        collisionData.forEach((col: any) => {
+                            const colW = (col.width || width) * mapScale;
+                            const colH = (col.height || height) * mapScale;
+                            const colX = centerX + ((col.x || 0) - (obj.width || 0) / 2) * mapScale;
+                            const colY = centerY + ((col.y || 0) - (obj.height || 0) / 2) * mapScale;
+                            scene.matter.add.rectangle(colX + colW / 2, colY + colH / 2, colW, colH, {
+                                isStatic: true,
+                                label: 'prop'
+                            });
+                        });
+                    } else {
+                        // 기본 사각형 충돌체
+                        scene.matter.add.rectangle(centerX, centerY, width, height, {
+                            isStatic: true,
+                            label: 'prop'
+                        });
+                    }
+
+                    // console.log(`[ObjectFactory] Created Prop with collision: ${obj.name || obj.id}`);
+                }
+                break;
+            }
             default: {
                 if (gid > 0) {
                     const sprite = scene.add.sprite(centerX, centerY, texture, frame);
