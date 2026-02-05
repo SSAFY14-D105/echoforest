@@ -798,7 +798,12 @@ export class Player {
 
         this._isDead = false;
         this.curseHP = 100; // HP 초기화
-        this.stopHPDrain(); // 드레인 저주 중지
+        this.stopHPDrain(); // 기존 타이머 중지
+
+        // [FIX] HP 저주가 있으면 드레인 재시작 (저주는 유지, HP만 리셋)
+        if (this.currentCurseId && CURSES[this.currentCurseId]?.hasDrainEffect) {
+            this.startHPDrain();
+        }
 
         // 위치 이동 및 물리 초기화
         this.setPosition(x, y);
