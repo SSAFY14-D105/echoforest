@@ -1926,10 +1926,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private applyElevatorStickyPhysics(): void {
         this.elevators.forEach(elevator => {
             const dy = elevator.deltaY;
-            // [Modified] 상승(dy < 0) 시에는 물리 엔진 충돌이 자연스럽게 밀어주므로 Sticky 로직 불필요
-            // 상승 시 Sticky를 적용하면 점프 시 바닥에 붙여버리는(Choppy) 부작용 발생
-            // 하강(dy > 0) 할 때만 적용하여 바닥에서 뜨는 것 방지
-            if (dy <= 0.001) return;
+            // [Modified] 조기 리턴 제거 - 상승 시에도 접지 판정(Grounded Check)은 필요함
+            // if (dy <= 0.001) return;
 
             const elevatorBounds = elevator.getBody().bounds;
             // 감지 영역: 엘리베이터 바로 위
@@ -1937,15 +1935,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 minX: elevatorBounds.min.x + 5,
                 maxX: elevatorBounds.max.x - 5,
                 minY: elevatorBounds.min.y - 15, // 위쪽으로 15px
-                maxY: elevatorBounds.min.y + 5   // 살짝 내부까지
+                maxY: elevatorBounds.min.y + 10  // 살짝 내부까지 (Deep check for fast moving elevators)
             };
 
             this.players.forEach(player => {
-                // [FIX] 점프 중(상승 중)인 플레이어는 Sticky 로직 제외
-                // 이것이 없으면 엘리베이터 내려갈 때 점프해도 강제로 바닥으로 끌어내려짐
-                const velocity = player.getVelocity();
-                if (velocity.y < -0.1) return;
-
                 const playerBounds = player.getBody().bounds;
 
                 // AABB Overlap Check
@@ -1957,13 +1950,20 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 );
 
                 if (overlaps) {
-                    // 엘리베이터 이동량만큼 플레이어 강제 이동
-                    const currentPos = player.getPosition();
-                    player.setPosition(currentPos.x, currentPos.y + dy);
-
-                    // [FIX] 강제 이동 시 물리 엔진이 "바닥 떨어짐"으로 인식하여 점프 불가 상태가 되는 것을 방지
-                    // 엘리베이터 위에 붙어있으므로 강제로 grounded 상태 갱신
+                    // [FIX 1] 엘리베이터 위에 있다면 방향 상관없이 항상 접지 상태로 간주
+                    // 물리 엔진이 상승 중에 접지를 놓치더라도 점프가 가능하도록 함
                     this.groundedFrames.set(player.nickname, this.COYOTE_FRAMES);
+
+                    // [FIX 2] Sticky Position (위치 보정)은 "하강 중"이고 "점프 중이 아닐 때"만 적용
+                    const isDescending = dy > 0.001;
+                    const velocity = player.getVelocity();
+                    const isJumping = velocity.y < -0.1;
+
+                    if (isDescending && !isJumping) {
+                        // 엘리베이터 이동량만큼 플레이어 강제 이동
+                        const currentPos = player.getPosition();
+                        player.setPosition(currentPos.x, currentPos.y + dy);
+                    }
                 }
             });
         });
