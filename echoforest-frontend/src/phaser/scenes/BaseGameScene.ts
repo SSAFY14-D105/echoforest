@@ -928,7 +928,14 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (velocity.y > 1 && playerPos.y < springPos.y) {
                 player.setVelocity(velocity.x, spring.getBouncePower());
                 spring.animate();
-                // console.log(`[${this.getSceneKey()}] Player stepped on spring`);
+
+                // [스프링 동기화] 로컬 플레이어가 밟은 경우에만 서버로 전송
+                if (playerLabel === this.myPlayerId) {
+                    const roomId = useGameStore.getState().roomId;
+                    if (roomId) {
+                        gameWebSocket.sendSpringTriggered(roomId, springId);
+                    }
+                }
             }
         }
     }
@@ -1759,6 +1766,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // [FIX] Late Joiner Elevator Sync (Host Driven)
         // 누군가 들어오면 호스트가 즉시 현재 기믹 상태를 전송
         gameWebSocket.on('JOIN', this.onPlayerJoin);
+
+        // [스프링 동기화] 원격 플레이어가 스프링을 밟았을 때 애니메이션 재생
+        gameWebSocket.on('SPRING_TRIGGERED', this.onSpringTriggered);
     }
 
     private cleanupSocketListeners(): void {
@@ -1770,12 +1780,23 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         gameWebSocket.off('ITEM_REMOVED', this.onItemRemoved);
         gameWebSocket.off('ITEM_SYNC', this.onItemSync);
         gameWebSocket.off('JOIN', this.onPlayerJoin);
+        gameWebSocket.off('SPRING_TRIGGERED', this.onSpringTriggered);
     }
 
     // [New Handlers]
     private onItemRemoved = (message: GameMessage) => {
         if (message.itemId) {
             this.handleItemRemoved(message.itemId);
+        }
+    };
+
+    // [스프링 동기화] 원격 플레이어가 스프링을 밟았을 때 애니메이션 재생
+    private onSpringTriggered = (message: GameMessage) => {
+        if (message.springId) {
+            const spring = this.springs.find(s => s.id === message.springId);
+            if (spring) {
+                spring.animate();
+            }
         }
     };
 
