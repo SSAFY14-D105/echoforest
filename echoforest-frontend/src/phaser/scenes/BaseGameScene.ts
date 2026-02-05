@@ -95,7 +95,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
     private readonly STATE_SEND_INTERVAL: number = 33;
     private lastGimmickUpdateTime: number = 0;
     private lastBlockUpdateTime: number = 0;
-    private readonly SYNC_INTERVAL: number = 50; // 20 TPS
+    // [FIX V2] 점프 직후 Sticky Physics 방지를 위한 타이머
+    private lastJumpTimes: Map<string, number> = new Map();
+
+    private readonly SYNC_INTERVAL = 50;  // 50ms마다 동기화 (20fps) TPS
 
     // [PERFORMANCE] 무거운 로직(재귀 계산 등) 쓰로틀링
     private heavyLogicTimer: number = 0;
@@ -1934,7 +1937,9 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const checkBounds = {
                 minX: elevatorBounds.min.x + 5,
                 maxX: elevatorBounds.max.x - 5,
-                minY: elevatorBounds.min.y - 15, // 위쪽으로 15px
+                // [FIX V2] 상단 감지 범위 확장 (15px -> 30px)
+                // 엘리베이터가 빠르게 올라갈 때 발바닥 감지를 놓치지 않도록 더 높게 잡음
+                minY: elevatorBounds.min.y - 30,
                 maxY: elevatorBounds.min.y + 10  // 살짝 내부까지 (Deep check for fast moving elevators)
             };
 
@@ -1957,7 +1962,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                     // [FIX 2] Sticky Position (위치 보정)은 "하강 중"이고 "점프 중이 아닐 때"만 적용
                     const isDescending = dy > 0.001;
                     const velocity = player.getVelocity();
-                    const isJumping = velocity.y < -0.1;
+                    // [FIX V2] 점프 시작 직후(0.25초)에는 절대 Sticky 적용 금지 (속도 체크보다 더 확실함)
+                    const lastJumpTime = this.lastJumpTimes.get(player.nickname) || 0;
+                    const justJumped = (this.time.now - lastJumpTime) < 250;
+                    const isJumping = velocity.y < -0.1 || justJumped;
 
                     if (isDescending && !isJumping) {
                         // 엘리베이터 이동량만큼 플레이어 강제 이동
@@ -2300,6 +2308,8 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 if (!enteredGoal && currentFrames > 0) {
                     myPlayer.setVelocity(velocity.x, PHYSICS.JUMP_POWER * myPlayer.getJumpMultiplier());
                     this.groundedFrames.set(playerLabel, 0);  // 더블 점프 방지
+                    // [FIX V2] 점프 시간 기록 (Sticky Physics 예외 처리용)
+                    this.lastJumpTimes.set(playerLabel, this.time.now);
                 }
             }
         }
