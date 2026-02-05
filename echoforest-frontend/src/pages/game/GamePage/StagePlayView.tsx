@@ -431,16 +431,44 @@ export default function StagePlayView({
     };
 
     // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버가 모든 클라이언트에 브로드캐스트)
-    // const handleTestEndingMission = () => {
-    //     if (isHost) {
-    //         // 서버로 엔딩 미션 시작 신호 전송 → 서버가 ENDING_MISSION_START 브로드캐스트
-    //         // 모든 클라이언트가 handleEndingMissionStart 이벤트로 동시 시작
-    //         gameWebSocket.sendEndingMissionStart(roomId);
-    //     } else {
-    //         // 비호스트는 서버 브로드캐스트를 기다림 (호스트에게 테스트 요청)
-    //         alert('호스트만 테스트를 시작할 수 있습니다.');
-    //     }
-    // };
+    const handleTestEndingMission = useCallback(() => {
+        if (isHost) {
+            // 서버로 엔딩 미션 시작 신호 전송 → 서버가 ENDING_MISSION_START 브로드캐스트
+            // 모든 클라이언트가 handleEndingMissionStart 이벤트로 동시 시작
+            gameWebSocket.sendEndingMissionStart(roomId);
+        } else {
+            // 비호스트는 서버 브로드캐스트를 기다림 (호스트에게 테스트 요청)
+            alert('호스트만 테스트를 시작할 수 있습니다.');
+        }
+    }, [isHost, roomId]);
+
+    // [NEW] 시크릿 키 조합 (P + Q + N + Space) 감지
+    useEffect(() => {
+        const pressedKeys = new Set<string>();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            pressedKeys.add(e.key.toLowerCase());
+
+            // P, Q, N, Space가 모두 눌렸는지 확인 (' ' is space)
+            if (pressedKeys.has('p') && pressedKeys.has('q') && pressedKeys.has('n') && pressedKeys.has(' ')) {
+                // console.log('[Secret] Key combo triggered! Starting Ending Mission...');
+                handleTestEndingMission();
+                pressedKeys.clear(); // 한번 실행 후 초기화 (연속 실행 방지)
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            pressedKeys.delete(e.key.toLowerCase());
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [handleTestEndingMission]);
 
     const handleSceneReady = useCallback(() => {
         // console.log('[StagePlayView] Scene Ready Signal Received');
