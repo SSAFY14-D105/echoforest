@@ -12,6 +12,7 @@ export class Spring {
 
     public readonly id: string;
     public readonly bouncePower: number;
+    private originalScaleY: number = 1; // [FIX] 원래 스케일 저장
 
     constructor(scene: Phaser.Scene, x: number, y: number, id: string, bouncePower: number = -15, width: number = 48, height: number = 16, texture?: string, frame?: string | number, angle: number = 0, collisionData?: any[]) {
         this.scene = scene;
@@ -90,12 +91,14 @@ export class Spring {
             this.sprite = this.scene.add.sprite(x, y, texture, frame);
             this.sprite.setDisplaySize(width, height);
             this.sprite.setAngle(angle);
+            this.originalScaleY = this.sprite.scaleY; // [FIX] 원래 스케일 저장
         } else {
             // 스프링 그래픽
             this.graphics = this.scene.add.graphics();
             this.drawSpring();
             this.graphics.setPosition(x, y);
             this.graphics.setAngle(angle);
+            this.originalScaleY = 1; // Graphics는 기본 스케일 1
         }
     }
 
@@ -116,26 +119,29 @@ export class Spring {
         this.graphics.fillRect(-16, -12, 32, 4);
     }
 
-    // 스프링 애니메이션 (눌렸다가 튀어오름)
+    private isAnimating: boolean = false;
+
+    // 스프링 애니메이션 (눈렸다가 튀어오름)
     public animate(): void {
         const target = this.sprite || this.graphics;
         if (!target) return;
 
-        // [FIX] 기존 트윈이 진행 중이면 중지하고 원래 스케일로 복원
-        this.scene.tweens.killTweensOf(target);
-        target.setScale(target.scaleX, 1); // 원래 scaleY로 복원
+        // [FIX] 애니메이션 중이면 무시 (중복 호출 방지)
+        if (this.isAnimating) return;
+        this.isAnimating = true;
 
-        // 간단한 스케일 애니메이션
-        this.scene.tweens.add({
-            targets: target,
-            scaleY: 0.5,
-            duration: 50,
-            yoyo: true,
-            ease: 'Quad.easeOut',
-            onComplete: () => {
-                // [FIX] 애니메이션 완료 시 확실하게 원래 스케일로 복원
-                target.setScale(target.scaleX, 1);
+        // [FIX] 원래 스케일 기준으로 수축/펜침
+        const compressedScaleY = this.originalScaleY * 0.5;
+
+        // 수축
+        target.setScale(target.scaleX, compressedScaleY);
+
+        // 100ms 후 펜짐
+        this.scene.time.delayedCall(100, () => {
+            if (target && target.active !== false) {
+                target.setScale(target.scaleX, this.originalScaleY);
             }
+            this.isAnimating = false;
         });
     }
 
