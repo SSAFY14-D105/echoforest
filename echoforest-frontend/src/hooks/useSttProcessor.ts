@@ -44,7 +44,7 @@ export function useSttProcessor(): UseSttProcessorReturn {
         reset,
     } = useSttStore();
 
-    const { isGameStarted, currentStage, players, nickname } = useGameStore();
+    const { isGameStarted, currentStage, players, nickname, isSoloMode } = useGameStore();
 
     // 로컬 플레이어의 저주 상태 확인 (버섯 저주 포함)
     const localPlayer = players.find(p => p.nickname === nickname);
@@ -97,12 +97,19 @@ export function useSttProcessor(): UseSttProcessorReturn {
 
     // STT 시작 - LiveKit보다 먼저 실행하여 마이크 접근권 확보
     // Web Speech API가 먼저 마이크에 접근하면 LiveKit이 공유받을 수 있음
+    // STT 시작 - LiveKit과 충돌 방지 및 솔로 모드 제외
     useEffect(() => {
-        // 마운트 직후 바로 STT 시작 (LiveKit보다 먼저)
-        // console.log('[STT Processor] STT 즉시 시작 (LiveKit 전)');
-        startListening();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // 마운트 시 한 번만 실행
+        // [FIX] 대기실 및 솔로 모드에서는 STT 시작 안 함
+        // 게임이 시작되었고, 멀티플레이 모드일 때만 STT 시작
+        if (isGameStarted && !isSoloMode) {
+            // console.log('[STT Processor] 게임 시작됨 (멀티플레이) - STT 시작');
+            startListening();
+        } else {
+            // 게임이 아니거나 솔로 모드면 중지 (혹시 켜져 있을 경우)
+            // console.log('[STT Processor] STT 대기 (대기실 or 솔로모드)');
+            // stopListening(); // 필요 시 호출, but startListening을 안 부르면 됨
+        }
+    }, [isGameStarted, isSoloMode, startListening]);
 
     // 결과 핸들러 등록 (handleWorkerResult 변경 시 재등록)
     useEffect(() => {
