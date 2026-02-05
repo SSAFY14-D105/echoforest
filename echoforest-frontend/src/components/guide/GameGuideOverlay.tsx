@@ -40,7 +40,7 @@ export default function GameGuideOverlay({ isOpen, onClose }: GameGuideOverlayPr
                         <h3 className={styles.sectionTitle}>🕹️ 조작 방법</h3>
                         <ul className={styles.list}>
                             <li className={styles.listItem}><span className={styles.highlight}>이동</span>: 키보드 방향키 (←, →)</li>
-                            <li className={styles.listItem}><span className={styles.highlight}>점프</span>: 스페이스바 (Space) 또는 위쪽 방향키 (↑)</li>
+                            <li className={styles.listItem}><span className={styles.highlight}>점프</span>: 위쪽 방향키 (↑)</li>
                             <li className={styles.listItem}><span className={styles.highlight}>상호작용</span>: 자동으로 이루어집니다 (발판 밟기, 열쇠 획득 등)</li>
                         </ul>
                     </div>
