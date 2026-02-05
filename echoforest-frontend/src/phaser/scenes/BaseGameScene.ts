@@ -1511,7 +1511,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
 
                         if (elevatorData.length > 0) {
                             gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
-                            console.log(`[Host] Sent elevator data:`, elevatorData);
                         }
                     }
                     this.lastGimmickUpdateTime = now;
@@ -1786,7 +1785,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
                 const collectedItems: string[] = JSON.parse(message.content);
                 if (Array.isArray(collectedItems)) {
                     collectedItems.forEach(itemId => this.handleItemRemoved(itemId));
-                    console.log(`[ItemSync] Synced ${collectedItems.length} collected items.`);
                 }
             } catch (e) {
                 console.error('[ItemSync] Failed to parse items:', e);
@@ -1812,7 +1810,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             const roomId = this.roomId || useGameStore.getState().roomId;
             if (roomId) {
                 gameWebSocket.sendGimmickUpdate(roomId, JSON.stringify(elevatorData));
-                console.log(`[SyncOnJoin] Sent ${elevatorData.length} elevators state for new joiner.`);
             }
         }
 
