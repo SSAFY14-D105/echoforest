@@ -115,14 +115,14 @@ export default function StagePlayView({
         };
 
         const handleEndingMissionEnd = () => {
-            console.log(`[handleEndingMissionEnd] Received! stageNum=${stageNum}`);
+
             // 오버레이만 닫음 - 실제 스테이지 전환은 STAGE_TRANSITION 메시지에서 처리
             setEndingMission(false);
 
             // [FIX] 마지막 스테이지(4)인 경우, 여기서 결과 화면으로 전환
             // 호스트가 보낸 ENDING_MISSION_END 신호를 받으면 호스트/게스트 모두 실행됨
             if (stageNum === '4') {
-                console.log('[handleEndingMissionEnd] Stage 4 - Showing ResultOverlay!');
+
                 setShowResultOverlay(true);
                 setIsLoading(false); // 로딩 끝
             }
@@ -156,7 +156,7 @@ export default function StagePlayView({
                     const data = JSON.parse(message);
 
                     if (data.type === 'IMAGE_UPLOADED' && data.stage === stageNum) {
-                        console.log(`[handleDataReceived] IMAGE_UPLOADED from userId=${data.userId}, isHost=${isHost}`);
+
                         // 호스트라면 업로드 카운트 추적 및 합성 트리거
                         if (isHost) {
                             uploadedUserIdsRef.current.add(data.userId);
@@ -166,11 +166,10 @@ export default function StagePlayView({
 
                     // [NEW] 모든 업로드 완료 신호 수신 (호스트가 브로드캐스트)
                     if (data.type === 'ALL_UPLOADS_COMPLETE' && data.stage === stageNum) {
-                        console.log(`[handleDataReceived] ALL_UPLOADS_COMPLETE for stage=${data.stage}`);
 
                         // 스테이지 4: "빠져나가는 중..." 로딩 2초 표시 후 결과 화면
                         if (stageNum === '4') {
-                            console.log('[handleDataReceived] Stage 4 - Showing Loading then ResultOverlay!');
+
                             setLoadingMessage("메아리의 숲을 빠져나가는 중...");
                             setIsLoading(true);
                             setEndingMission(false); // 오버레이 닫기
@@ -179,7 +178,7 @@ export default function StagePlayView({
                             setTimeout(() => {
                                 setIsLoading(false);
                                 setShowResultOverlay(true);
-                                console.log('[handleDataReceived] ResultOverlay shown!');
+
                             }, 2000);
                         }
                         // 다른 스테이지는 WebSocket ENDING_MISSION_END / NEXT_STAGE가 처리
@@ -205,9 +204,6 @@ export default function StagePlayView({
         // Solo모드거나 참가자가 없으면(1명) 1명만 체크. 멀티면 (participantInfos.length + 1) 체크 (participantInfos는 원격 참가자만 포함하므로)
         const requiredCount = isSoloMode ? 1 : (participantInfos.length + 1);
 
-        // [DEBUG] 로그 출력으로 상태 확인
-        console.log(`[checkAndGenerateComposite] current=${currentCount}, required=${requiredCount}, participantInfos.length=${participantInfos.length}`);
-
         if (currentCount >= requiredCount) {
             hasGeneratedImageRef.current = true;
 
@@ -220,17 +216,17 @@ export default function StagePlayView({
                 // [FIX] 모든 참가자 업로드 완료 후 스테이지 전환 또는 결과 화면
                 if (isHost) {
                     if (stageNum === '4') {
-                        console.log('[checkAndGenerateComposite] Stage 4 - Sending ENDING_MISSION_END via LiveKit');
+
                         // [FIX] LiveKit으로 직접 브로드캐스트 (서버 의존 제거)
                         // WebSocket보다 LiveKit이 더 신뢰성 있게 작동함 (IMAGE_UPLOADED도 LiveKit 사용)
                         if (liveKitService.isConnected) {
                             const signal = JSON.stringify({ type: 'ALL_UPLOADS_COMPLETE', stage: stageNum });
                             await liveKitService.sendData(signal);
-                            console.log('[checkAndGenerateComposite] LiveKit signal sent!');
+
                         }
 
                         // [FIX] 호스트 자신은 LiveKit 메시지를 수신하지 못하므로 직접 상태 변경
-                        console.log('[checkAndGenerateComposite] Host self-transition: Loading then ResultOverlay');
+
                         setEndingMission(false); // 오버레이 닫기
                         setLoadingMessage("메아리의 숲을 빠져나가는 중...");
                         setIsLoading(true);
@@ -239,7 +235,7 @@ export default function StagePlayView({
                         setTimeout(() => {
                             setIsLoading(false);
                             setShowResultOverlay(true);
-                            console.log('[checkAndGenerateComposite] Host ResultOverlay shown!');
+
                         }, 2000);
 
                         // WebSocket도 보내기 (서버 상태 업데이트용, 옵션)
@@ -435,16 +431,16 @@ export default function StagePlayView({
     };
 
     // 테스트 버튼용: 호스트가 엔딩 미션 시작 (서버가 모든 클라이언트에 브로드캐스트)
-    const handleTestEndingMission = () => {
-        if (isHost) {
-            // 서버로 엔딩 미션 시작 신호 전송 → 서버가 ENDING_MISSION_START 브로드캐스트
-            // 모든 클라이언트가 handleEndingMissionStart 이벤트로 동시 시작
-            gameWebSocket.sendEndingMissionStart(roomId);
-        } else {
-            // 비호스트는 서버 브로드캐스트를 기다림 (호스트에게 테스트 요청)
-            alert('호스트만 테스트를 시작할 수 있습니다.');
-        }
-    };
+    // const handleTestEndingMission = () => {
+    //     if (isHost) {
+    //         // 서버로 엔딩 미션 시작 신호 전송 → 서버가 ENDING_MISSION_START 브로드캐스트
+    //         // 모든 클라이언트가 handleEndingMissionStart 이벤트로 동시 시작
+    //         gameWebSocket.sendEndingMissionStart(roomId);
+    //     } else {
+    //         // 비호스트는 서버 브로드캐스트를 기다림 (호스트에게 테스트 요청)
+    //         alert('호스트만 테스트를 시작할 수 있습니다.');
+    //     }
+    // };
 
     const handleSceneReady = useCallback(() => {
         // console.log('[StagePlayView] Scene Ready Signal Received');
