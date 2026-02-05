@@ -1381,6 +1381,10 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             if (!Number.isFinite(this.cameras.main.scrollY)) this.cameras.main.scrollY = 0;
         }
 
+        // [CRITICAL FIX] isHost 판별은 항상 필요하므로 블록 밖에서 먼저 정의
+        const state = useGameStore.getState();
+        const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
+
         // [CRITICAL FIX] 탭이 숨겨져 있거나 델타가 너무 크면 물리 업데이트 생략
         if (document.hidden || delta > 200) {
             // 물리 연산 건너뜀 (멈춤)
@@ -1392,8 +1396,6 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             // [FIX] Update Elevators BEFORE Physics Step
             // 엘리베이터 이동 -> 물리 엔진 계산 -> 렌더링 순서로 변경하여
             // 물리 바디 이동 후 즉시 충돌 처리가 되도록 함 (1프레임 딜레이/떨림 방지)
-            const state = useGameStore.getState();
-            const amIHost = Boolean(state.isHost || (this.myPlayerId && state.host === this.myPlayerId));
 
             this.elevators.forEach(elevator => {
                 // 무게 계산은 위쪽 루프(heavyLogicTimer)에서 미리 캐싱됨

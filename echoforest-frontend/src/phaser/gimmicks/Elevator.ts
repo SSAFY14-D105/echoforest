@@ -87,10 +87,6 @@ export class Elevator {
                 this.scene.matter.body.scale(this.body, scaleX, 1);
             }
 
-            // 4. Align Position (CoM)
-            const coMOffsetX = this.body.position.x;
-            const coMOffsetY = this.body.position.y;
-
             // [FIX] Store Initial CoM Offset
             this.coMOffsetX = this.body.position.x - this.x;
             this.coMOffsetY = this.body.position.y - this.initialY;
@@ -139,6 +135,9 @@ export class Elevator {
     private coMOffsetX: number = 0;
     private coMOffsetY: number = 0;
 
+    // [RESTORED] Delta Y for Sticky Physics
+    public deltaY: number = 0;
+
     /**
      * 엘리베이터 업데이트 루프
      * @param weight 현재 탑승 인원 수 (Host용)
@@ -185,14 +184,14 @@ export class Elevator {
             }
         }
 
+        // Calculate Delta for Sticky Logic
+        this.deltaY = nextY - currentPosY;
+
         // Apply Movement
         if (nextY !== currentPosY) {
             // [FIX] Apply CoM Offset when setting position
             this.scene.matter.body.setPosition(this.body, { x: this.x + this.coMOffsetX, y: nextY + this.coMOffsetY });
         }
-
-        // Calculate Delta for Sticky Logic
-        this.deltaY = nextY - currentPosY;
 
         this.updateVisuals();
     }
