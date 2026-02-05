@@ -1941,6 +1941,11 @@ export default abstract class BaseGameScene extends Phaser.Scene {
             };
 
             this.players.forEach(player => {
+                // [FIX] 점프 중(상승 중)인 플레이어는 Sticky 로직 제외
+                // 이것이 없으면 엘리베이터 내려갈 때 점프해도 강제로 바닥으로 끌어내려짐
+                const velocity = player.getVelocity();
+                if (velocity.y < -0.1) return;
+
                 const playerBounds = player.getBody().bounds;
 
                 // AABB Overlap Check
