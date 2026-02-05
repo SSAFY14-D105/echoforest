@@ -7,6 +7,7 @@ import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
 import SettingsModal from '../../../components/SettingsModal/SettingsModal';
 import SplashScreen from '../../../components/SplashScreen/SplashScreen';
 import AudioController from '../../../components/common/AudioController';
+import GameGuideOverlay from '../../../components/guide/GameGuideOverlay';
 import styles from './LobbyPage.module.css';
 
 export default function LobbyPage() {
@@ -75,50 +76,8 @@ export default function LobbyPage() {
     }
   };
 
-  const handleSoloPlay = async () => {
-    if (isConnecting) return;
-    setIsConnecting(true);
-    setJoinError('');
-
-    try {
-      if (gameWebSocket.isConnected()) {
-        gameWebSocket.disconnect();
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      gameWebSocket.setUser(nickname);
-      await gameWebSocket.connect();
-
-      gameWebSocket.onMessage((message: GameMessage) => {
-        if (message.type === 'ROOM_CREATED') {
-          const roomCode = message.content || '';
-
-          useGameStore.getState().joinGame(roomCode, true);
-          useGameStore.setState({
-            isSoloMode: true,
-            isGameStarted: true,
-            currentStage: 'SOLO_1',
-          });
-
-          navigate('/game');
-          setIsConnecting(false);
-        }
-      });
-
-      gameWebSocket.onError((error: string) => {
-        setJoinError(error);
-        setIsConnecting(false);
-      });
-
-      gameWebSocket.createRoom();
-
-    } catch (error) {
-      console.error('솔로 모드 시작 실패:', error);
-      setJoinError('서버 연결 실패 (게임 서버 확인 필요)');
-      gameWebSocket.disconnect();
-      setIsConnecting(false);
-    }
-  };
+  // [FIX] 게임 가이드 오버레이 상태
+  const [showGameGuide, setShowGameGuide] = useState(false);
 
   // 설정 열기/닫기 핸들러
   const openSettings = () => setSearchParams({ settings: 'true' });
@@ -143,10 +102,9 @@ export default function LobbyPage() {
       <div className={styles.topRightButtons}>
         <button
           className={styles.soloButton}
-          onClick={handleSoloPlay}
-          disabled={isConnecting}
+          onClick={() => setShowGameGuide(true)}
         >
-          🧪 혼자하기
+          📖 게임 가이드
         </button>
       </div>
 
@@ -203,6 +161,12 @@ export default function LobbyPage() {
           onClose={closeSettings}
         />
       )}
+
+      {/* 게임 가이드 오버레이 */}
+      <GameGuideOverlay
+        isOpen={showGameGuide}
+        onClose={() => setShowGameGuide(false)}
+      />
     </div>
   );
 }
