@@ -138,11 +138,15 @@ export default function WaitingRoom({
 
                     {isHost ? (
                         <button
-                            className={`${styles.actionBtn} ${(!isSoloMode && players.length > 1 && !allReady) || !isLiveKitConnected ? '' : styles.readyActive}`}
+                            className={`${styles.actionBtn} ${(!isSoloMode && (players.length < 4 || !allReady)) || !isLiveKitConnected ? '' : styles.readyActive}`}
                             onClick={onStartGame}
-                            disabled={(!isSoloMode && players.length > 1 && !allReady) || !isLiveKitConnected}
+                            disabled={(!isSoloMode && (players.length < 4 || !allReady)) || !isLiveKitConnected}
                         >
-                            {!isLiveKitConnected ? '연결 중...' : (!isSoloMode && players.length > 1 && !allReady ? '준비 대기중...' : '게임 시작')}
+                            {!isLiveKitConnected ? '연결 중...' :
+                                (!isSoloMode ?
+                                    (players.length < 4 ? `인원 부족 (${players.length}/4)` :
+                                        (!allReady ? '준비 대기중...' : '게임 시작'))
+                                    : '게임 시작')}
                         </button>
                     ) : (
                         <button
