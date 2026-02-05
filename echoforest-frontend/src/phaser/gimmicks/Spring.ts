@@ -119,29 +119,31 @@ export class Spring {
         this.graphics.fillRect(-16, -12, 32, 4);
     }
 
-    private isAnimating: boolean = false;
+    private pendingTimer?: Phaser.Time.TimerEvent;
 
-    // 스프링 애니메이션 (눈렸다가 튀어오름)
+    // 스프링 애니메이션 (눌렸다가 튀어오름)
     public animate(): void {
         const target = this.sprite || this.graphics;
         if (!target) return;
 
-        // [FIX] 애니메이션 중이면 무시 (중복 호출 방지)
-        if (this.isAnimating) return;
-        this.isAnimating = true;
+        // [FIX] 기존 타이머가 있으면 취소하고 원래 스케일로 복원 후 새로 시작
+        if (this.pendingTimer) {
+            this.pendingTimer.destroy();
+            this.pendingTimer = undefined;
+        }
 
-        // [FIX] 원래 스케일 기준으로 수축/펜침
+        // [FIX] 원래 스케일 기준으로 수축/펴짐
         const compressedScaleY = this.originalScaleY * 0.5;
 
         // 수축
         target.setScale(target.scaleX, compressedScaleY);
 
-        // 100ms 후 펜짐
-        this.scene.time.delayedCall(100, () => {
+        // 100ms 후 펴짐
+        this.pendingTimer = this.scene.time.delayedCall(100, () => {
             if (target && target.active !== false) {
                 target.setScale(target.scaleX, this.originalScaleY);
             }
-            this.isAnimating = false;
+            this.pendingTimer = undefined;
         });
     }
 
