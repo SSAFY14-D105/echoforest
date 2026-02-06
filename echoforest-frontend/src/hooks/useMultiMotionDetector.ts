@@ -49,6 +49,9 @@ export default function useMultiMotionDetector() {
     // 디버그용: 각 유저별 모든 제스처 인식 결과 (점수 포함)
     const [debugInfo, setDebugInfo] = useState<Map<string, any[]>>(new Map());
 
+    // [NEW] 손 랜드마크 데이터 (스켈레톤 그리기용)
+    const [handLandmarks, setHandLandmarks] = useState<Map<string, any[]>>(new Map());
+
     const detectPose = useCallback((video: HTMLVideoElement, userId: string) => {
         if (!gestureRecognizerRef.current || !faceLandmarkerRef.current || !poseManagerRef.current || !video || video.readyState < 2) return;
 
@@ -60,6 +63,13 @@ export default function useMultiMotionDetector() {
             if (results.landmarks && results.landmarks.length > 0) {
                 const landmarks = results.landmarks[0] as any[]; // 첫 번째 손
                 const allHands = results.landmarks; // 전체 손
+
+                // [NEW] 손 랜드마크 저장
+                setHandLandmarks(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(userId, allHands);
+                    return newMap;
+                });
 
                 // 얼굴 랜드마크 추출
                 const faceLandmarks = faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0
@@ -123,11 +133,16 @@ export default function useMultiMotionDetector() {
                     if (newMap.has(userId)) newMap.delete(userId);
                     return newMap;
                 });
+                setHandLandmarks(prev => {
+                    const newMap = new Map(prev);
+                    if (newMap.has(userId)) newMap.delete(userId);
+                    return newMap;
+                });
             }
         } catch (e) {
             console.error("Pose detection error:", e);
         }
     }, [isLoaded]);
 
-    return { isLoaded, detectPose, detectedPoses, poseManager: poseManagerRef.current, debugInfo };
+    return { isLoaded, detectPose, detectedPoses, poseManager: poseManagerRef.current, debugInfo, handLandmarks };
 }

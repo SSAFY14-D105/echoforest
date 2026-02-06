@@ -43,9 +43,6 @@ export default class FlowerPoseGesture extends BaseGesture {
         let detectedHands = 0;
         let totalScore = 0;
 
-        // [DEBUG] 감지 상태 추적
-        const debugInfo: any[] = [];
-
         for (const hand of allHands) {
             // 손가락 펴짐 체크 (2개 이상의 손가락이 펴져 있어야 함)
             const extendedCount = [8, 12, 16, 20].filter(idx => isFingerExtended(hand as Landmark[], idx, idx - 2)).length;
