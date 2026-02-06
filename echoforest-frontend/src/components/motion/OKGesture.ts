@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distance, isFingerExtended, type Landmark } from '../../utils/gesture-helpers';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class OKGesture extends BaseGesture {
     constructor() {
@@ -17,15 +17,16 @@ export default class OKGesture extends BaseGesture {
         const thumbIndexDist = distance(thumbTip, indexTip);
         const normalizedDist = thumbIndexDist / palmSize;
 
-        const isTouch = normalizedDist < 0.2; // 0.2 이내면 붙은 것으로 간주
+        const isTouch = normalizedDist < 0.25; // 0.2→0.25로 완화
 
-        // 2. 나머지 세 손가락(중지, 약지, 소지)이 펴져 있는지 확인
-        // [FIX] 끝(tip)과 PIP(두번째 마디) 비교로 변경
-        const isMiddleExtended = isFingerExtended(landmarks, 12, 10); // 12: 중지 끝, 10: 중지 PIP
-        const isRingExtended = isFingerExtended(landmarks, 16, 14);   // 16: 약지 끝, 14: 약지 PIP
-        const isPinkyExtended = isFingerExtended(landmarks, 20, 18);  // 20: 새끼 끝, 18: 새끼 PIP
+        // 2. 나머지 세 손가락 펴짐 체크 (완화된 조건)
+        // [FIX] 손목에서 끝까지 거리 > 손목에서 MCP까지 거리 * 0.9 → 살짝 구부러져도 OK
+        const wrist = landmarks[0];
+        const isMiddleExtended = distance(landmarks[12], wrist) > distance(landmarks[9], wrist) * 0.9;
+        const isRingExtended = distance(landmarks[16], wrist) > distance(landmarks[13], wrist) * 0.9;
+        const isPinkyExtended = distance(landmarks[20], wrist) > distance(landmarks[17], wrist) * 0.9;
 
-        // 사용자가 요청한 단순 로직: 엄지-검지 붙고 + 나머지 펴짐 (2개 이상)
+        // 엄지-검지 붙고 + 나머지 1개 이상 펴짐 (2→1로 완화)
         const extendedCount = [isMiddleExtended, isRingExtended, isPinkyExtended].filter(Boolean).length;
 
         // [DEBUG] 실시간 상태 추적
