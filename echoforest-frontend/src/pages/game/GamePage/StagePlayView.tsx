@@ -518,7 +518,14 @@ export default function StagePlayView({
                         onClick={onCopyRoomId}
                         title="클릭하여 방 코드 복사"
                     >
-                        🎮 Stage {stageNum} | Room: <span className={styles.roomId}>{roomId}</span>
+                        <img
+                            src="/assets/ui/waiting_gnome.png"
+                            alt="gnome"
+                            className={styles.gnomeIcon}
+                        />
+                        <span className={styles.roomInfoText}>
+                            Stage {stageNum} | Room: <span className={styles.roomId}>{roomId}</span>
+                        </span>
                     </div>
                     {/* 저주 스택 바 이동 */}
                     <CurseStackBar
