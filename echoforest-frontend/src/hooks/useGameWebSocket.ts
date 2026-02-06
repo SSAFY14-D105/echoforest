@@ -164,6 +164,16 @@ export function useGameWebSocket() {
                         setPlayerReady(msg.username, isReady);
                     }
                     break;
+                case 'READY_SYNC':
+                    if (msg.content) {
+                        try {
+                            const readyList: string[] = JSON.parse(msg.content);
+                            readyList.forEach(name => setPlayerReady(name, true));
+                        } catch (e) {
+                            //console.error('Failed to parse READY_SYNC:', e);
+                        }
+                    }
+                    break;
 
                 case 'GAME_START':
                     {
