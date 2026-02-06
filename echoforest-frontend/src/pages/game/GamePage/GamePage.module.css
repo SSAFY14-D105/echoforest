@@ -306,9 +306,10 @@
 }
 
 .gnomeIcon {
-    width: 56px;
-    height: 56px;
+    width: 25px;
+    height: 25px;
     object-fit: contain;
+    margin-right: 5px;
 }
 
 .roomInfoText {
