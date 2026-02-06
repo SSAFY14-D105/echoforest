@@ -131,7 +131,14 @@ export default function WaitingRoom({
                         onClick={onCopyRoomId}
                         title="클릭하여 방 코드 복사"
                     >
-                        🎮 대기실 | Room: <span className={styles.roomId}>{roomId}</span>
+                        <img
+                            src="/assets/ui/waiting_gnome.png"
+                            alt="gnome"
+                            className={styles.gnomeIcon}
+                        />
+                        <span className={styles.roomInfoText}>
+                            대기실 | Room: <span className={styles.roomId}>{roomId}</span>
+                        </span>
                     </div>
 
 
