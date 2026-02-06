@@ -194,6 +194,23 @@ public class GameService {
                 log.error("Failed to send ITEM_SYNC", e);
             }
         }
+
+        // [FIX] Ready State Sync
+        // 현재 준비 완료된 플레이어 목록을 전송하여 신규 유저 대기실 화면 동기화
+        try {
+            java.util.Set<String> readyPlayers = redisRoomService.getReadyPlayers(roomId);
+            if (readyPlayers != null && !readyPlayers.isEmpty()) {
+                GameMessageDto readySyncMsg = new GameMessageDto();
+                readySyncMsg.setType("READY_SYNC");
+                readySyncMsg.setRoomId(roomId);
+                readySyncMsg.setContent(objectMapper.writeValueAsString(readyPlayers));
+
+                sendMessage(session, readySyncMsg);
+                log.info("Sent READY_SYNC to {}: {} players", username, readyPlayers.size());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send READY_SYNC", e);
+        }
     }
 
     /**
