@@ -1,6 +1,5 @@
 package com.d105.service;
 
-import com.d105.config.AiProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
