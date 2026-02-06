@@ -25,8 +25,8 @@ export const AVAILABLE_POSES: PoseInfo[] = [
     { id: 'cheekheart', name: '볼하트', emoji: '❤️', difficulty: 2, gestureClass: 'CheekHeartGesture' },
     { id: 'bigheart', name: '머리 위 큰 하트', emoji: '🙆‍♀️', difficulty: 2, gestureClass: 'BigHeartGesture' },
     { id: 'catears', name: '고양이 귀', emoji: '😺', difficulty: 2, gestureClass: 'CatEarsGesture' },
-    { id: 'flower', name: '꽃받침', emoji: '�', difficulty: 1, gestureClass: 'FlowerPoseGesture' },
-    { id: 'talmo', name: '탈모빔', emoji: '☀️', difficulty: 2, gestureClass: 'TalmoBeamGesture' },
+    { id: 'flower', name: '꽃받침', emoji: '🌸', difficulty: 1, gestureClass: 'FlowerPoseGesture' },
+    { id: 'talmo', name: '탈모빔', emoji: '👆👆', difficulty: 2, gestureClass: 'TalmoBeamGesture' },
 ];
 
 // 엔딩 미션에서 사용할 기본 포즈들 (난이도 1~2)
