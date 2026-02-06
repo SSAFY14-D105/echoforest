@@ -20,12 +20,23 @@ export default class OKGesture extends BaseGesture {
         const isTouch = normalizedDist < 0.2; // 0.2 이내면 붙은 것으로 간주
 
         // 2. 나머지 세 손가락(중지, 약지, 소지)이 펴져 있는지 확인
-        const isMiddleExtended = isFingerExtended(landmarks, 12, 11);
-        const isRingExtended = isFingerExtended(landmarks, 16, 15);
-        const isPinkyExtended = isFingerExtended(landmarks, 20, 19);
+        // [FIX] 끝(tip)과 PIP(두번째 마디) 비교로 변경
+        const isMiddleExtended = isFingerExtended(landmarks, 12, 10); // 12: 중지 끝, 10: 중지 PIP
+        const isRingExtended = isFingerExtended(landmarks, 16, 14);   // 16: 약지 끝, 14: 약지 PIP
+        const isPinkyExtended = isFingerExtended(landmarks, 20, 18);  // 20: 새끼 끝, 18: 새끼 PIP
 
         // 사용자가 요청한 단순 로직: 엄지-검지 붙고 + 나머지 펴짐 (2개 이상)
         const extendedCount = [isMiddleExtended, isRingExtended, isPinkyExtended].filter(Boolean).length;
+
+        // [DEBUG] 실시간 상태 추적
+        const debugInfo = {
+            normalizedDist: normalizedDist.toFixed(3),
+            isTouch,
+            extendedCount,
+            middle: isMiddleExtended,
+            ring: isRingExtended,
+            pinky: isPinkyExtended
+        };
 
         if (isTouch && extendedCount >= 2) {
             return {
@@ -33,7 +44,7 @@ export default class OKGesture extends BaseGesture {
                 score: 0.95, // 확실한 OK
                 label: this.label,
                 emoji: this.emoji,
-                extra: { normalizedDist: normalizedDist.toFixed(3), extendedCount }
+                extra: debugInfo
             };
         }
 
@@ -42,7 +53,7 @@ export default class OKGesture extends BaseGesture {
         return {
             detected: false,
             score: isTouch ? 0.4 : 0,
-            extra: { normalizedDist: normalizedDist.toFixed(3), extendedCount }
+            extra: debugInfo
         };
     }
 }
