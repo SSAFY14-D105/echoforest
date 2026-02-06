@@ -62,7 +62,7 @@ export default class PoseManager {
                 const result = gesture.check(landmarks, metadata);
                 if (result.detected && result.score > maxScore) {
                     // 임계값 체크 (0.5 이상이면 인식)
-                    if (result.score >= 0.5) {
+                    if (result.score >= 0.8) {
                         maxScore = result.score;
                         bestResult = result;
                     }
