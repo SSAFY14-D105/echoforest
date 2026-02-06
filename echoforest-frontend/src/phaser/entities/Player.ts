@@ -103,6 +103,8 @@ export class Player {
             isSensor: false, // 모든 플레이어 물리 충돌 활성화
             collisionFilter: {
                 category: 0x0002
+                // [NOTE] mask를 설정하지 않으면 기본적으로 모든 카테고리와 충돌함
+                // 플레이어끼리 충돌은 유지되며, 하늘로 올라가는 버그는 update()에서 별도 처리
             }
         });
 
