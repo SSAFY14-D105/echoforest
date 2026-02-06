@@ -14,18 +14,18 @@ export interface PoseInfo {
 // 사용 가능한 포즈 목록 (기존 제스처 클래스들 기반)
 export const AVAILABLE_POSES: PoseInfo[] = [
     { id: 'vsign', name: 'V 사인', emoji: '✌️', difficulty: 1, gestureClass: 'VSignGesture' },
-    { id: 'fist', name: '주먹', emoji: '✊', difficulty: 1, gestureClass: 'FistGesture' },
+    { id: 'fist', name: '엄지척', emoji: '👍', difficulty: 1, gestureClass: 'FistGesture' },
     { id: 'ok', name: 'OK', emoji: '👌', difficulty: 1, gestureClass: 'OKGesture' },
     { id: 'kiss', name: '츄~💋', emoji: '💋', difficulty: 2, gestureClass: 'KissGesture' },
     { id: 'cheekpoke', name: '양볼 콕!', emoji: '👉👈', difficulty: 2, gestureClass: 'BothCheekPokeGesture' },
     { id: 'leftpoke', name: '왼볼 콕!', emoji: '👉', difficulty: 1, gestureClass: 'LeftPokeGesture' },
     { id: 'rightpoke', name: '오른볼 콕!', emoji: '👈', difficulty: 1, gestureClass: 'RightPokeGesture' },
-    { id: 'l', name: 'L 사인', emoji: '🔫', difficulty: 1, gestureClass: 'LGesture' },
+    { id: 'l', name: 'L 사인', emoji: '👆', difficulty: 1, gestureClass: 'LGesture' },
     { id: 'heart', name: '하트', emoji: '🫶', difficulty: 2, gestureClass: 'HeartGesture' },
     { id: 'cheekheart', name: '볼하트', emoji: '❤️', difficulty: 2, gestureClass: 'CheekHeartGesture' },
-    { id: 'bigheart', name: '큰 하트', emoji: '💕', difficulty: 2, gestureClass: 'BigHeartGesture' },
+    { id: 'bigheart', name: '머리 위 큰 하트', emoji: '🙆‍♀️', difficulty: 2, gestureClass: 'BigHeartGesture' },
     { id: 'catears', name: '고양이 귀', emoji: '😺', difficulty: 2, gestureClass: 'CatEarsGesture' },
-    { id: 'flower', name: '꽃받침', emoji: '🌸', difficulty: 1, gestureClass: 'FlowerPoseGesture' },
+    { id: 'flower', name: '꽃받침', emoji: '�', difficulty: 1, gestureClass: 'FlowerPoseGesture' },
     { id: 'talmo', name: '탈모빔', emoji: '☀️', difficulty: 2, gestureClass: 'TalmoBeamGesture' },
 ];
 

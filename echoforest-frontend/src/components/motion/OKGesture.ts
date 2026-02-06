@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { distance, isFingerExtended, type Landmark } from '../../utils/gesture-helpers';
+import { distance, type Landmark } from '../../utils/gesture-helpers';
 
 export default class OKGesture extends BaseGesture {
     constructor() {
@@ -17,15 +17,27 @@ export default class OKGesture extends BaseGesture {
         const thumbIndexDist = distance(thumbTip, indexTip);
         const normalizedDist = thumbIndexDist / palmSize;
 
-        const isTouch = normalizedDist < 0.2; // 0.2 이내면 붙은 것으로 간주
+        const isTouch = normalizedDist < 0.25; // 0.2→0.25로 완화
 
-        // 2. 나머지 세 손가락(중지, 약지, 소지)이 펴져 있는지 확인
-        const isMiddleExtended = isFingerExtended(landmarks, 12, 11);
-        const isRingExtended = isFingerExtended(landmarks, 16, 15);
-        const isPinkyExtended = isFingerExtended(landmarks, 20, 19);
+        // 2. 나머지 세 손가락 펴짐 체크 (완화된 조건)
+        // [FIX] 손목에서 끝까지 거리 > 손목에서 MCP까지 거리 * 0.9 → 살짝 구부러져도 OK
+        const wrist = landmarks[0];
+        const isMiddleExtended = distance(landmarks[12], wrist) > distance(landmarks[9], wrist) * 0.9;
+        const isRingExtended = distance(landmarks[16], wrist) > distance(landmarks[13], wrist) * 0.9;
+        const isPinkyExtended = distance(landmarks[20], wrist) > distance(landmarks[17], wrist) * 0.9;
 
-        // 사용자가 요청한 단순 로직: 엄지-검지 붙고 + 나머지 펴짐 (2개 이상)
+        // 엄지-검지 붙고 + 나머지 1개 이상 펴짐 (2→1로 완화)
         const extendedCount = [isMiddleExtended, isRingExtended, isPinkyExtended].filter(Boolean).length;
+
+        // [DEBUG] 실시간 상태 추적
+        const debugInfo = {
+            normalizedDist: normalizedDist.toFixed(3),
+            isTouch,
+            extendedCount,
+            middle: isMiddleExtended,
+            ring: isRingExtended,
+            pinky: isPinkyExtended
+        };
 
         if (isTouch && extendedCount >= 2) {
             return {
@@ -33,7 +45,7 @@ export default class OKGesture extends BaseGesture {
                 score: 0.95, // 확실한 OK
                 label: this.label,
                 emoji: this.emoji,
-                extra: { normalizedDist: normalizedDist.toFixed(3), extendedCount }
+                extra: debugInfo
             };
         }
 
@@ -42,7 +54,7 @@ export default class OKGesture extends BaseGesture {
         return {
             detected: false,
             score: isTouch ? 0.4 : 0,
-            extra: { normalizedDist: normalizedDist.toFixed(3), extendedCount }
+            extra: debugInfo
         };
     }
 }
