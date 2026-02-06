@@ -84,9 +84,9 @@ export function useMultiMotionDetector({
         gestureInstancesRef.current.clear();
 
         const initialStates: ParticipantPoseState[] = [];
-        console.log('[MultiMotionDetector] Initializing participant states...', {
-            assignmentsCount: poseAssignments.size
-        });
+        // console.log('[MultiMotionDetector] Initializing participant states...', {
+        //     assignmentsCount: poseAssignments.size
+        // });
 
         poseAssignments.forEach((pose, identity) => {
             initialStates.push({
@@ -101,14 +101,14 @@ export function useMultiMotionDetector({
             const GestureClass = GESTURE_CLASS_MAP[pose.gestureClass];
             if (GestureClass) {
                 gestureInstancesRef.current.set(identity, new GestureClass());
-                console.log(`[MultiMotionDetector] ✅ Created gesture: ${identity} → ${pose.gestureClass} (${pose.emoji} ${pose.name})`);
+                // console.log(`[MultiMotionDetector] ✅ Created gesture: ${identity} → ${pose.gestureClass} (${pose.emoji} ${pose.name})`);
             } else {
                 console.error(`[MultiMotionDetector] ❌ Gesture class not found: ${pose.gestureClass}`);
             }
         });
 
         setParticipantStates(initialStates);
-        console.log('[MultiMotionDetector] Initialized states:', initialStates.map(s => `${s.identity}: ${s.targetPose.name}`));
+        // console.log('[MultiMotionDetector] Initialized states:', initialStates.map(s => `${s.identity}: ${s.targetPose.name}`));
     }, [poseAssignments]);
 
     // MediaPipe 모델 로딩
@@ -252,7 +252,7 @@ export function useMultiMotionDetector({
 
                 // [DEBUG] 인식 상태 로그 (할당된 제스처가 맞는지 확인)
                 if (result.detected) {
-                    console.log(`[MultiMotionDetector] ✅ ${identity}: 감지됨! → ${result.label} (target: ${targetPose?.name}, score: ${result.score.toFixed(2)})`);
+                    // console.log(`[MultiMotionDetector] ✅ ${identity}: 감지됨! → ${result.label} (target: ${targetPose?.name}, score: ${result.score.toFixed(2)})`);
                 }
 
                 setParticipantStates(prev => {
