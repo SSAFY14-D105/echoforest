@@ -161,7 +161,7 @@ export default function WaitingRoom({
 
                     {!isSoloMode && players.length > 1 && (
                         <div className={styles.readyStatus}>
-                            Ready: {readyPlayers.length}/{players.filter(p => !p.isHost).length - 2}
+                            Ready: {readyPlayers.length}/{players.filter(p => !p.isHost).length - 1}
                             {allReady && <span className={styles.allReadyText}>✓ 전원 준비완료!</span>}
                         </div>
                     )}
