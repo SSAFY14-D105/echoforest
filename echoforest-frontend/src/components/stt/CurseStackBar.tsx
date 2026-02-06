@@ -16,7 +16,7 @@ interface CurseStackBarProps {
  */
 export default function CurseStackBar({
     stack,
-    maxStack = 10,
+    maxStack = 5,
     cursedPlayers = [],
     isListening = false,
 }: CurseStackBarProps) {
@@ -24,8 +24,8 @@ export default function CurseStackBar({
 
     // 색상 결정 (스택 레벨에 따라)
     const getColor = () => {
-        if (stack >= 8) return '#ff4444';  // 빨강 (위험)
-        if (stack >= 5) return '#ffaa00';  // 주황 (경고)
+        if (stack >= 4) return '#ff4444';  // 빨강 (위험, 80%)
+        if (stack >= 3) return '#ffaa00';  // 주황 (경고, 60%)
         return '#667eea';                   // 파랑 (안전)
     };
 
@@ -68,7 +68,7 @@ export default function CurseStackBar({
             )}
 
             {/* 위험 경고 */}
-            {stack >= 8 && cursedPlayers.length === 0 && (
+            {stack >= 4 && cursedPlayers.length === 0 && (
                 <div className={styles.dangerAlert}>
                     ⚠️ 저주 발동 임박!
                 </div>
