@@ -1,5 +1,5 @@
 import BaseGesture, { type GestureResult, type GestureMetadata } from './BaseGesture';
-import { isFingerExtended, distance, type Landmark } from '../../utils/gesture-helpers';
+import { isFingerExtended, distance, calculateAngle, type Landmark } from '../../utils/gesture-helpers';
 
 export default class FistGesture extends BaseGesture {
 
