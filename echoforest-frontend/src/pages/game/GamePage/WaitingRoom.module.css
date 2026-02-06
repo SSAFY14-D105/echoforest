@@ -36,7 +36,7 @@
     font-size: 14px;
     font-weight: bold;
     text-align: center;
-    padding: 12px;
+    padding: 12px 18px 12px 6px;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -54,6 +54,19 @@
     background: #f0f0f0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+.gnomeIcon {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+}
+
+.roomInfoText {
+    margin-left: -10px;
+    display: flex;
+    align-items: center;
+}
+
 
 .roomId {
     color: #e74c3c;
