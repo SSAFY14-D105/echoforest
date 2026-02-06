@@ -39,6 +39,9 @@ const CameraArea = memo(function CameraArea({
 
     // [FIX] callback ref - 비디오 엘리먼트가 DOM에 마운트되는 즉시 LiveKit에 등록 (useCallback으로 안정화)
     const onLocalVideoRef = useCallback((element: HTMLVideoElement | null) => {
+        // [FIX] 동일한 엘리먼트이면 무시 (불필요한 re-attach 방지)
+        if (element === localVideoRef.current) return;
+
         // ref 업데이트
         localVideoRef.current = element;
 

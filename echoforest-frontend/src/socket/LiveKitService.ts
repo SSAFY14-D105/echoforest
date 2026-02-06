@@ -128,6 +128,18 @@ export class LiveKitService {
 
     // 로컬 비디오 엘리먼트 설정 (새 엘리먼트가 설정되면 기존 트랙 자동 연결)
     setLocalVideoElement(element: HTMLVideoElement | null) {
+        // [FIX] 동일한 엘리먼트가 이미 설정되어 있으면 무시 (flickering 방지)
+        if (element && element === this.localVideoElement) {
+            // 트랙이 아직 연결 안 되어 있으면 연결 시도
+            if (this.room?.localParticipant) {
+                const cameraPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
+                if (cameraPublication?.track && !element.srcObject) {
+                    cameraPublication.track.attach(element);
+                }
+            }
+            return;
+        }
+
         // [FIX] 기존 엘리먼트가 있다면 트랙에서 분리 (누수 방지)
         if (this.localVideoElement && this.localVideoElement !== element) {
             if (this.room?.localParticipant) {
@@ -196,22 +208,33 @@ export class LiveKitService {
         return participantInfos;
     }
 
-    // NodeJS.Timeout 대신 ReturnType<typeof setInterval> 사용 (환경 호환성)
-    // private syncInterval: ReturnType<typeof setInterval> | null = null;
+    // [FIX] Debounce timer for participant updates (prevents flickering)
+    private updateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private readonly UPDATE_DEBOUNCE_MS = 150; // 150ms debounce
     private lastParticipantInfos: ParticipantInfo[] = [];
 
     // 참가자 업데이트 통지 (모든 구독자에게 알림)
     private notifyParticipantUpdate() {
         if (!this.room) return;
-        const currentInfos = this.getParticipants();
 
-        // [FIX] 중복 업데이트 방지 (Change Detection)
-        if (this.areParticipantInfosEqual(this.lastParticipantInfos, currentInfos)) {
-            return;
+        // [FIX] Debounce rapid updates to prevent flickering
+        if (this.updateDebounceTimer) {
+            clearTimeout(this.updateDebounceTimer);
         }
 
-        this.lastParticipantInfos = currentInfos;
-        this.participantCallbacks.forEach(callback => callback(currentInfos));
+        this.updateDebounceTimer = setTimeout(() => {
+            if (!this.room) return;
+
+            const currentInfos = this.getParticipants();
+
+            // [FIX] 중복 업데이트 방지 (Change Detection)
+            if (this.areParticipantInfosEqual(this.lastParticipantInfos, currentInfos)) {
+                return;
+            }
+
+            this.lastParticipantInfos = currentInfos;
+            this.participantCallbacks.forEach(callback => callback(currentInfos));
+        }, this.UPDATE_DEBOUNCE_MS);
     }
 
     // 변경 감지 (Deep Compare for ParticipantInfo)
