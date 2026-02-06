@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import styles from './GameGuideOverlay.module.css';
 
 interface GameGuideOverlayProps {
@@ -54,7 +54,7 @@ export default function GameGuideOverlay({ isOpen, onClose }: GameGuideOverlayPr
                             <p className={styles.text}>
                                 게임 중 플레이어에게 무작위로 <strong>저주</strong>가 걸릴 수 있습니다.<br />
                                 저주 스택은 <strong>부정적인 말(비속어, 짜증 등)</strong>을 하면 쌓입니다.<br />
-                                스택이 <strong>10</strong>이 되면 누군가에게 저주가 발동됩니다!
+                                스택이 <strong>5</strong>가 되면 누군가에게 저주가 발동됩니다!
                             </p>
                             <p className={styles.text} style={{ opacity: 0.8, fontSize: '0.9em' }}>
                                 * 저주에 걸리면 캐릭터가 커지거나, 작아지거나, 조작이 반대로 바뀌는 등 방해 요소가 발생합니다.
