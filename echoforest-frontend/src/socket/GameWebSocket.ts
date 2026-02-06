@@ -25,6 +25,7 @@ export type MessageType =
     | 'START_GAME'    // Client→Server: 게임 시작 (방장만)
     | 'NEXT_STAGE'    // Client→Server: 다음 스테이지 (방장만)
     | 'READY_STATUS'  // Server→All: Ready 상태 브로드캐스트 (username, content: "true"/"false")
+    | 'READY_SYNC'    // Server→Client: 현재 Ready 플레이어 목록 동기화 (content: JSON array)
     | 'GAME_START'    // Server→All: 게임 시작 (content: 스테이지 번호)
     | 'STAGE_CHANGE'  // Server→All: 스테이지 변경 (content: 스테이지 번호)
     | 'STAGE_SELECT'  // Client<->Server: 스테이지 선택 (stage: 번호)
