@@ -80,10 +80,14 @@ export function useMultiMotionDetector({
 
     // 초기 상태 설정
     useEffect(() => {
+        // [FIX] 이전 제스처 인스턴스 모두 제거 (새로운 할당으로 완전히 교체)
+        gestureInstancesRef.current.clear();
+
         const initialStates: ParticipantPoseState[] = [];
-        // console.log('[MultiMotionDetector] Initializing participant states...', {
-        //     assignmentsCount: poseAssignments.size
-        // });
+        console.log('[MultiMotionDetector] Initializing participant states...', {
+            assignmentsCount: poseAssignments.size
+        });
+
         poseAssignments.forEach((pose, identity) => {
             initialStates.push({
                 identity,
@@ -93,17 +97,18 @@ export function useMultiMotionDetector({
                 score: 0
             });
 
-            // 제스처 인스턴스 생성
+            // [FIX] 해당 참가자에게 할당된 제스처 인스턴스만 생성
             const GestureClass = GESTURE_CLASS_MAP[pose.gestureClass];
             if (GestureClass) {
                 gestureInstancesRef.current.set(identity, new GestureClass());
-                // console.log(`[MultiMotionDetector] Created gesture instance for ${identity}: ${pose.gestureClass} (${pose.emoji})`);
+                console.log(`[MultiMotionDetector] ✅ Created gesture: ${identity} → ${pose.gestureClass} (${pose.emoji} ${pose.name})`);
             } else {
-                console.error(`[MultiMotionDetector] Gesture class not found: ${pose.gestureClass}`);
+                console.error(`[MultiMotionDetector] ❌ Gesture class not found: ${pose.gestureClass}`);
             }
         });
+
         setParticipantStates(initialStates);
-        // console.log('[MultiMotionDetector] Initialized states:', initialStates);
+        console.log('[MultiMotionDetector] Initialized states:', initialStates.map(s => `${s.identity}: ${s.targetPose.name}`));
     }, [poseAssignments]);
 
     // MediaPipe 모델 로딩
@@ -238,16 +243,16 @@ export function useMultiMotionDetector({
             }
 
             if (gestureInstance && (hasHands || hasFace)) {
+                // [DEBUG] 어떤 제스처 인스턴스가 사용되는지 확인
+                const targetPose = poseAssignments.get(identity);
+
                 // 손 랜드마크가 없으면 빈 배열 전달 (제스처 클래스에서 처리)
                 const handLandmarks = hasHands ? handResult.landmarks[0] : [];
                 const result: GestureResult = gestureInstance.check(handLandmarks, metadata);
 
-                // [DEBUG] 인식 상태 로그 (개발 중 확인용)
+                // [DEBUG] 인식 상태 로그 (할당된 제스처가 맞는지 확인)
                 if (result.detected) {
-                    // console.log(`[MultiMotionDetector] ✅ ${identity}: ${result.label} (score: ${result.score.toFixed(2)})`);
-                } else if (hasHands || hasFace) {
-                    // [DEBUG] 손/얼굴은 감지됐지만 제스처가 인식되지 않은 경우
-                    // console.log(`[MultiMotionDetector] ❌ ${identity}: Not matched (score: ${result.score.toFixed(2)})`);
+                    console.log(`[MultiMotionDetector] ✅ ${identity}: 감지됨! → ${result.label} (target: ${targetPose?.name}, score: ${result.score.toFixed(2)})`);
                 }
 
                 setParticipantStates(prev => {
@@ -258,9 +263,10 @@ export function useMultiMotionDetector({
                         if (!updated[idx].isCleared) {
                             updated[idx] = {
                                 ...updated[idx],
-                                currentGesture: result.detected ? result.label || null : null,
+                                // [FIX] 할당된 제스처의 라벨만 표시 (다른 제스처 라벨 방지)
+                                currentGesture: result.detected ? (targetPose?.name || result.label || null) : null,
                                 score: result.score,
-                                // [FIX] 임계값 0.4로 설정 (적절한 인식률)
+                                // [FIX] 임계값 0.5로 설정 (적절한 인식률)
                                 isCleared: result.detected && result.score > 0.5
                             };
                         }
@@ -274,7 +280,7 @@ export function useMultiMotionDetector({
 
         // [FIX] 감지 주기 100ms → 50ms로 빠르게 (약 20fps)
         setTimeout(() => requestAnimationFrame(detect), 50);
-    }, [videoRefs]);
+    }, [videoRefs, poseAssignments]);
 
     // 감지 루프 시작/중지
     useEffect(() => {
