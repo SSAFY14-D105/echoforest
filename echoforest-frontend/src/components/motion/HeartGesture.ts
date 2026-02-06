@@ -54,7 +54,7 @@ export default class HeartGesture extends BaseGesture {
         const isHeartShape = isVertical && isCurvedL && isCurvedR && isBentL && isBentR;
 
         if (isTouching && isHeartShape) {
-            const score = Math.max(0.1, 1 - (thumbDist + indexDist) / (this.thresholds.tipDistance * 2));
+            const score = Math.max(0.55, 1 - (thumbDist + indexDist) / (this.thresholds.tipDistance * 2));
             return {
                 detected: true,
                 score: score,

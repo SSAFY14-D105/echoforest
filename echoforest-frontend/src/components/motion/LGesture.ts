@@ -12,7 +12,19 @@ export default class LGesture extends BaseGesture {
         const palmSize = metadata.palmSize || distance(landmarks[0], landmarks[9]);
 
         // 1. 얼굴 근접 체크 (볼콕 오인식 방지) - 거리 완화
-        // 1. 얼굴 근접 체크 로직 제거됨 (볼콕 오인식 방지 로직은 2번 스텝에서 처리)
+        // [FIX] 얼굴 근처(볼콕 거리)에서는 L인식 차단 (볼콕 우선)
+        // 엄지-중지 거리 체크가 추가되었으므로, 얼굴 거리 제한은 다시 완화하거나 제거해도 됨
+        // 하지만 안전장치로 아주 가까운 경우(0.4)만 차단
+        // if (metadata.faceLandmarks) {
+        //     const indexTip = landmarks[8];
+        //     const nose = metadata.faceLandmarks[1];
+        //     const distToNose = distance(indexTip, nose);
+        //     const faceSize = metadata.faceSize || distance(metadata.faceLandmarks[10], metadata.faceLandmarks[152]);
+        //     if (distToNose < faceSize * 0.4) {
+        //         return { detected: false, score: 0 };
+        //     }
+        // }
+
 
         // 2. 손가락 상태 계산
         let fingers: any;

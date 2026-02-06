@@ -8,8 +8,8 @@ export default class VSignGesture extends BaseGesture {
         super(config);
         // 기본 임계값
         this.thresholds = {
-            fingerFold: 1.1,     // 손가락 접힘 판단
-            vAngleMin: 15,       // V 최소 각도
+            fingerFold: 1.0,     // 손가락 접힘 판단 (완화: 1.1→1.0)
+            vAngleMin: 10,       // V 최소 각도 (완화: 15→10)
             vAngleMax: 70,       // V 최대 각도
             ...config
         };

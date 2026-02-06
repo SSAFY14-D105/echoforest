@@ -13,7 +13,7 @@ export default class FlowerPoseGesture extends BaseGesture {
         this.label = '꽃받침! 🌸';
         this.emoji = '🌸';
         this.thresholds = {
-            distance: 0.6, // [FIX] 턱과의 거리 임계값 완화 (0.35 → 0.6)
+            maxWristDistance: 2.5, // [INCREASED] 양손 손목 간 최대 거리 (얼굴 가까이 대도 인식되게)
             ...config
         };
 
@@ -43,62 +43,19 @@ export default class FlowerPoseGesture extends BaseGesture {
         let detectedHands = 0;
         let totalScore = 0;
 
-        // [DEBUG] 감지 상태 추적
-        const debugInfo: any[] = [];
-
         for (const hand of allHands) {
-            // 1. 손목(0)이나 손바닥 중심이 턱 근처에 있는지 체크
-            // 꽃받침은 보통 손목이나 손바닥 아랫부분을 턱에 댐
-            const wrist = hand[0] as Landmark;
-            const thumbBase = hand[1] as Landmark;
-            const pinkyBase = hand[17] as Landmark;
-
-            // 손의 "받침" 부분 (손목~손바닥 하단)
-            const basePoints = [wrist, thumbBase, pinkyBase];
-
-            let minToJaw = Infinity;
-
-            // 얼굴의 턱 포인트들과 비교
-            for (const jawIdx of this.jawPoints) {
-                const jawPt = faceLandmarks[jawIdx] as Landmark;
-                if (!jawPt) continue;
-
-                for (const basePt of basePoints) {
-                    const d = distance(basePt, jawPt);
-                    const norm = d / faceSize;
-                    if (norm < minToJaw) minToJaw = norm;
-                }
-            }
-
-            // 2. 거리 체크
+            // 손가락 펴짐 체크 (2개 이상의 손가락이 펴져 있어야 함)
             const extendedCount = [8, 12, 16, 20].filter(idx => isFingerExtended(hand as Landmark[], idx, idx - 2)).length;
 
-            // [DEBUG] 정보 수집
-            debugInfo.push({
-                minToJaw: minToJaw.toFixed(3),
-                threshold: this.thresholds.distance,
-                extendedFingers: extendedCount,
-                passed: minToJaw < this.thresholds.distance && extendedCount >= 2
-            });
+            console.log(`[FlowerPose] Hand extended fingers: ${extendedCount}`);
 
-            if (minToJaw < this.thresholds.distance) {
-                // 3. 모양 체크 (손이 펴져 있어야 함, 주먹이면 안됨)
-                // [FIX] 2개 이상의 손가락이 펴져 있어야 함
-                if (extendedCount >= 2) {
-
-                    // [FIX] 볼하트 오인식 방지: 엄지와 검지가 가까우면(C모양/집게모양) 꽃받침 아님
-                    // 꽃받침은 손바닥을 펴서 턱을 받치는 자세이므로 엄지-검지가 멀어야 함
-                    const thumbIndexDist = distance(hand[4], hand[8]) / faceSize;
-                    if (thumbIndexDist < 0.3) {
-                        // C모양이면 꽃받침 점수 인정 안 함
-                        continue;
-                    }
-
-                    detectedHands++;
-                    // 거리가 가까울수록 점수 높음
-                    const score = Math.max(0.2, 1.0 - (minToJaw / this.thresholds.distance));
-                    totalScore += score;
-                }
+            if (extendedCount >= 2) {
+                detectedHands++;
+                const score = 0.7; // 기본 점수
+                totalScore += score;
+                console.log(`[FlowerPose] ✅ Hand passed (detectedHands: ${detectedHands})`);
+            } else {
+                console.log(`[FlowerPose] ❌ Hand rejected: not enough fingers extended (${extendedCount} < 2)`);
             }
         }
 
@@ -111,24 +68,42 @@ export default class FlowerPoseGesture extends BaseGesture {
             // });
         }
 
-        // [FIX] 양손 필수로 변경 - 한손 꽃받침은 인식 안 함
-        // [FIX] 양손 필수로 변경 - 한손 꽃받침은 인식 안 함
+        // 양손 필수
         if (detectedHands >= 2) {
-            // [FIX] 손하트 오인식 방지: 양손 검지/중지 끝이 붙어 있으면(하트 모양) 꽃받침 아님
-            // 하트는 손끝이 붙어있고, 꽃받침은 손목이 붙어있고 손끝은 벌어짐
             const hand1 = allHands[0];
             const hand2 = allHands[1];
+
+            // [NEW] 핵심 조건: 양손 손목 간 거리가 가까워야 함 (꽃받침의 본질)
+            const wrist1 = hand1[0];
+            const wrist2 = hand2[0];
+            const wristDist = distance(wrist1, wrist2) / faceSize;
+
+            // [DEBUG] 손목 간 거리 로그
+            console.log(`[FlowerPose] Wrist distance: ${wristDist.toFixed(3)}, threshold: ${this.thresholds.maxWristDistance}`);
+
+            // 손목이 너무 멀면 (손을 벌린 자세) 차단
+            if (wristDist > this.thresholds.maxWristDistance) {
+                console.log(`[FlowerPose] ❌ Rejected: wrists too far apart (${wristDist.toFixed(3)} > ${this.thresholds.maxWristDistance})`);
+                return { detected: false, score: 0 };
+            }
+
+            console.log(`[FlowerPose] ✅ Wrists close enough (${wristDist.toFixed(3)} <= ${this.thresholds.maxWristDistance})`);
+
+            // 손하트 오인식 방지: 양손 검지/중지 끝이 붙어 있으면(하트 모양) 꽃받침 아님
             const indexTipDist = distance(hand1[8], hand2[8]) / faceSize;
 
             // 손끝이 너무 가까우면(0.2 미만) 하트로 간주하고 차단
             if (indexTipDist < 0.2) {
+                console.log(`[FlowerPose] ❌ Rejected: heart shape detected`);
                 return { detected: false, score: 0 };
             }
 
-            // [FIX] 점수 계산 개선
+            // 점수 계산: 손목이 가까울수록 높은 점수
             let finalScore = totalScore / detectedHands;
-            // 양손이면 점수 가산
-            finalScore = Math.min(0.99, finalScore + 0.3);
+            const wristBonus = Math.max(0, (this.thresholds.maxWristDistance - wristDist) / this.thresholds.maxWristDistance) * 0.3;
+            finalScore = Math.min(0.99, finalScore + wristBonus);
+
+            console.log(`[FlowerPose] ✅ Detected! Score: ${finalScore.toFixed(3)}`);
 
             return {
                 detected: true,

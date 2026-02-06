@@ -1429,6 +1429,53 @@ export default abstract class BaseGameScene extends Phaser.Scene {
         // 두 개의 루프를 하나로 합쳐 순회 비용 절감
         this.movingBumpers.forEach(bumper => bumper.update(time));
 
+        // [FIX] 플레이어끼리 겹쳤을 때 위로 밀려 올라가는 버그 방지
+        // 좌우 밀기는 자연스럽게 유지하고, 위로 떠오르는 것만 방지
+        if (this.myPlayerId) {
+            const myPlayer = this.players.get(this.myPlayerId);
+            if (myPlayer && !myPlayer.isDead && !myPlayer.isHidden) {
+                const myPos = myPlayer.getPosition();
+                const myVel = myPlayer.getVelocity();
+
+                // 다른 플레이어와 겹쳐있는지 확인
+                let overlappingPlayerPos: { x: number, y: number } | null = null;
+                this.players.forEach((otherPlayer, otherLabel) => {
+                    if (otherLabel === this.myPlayerId) return;
+                    if (otherPlayer.isHidden || otherPlayer.isDead) return;
+
+                    const otherPos = otherPlayer.getPosition();
+                    const dx = Math.abs(myPos.x - otherPos.x);
+                    const dy = Math.abs(myPos.y - otherPos.y);
+
+                    // 플레이어 크기(60px) 기준으로 겹침 판정
+                    if (dx < 58 && dy < 58) {
+                        overlappingPlayerPos = otherPos;
+                    }
+                });
+
+                if (overlappingPlayerPos) {
+                    const otherPos = overlappingPlayerPos as { x: number, y: number };
+
+                    // 1. 위로 떠오르는 버그 방지
+                    const isBelowOther = myPos.y > otherPos.y - 30;
+                    if (myVel.y < -1 && isBelowOther) {
+                        myPlayer.setVelocity(myVel.x, Math.min(0, myVel.y + 2));
+                    }
+
+                    // 2. 수평 밀기 강화 - 겹쳤을 때 서로 밀어내는 힘 추가
+                    const pushDirection = myPos.x < otherPos.x ? -1 : 1; // 상대방 반대 방향으로 밀림
+                    const overlapAmount = 58 - Math.abs(myPos.x - otherPos.x); // 겹침 정도
+
+                    if (overlapAmount > 0) {
+                        // 겹침 정도에 비례해서 밀어내는 힘 적용 (최대 3px/frame)
+                        const pushForce = Math.min(3, overlapAmount * 0.15);
+                        const currentVelX = myPlayer.getVelocity().x;
+                        myPlayer.setVelocity(currentVelX + pushForce * pushDirection, myPlayer.getVelocity().y);
+                    }
+                }
+            }
+        }
+
         this.players.forEach((player, label) => {
             // 1. Bounds Check (낙사)
             const pos = player.getPosition();
