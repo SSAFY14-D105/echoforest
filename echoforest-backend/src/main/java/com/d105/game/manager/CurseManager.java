@@ -16,7 +16,7 @@ import java.util.Random;
 public class CurseManager {
 
     private final String roomId;
-    private static final int MAX_CURSE_STACK = 10;
+    private static final int MAX_CURSE_STACK = 5;
 
     // 팀 공용 저주 스택
     @Getter
@@ -155,8 +155,6 @@ public class CurseManager {
      */
     public String triggerRandomCurse(Map<String, PlayerState> players) {
         List<PlayerState> activePlayers = new ArrayList<>(players.values());
-        // [TODO] 연결 끊긴 플레이어 제외 로직 추가 가능
-
         if (activePlayers.isEmpty())
             return null;
 
