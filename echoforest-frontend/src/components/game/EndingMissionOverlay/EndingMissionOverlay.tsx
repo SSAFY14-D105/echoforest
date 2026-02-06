@@ -433,7 +433,16 @@ function ParticipantCameraBox({
         >
             {targetPose && !isDummy && (
                 <div className={styles.targetPose}>
-                    <span className={styles.poseEmoji}>{targetPose.emoji}</span>
+                    {targetPose.id === 'talmo' ? (
+                        <div className={styles.poseEmoji} style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
+                            {/* 왼쪽: 좌우 반전하여 왼손(ㄴ) 모양 */}
+                            <span style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>👆</span>
+                            {/* 오른쪽: 그대로 두어 오른손(ㄱ) 모양 */}
+                            <span>👆</span>
+                        </div>
+                    ) : (
+                        <span className={styles.poseEmoji}>{targetPose.emoji}</span>
+                    )}
                     <span className={styles.poseName}>{targetPose.name}</span>
                 </div>
             )}
