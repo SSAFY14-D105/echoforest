@@ -312,9 +312,3 @@ saved_model/
 .cache/
 huggingface/
 transformers_cache/
-
-# ----- 오디오/비디오 파일 (테스트용) -----
-*.wav
-*.mp3
-*.webm
-*.mp4

@@ -1,0 +1,376 @@
+/* 컨테이너 */
+.gameContainer {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: #F3FDF4;
+    /* WaitingRoom과 동일한 배경 */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* 게임 캔버스 영역 */
+.canvasWrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 0;
+    /* 하단 카메라 제거로 인해 마진 0 */
+    background: #000 !important;
+    /* [FIX] 글로벌 스타일(pixel-box)의 흰색 배경을 덮어쓰기 위해 !important 사용 */
+    /* WaitingRoom과 동일한 회색 배경 */
+    /* [FIX] 블랙 배경으로 변경하여 레터박스 이질감 제거 */
+    min-height: 0;
+    /* flex 자식에서 중요 */
+
+    /* [FIX] 중앙 정렬 및 가득 채우기 */
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    /* 내부 캔버스 중앙 정렬용 */
+    justify-content: center;
+    align-items: center;
+}
+
+.gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    /* 비율 유지하며 꽉 채우기 (필요 시 cover) */
+}
+
+/* 게임 내 BGM 컨트롤러 위치 */
+.gameAudioController {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 100;
+}
+
+/* 게임 정보 오버레이 */
+.gameInfo {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    padding: 8px 15px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.roomId {
+    color: #e74c3c;
+    margin-right: 8px;
+    /* 버튼과 간격 */
+}
+
+.copyBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
+
+.copyBtn:hover {
+    transform: scale(1.2);
+}
+
+.copyBtn:active {
+    transform: scale(0.95);
+}
+
+/* 카메라 영역은 CameraArea.module.css 로 이동됨 */
+
+/* 하단 버튼 영역 */
+.bottomActions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.testBtn {
+    padding: 10px 20px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.testBtn:hover:not(:disabled) {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+.testBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.startGameBtn {
+    padding: 12px 35px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.startGameBtn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(17, 153, 142, 0.5);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 4px 25px rgba(56, 239, 125, 0.6);
+    }
+}
+
+.waitingMessage {
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #555;
+}
+
+/* 스테이지 선택 화면은 StageSelectScreen.module.css 로 이동됨 */
+
+/* 스테이지 클리어 테스트 버튼 (GamePage에서도 사용됨) */
+.testClearBtn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+}
+
+.testClearBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 147, 251, 0.5);
+}
+
+/* 로비로 돌아가기 버튼 */
+.backToLobbyBtn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.backToLobbyBtn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-2px);
+}
+
+/* Ready 버튼 */
+.readyBtn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.readyBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.readyBtn.readyActive {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.readyBtn.readyActive:hover {
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+}
+
+/* Ready 상태 표시 */
+.readyStatus {
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+}
+
+/* 상단 섹션: 카메라 + 정보 패널 (WaitingRoom 스타일 복사) */
+.topSection {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-bottom: 12px;
+    height: 140px;
+    /* 높이 고정으로 롤백 */
+    /* Force height to match camera */
+    align-items: center;
+    /* 수직 중앙 정렬 */
+}
+
+/* 정보 패널 */
+/* WaitingRoom의 infoPanel 스타일 적용 */
+.infoPanel {
+    flex-shrink: 0;
+    width: 280px;
+    /* WaitingRoom과 동일하게 280px로 수정 */
+    background: transparent;
+    border: none;
+    padding: 12px;
+    /* WaitingRoom과 동일하게 12px */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* WaitingRoom과 동일하게 12px */
+    justify-content: center;
+    align-items: center;
+}
+
+.roomInfo {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    padding: 12px 18px 12px 6px;
+    /* WaitingRoom과 동일하게 12px */
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    /* 간격 추가 */
+    white-space: nowrap;
+    /* 줄바꿈 방지 */
+    cursor: pointer;
+    /* 클릭 가능 표시 */
+    transition: all 0.2s ease;
+}
+
+.roomInfo:hover {
+    transform: scale(1.05);
+    background: #f0f0f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.gnomeIcon {
+    width: 25px;
+    height: 25px;
+    object-fit: contain;
+    margin-right: 5px;
+}
+
+.roomInfoText {
+    margin-left: -10px;
+    display: flex;
+    align-items: center;
+}
+
+
+/* 리스폰 알림 (중앙 상단) */
+.respawnNotification {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    color: #ffeeb0;
+    /* 로그인/로비 버튼 노란색 */
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 20px;
+    /* 폰트 크기 키움 (가시성 확보) */
+    font-weight: bold;
+    font-family: 'MulmaruMono', monospace;
+    /* 폰트 변경 유지 */
+    z-index: 2000;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: slideDownFade 3s ease-in-out forwards;
+    border: none;
+    box-shadow: none;
+    text-shadow:
+        2px 2px 0px #000,
+        -1px -1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000,
+        1px 1px 0px #000;
+}
+
+@keyframes slideDownFade {
+    0% {
+        top: 20px;
+        opacity: 0;
+        transform: translateX(-50%) scale(0.9);
+    }
+
+    15% {
+        top: 40px;
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    85% {
+        top: 40px;
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    100% {
+        top: 30px;
+        opacity: 0;
+        transform: translateX(-50%) scale(0.95);
+    }
+}
