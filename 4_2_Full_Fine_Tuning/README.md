@@ -1,57 +1,59 @@
 # 4_2_Full_Fine_Tuning
 
-Full Fine-Tuning 기반 모든 파라미터 학습 스크립트
+Full Fine-tuning 기반 모든 파라미터 학습
 
-## 📁 스크립트
+## 📁 디렉토리 구조
 
-| 파일명 | 모델 | 메트릭 | 설명 |
-|--------|------|--------|------|
-| `full_game_kcelectra.py` | KcELECTRA-base-v2022 | abuse_recall | 게임 환경 최적화 (한국어) |
-| `full_tutorial_bert.py` | beomi/kcbert-base | LRAP | 공식 튜토리얼 기반 |
+```
+4_2_Full_Fine_Tuning/
+├── v1_corrected_only/           # 보정 데이터만 (10,490건)
+│   ├── full_game_kcelectra.py/.ipynb
+│   ├── full_tutorial_kcbert.py/.ipynb
+│   └── output/                  # 학습 결과 저장
+│       ├── full_game_kcelectra/
+│       └── full_tutorial_kcbert/
+│
+└── v2_corrected_plus_collected/ # 보정+수집 (11,009건)
+    ├── full_game_kcelectra_v2.py/.ipynb
+    ├── full_tutorial_kcbert_v2.py/.ipynb
+    └── output/
+        ├── full_game_kcelectra_v2/
+        └── full_tutorial_kcbert_v2/
+```
 
-### 📓 Jupyter 노트북 (외부 GPU 환경용)
+## 📊 버전별 데이터
 
-| 파일명 | 모델 | 메트릭 | 설명 |
-|--------|------|--------|------|
-| `full_game_kcelectra.ipynb` | KcELECTRA-base-v2022 | abuse_recall | L40S GPU 최적화 |
-| `full_tutorial_kcbert.ipynb` | beomi/kcbert-base | LRAP | 튜토리얼 기반 |
+| 버전 | 데이터 | 건수 |
+|------|--------|------|
+| v1 | UnSmile 보정 | 10,490건 |
+| v2 | UnSmile 보정 + 게임 음성채팅 수집 | 11,009건 |
 
 ## 🔧 학습 설정
 
 ```python
-# 게임 환경 최적화
 EPOCHS = 5
-BATCH_SIZE = 16
-LEARNING_RATE = 2e-5
-WARMUP_RATIO = 0.1
-WEIGHT_DECAY = 0.01
-
-# 튜토리얼 기반
-EPOCHS = 5
-BATCH_SIZE = 32
-LEARNING_RATE = 2e-5
+LEARNING_RATE = 2e-5  # Full FT는 LoRA보다 낮은 LR
+BATCH_SIZE = 16       # 메모리 절약
+gradient_accumulation_steps = 2
 ```
 
-## ▶️ 실행 방법
+## 📈 모델 비교
+
+| 노트북 | 모델 | 메트릭 |
+|--------|------|--------|
+| `full_game_kcelectra` | KcELECTRA-base-v2022 | abuse_recall |
+| `full_tutorial_kcbert` | kcbert-base | LRAP |
+
+## ⚠️ 참고
+Full Fine-tuning은 LoRA보다 학습 시간이 길고 메모리 사용량이 높습니다.
+
+## 🚀 실행 방법
 
 ```bash
-# Conda 환경 활성화
+# Jupyter 환경
+# GPU 서버에 ipynb 파일 업로드 후 실행
+
+# 로컬 conda 환경
 conda activate echoforest_ft
-
-# 게임 환경 최적화 버전 실행
-python full_game_kcelectra.py
-
-# 튜토리얼 기반 버전 실행
-python full_tutorial_bert.py
+python v1_corrected_only/full_game_kcelectra.py
 ```
-
-## 📊 출력 폴더
-
-- `output_game_full/` - 게임 최적화 Full FT 결과
-- `output_tutorial_full/` - 튜토리얼 기반 Full FT 결과
-
-## ⚠️ 주의사항
-
-- Full Fine-tuning은 모든 파라미터를 학습하므로 **GPU 메모리가 많이 필요**합니다.
-- VRAM 8GB 이상 권장
-- 메모리 부족 시 BATCH_SIZE를 줄이세요.
