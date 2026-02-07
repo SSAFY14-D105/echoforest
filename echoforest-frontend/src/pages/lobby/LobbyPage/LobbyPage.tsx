@@ -1,0 +1,172 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useGameStore } from '../../../store/useGameStore';
+import { gameWebSocket } from '../../../socket/GameWebSocket';
+import type { GameMessage } from '../../../socket/GameWebSocket';
+import JoinGameModal from '../../../components/JoinGameModal/JoinGameModal';
+import SettingsModal from '../../../components/SettingsModal/SettingsModal';
+import SplashScreen from '../../../components/SplashScreen/SplashScreen';
+import AudioController from '../../../components/common/AudioController';
+import GameGuideOverlay from '../../../components/guide/GameGuideOverlay';
+import styles from './LobbyPage.module.css';
+
+export default function LobbyPage() {
+  const {
+    nickname,
+    roomId,
+    joinGame,
+  } = useGameStore();
+
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // [NEW] URL 쿼리 파라미터로 모달 상태 제어
+  const showSettings = searchParams.get('settings') === 'true';
+
+  // [FIX] roomId가 있으면 게임 페이지로 리다이렉트 (새로고침으로 세션 복구된 경우)
+  // 의도적으로 로비에 온 경우(뒤로가기 등)는 roomId가 없음
+  useEffect(() => {
+    if (roomId) {
+      navigate('/game', { replace: true });
+    }
+  }, [roomId, navigate]);
+
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinError, setJoinError] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // 로딩 상태 (SplashScreen)
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 방 만들기 (WebSocket CREATE 메시지 전송)
+  const handleHost = async () => {
+    if (isConnecting) return;
+    setIsConnecting(true);
+    setJoinError('');
+
+    try {
+      if (gameWebSocket.isConnected()) {
+        gameWebSocket.disconnect();
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      gameWebSocket.setUser(nickname);
+      await gameWebSocket.connect();
+
+      gameWebSocket.onMessage((message: GameMessage) => {
+        if (message.type === 'ROOM_CREATED') {
+          const roomCode = message.content || '';
+          joinGame(roomCode, true);
+          navigate('/game');
+        }
+      });
+
+      gameWebSocket.onError((error: string) => {
+        setJoinError(error);
+        setIsConnecting(false);
+      });
+
+      gameWebSocket.createRoom();
+
+    } catch (error) {
+      console.error('방 생성 실패:', error);
+      setJoinError('서버 연결 실패. (토큰 만료?)');
+      gameWebSocket.disconnect();
+      setIsConnecting(false);
+    }
+  };
+
+  // [FIX] 게임 가이드 오버레이 상태
+  const [showGameGuide, setShowGameGuide] = useState(false);
+
+  // 설정 열기/닫기 핸들러
+  const openSettings = () => setSearchParams({ settings: 'true' });
+  const closeSettings = () => {
+    setSearchParams({}); // 쿼리 파라미터 제거 -> 모달 닫힘
+  };
+
+  return (
+    <div className={styles.container}>
+      {/* 로딩 화면 (SplashScreen) */}
+      {isLoading && <SplashScreen onFinished={() => setIsLoading(false)} />}
+
+      <AudioController />
+      {/* 배경 이미지 */}
+      <img
+        className={styles.bgImage}
+        src="/assets/backgrounds/main_page.png"
+        alt="메아리의 숲"
+      />
+
+      {/* 오른쪽 상단 버튼들 */}
+      <div className={styles.topRightButtons}>
+        <button
+          className={styles.soloButton}
+          onClick={() => setShowGameGuide(true)}
+        >
+          📖 게임 가이드
+        </button>
+      </div>
+
+      {/* [NEW] 메인 타이틀 (MainPage와 동일) */}
+      <div className={styles.titleWrapper}>
+        <h1 className={styles.mainTitle}>메아리의 숲</h1>
+        <h2 className={styles.subTitle}>Echo Forest</h2>
+      </div>
+
+      {/* 메뉴 (검정 보드 위치) */}
+      {!showSettings && !showJoinModal && (
+        <div className={styles.menuWrapper}>
+          <div className={styles.menuItems}>
+            <button
+              className={styles.menuButton}
+              onClick={handleHost}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 만들기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowJoinModal(true)}
+              disabled={isConnecting}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              방 참여하기
+            </button>
+            <button
+              className={styles.menuButton}
+              onClick={openSettings}
+            >
+              <img className={styles.leafIcon} src="/assets/ui/leaf.png" alt="" />
+              설정
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 에러 메시지 */}
+      {joinError && <div className={styles.errorToast}>{joinError}</div>}
+
+      {/* Modals */}
+      {showJoinModal && (
+        <JoinGameModal
+          nickname={nickname}
+          onClose={() => setShowJoinModal(false)}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          onClose={closeSettings}
+        />
+      )}
+
+      {/* 게임 가이드 오버레이 */}
+      <GameGuideOverlay
+        isOpen={showGameGuide}
+        onClose={() => setShowGameGuide(false)}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,305 @@
+.container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.bgImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    /* 필터 제거하여 원본(칠판 배경 포함)이 보이도록 함 */
+    /* filter: brightness(0.6); */
+}
+
+.backButton {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    z-index: 3000;
+    background: transparent;
+    border: none;
+    color: #ffeeb0;
+    font-size: 24px;
+    font-family: var(--font-title);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    /* 보드와 겹치지 않도록 위치 조정 또는 z-index 확인 */
+    z-index: 4000;
+}
+
+.backButton:hover {
+    color: #ffffff;
+    transform: translateX(-5px);
+}
+
+.boardWrapper {
+    width: 80%;
+    /* 원래대로 복구 */
+    max-width: 1000px;
+    /* 원래대로 복구 */
+    height: 85vh;
+    /* 원래대로 복구 */
+    /* 높이를 조금 더 늘려서 공간 확보 */
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    position: relative;
+
+    /* 칠판 스타일 구현 (픽셀 아트 테마) */
+    background: #3a4a3b;
+    /* 칠판색 (조금 더 초록빛) */
+    /* 픽셀 느낌의 나무 테두리 */
+    border: 8px solid #5D4037;
+    box-shadow:
+        0 0 0 4px #3E2723,
+        /* 안쪽 테두리 느낌 */
+        inset 0 0 0 4px #263327,
+        /* 칠판 안쪽 그림자 */
+        10px 10px 0px rgba(0, 0, 0, 0.5);
+    /* 하드 쉐도우 */
+    border-radius: 4px;
+    /* 픽셀 느낌을 위해 둥근 모서리 줄임 */
+}
+
+.boardContent {
+    width: 100%;
+    height: 100%;
+    padding: 40px 60px;
+    /* 상단 패딩을 줄임 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    font-size: 2.2rem;
+    color: #ffeeb0;
+    /* 칠판 분필 색상 */
+    margin-bottom: 20px;
+    /* 제목 아래 여백 줄임 */
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #333;
+    font-family: var(--font-title);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gridContainer {
+    width: 100%;
+    /* 높이를 유동적으로 하지 않고 고정하거나, flex-grow로 채움 */
+    flex: 1;
+    overflow-y: hidden;
+    /* 스크롤바 강제 숨김 */
+    display: grid;
+    /* 4 columns fixed width (작게 고정) */
+    grid-template-columns: repeat(4, 180px);
+    /* 2 rows */
+    grid-template-rows: repeat(2, max-content);
+    /* 중앙 정렬 */
+    justify-content: center;
+    align-content: center;
+
+    row-gap: 30px;
+    column-gap: 30px;
+    padding: 10px;
+    /* 패딩 초기화 */
+}
+
+
+
+.gridItem {
+    position: relative;
+    aspect-ratio: 16/9;
+    /* 폴라로이드 사진 느낌 */
+    background: #fff;
+    padding: 6px 6px 24px 6px;
+    /* 하단 여백을 더 줘서 폴라로이드 느낌 */
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s;
+    transform: rotate(0deg);
+    /* 기본 */
+}
+
+.gridItem:hover {
+    transform: scale(1.05) rotate(-2deg);
+    z-index: 10;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* 짝수 아이템은 반대로 회전하는 느낌 (선택적) */
+.gridItem:nth-child(even):hover {
+    transform: scale(1.05) rotate(2deg);
+}
+
+.gridItem.selected {
+    /* 선택 시 테두리 강조 (형광펜 느낌) */
+    box-shadow: 0 0 0 4px #ffeb3b, 6px 6px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
+    z-index: 5;
+}
+
+.image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.checkbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.checkbox.checked {
+    background: #66ff66;
+    border-color: #66ff66;
+}
+
+.checkbox::after {
+    content: '✓';
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    display: block;
+    opacity: 0;
+}
+
+.checkbox.checked::after {
+    opacity: 1;
+}
+
+.footer {
+    width: 100%;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    align-items: center;
+    padding-top: 25px;
+    margin-bottom: 10px;
+    /* 버튼이 아래 판넬(보드 끝)과 떨어지도록 여백 추가 */
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    /* 그리드와는 떨어지고, 푸터(구분선)와는 가깝게 */
+    margin: 30px 0 5px 0;
+}
+
+.pageButton {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #e0f2d8;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.pageButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+.pageButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.activePage {
+    background: #6b9c5a;
+    color: white;
+    border-color: #6b9c5a;
+    box-shadow: 0 0 10px rgba(107, 156, 90, 0.5);
+}
+
+.infoText {
+    color: #ffeeb0;
+    font-size: 1rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    margin-right: 10px;
+}
+
+.sendButton {
+    padding: 12px 30px;
+    /* border-radius: 25px; <- 제거 */
+    border: 2px solid #333;
+    background: #76c442;
+    /* Frog Green */
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: bold;
+    font-family: var(--font-main);
+    cursor: pointer;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+    transition: all 0.1s;
+}
+
+.sendButton:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+.sendButton:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.emptyState {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffeeb0;
+    /* 분필 색상 */
+    gap: 20px;
+    font-size: 1.2rem;
+    opacity: 0.9;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}

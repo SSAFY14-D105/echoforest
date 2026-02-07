@@ -1,0 +1,914 @@
+import Phaser from 'phaser';
+import { CURSES } from '../config/curseConfig';
+
+const PLAYER_COLORS = [0x4CAF50, 0x2196F3, 0xFF9800, 0x9C27B0]; // P1~P4 색상
+const BASE_PLAYER_SIZE = 60; // 기본 히트박스 및 스프라이트 크기
+
+// 물리 파라미터
+const PHYSICS = {
+    FRICTION: 0,           // 동적 마찰 없음 (벽에서 느리게 떨어지는 현상 방지)
+    STATIC_FRICTION: 0,    // 벽 충돌 시 덜덜거림 방지를 위해 0으로 설정
+    AIR_FRICTION: 0.02,
+    RESTITUTION: 0         // 튕김 방지
+};
+
+export interface PlayerConfig {
+    id: string;
+    nickname: string;
+    x: number;
+    y: number;
+    colorIndex: number;
+    isLocalPlayer: boolean;
+}
+
+export class Player {
+    private scene: Phaser.Scene;
+    private body: MatterJS.BodyType;
+    private sprite: Phaser.GameObjects.Sprite;
+    public colorName: string;
+    public colorIndex: number;
+
+    public readonly id: string;
+    public readonly nickname: string;
+    public color: number;
+    public readonly isLocalPlayer: boolean;
+
+    // 저주 시스템
+    private currentCurseId: string | null = null;
+    private sizeMultiplier: number = 1;
+    private speedMultiplier: number = 1;
+    private jumpMultiplier: number = 1;
+    private reverseControls: boolean = false;
+
+    // HP 저주용
+    private curseHP: number = 100;
+    private hpDrainTimer: Phaser.Time.TimerEvent | null = null;
+    private hpBarGraphics: Phaser.GameObjects.Graphics | null = null;
+    private visualProxy: Phaser.GameObjects.Graphics | null = null; // [FALLBACK] 비주얼 백업
+    private reverseCurseEffect: Phaser.GameObjects.Graphics | null = null; // 반전 저주 시각 효과
+    private onDeathCallback: (() => void) | null = null;
+
+    // 밀치기(Knockback) 및 스턴 상태
+    private _isStunned: boolean = false;
+    private stunTimer: Phaser.Time.TimerEvent | null = null;
+    private _isDead: boolean = false;
+
+
+    // 목표 위치 (원격 플레이어 보간용)
+    private targetPos: { x: number, y: number } | null = null;
+    // private readonly LERP_FACTOR = 0.15; // Velocity 기반 이동으로 변경되어 더 이상 사용되지 않음
+
+    // [PERFORMANCE] Rendering Optimization Cache
+    private lastTinted: boolean = false;
+
+    constructor(scene: Phaser.Scene, config: PlayerConfig) {
+        this.scene = scene;
+        this.id = config.id;
+        this.nickname = config.nickname;
+        this.colorIndex = config.colorIndex;
+        this.color = PLAYER_COLORS[config.colorIndex % PLAYER_COLORS.length];
+        this.isLocalPlayer = config.isLocalPlayer;
+
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        this.colorName = colors[config.colorIndex % colors.length];
+
+        // TODO: 씬 준비 상태 체크 로직 개선 필요 - 임시 가드
+        if (!this.scene.matter) {
+            // console.warn('[Player] Scene matter physics not ready, skipping player creation:', config.id);
+            throw new Error('Scene matter physics not initialized');
+        }
+
+        // 물리 바디 생성
+        this.body = this.createBody(config.x, config.y);
+
+        // 초기 목표 위치 설정 (원격 플레이어용)
+        if (!this.isLocalPlayer) {
+            this.targetPos = { x: config.x, y: config.y };
+        }
+        // 플레이어 스프라이트 생성
+        this.sprite = this.scene.add.sprite(config.x, config.y, `player_${this.colorName}_standing`);
+        this.sprite.setOrigin(0.5, 1); // 하단 중앙을 기준으로 설정하여 충돌체 하단과 일치시키기 용이하게 함
+        this.sprite.play(`player_idle_${this.colorName}`);
+        this.sprite.setDepth(2000); // [FIX] 기믹보다 확실히 위로 배치 (안전값)
+    }
+
+    private createBody(x: number, y: number): MatterJS.BodyType {
+        const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        const body = this.scene.matter.add.rectangle(x, y, size, size, {
+            label: this.id,
+            friction: PHYSICS.FRICTION,
+            frictionStatic: PHYSICS.STATIC_FRICTION,
+            frictionAir: PHYSICS.AIR_FRICTION,
+            restitution: PHYSICS.RESTITUTION,
+            isSensor: false, // 모든 플레이어 물리 충돌 활성화
+            collisionFilter: {
+                category: 0x0002
+                // [NOTE] mask를 설정하지 않으면 기본적으로 모든 카테고리와 충돌함
+                // 플레이어끼리 충돌은 유지되며, 하늘로 올라가는 버그는 update()에서 별도 처리
+            }
+        });
+
+        // 회전 완전 고정 (피코파크 스타일)
+        this.scene.matter.body.setInertia(body, Infinity);
+
+        return body;
+    }
+
+    private updateVisualEffects(): void {
+        // [PERFORMANCE] Dirty Check: Tint (Stun Status)
+        if (this._isStunned) {
+            if (!this.lastTinted) {
+                this.sprite.setTint(0xff5555);
+                this.lastTinted = true;
+            }
+        } else {
+            if (this.lastTinted) {
+                this.sprite.clearTint();
+                this.lastTinted = false;
+            }
+        }
+
+        // 상태에 따른 크기 결정 (원본 픽셀 배율 2배 유지)
+        let width = 80 * this.sizeMultiplier;
+        let height = 80 * this.sizeMultiplier;
+
+        // 죽음 상태 체크 (HP 기반 또는 강제 사망 상태)
+        if (this._isDead || this.curseHP <= 0) {
+            // 죽은 모션일 때는 원본 이미지 비율(48*24)의 2배인 96*48 적용
+            width = 130 * this.sizeMultiplier;
+            height = 65 * this.sizeMultiplier;
+        }
+
+        // [PERFORMANCE] Dirty Check: Display Size
+        // Sprite의 프레임이 바뀌면(애니메이션 등) displayWidth가 변할 수 있으므로,
+        // 캐시된 값이 아닌 실제 현재 displayWith와 목표 width를 비교해야 함
+        if (Math.abs(this.sprite.displayWidth - width) > 1 || Math.abs(this.sprite.displayHeight - height) > 1) {
+            this.sprite.setDisplaySize(width, height);
+        }
+
+        // [FALLBACK] 비주얼 프록시(도형) 업데이트 - 비활성화됨
+        // if (this.visualProxy) {
+        //     this.visualProxy.clear();
+        //     this.visualProxy.fillStyle(this.color, 1);
+        //     const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        //     const { x, y } = this.body.position;
+        //     this.visualProxy.fillCircle(x, y, size / 2);
+        //     this.visualProxy.lineStyle(2, 0xffffff, 1);
+        //     this.visualProxy.strokeCircle(x, y, size / 2);
+        //     this.visualProxy.setDepth(9);
+        // }
+    }
+
+    public update(isGrounded: boolean, delta: number = 16.6): void {
+        // 원격 플레이어 보간 이동
+        if (!this.isLocalPlayer && this.targetPos) {
+            const currentX = this.body.position.x;
+            const currentY = this.body.position.y;
+
+            // 거리 계산
+            const dx = this.targetPos.x - currentX;
+            const dy = this.targetPos.y - currentY;
+            const distSq = dx * dx + dy * dy;
+
+            // 아주 작은 움직임은 무시하여 떨림 방지
+            if (distSq > 0.01) {
+                // 텔레포트 임계값 (Relaxed to 150px to prevent snap on lag spikes)
+                if (distSq > 22500) {
+                    this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
+                } else {
+                    // [PERFORMANCE] Time-based Interpolation for smoother high-refresh rate movement
+                    // Frame-rate independent smoothing using exponential decay
+                    // t = 1 - 0.5 ^ (dt / half-life)
+                    // Half-life of 50ms means error is halved every 50ms
+                    const t = 1.0 - Math.pow(0.5, delta / 50);
+
+                    const newX = Phaser.Math.Linear(currentX, this.targetPos.x, t);
+                    const newY = Phaser.Math.Linear(currentY, this.targetPos.y, t);
+
+                    // 위치 변경
+                    this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
+                }
+            }
+
+            // [FIX] 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시)
+            // 원격 플레이어는 서버 좌표를 추종하므로 속도를 0으로 유지하여 물리 엔진의 간섭 최소화
+            this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+            this.scene.matter.body.setAngularVelocity(this.body, 0);
+        }
+
+        const { x, y } = this.body.position;
+        const currentBodyHeight = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        // 스프라이트의 origin이 (0.5, 1)이므로 y 좌표를 몸체 하단(y + height/2)에 맞춤
+        this.sprite.setPosition(x, y + currentBodyHeight / 2);
+
+        // 애니메이션 상태 업데이트 (로컬 플레이어만)
+        if (this.isLocalPlayer) {
+            this.updateAnimation(isGrounded);
+        }
+
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
+
+        // HP 바 업데이트 (drain 저주가 있을 때만)
+        if (this.hpBarGraphics) {
+            this.drawHPBar();
+        }
+
+        // 반전 저주 이펙트 업데이트
+        if (this.reverseCurseEffect) {
+            this.updateReverseCurseEffect();
+        }
+
+        // 비주얼 프록시(도형) 업데이트 - 비활성화
+        // if (this.visualProxy) {
+        //     this.visualProxy.clear();
+        //     this.visualProxy.fillStyle(this.color, 1);
+        //     // 스프라이트가 안 보일 때를 대비해 기본적으로 그림 (반투명 혹은 테두리)
+        //     // 혹은 스프라이트 뒤에 백업으로 배치
+        //     const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        //     this.visualProxy.fillCircle(x, y, size / 2);
+        //     this.visualProxy.lineStyle(2, 0xffffff, 1);
+        //     this.visualProxy.strokeCircle(x, y, size / 2);
+        //     this.visualProxy.setDepth(9); // 스프라이트(10)보다 약간 뒤
+        // }
+    }
+
+    private updateAnimation(isGrounded: boolean): void {
+        // 죽은 상태면 dead 애니메이션 고정 (HP 기반 또는 강제 사망 상태)
+        if (this._isDead || this.curseHP <= 0) {
+            if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
+                this.sprite.play(`player_dead_${this.colorName}`);
+            }
+            return;
+        }
+
+        const velocity = this.body.velocity;
+        // 바닥 접촉 여부 (Scene에서 전달받은 값 사용)
+        // const isGrounded = Math.abs(velocity.y) < 0.2; // [FIX] 기존 속도 기반 체크 제거
+
+        // 좌우 반전 (임계값을 0.5로 높여 미세한 떨림 시 뒤집힘 방지)
+        if (Math.abs(velocity.x) > 0.5) {
+            this.sprite.setFlipX(velocity.x < 0);
+        }
+
+        if (!isGrounded) {
+            // 공중 상태 (점프 또는 추락)
+            if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
+                this.sprite.play(`player_jump_${this.colorName}`);
+            }
+        } else if (Math.abs(velocity.x) > 0.5) {
+            // 걷기 (임계값 상향)
+            if (this.sprite.anims.currentAnim?.key !== `player_walk_${this.colorName}`) {
+                this.sprite.play(`player_walk_${this.colorName}`);
+            }
+        } else {
+            // 대기
+            if (this.sprite.anims.currentAnim?.key !== `player_idle_${this.colorName}`) {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+        }
+    }
+
+    public getSprite(): Phaser.GameObjects.Sprite {
+        return this.sprite;
+    }
+
+    /**
+     * 목표 위치 설정 (원격 플레이어 보간용)
+     */
+    public setTargetPosition(x: number, y: number): void {
+        this.targetPos = { x, y };
+    }
+
+    // 원격 플레이어의 서버 상태 (방향 및 애니메이션 결정용)
+    private remoteVx: number = 0;
+    private remoteVy: number = 0;
+    private remoteAnim: string | null = null;
+
+    /**
+     * 원격 플레이어 상태 동기화 (위치 + 속도 + 애니메이션)
+     * @param x 목표 X 좌표
+     * @param y 목표 Y 좌표
+     * @param vx 서버에서 받은 X 속도 (방향 결정용)
+     * @param vy 서버에서 받은 Y 속도 (점프 판정용)
+     * @param anim 서버에서 받은 애니메이션 상태
+     */
+    public setRemoteState(x: number, y: number, vx: number, vy?: number, anim?: string, isDead?: boolean, curses?: string[], isHidden?: boolean): void {
+        this.targetPos = { x, y };
+        this.remoteVx = vx;
+        if (vy !== undefined) this.remoteVy = vy;
+        if (anim !== undefined) this.remoteAnim = anim;
+
+        // [NEW] 원격 플레이어 상태 동기화 (죽음 및 저주)
+        if (isDead !== undefined) {
+            // 원격 플레이어도 죽음 상태면 _isDead 설정 (물리 영향 등은 die() 로직 참조)
+            if (isDead) {
+                this._isDead = true;
+                // 애니메이션은 applyRemoteAnimation에서 처리
+            } else {
+                this._isDead = false;
+            }
+        }
+
+        // [NEW] 숨김 상태 동기화
+        if (isHidden !== undefined) {
+            if (isHidden) {
+                this.hide();
+            } else {
+                this.show();
+            }
+        }
+
+        if (curses) {
+            // 현재 적용된 저주와 비교하여 다르면 적용
+            // 단순화를 위해 마지막 저주만 적용하거나, 목록 전체를 순회하며 적용
+            // 여기서는 가장 최근 저주(배열 마지막)를 적용한다고 가정, 혹은 목록에 있는 것들 적용
+            // 기존 저주와 다르면 초기화 후 재적용 방식이 안전함
+
+            const newCurseId = curses.length > 0 ? curses[curses.length - 1] : null; // 예시: 가장 최근 저주
+
+            if (this.currentCurseId !== newCurseId) {
+                if (newCurseId) {
+                    this.applyCurse(newCurseId);
+                } else {
+                    this.removeCurse();
+                }
+            }
+        }
+    }
+
+    /**
+     * 원격 플레이어 방향(flip) 적용
+     * 로컬이 아닌 플레이어의 방향을 서버 속도 기반으로 결정
+     */
+    public applyRemoteDirection(): void {
+        if (this.isLocalPlayer) return;
+
+        // vx 임계값 (0.5 이상일 때만 방향 변경, 미세한 떨림 방지)
+        if (Math.abs(this.remoteVx) > 0.5) {
+            this.sprite.setFlipX(this.remoteVx < 0);
+        }
+    }
+
+    /**
+     * 원격 플레이어 애니메이션 적용
+     * 서버에서 받은 anim 또는 vx, vy 기반으로 애니메이션 결정
+     */
+    public applyRemoteAnimation(): void {
+        if (this.isLocalPlayer) return;
+        if (this._isDead || this.curseHP <= 0) {
+            if (this.sprite.anims.currentAnim?.key !== `player_dead_${this.colorName}`) {
+                this.sprite.play(`player_dead_${this.colorName}`);
+            }
+            return;
+        }
+
+        // 서버 애니메이션 상태 우선 사용 (있을 경우)
+        // 백엔드에서 'jump', 'walk', 'idle' 등을 전송
+        if (this.remoteAnim) {
+            // 서버에서 받은 anim이 있으면 매핑
+            let targetAnim: string | null = null;
+            if (this.remoteAnim.includes('jump')) {
+                targetAnim = `player_jump_${this.colorName}`;
+            } else if (this.remoteAnim.includes('walk')) {
+                targetAnim = `player_walk_${this.colorName}`;
+            } else if (this.remoteAnim.includes('idle')) {
+                targetAnim = `player_idle_${this.colorName}`;
+            } else if (this.remoteAnim.includes('dead')) { // [NEW] 사망 애니메이션 동기화
+                targetAnim = `player_dead_${this.colorName}`;
+            }
+
+            if (targetAnim && this.sprite.anims.currentAnim?.key !== targetAnim) {
+                this.sprite.play(targetAnim);
+                return;
+            }
+        }
+
+        // Fallback: 속도 기반 애니메이션 결정
+        const isAirborne = Math.abs(this.remoteVy) > 1;
+        const isMoving = Math.abs(this.remoteVx) > 0.5;
+
+        if (isAirborne) {
+            if (this.sprite.anims.currentAnim?.key !== `player_jump_${this.colorName}`) {
+                this.sprite.play(`player_jump_${this.colorName}`);
+            }
+        } else if (isMoving) {
+            if (this.sprite.anims.currentAnim?.key !== `player_walk_${this.colorName}`) {
+                this.sprite.play(`player_walk_${this.colorName}`);
+            }
+        } else {
+            if (this.sprite.anims.currentAnim?.key !== `player_idle_${this.colorName}`) {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+        }
+    }
+
+    /**
+     * HP 바 그리기 (플레이어 위에 표시)
+     */
+    private drawHPBar(): void {
+        if (!this.hpBarGraphics) return;
+
+        const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+        const barWidth = size + 10;
+        const barHeight = 6;
+        const x = this.body.position.x - barWidth / 2;
+        const y = this.body.position.y - size / 2 - 15;
+
+        this.hpBarGraphics.clear();
+
+        // 배경
+        this.hpBarGraphics.fillStyle(0x333333, 0.8);
+        this.hpBarGraphics.fillRect(x, y, barWidth, barHeight);
+
+        // HP
+        const hpRatio = this.curseHP / 100;
+        const hpColor = hpRatio > 0.5 ? 0x00ff00 : (hpRatio > 0.25 ? 0xffff00 : 0xff0000);
+        this.hpBarGraphics.fillStyle(hpColor, 1);
+        this.hpBarGraphics.fillRect(x, y, barWidth * hpRatio, barHeight);
+
+        // 테두리
+        this.hpBarGraphics.lineStyle(1, 0xffffff, 0.8);
+        this.hpBarGraphics.strokeRect(x, y, barWidth, barHeight);
+    }
+
+    // ===== 저주 시스템 =====
+
+    public applyCurse(curseId: string): void {
+        const curse = CURSES[curseId];
+        if (!curse) {
+            // console.warn(`[Player] Unknown curse: ${curseId}`);
+            return;
+        }
+
+        // console.log(`[Player] Applying curse '${curse.name}' to ${this.id}`);
+
+        this.currentCurseId = curseId;
+        this.sizeMultiplier = curse.sizeMultiplier;
+        this.speedMultiplier = curse.speedMultiplier;
+        this.jumpMultiplier = curse.jumpMultiplier ?? 1;
+        this.reverseControls = curse.reverseControls ?? false;
+
+        // 반전 저주 시각 효과 생성
+        if (curse.reverseControls) {
+            this.createReverseCurseEffect();
+        }
+
+        // HP 저주 처리
+        if (curse.hasDrainEffect) {
+            this.curseHP = 100;
+            this.startHPDrain();
+        }
+
+        // 물리 바디 재생성 (크기 변경)
+        const pos = this.body.position;
+        const vel = this.body.velocity;
+        this.scene.matter.world.remove(this.body);
+        this.body = this.createBody(pos.x, pos.y);
+        this.scene.matter.body.setVelocity(this.body, vel);
+
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
+    }
+
+    private startHPDrain(): void {
+        // 기존 타이머 제거
+        this.stopHPDrain();
+
+        // HP 바 생성
+        if (!this.hpBarGraphics) {
+            this.hpBarGraphics = this.scene.add.graphics();
+        }
+
+        // 1초마다 HP 20% 감소 (5초 후 죽음)
+        this.hpDrainTimer = this.scene.time.addEvent({
+            delay: 1000,
+            repeat: 4,  // 5회 실행 (0, 1, 2, 3, 4)
+            callback: () => {
+                this.curseHP -= 20;
+                if (this.curseHP <= 0) {
+                    this.curseHP = 0;
+                    if (this.onDeathCallback) {
+                        this.onDeathCallback();
+                    }
+                }
+            }
+        });
+    }
+
+    private stopHPDrain(): void {
+        if (this.hpDrainTimer) {
+            this.hpDrainTimer.remove();
+            this.hpDrainTimer = null;
+        }
+        if (this.hpBarGraphics) {
+            this.hpBarGraphics.clear();
+            this.hpBarGraphics.destroy();
+            this.hpBarGraphics = null;
+        }
+    }
+
+    // 소용돌이 애니메이션 각도
+    private swirlAngle: number = 0;
+
+    /**
+     * 반전 저주 시각 효과 생성 (회전하는 보라색 소용돌이 + 반전 화살표)
+     */
+    private createReverseCurseEffect(): void {
+        // 기존 효과 제거
+        this.removeReverseCurseEffect();
+
+        this.reverseCurseEffect = this.scene.add.graphics();
+        this.reverseCurseEffect.setDepth(2001); // 플레이어 스프라이트보다 위에 표시
+        this.swirlAngle = 0;
+        this.updateReverseCurseEffect();
+    }
+
+    /**
+     * 반전 저주 시각 효과 업데이트 (혼란/어지러움 - 물음표와 회전하는 별)
+     */
+    private updateReverseCurseEffect(): void {
+        const graphics = this.reverseCurseEffect;
+        if (!graphics) return;
+
+        graphics.clear();
+
+        const { x, y } = this.body.position;
+        const size = BASE_PLAYER_SIZE * this.sizeMultiplier;
+
+        // 머리 위 위치 계산
+        // 물음표가 위아래로 둥둥 떠다니는(Floating) 애니메이션
+        const floatY = Math.sin(this.scene.time.now / 200) * 3;
+        const centerY = y - size / 2 - 35 + floatY;
+
+        // 회전 각도 업데이트
+        this.swirlAngle += 0.05;
+
+        // 픽셀 단위 크기 (도트 느낌을 위해 3배 확대)
+        const p = 3;
+
+        // === 1. 중앙 픽셀 물음표 (?) 그리기 ===
+        // 색상: 밝은 보라색 + 흰색 하이라이트
+        graphics.fillStyle(0xE0B0FF, 1); // Mauve (연보라)
+
+        // 물음표 모양 데이터 (5x7 픽셀)
+        //   XXX
+        //  X   X
+        //      X
+        //    XX
+        //    X
+        //
+        //    X
+        const qMarkPixels = [
+            { dx: 0, dy: -3 }, { dx: 1, dy: -3 }, { dx: -1, dy: -3 }, // Top bar
+            { dx: -2, dy: -2 }, { dx: 2, dy: -2 },                    // Top sides
+            { dx: 2, dy: -1 },                                        // Right side 1
+            { dx: 1, dy: 0 }, { dx: 0, dy: 1 },                       // Curve in
+            { dx: 0, dy: 2 },                                         // Stem
+            { dx: 0, dy: 4 }                                          // Dot
+        ];
+
+        qMarkPixels.forEach(pixel => {
+            graphics.fillRect(
+                x + pixel.dx * p - p / 2,
+                centerY + pixel.dy * p - p / 2,
+                p, p
+            );
+        });
+
+        // === 2. 주위를 도는 픽셀 별 (어지러움 표현) ===
+        // 타원형으로 회전
+        const radiusX = 25;
+        const radiusY = 10;
+
+        const colors = [0xDA70D6, 0xBA55D3]; // Orchid, MediumOrchid
+
+        for (let i = 0; i < 2; i++) {
+            // 별 2개가 180도 차이로 회전
+            const angle = this.swirlAngle + (i * Math.PI);
+
+            const starX = x + Math.cos(angle) * radiusX;
+            const starY = centerY + Math.sin(angle) * radiusY + 5; // 물음표 허리쯤에서 회전
+
+            // 별 모양 (십자 픽셀)
+            //  X
+            // XXX
+            //  X
+            graphics.fillStyle(colors[i], 1);
+            const starP = 2; // 별 픽셀 크기
+
+            // 중앙
+            graphics.fillRect(starX - starP / 2, starY - starP / 2, starP, starP);
+            // 상하좌우
+            graphics.fillRect(starX - starP / 2, starY - starP / 2 - starP, starP, starP);
+            graphics.fillRect(starX - starP / 2, starY - starP / 2 + starP, starP, starP);
+            graphics.fillRect(starX - starP / 2 - starP, starY - starP / 2, starP, starP);
+            graphics.fillRect(starX - starP / 2 + starP, starY - starP / 2, starP, starP);
+        }
+    }
+
+    /**
+     * 반전 저주 시각 효과 제거
+     */
+    private removeReverseCurseEffect(): void {
+        if (this.reverseCurseEffect) {
+            this.reverseCurseEffect.clear();
+            this.reverseCurseEffect.destroy();
+            this.reverseCurseEffect = null;
+        }
+    }
+
+    public removeCurse(): void {
+        if (!this.currentCurseId) return;
+
+        // console.log(`[Player] Removing curse from ${this.id}`);
+        this.currentCurseId = null;
+        this.sizeMultiplier = 1;
+        this.speedMultiplier = 1;
+        this.jumpMultiplier = 1;
+        this.reverseControls = false;
+
+        // 반전 저주 시각 효과 제거
+        this.removeReverseCurseEffect();
+
+        this.stopHPDrain();
+
+        // 물리 바디 재생성
+        const pos = this.body.position;
+        const vel = this.body.velocity;
+        this.scene.matter.world.remove(this.body);
+        this.body = this.createBody(pos.x, pos.y);
+        this.scene.matter.body.setVelocity(this.body, vel);
+
+        // 비주얼 효과 업데이트
+        this.updateVisualEffects();
+    }
+
+    public hasCurse(): boolean {
+        return this.currentCurseId !== null;
+    }
+
+    public setOnDeathCallback(callback: () => void): void {
+        this.onDeathCallback = callback;
+    }
+
+    public getSpeedMultiplier(): number {
+        return this.speedMultiplier;
+    }
+
+    public getJumpMultiplier(): number {
+        return this.jumpMultiplier;
+    }
+
+    public setColor(colorIndex: number): void {
+        this.colorIndex = colorIndex;
+        const newColor = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+        const colors = ['green', 'blue', 'orange', 'purple'];
+        const newColorName = colors[colorIndex % colors.length];
+
+        if (this.color !== newColor) {
+            this.color = newColor;
+            this.colorName = newColorName;
+
+            // 애니메이션 갱신 (현재 상태 유지하며 색상 변경)
+            const currentAnim = this.sprite.anims.currentAnim?.key;
+            if (currentAnim) {
+                // 예: "player_idle_green" -> "player_idle_blue"
+                const parts = currentAnim.split('_');
+                const action = parts[1]; // idle, walk, jump, dead
+                this.sprite.play(`player_${action}_${this.colorName}`, true);
+            } else {
+                this.sprite.play(`player_idle_${this.colorName}`);
+            }
+            this.updateVisualEffects();
+        }
+    }
+
+    public get isControlReversed(): boolean {
+        return this.reverseControls;
+    }
+
+    public applyKnockback(forceX: number, forceY: number, duration: number): void {
+        // 기존 코드 복구: applyForce가 아니라 setVelocity를 사용해야 함
+        // Bumper power(8)는 Force로 쓰기엔 너무 크고 Velocity로 쓰기에 적당함
+        this.scene.matter.body.setVelocity(this.body, { x: forceX, y: forceY });
+        this.stun(duration);
+    }
+
+    // ===== 스턴 시스템 =====
+
+    public stun(duration: number): void {
+        if (this._isStunned) return;
+
+        this._isStunned = true;
+        this.updateVisualEffects(); // 색상 변경을 위해 즉시 업데이트
+
+        // 일정 시간 후 스턴 해제
+        if (this.stunTimer) this.stunTimer.destroy();
+
+        // 지속 시간 후 스턴 해제
+        this.stunTimer = this.scene.time.delayedCall(duration, () => {
+            this._isStunned = false;
+            this.stunTimer = null;
+            this.updateVisualEffects(); // 원래 색상으로 복구
+        });
+
+
+    }
+
+    public get isStunned(): boolean {
+        return this._isStunned;
+    }
+
+    // ===== 기존 메서드들 =====
+
+    public getPosition(): { x: number; y: number } {
+        return { x: this.body.position.x, y: this.body.position.y };
+    }
+
+    public getVelocity(): { x: number; y: number } {
+        return { x: this.body.velocity.x, y: this.body.velocity.y };
+    }
+
+    public setVelocity(x: number, y: number): void {
+        this.scene.matter.body.setVelocity(this.body, { x, y });
+    }
+
+
+
+    public setPosition(x: number, y: number): void {
+        this.scene.matter.body.setPosition(this.body, { x, y });
+        this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+    }
+
+    // Goal 입장 시 플레이어 숨기기
+    private _isHidden: boolean = false;
+
+    public get isDead(): boolean {
+        return this._isDead;
+    }
+
+    public get currentCurses(): string[] {
+        return this.currentCurseId ? [this.currentCurseId] : [];
+    }
+
+    public hide(): void {
+        if (this._isHidden) return;
+        this._isHidden = true;
+        this.sprite.setVisible(false);
+        // 센서로 변경 (충돌 블로킹 해제, 다른 플레이어가 통과 가능)
+        this.body.isSensor = true;
+        this.scene.matter.body.setStatic(this.body, true);
+        this.setVelocity(0, 0);
+        // console.log(`[Player] Hidden: ${this.id}`);
+    }
+
+    public show(): void {
+        if (!this._isHidden) return;
+        this._isHidden = false;
+        this.sprite.setVisible(true);
+        // 센서 해제 (다시 충돌 블로킹)
+        this.body.isSensor = false;
+        this.scene.matter.body.setStatic(this.body, false);
+        // console.log(`[Player] Shown: ${this.id}`);
+    }
+
+    public get isHidden(): boolean {
+        return this._isHidden;
+    }
+
+    public die(): void {
+        this._isDead = true;
+        // 물리 엔진에서 반응하지 않도록 설정 (선택 사항)
+        this.setVelocity(0, 0);
+        // 애니메이션 즉시 업데이트를 위해 updateAnimation 호출 가능
+    }
+
+    public getBodyLabel(): string {
+        return this.body.label || this.id;
+    }
+
+    public getBody(): MatterJS.BodyType {
+        return this.body;
+    }
+
+    /**
+     * 플레이어 리스폰 (위치 이동 및 상태 초기화)
+     */
+    public respawn(x: number, y: number): void {
+        // console.log(`[Player] Respawning ${this.nickname} at (${x}, ${y})`);
+
+        this._isDead = false;
+        this.curseHP = 100; // HP 초기화
+        this.stopHPDrain(); // 기존 타이머 중지
+
+        // [FIX] HP 저주가 있으면 드레인 재시작 (저주는 유지, HP만 리셋)
+        if (this.currentCurseId && CURSES[this.currentCurseId]?.hasDrainEffect) {
+            this.startHPDrain();
+        }
+
+        // 위치 이동 및 물리 초기화
+        this.setPosition(x, y);
+        this.setVelocity(0, 0);
+        this.scene.matter.body.setAngularVelocity(this.body, 0);
+
+        // 비주얼 복구
+        this.hardResetVisuals();
+    }
+
+    public hardResetVisuals(): void {
+        // console.log(`[Player] Hard resetting visuals for ${this.nickname}`);
+
+        // 1. 기존 스프라이트 제거
+        if (this.sprite) {
+            this.sprite.destroy();
+        }
+        // 기존 프록시 제거
+        if (this.visualProxy) {
+            this.visualProxy.destroy();
+        }
+
+        // 2. 스프라이트 새로 생성
+        this.sprite = this.scene.add.sprite(this.body.position.x, this.body.position.y, `player_${this.colorName}_standing`);
+        this.sprite.setOrigin(0.5, 1); // [FIX] 생성자와 동일하게 Origin 설정 (안하면 바닥에 묻힘)
+
+        // [FALLBACK] 비주얼 프록시(도형) 생성 - 비활성화
+        // this.visualProxy = this.scene.add.graphics();
+
+        // 3. 상태 복구
+        this.sprite.setDepth(10);
+        this.sprite.setVisible(true);
+        this.sprite.setActive(true);
+        this.sprite.setAlpha(1);
+
+        // 4. 애니메이션 재시작 (Idle)
+        const idleAnim = `player_idle_${this.colorName}`;
+        if (this.scene.anims.exists(idleAnim)) {
+            this.sprite.play(idleAnim, true);
+        }
+
+        // 5. 스턴 상태라면 틴트 복구 (메서드 활용)
+        this.updateVisualEffects();
+    }
+
+    public forceRefreshVisuals(): void {
+        if (!this.sprite) return;
+
+        // console.log(`[Player] Forcing visual refresh for ${this.nickname}`);
+
+        // 1. 투명도 및 활성 상태 강제 복구
+        this.sprite.setVisible(true);
+        this.sprite.setActive(true);
+        this.sprite.setAlpha(1);
+        this.sprite.setDepth(10);
+
+        // 2. 애니메이션 재시작 (Idle로 리셋)
+        if (this.scene.anims.exists(`player_idle_${this.colorName}`)) {
+            this.sprite.play(`player_idle_${this.colorName}`, true);
+        }
+
+        // 3. 틴트 초기화
+        this.sprite.clearTint();
+
+        // 4. 크기 재설정
+        this.updateVisualEffects();
+    }
+
+    public destroy(): void {
+        if (this.hpDrainTimer) {
+            this.hpDrainTimer.remove();
+            this.hpDrainTimer = null;
+        }
+        if (this.stunTimer) {
+            this.stunTimer.remove();
+            this.stunTimer = null;
+        }
+        if (this.hpBarGraphics) {
+            this.hpBarGraphics.destroy();
+            this.hpBarGraphics = null;
+        }
+        if (this.reverseCurseEffect) {
+            this.reverseCurseEffect.destroy();
+            this.reverseCurseEffect = null;
+        }
+        if (this.visualProxy) {
+            this.visualProxy.clear();
+            this.visualProxy.destroy();
+            this.visualProxy = null;
+        }
+
+        // 물리 바디 제거 - 씬이 이미 종료되었을 수 있으므로 체크
+        if (this.scene?.matter?.world) {
+            if (this.body) {
+                this.scene.matter.world.remove(this.body);
+            }
+        }
+
+        // 스프라이트 제거
+        if (this.sprite) {
+            this.sprite?.destroy();
+        }
+
+        // console.log(`[Player] ${this.nickname} destroyed`);
+    }
+}
