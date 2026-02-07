@@ -1,20 +1,19 @@
 # 4_1_LoRA_Fine_Tuning
 
-LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning 스크립트
+LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning
 
-## 📁 스크립트
+## 📁 디렉토리 구조
 
-| 파일명 | 모델 | 메트릭 | 설명 |
-|--------|------|--------|------|
-| `lora_game_kcelectra.py` | KcELECTRA-base-v2022 | abuse_recall | 게임 환경 최적화 (한국어) |
-| `lora_tutorial_bert.py` | beomi/kcbert-base | LRAP | 공식 튜토리얼 기반 |
+### v1_corrected_only/ (보정 데이터만 사용)
+- **데이터**: UnSmile 보정 데이터 (10,490건)
+- `lora_game_kcelectra.ipynb` - KcELECTRA + abuse_recall
+- `lora_tutorial_kcbert.ipynb` - kcbert-base + LRAP
+- `.py` 스크립트 버전 포함
 
-### 📓 Jupyter 노트북 (외부 GPU 환경용)
-
-| 파일명 | 모델 | 메트릭 | 설명 |
-|--------|------|--------|------|
-| `lora_game_kcelectra.ipynb` | KcELECTRA-base-v2022 | abuse_recall | L40S GPU 최적화 |
-| `lora_tutorial_kcbert.ipynb` | beomi/kcbert-base | LRAP | 튜토리얼 기반 |
+### v2_corrected_plus_collected/ (보정 + 수집 데이터)
+- **데이터**: UnSmile 보정 (10,490) + 게임 음성채팅 수집 (519) = **11,009건**
+- `lora_game_kcelectra_v2.ipynb` - KcELECTRA + abuse_recall
+- `lora_tutorial_kcbert_v2.ipynb` - kcbert-base + LRAP
 
 ## 🔧 LoRA 설정
 
@@ -25,29 +24,17 @@ LORA_DROPOUT = 0.1
 target_modules = ["query", "key", "value"]
 ```
 
-## ▶️ 실행 방법
+## 📊 모델 비교
 
-```bash
-# Conda 환경 활성화
-conda activate echoforest_ft
+| 버전 | 모델 | 메트릭 | 데이터 |
+|------|------|--------|--------|
+| v1 Game | KcELECTRA | abuse_recall | 보정 10,490건 |
+| v1 Tutorial | kcbert-base | LRAP | 보정 10,490건 |
+| v2 Game | KcELECTRA | abuse_recall | 보정+수집 11,009건 |
+| v2 Tutorial | kcbert-base | LRAP | 보정+수집 11,009건 |
 
-# 게임 환경 최적화 버전 실행
-python lora_game_kcelectra.py
-
-# 튜토리얼 기반 버전 실행
-python lora_tutorial_bert.py
-```
-
-## 📊 출력 폴더
-
-- `output_game_lora/` - 게임 최적화 LoRA 결과
-- `output_tutorial_lora/` - 튜토리얼 기반 LoRA 결과
-
-## 🆚 Full Fine-tuning과 비교
-
-| 항목 | LoRA | Full FT |
-|------|------|---------|
-| 학습 파라미터 | ~0.5% | 100% |
-| 메모리 사용 | 낮음 | 높음 |
-| 학습 속도 | 빠름 | 느림 |
-| 성능 | 비슷 | 약간 좋음 |
+## 🚀 실행 환경
+- GPU: NVIDIA L40S (48GB)
+- Python 3.12.6
+- torch 2.5.1+cu121
+- CUDA 12.1
