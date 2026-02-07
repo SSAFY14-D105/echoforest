@@ -1,0 +1,36 @@
+package com.d105.controller;
+
+import com.d105.dto.token.TokenReqDto;
+import com.d105.dto.token.TokenResDto;
+import com.d105.service.LiveKitService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@Tag(name = "LiveKit", description = "화상 채팅 API (토큰 발급)")
+@CrossOrigin(origins = "*") // 테스트용, 실제 배포 시에는 지워야함
+@RestController
+@RequestMapping("/api/livekit")
+@RequiredArgsConstructor
+public class LiveKitController {
+
+    private final LiveKitService liveKitService;
+
+    /**
+     * 클라이언트의 토큰 요청 처리
+     */
+    @Operation(summary = "LiveKit 토큰 발급", description = "게임 방 번호(roomId)를 기반으로 화상 채팅 접속 토큰을 생성합니다.")
+    @PostMapping("/token")
+    public ResponseEntity<TokenResDto> getToken(@RequestBody TokenReqDto request) {
+
+        String token = liveKitService.createToken(
+                request.getRoomId(),
+                request.getUsername(), // userId 대신 username 사용
+                request.getUsername());
+
+        // TokenResDto를 사용하여 응답 반환
+        return ResponseEntity.ok(new TokenResDto(token));
+    }
+}
