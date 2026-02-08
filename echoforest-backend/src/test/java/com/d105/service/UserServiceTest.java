@@ -37,6 +37,9 @@ class UserServiceTest {
     @Mock
     private com.d105.manager.WebSocketSessionManager webSocketSessionManager;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private UserService userService;
 
