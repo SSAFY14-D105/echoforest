@@ -1,0 +1,10 @@
+model,lrap,abuse_recall,abuse_f1,clean_recall,clean_f1
+kor_unsmile (Baseline),0.8868092691622104,0.646551724137931,0.7772020725388601,0.971830985915493,0.7752808988764045
+LoRA v1 Game (KcELECTRA),,,,,
+LoRA v1 Tutorial (kcbert),,,,,
+LoRA v2 Game (KcELECTRA),,,,,
+LoRA v2 Tutorial (kcbert),,,,,
+Full FT v1 Game (KcELECTRA),,,,,
+Full FT v1 Tutorial (kcbert),,,,,
+Full FT v2 Game (KcELECTRA),,,,,
+Full FT v2 Tutorial (kcbert),,,,,

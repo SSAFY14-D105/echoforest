@@ -1,0 +1,9 @@
+﻿Metric,Original,Quantized,Difference
+Model Size (MB),415.53,88.93,-326.60
+Inference (ms),8.55,8.47,-0.08
+Abuse Precision,0.9358,0.9358,+0.0000
+Abuse Recall,0.8793,0.8793,+0.0000
+Abuse F1,0.9067,0.9067,+0.0000
+Clean Precision,0.8442,0.8442,+0.0000
+Clean Recall,0.9155,0.9155,+0.0000
+Clean F1,0.8784,0.8784,+0.0000

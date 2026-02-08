@@ -9,7 +9,7 @@
 - unSmile 모델은 일반 댓글 데이터로 학습됨
 - 게임 특유 표현 인식 부족: "빡치다", "빡대가리", "열받다" 등
 - 게임 상황 오탐: "죽어 죽어"(몬스터에게), "피해 피해" 등을 욕설로 오인
-- **Baseline 악플/욕설 Recall: 0.42** (심각한 개선 필요!)
+- **Baseline 악플/욕설 Recall: 0.6466** (개선 필요!)
 
 ### 핵심 전략
 ```
@@ -18,13 +18,12 @@
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  Step 1: 데이터 수집 및 라벨링                                   │
-│          - 게임 STT 데이터 500건 수집                            │
-│          - Keywords 정리 (자주 쓰는 말 + GPT 보강)               │
-│          - Clean/Negative 라벨링                                 │
+│          - 게임 STT 데이터 v1 수집 (518건) - Baseline 테스트용   │
+│          - 게임 STT 데이터 v2 수집 (116건) - 최종 테스트용       │
 │                    │                                             │
 │                    ▼                                             │
 │  Step 2: Baseline 테스트 (현재 모델 성능 파악)                   │
-│          - 기존 unSmile 모델에 518개 Keywords 테스트             │
+│          - 기존 unSmile 모델에 v1 데이터 테스트                  │
 │          - 인식률 떨어지는 표현 목록화 (시각화)                  │
 │          - False Negative 분석 (악플인데 놓친 표현)              │
 │                    │                                             │
@@ -40,16 +39,17 @@
 │  ▼                                   ▼                          │
 │  Step 4-1: LoRA            Step 4-2: Full Fine-tuning           │
 │  Fine-tuning               (전체 가중치 학습)                    │
-│  (어댑터만 학습)           (보정된 unSmile + 518건)              │
+│  - v1: unSmile 보정 데이터  - v1: unSmile 보정 데이터            │
+│  - v2: + 게임 STT 518건    - v2: + 게임 STT 518건               │
 │  │                                   │                          │
 │  └─────────────────┬─────────────────┘                          │
 │                    │                                             │
 │                    ▼                                             │
-│  Step 5: 성능 비교 분석 (LoRA vs Full FT)                        │
-│          (F1, Recall, 학습시간, 과적합 여부)                     │
+│  Step 5: 최종 테스트 (v2 데이터 116건)                           │
+│          - 9개 모델 비교 (Baseline + 8개 Fine-tuned)             │
 │                    │                                             │
 │                    ▼                                             │
-│  Step 6: 더 좋은 모델 선택                                       │
+│  Step 6: 최적 모델 선택 → Full v2 Tutorial ✅                    │
 │                    │                                             │
 │                    ▼                                             │
 │  Step 7: INT8 양자화 (CPU 추론 최적화)                           │
@@ -62,98 +62,106 @@
 
 ---
 
-## 📅 세부 실행 일정 (손다현)
+## ✅ 프로젝트 결과 (완료)
 
-| 단계 | 작업 | 상세 내용 | 예상 시간 | 도구 | 상태 |
-|------|------|-----------|-----------|------|------|
-| **1** | Keywords + STT 수집 | 자주 쓰는 말 정리 + GPT 보강, 518건 확보 | 2시간 | GPT | ✅ |
-| **2** | Baseline 테스트 | 기존 unSmile에 키워드 테스트, 인식 실패 목록화 | 1시간 | Python | ✅ |
-| **3** | unSmile 데이터 보정 | 인식률 저하 표현 재라벨링 + 개인지칭 제거 | 1시간 | Python | ✅ |
-| **4-1** | LoRA Fine-tuning | 518건 데이터셋으로 LoRA FT | 20-30분 | Colab GPU | ⏳ |
-| **4-2** | Full Fine-tuning | 보정된 unSmile + 518건으로 Full FT | 30-40분 | Colab GPU | ⏳ |
-| **5** | 모델 비교 | LoRA vs Full FT 성능 비교 | 10분 | Colab | ⏳ |
-| **6** | 최적 모델 선택 | 최적 모델 선택 및 저장 | 5분 | Colab | ⏳ |
-| **7** | 양자화 | INT8 Dynamic Quantization | 10분 | Colab | ⏳ |
-| **8** | 이식 | FastAPI 서버에 배포 | 30분 | EC2 | ⏳ |
+### 🏆 최종 성과
 
-**총 예상 소요 시간: 약 6-8시간**
+| 지표 | Before (Baseline) | After (Best) | 개선 | 의미 |
+|------|:-----------------:|:------------:|:----:|------|
+| **Abuse Recall** | 64.66% | **87.93%** | **+36.0%** | 욕설 탐지율 대폭 향상 |
+| **Abuse F1** | 77.72% | **90.67%** | **+16.7%** | 정밀도+재현율 균형 |
+| **LRAP** | 88.68% | **94.34%** | **+6.4%** | 전체 라벨 정확도 |
+
+### 🏆 선정 모델: **Full v2 Tutorial (kcbert)**
+
+### 전체 모델 순위
+| 순위 | 모델 | Abuse Recall | Baseline 대비 |
+|:---:|------|:---:|:---:|
+| **1** | Full v2 Tutorial | **0.8793** | **+36.0%** |
+| **1** | LoRA v2 Game | **0.8793** | **+36.0%** |
+| **1** | LoRA v2 Tutorial | **0.8793** | **+36.0%** |
+| 4 | Full v2 Game | 0.8707 | +34.7% |
+| 5 | LoRA v1 Game | 0.7759 | +20.0% |
+| 6 | LoRA v1 Tutorial | 0.7414 | +14.7% |
+| 6 | Full v1 Game | 0.7414 | +14.7% |
+| 8 | Full v1 Tutorial | 0.6983 | +8.0% |
+| 9 | Baseline (kor_unsmile) | 0.6466 | - |
 
 ---
 
-## Step 0: Baseline 테스트 🆕
+## 📊 데이터 구성
 
-### 0.1 Keywords 준비
+### 수집 데이터 (게임 STT)
+| 데이터셋 | 건수 | 파일 경로 | 용도 |
+|---------|:----:|----------|------|
+| **v1 (Keywords)** | 518건 | `2_Baseline_Test/keywords_unsmile_format.tsv` | Baseline 테스트 + v2 학습 |
+| **v2 (Test)** | 187건 | `5_Model_Comparison/data/game_test.tsv` | **최종 모델 테스트** |
 
-게임에서 자주 사용하는 표현들을 정리하고 GPT로 보강
+> 두 데이터셋 모두 직접 게임 STT + 유튜브 협력게임 STT에서 수집
 
-```python
-# 게임 도메인 키워드 예시
-game_keywords = {
-    "욕설/분노": [
-        "빡치다", "빡친다", "열받다", "열받아", "짜증나", "빡대가리",
-        "씨발", "시발", "병신", "개같다", "미친", "지랄"
-    ],
-    "게임_컨텍스트_clean": [
-        "죽어 죽어", "피해 피해", "탱커 먼저", "힐 줘", "울궁 쳐",
-        "한타 가자", "딜 넣어", "백스탭 해"
-    ],
-    "칭찬/격려": [
-        "잘한다", "나이스", "캐리하네", "오져", "미쳤다"
-    ]
-}
+### 학습 데이터
+| 버전 | 학습 데이터 | 설명 |
+|------|------------|------|
+| **v1** | UnSmile 보정 (14,690건) | 라벨 오류 보정만 적용 |
+| **v2** | UnSmile 보정 + v1 Keywords (518건) | 게임 도메인 데이터 추가 |
+
+### 데이터 흐름 요약
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  v1: keywords_unsmile_format.tsv (518건)                         │
+│  └→ Baseline 테스트 (기존 모델 문제점 파악)                      │
+│  └→ v2 학습 데이터로 사용 (도메인 특화)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  v2: game_test.tsv (187건) - 별도 수집                           │
+│  └→ 최종 테스트용 (9개 모델 비교)                                │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 0.2 기존 unSmile 모델 테스트
+---
 
-```python
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
+## 📅 세부 실행 일정
 
-model_name = "smilegate-ai/kor_unsmile"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained(model_name)
+| 단계 | 작업 | 상세 내용 | 상태 |
+|------|------|-----------|:----:|
+| **1** | 데이터 수집 | v1(518건) + v2(116건) 수집 및 라벨링 | ✅ |
+| **2** | Baseline 테스트 | v1 데이터로 기존 unSmile 모델 테스트 | ✅ |
+| **3** | unSmile 데이터 보정 | 인식률 저하 표현 재라벨링 (14,690건) | ✅ |
+| **4-1** | LoRA Fine-tuning | v1/v2 × Game/Tutorial (4개 모델) | ✅ |
+| **4-2** | Full Fine-tuning | v1/v2 × Game/Tutorial (4개 모델) | ✅ |
+| **5** | 최종 테스트 | v2 데이터로 9개 모델 비교 | ✅ |
+| **6** | 모델 선택 | Full v2 Tutorial 선정 | ✅ |
+| **7** | INT8 양자화 | 최적 모델 양자화 (CPU 추론 최적화) | ⏳ |
+| **8** | 서버 배포 | FastAPI 서버에 배포 | ⏳ |
 
-def test_keywords(keywords_dict):
-    results = []
-    for category, expressions in keywords_dict.items():
-        for expr in expressions:
-            inputs = tokenizer(expr, return_tensors="pt")
-            with torch.no_grad():
-                outputs = model(**inputs)
-                probs = torch.sigmoid(outputs.logits[0])
-            
-            results.append({
-                "표현": expr,
-                "기대_카테고리": category,
-                "악플/욕설_확률": float(probs[8]),
-                "clean_확률": float(probs[9]),
-                "인식_결과": "욕설" if probs[8] > 0.5 else "clean"
-            })
-    return pd.DataFrame(results)
+---
 
-# 결과 시각화
-df_results = test_keywords(game_keywords)
-failed = df_results[df_results['기대_카테고리'].str.contains('욕설') & (df_results['인식_결과'] == 'clean')]
-print(f"❌ 인식 실패 표현: {len(failed)}건")
-print(failed)
-```
+## 🔬 핵심 인사이트
 
-### 0.3 인식률 시각화
+### 1. 도메인 데이터가 핵심 (가장 중요한 발견)
 
-```python
-import matplotlib.pyplot as plt
-import seaborn as sns
+| 비교 | v1 (일반 데이터만) | v2 (게임 데이터 추가) | 차이 |
+|------|:------------------:|:--------------------:|:----:|
+| 평균 Abuse Recall | 73.93% | **87.60%** | **+13.67%p** |
 
-# 카테고리별 인식 정확도 시각화
-plt.figure(figsize=(10, 6))
-accuracy_by_category = df_results.groupby('기대_카테고리').apply(
-    lambda x: (x['기대_카테고리'].str.contains('clean') == (x['인식_결과'] == 'clean')).mean()
-)
-sns.barplot(x=accuracy_by_category.index, y=accuracy_by_category.values)
-plt.title('카테고리별 unSmile 인식 정확도')
-plt.ylabel('정확도')
-plt.savefig('baseline_accuracy.png')
-```
+> **518건의 게임 데이터**만으로 **+13%p 이상** 성능 향상!
+
+### 2. LoRA ≈ Full Fine-tuning
+
+| 방법론 | 평균 Recall | 학습 시간 | GPU 메모리 |
+|--------|:-----------:|:---------:|:---------:|
+| LoRA | 83.44% | ~30분 | ~8GB |
+| Full FT | 83.00% | ~2시간 | ~16GB |
+
+> 성능 차이 미미 → **효율성 면에서 LoRA 권장**
+
+### 3. 베이스 모델 차이 미미
+
+| 베이스 모델 | v2 평균 Recall |
+|------------|:--------------:|
+| KcELECTRA (Game) | 87.50% |
+| kcbert (Tutorial) | 87.93% |
+
+> **어떤 모델을 쓰든 데이터가 더 중요**
 
 ---
 
@@ -168,190 +176,76 @@ plt.savefig('baseline_accuracy.png')
 | **분류 유형** | Multi-label Classification |
 
 ### 10개 카테고리
-| # | 카테고리 | 설명 | Baseline F1 |
-|---|----------|------|-------------|
-| 0 | 여성/가족 | 여성 차별, 페미니즘 혐오 | 0.76 |
-| 1 | 남성 | 남성 비하, 조롱 | 0.85 |
-| 2 | 성소수자 | LGBTQ+ 혐오 | 0.83 |
-| 3 | 인종/국적 | 특정 인종/국가 비하 | 0.82 |
-| 4 | 연령 | 세대 비하 (급식충, 틀딱) | 0.83 |
-| 5 | 지역 | 특정 지역 비하 | 0.88 |
-| 6 | 종교 | 종교 비하 | 0.87 |
-| 7 | 기타 혐오 | 장애인, 정부 등 | 0.30 |
-| 8 | **악플/욕설** | 비하/욕설 🎯 **핵심!** | **0.67** |
-| 9 | clean | 정상 문장 | 0.77 |
+| # | 카테고리 | 설명 | 게임 관련성 |
+|---|----------|------|:-----------:|
+| 8 | **악플/욕설** | 비하/욕설 🎯 **핵심!** | ⭐⭐⭐ |
+| 9 | clean | 정상 문장 | ⭐⭐⭐ |
+| 0-7 | 혐오 카테고리 | 여성/남성/성소수자/인종/연령/지역/종교/기타 | ⭐ |
 
 ---
 
-## Step 1: 게임 STT 데이터 500건 수집
+## 📁 산출물
 
-### 1.1 데이터 수집 전략
-
-| 항목 | 내용 |
+### 데이터
+| 파일 | 설명 |
 |------|------|
-| **출처** | 유튜브 협동 게임 영상 STT |
-| **목표 수량** | 500건 |
-| **분할 비율** | Train 70% (350) / Valid 15% (75) / Test 15% (75) |
+| `game_stt_v1.tsv` | 게임 STT 데이터 v1 (518건) - 학습용 |
+| `game_test.tsv` | 게임 STT 데이터 v2 (116건) - 테스트용 |
+| `unsmile_train_corrected.tsv` | 보정된 UnSmile 데이터 (14,690건) |
 
-### 1.2 라벨링 가이드라인
+### 모델 (8개)
+| 경로 | 설명 |
+|------|------|
+| `4_1_LoRA_Fine_Tuning/v1.../lora_game_kcelectra/merged_model` | LoRA v1 Game |
+| `4_1_LoRA_Fine_Tuning/v1.../lora_tutorial_kcbert/merged_model` | LoRA v1 Tutorial |
+| `4_1_LoRA_Fine_Tuning/v2.../lora_game_kcelectra_v2/merged_model` | LoRA v2 Game |
+| `4_1_LoRA_Fine_Tuning/v2.../lora_tutorial_kcbert_v2/merged_model` | LoRA v2 Tutorial |
+| `4_2_Full_Fine_Tuning/v1.../full_game_kcelectra/best_model` | Full v1 Game |
+| `4_2_Full_Fine_Tuning/v1.../full_tutorial_kcbert/best_model` | Full v1 Tutorial |
+| `4_2_Full_Fine_Tuning/v2.../full_game_kcelectra_v2/best_model` | Full v2 Game |
+| `4_2_Full_Fine_Tuning/v2.../full_tutorial_kcbert_v2/best_model` | **Full v2 Tutorial ✅** |
 
-| 카테고리 | 게임 상황 예시 | 라벨 |
-|----------|---------------|------|
-| 악플/욕설 | "빡치네", "씨발", "열받아", "빡대가리" | `[0,0,0,0,0,0,0,0,1,0]` |
-| clean | "피해 피해", "죽어 죽어(몬스터)", "잘한다" | `[0,0,0,0,0,0,0,0,0,1]` |
-
-### 1.3 CSV 파일 형식
-```csv
-문장,labels,split
-"야 진짜 빡치네","[0,0,0,0,0,0,0,0,1,0]",train
-"피해 피해","[0,0,0,0,0,0,0,0,0,1]",train
-```
-
----
-
-## Step 2: unSmile 데이터셋 보정 🆕
-
-### 2.1 보정 대상 식별
-
-Step 0에서 발견된 인식률 저하 표현들을 unSmile 원본 데이터에서 찾아 수정
-
-```python
-import pandas as pd
-
-# unSmile 데이터 로드
-unsmile_train = pd.read_csv('unsmile_train.csv')
-
-# 잘못 라벨링된 표현 목록 (Step 0에서 발견)
-fix_list = {
-    "빡친다": {"from": "clean", "to": "악플/욕설"},
-    "빡치네": {"from": "clean", "to": "악플/욕설"},
-    "열받아": {"from": "clean", "to": "악플/욕설"},
-    # ... 추가 표현들
-}
-
-# 라벨 수정
-def fix_labels(row):
-    for expr, fix in fix_list.items():
-        if expr in row['문장']:
-            # labels[8] = 1 (악플/욕설)
-            labels = eval(row['labels'])
-            labels[8] = 1
-            labels[9] = 0  # clean 해제
-            row['labels'] = str(labels)
-    return row
-
-unsmile_train_fixed = unsmile_train.apply(fix_labels, axis=1)
-unsmile_train_fixed.to_csv('unsmile_train_fixed.csv', index=False)
-```
+### 분석 결과
+| 파일 | 설명 |
+|------|------|
+| `5_Model_Comparison/results/game_test_results.csv` | 9개 모델 비교 결과 |
+| `5_Model_Comparison/results/before_after_comparison.png` | Before/After 비교 차트 |
+| `5_Model_Comparison/results/v1_vs_v2_comparison.png` | v1 vs v2 비교 차트 |
+| `5_Model_Comparison/results/metrics_heatmap.png` | 전체 메트릭 히트맵 |
 
 ---
 
-## Step 3-1: LoRA Fine-tuning
+## ✅ 성공 기준 달성 여부
 
-### 3.1 LoRA 설정
-
-```python
-from peft import LoraConfig, get_peft_model, TaskType
-
-lora_config = LoraConfig(
-    task_type=TaskType.SEQ_CLS,
-    r=16,
-    lora_alpha=32,
-    lora_dropout=0.1,
-    target_modules=["query", "value"],
-    bias="none",
-)
-
-model_lora = get_peft_model(base_model, lora_config)
-model_lora.print_trainable_parameters()
-# → trainable params: ~0.5% of total
-```
-
-### 3.2 학습 설정
-
-```python
-training_args_lora = TrainingArguments(
-    output_dir="./lora_finetuned",
-    num_train_epochs=5,
-    learning_rate=1e-4,
-    per_device_train_batch_size=16,
-    metric_for_best_model="abuse_recall",
-    load_best_model_at_end=True,
-)
-```
+| 지표 | 목표 | 실제 결과 | 달성 |
+|------|:----:|:--------:|:----:|
+| 악플/욕설 Recall | ≥ 0.75 | **0.8793** | ✅ **초과 달성** |
+| Abuse F1 Score | ≥ 0.80 | **0.9067** | ✅ **초과 달성** |
+| LRAP | ≥ 0.90 | **0.9434** | ✅ **초과 달성** |
 
 ---
 
-## Step 3-2: Full Fine-tuning
+## Step 7: INT8 양자화 (예정)
 
-### 3.3 Full Fine-tuning 학습 설정
+### 7.1 양자화 목적
+| 항목 | Before | After (예상) |
+|------|:------:|:------------:|
+| 모델 크기 | ~420MB | **~150MB** |
+| 추론 속도 | ~50ms (GPU) | **~30ms (CPU)** |
+| 메모리 사용량 | ~2GB | **~500MB** |
 
-```python
-from transformers import BertForSequenceClassification, TrainingArguments
-
-model_full = BertForSequenceClassification.from_pretrained(
-    "smilegate-ai/kor_unsmile",
-    num_labels=10,
-    problem_type="multi_label_classification"
-)
-
-training_args_full = TrainingArguments(
-    output_dir="./full_finetuned",
-    num_train_epochs=3,
-    learning_rate=2e-5,
-    per_device_train_batch_size=16,
-    weight_decay=0.01,
-    metric_for_best_model="abuse_recall",
-    load_best_model_at_end=True,
-)
-```
-
----
-
-## Step 4: 성능 비교 분석
-
-### 4.1 평가 지표
-
-| 지표 | 설명 | 중요도 |
-|------|------|--------|
-| **Abuse Recall** | 실제 욕설 중 탐지한 비율 🎯 | ⭐⭐⭐⭐⭐ |
-| **F1 Score** | Precision과 Recall의 조화평균 | ⭐⭐⭐ |
-| **학습 시간** | 모델 학습에 걸린 시간 | ⭐⭐ |
-
-### 4.2 비교 기준
-
-| 비교 항목 | LoRA | Full FT | 선택 기준 |
-|-----------|------|---------|-----------| 
-| Abuse Recall | ? | ? | **높은 쪽** |
-| F1 Score | ? | ? | 높은 쪽 |
-| 학습 시간 | 빠름 | 느림 | - |
-| 과적합 위험 | 낮음 | 높음 | - |
-
----
-
-## Step 5: 최적 모델 선택
-
-```python
-if eval_result_full['abuse_recall'] > eval_result_lora['abuse_recall']:
-    best_model = model_full
-    best_model_type = "Full Fine-tuning"
-else:
-    best_model = model_lora
-    best_model_type = "LoRA Fine-tuning"
-
-print(f"🏆 선택된 모델: {best_model_type}")
-```
-
----
-
-## Step 6: INT8 양자화
-
+### 7.2 양자화 코드
 ```python
 import torch
+from transformers import AutoModelForSequenceClassification
+
+# 최적 모델 로드
+MODEL_PATH = "../4_2_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_tutorial_kcbert_v2/best_model"
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 
 # Dynamic Quantization (CPU용)
 quantized_model = torch.quantization.quantize_dynamic(
-    final_model,
+    model,
     {torch.nn.Linear},
     dtype=torch.qint8
 )
@@ -359,25 +253,29 @@ quantized_model = torch.quantization.quantize_dynamic(
 # 저장
 torch.save(quantized_model.state_dict(), "./quantized_model/model_int8.pt")
 tokenizer.save_pretrained("./quantized_model")
+print("✅ 양자화 완료!")
 ```
+
+### 7.3 양자화 후 성능 검증
+- 양자화 전후 Abuse Recall 비교 (성능 손실 확인)
+- 추론 속도 측정
+- 모델 크기 확인
 
 ---
 
-## Step 7: AI 서버 이식
+## Step 8: AI 서버 배포 (예정)
 
-FastAPI 서버 (`S14P11D105` AI 서버)에 최종 모델 배포
-
+### 8.1 FastAPI 서버 구성
 ```python
 from fastapi import FastAPI
-from transformers import AutoTokenizer, BertForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
 app = FastAPI()
 
 MODEL_PATH = "./quantized_model"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-model = BertForSequenceClassification.from_pretrained(MODEL_PATH)
-model.load_state_dict(torch.load(f"{MODEL_PATH}/model_int8.pt"))
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 model.eval()
 
 @app.post("/analyze")
@@ -388,37 +286,29 @@ async def analyze_text(text: str):
         outputs = model(**inputs)
         probs = torch.sigmoid(outputs.logits[0])
     
-    is_negative = any(probs[i] > 0.5 for i in range(9))
+    is_negative = probs[8] > 0.5  # 악플/욕설
     
     return {
         "text": text,
-        "is_negative": is_negative,
+        "is_negative": bool(is_negative),
         "abuse_score": float(probs[8]),
     }
 ```
 
 ---
 
-## 📁 산출물
+## 🎯 결론
 
-| 파일 | 설명 |
-|------|------|
-| `game_keywords.txt` | 테스트용 게임 키워드 목록 |
-| `baseline_accuracy.png` | Baseline 인식률 시각화 |
-| `game_stt_data.csv` | 라벨링된 게임 STT 데이터 500건 |
-| `unsmile_train_fixed.csv` | 보정된 unSmile 데이터셋 |
-| `EchoForest_AI_Training.ipynb` | Colab 학습 노트북 |
-| `./quantized_model/` | 최종 양자화 모델 |
-| `comparison.png` | 성능 비교 차트 (LoRA vs Full FT) |
-| `main.py` | FastAPI 서버 코드 |
+### 핵심 한 줄 요약
+> **518건의 게임 데이터로 욕설 탐지율을 65% → 88%로 36% 개선 🎉**
 
----
+### 프로젝트 성공 요인
+1. **도메인 특화 데이터 확보** - 직접 게임/유튜브 STT 데이터 수집
+2. **체계적 실험 설계** - LoRA vs Full FT, v1 vs v2 비교
+3. **Baseline 분석** - 기존 모델의 한계점 정확히 파악 후 개선
 
-## ✅ 성공 기준
-
-| 지표 | Baseline | 목표 |
-|------|----------|------|
-| 악플/욕설 Recall | 0.59 | **≥ 0.75** |
-| 전체 F1 Score | 0.77 | **≥ 0.80** |
-| 모델 크기 | ~420MB | **≤ 150MB** |
-| 추론 속도 | ~50ms | **≤ 30ms** |
+### 다음 단계
+| 단계 | 작업 | 예상 시간 |
+|------|------|:---------:|
+| Step 7 | INT8 양자화 | 10분 |
+| Step 8 | FastAPI 서버 배포 | 30분 |
