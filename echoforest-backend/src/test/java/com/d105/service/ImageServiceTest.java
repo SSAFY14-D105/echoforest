@@ -1,5 +1,6 @@
 package com.d105.service;
 
+import com.d105.config.TestRedisConfig;
 import com.d105.entity.Image;
 import com.d105.entity.User;
 import com.d105.repository.ImageRepository;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Import(TestRedisConfig.class)
 @Transactional // 테스트 끝나면 DB 롤백
 class ImageServiceTest {
 
