@@ -66,18 +66,18 @@
 
 ### 🏆 최종 성과
 
-| 지표 | Before (Baseline) | After (Best) | 개선 | 의미 |
-|------|:-----------------:|:------------:|:----:|------|
-| **Abuse Recall** | 64.66% | **87.93%** | **+36.0%** | 욕설 탐지율 대폭 향상 |
-| **Abuse F1** | 77.72% | **90.67%** | **+16.7%** | 정밀도+재현율 균형 |
-| **LRAP** | 88.68% | **94.34%** | **+6.4%** | 전체 라벨 정확도 |
+| 지표 | Before (Baseline) | After (Best) | After (양자화) | 개선 |
+|------|:-----------------:|:------------:|:-------------:|:----:|
+| **Abuse Recall** | 64.66% | **87.93%** | **87.93%** | **+36.0%** |
+| **Abuse F1** | 77.72% | **90.67%** | **90.67%** | **+16.7%** |
+| **모델 크기** | - | 415.53 MB | **88.93 MB** | **4.67x 압축** |
 
-### 🏆 선정 모델: **Full v2 Tutorial (kcbert)**
+### 🏆 최종 배포 모델: **Full v2 Tutorial (kcbert) - INT8 Quantized**
 
 ### 전체 모델 순위
 | 순위 | 모델 | Abuse Recall | Baseline 대비 |
 |:---:|------|:---:|:---:|
-| **1** | Full v2 Tutorial | **0.8793** | **+36.0%** |
+| **1** | Full v2 Tutorial ✅ | **0.8793** | **+36.0%** |
 | **1** | LoRA v2 Game | **0.8793** | **+36.0%** |
 | **1** | LoRA v2 Tutorial | **0.8793** | **+36.0%** |
 | 4 | Full v2 Game | 0.8707 | +34.7% |
@@ -130,7 +130,7 @@
 | **4-2** | Full Fine-tuning | v1/v2 × Game/Tutorial (4개 모델) | ✅ |
 | **5** | 최종 테스트 | v2 데이터로 9개 모델 비교 | ✅ |
 | **6** | 모델 선택 | Full v2 Tutorial 선정 | ✅ |
-| **7** | INT8 양자화 | 최적 모델 양자화 (CPU 추론 최적화) | ⏳ |
+| **7** | INT8 양자화 | 4.67x 압축, 성능 손실 0% | ✅ |
 | **8** | 서버 배포 | FastAPI 서버에 배포 | ⏳ |
 
 ---
@@ -225,41 +225,32 @@
 
 ---
 
-## Step 7: INT8 양자화 (예정)
+## Step 7: INT8 양자화 ✅ (완료)
 
-### 7.1 양자화 목적
-| 항목 | Before | After (예상) |
-|------|:------:|:------------:|
-| 모델 크기 | ~420MB | **~150MB** |
-| 추론 속도 | ~50ms (GPU) | **~30ms (CPU)** |
-| 메모리 사용량 | ~2GB | **~500MB** |
+### 7.1 양자화 결과: **SUCCESS**
 
-### 7.2 양자화 코드
-```python
-import torch
-from transformers import AutoModelForSequenceClassification
+| 항목 | Original | Quantized | 변화 |
+|------|:--------:|:---------:|:----:|
+| **모델 크기** | 415.53 MB | 88.93 MB | **4.67x 압축** |
+| **추론 속도** | 8.55 ms | 8.47 ms | 1.01x 빠름 |
+| **Abuse Recall** | 0.8793 | 0.8793 | **0% 손실** |
+| **Abuse F1** | 0.9067 | 0.9067 | 0% 손실 |
 
-# 최적 모델 로드
-MODEL_PATH = "../4_2_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_tutorial_kcbert_v2/best_model"
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+> **결론**: 모델 크기 78.6% 감소, 성능 손실 없음 - 양자화 성공!
 
-# Dynamic Quantization (CPU용)
-quantized_model = torch.quantization.quantize_dynamic(
-    model,
-    {torch.nn.Linear},
-    dtype=torch.qint8
-)
+### 7.2 Confusion Matrix (동일)
+| | Pred Non-Abuse | Pred Abuse |
+|---|:---:|:---:|
+| **Actual Non-Abuse** | 64 | 7 |
+| **Actual Abuse** | 14 | 102 |
 
-# 저장
-torch.save(quantized_model.state_dict(), "./quantized_model/model_int8.pt")
-tokenizer.save_pretrained("./quantized_model")
-print("✅ 양자화 완료!")
-```
-
-### 7.3 양자화 후 성능 검증
-- 양자화 전후 Abuse Recall 비교 (성능 손실 확인)
-- 추론 속도 측정
-- 모델 크기 확인
+### 7.3 양자화 산출물
+| 파일 | 설명 |
+|------|------|
+| `7_Quantization/results/quantization_dashboard.png` | 메인 대시보드 (6-panel) |
+| `7_Quantization/results/confusion_matrices.png` | Confusion Matrix 비교 |
+| `7_Quantization/results/quantization_results.csv` | 주요 메트릭 요약 |
+| `7_Quantization/results/quantization_report.json` | JSON 리포트 |
 
 ---
 
@@ -300,15 +291,21 @@ async def analyze_text(text: str):
 ## 🎯 결론
 
 ### 핵심 한 줄 요약
-> **518건의 게임 데이터로 욕설 탐지율을 65% → 88%로 36% 개선 🎉**
+> **518건의 게임 데이터로 욕설 탐지율 65% → 88% (+36%), 양자화로 모델 크기 5분의 1 축소 🎉**
 
 ### 프로젝트 성공 요인
 1. **도메인 특화 데이터 확보** - 직접 게임/유튜브 STT 데이터 수집
 2. **체계적 실험 설계** - LoRA vs Full FT, v1 vs v2 비교
 3. **Baseline 분석** - 기존 모델의 한계점 정확히 파악 후 개선
+4. **INT8 양자화** - 성능 손실 없이 모델 크기 4.67배 압축
+
+### 최종 산출물
+| 항목 | 경로 |
+|------|------|
+| **양자화 모델** | `7_Quantization/quantized_model/` |
+| **분석 결과** | `7_Quantization/results/` |
 
 ### 다음 단계
 | 단계 | 작업 | 예상 시간 |
 |------|------|:---------:|
-| Step 7 | INT8 양자화 | 10분 |
 | Step 8 | FastAPI 서버 배포 | 30분 |
