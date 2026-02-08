@@ -152,10 +152,15 @@ export class Elevator {
         // [Client] 비-호스트는 무조건 서버 동기화 값만 따름 (로컬 예측 금지)
         if (!isHost) {
             if (this.serverTarget) {
+                // [PPT 비교용] 보간 비활성화 - 서버 위치로 즉시 이동 (끊김 현상 발생)
+                nextY = this.serverTarget.y;
+
+                /* [원본 보간 로직 - 녹화 후 복원]
                 // [Client] 서버에서 받은 위치로 보간 이동
                 // Snap 로직 제거 (항상 부드럽게 추종)
                 const lerpFactor = 0.5; // 반응성 좋게 유지
                 nextY = Phaser.Math.Linear(currentPosY, this.serverTarget.y, lerpFactor);
+                */
             }
         }
         else {

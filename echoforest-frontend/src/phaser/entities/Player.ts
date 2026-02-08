@@ -162,6 +162,10 @@ export class Player {
     public update(isGrounded: boolean, delta: number = 16.6): void {
         // 원격 플레이어 보간 이동
         if (!this.isLocalPlayer && this.targetPos) {
+            // [PPT 비교용] 보간 비활성화 - 서버 위치로 즉시 이동 (끊김 현상 발생)
+            this.scene.matter.body.setPosition(this.body, { x: this.targetPos.x, y: this.targetPos.y });
+
+            /* [원본 보간 로직 - 녹화 후 복원]
             const currentX = this.body.position.x;
             const currentY = this.body.position.y;
 
@@ -189,6 +193,7 @@ export class Player {
                     this.scene.matter.body.setPosition(this.body, { x: newX, y: newY });
                 }
             }
+            */
 
             // [FIX] 물리 엔진에 의한 불필요한 이동 방지 (중력 등 무시)
             // 원격 플레이어는 서버 좌표를 추종하므로 속도를 0으로 유지하여 물리 엔진의 간섭 최소화
