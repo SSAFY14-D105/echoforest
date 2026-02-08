@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 0. 게임 서버 (Spring Boot) - Build locally
+  # ==========================================
+  game-server:
+    build: . # Build from current directory (Dockerfile)
+    image: echoforest-server:local
+    container_name: echoforest-server
+    ports:
+      - "9001:9001" # Expose for local access if needed
+    environment:
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - AI_MODEL_URL=${AI_MODEL_URL}
+      - AI_MODEL_API_KEY=${AI_MODEL_API_KEY}
+      - SENTIMENT_AI_URL=http://ai-server:8000
+      - DB_URL=jdbc:mysql://mysql:3306/echoforest?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY:-86400000}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - LIVEKIT_PUBLIC_IP=${LIVEKIT_PUBLIC_IP}
+      - DB_DRIVER=com.mysql.cj.jdbc.Driver
+      - DB_PLATFORM=org.hibernate.dialect.MySQL8Dialect
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - livekit
+      - mysql
+      - redis
+      - ai-server
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 1. LiveKit Server
+  # ==========================================
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: echoforest-livekit
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /etc/livekit
+        cat <<EOF > /etc/livekit/livekit.yaml
+        port: 7880
+        rtc:
+          port_range_start: 60000
+          port_range_end: 60200
+          use_external_ip: true
+        keys:
+          "$${LIVEKIT_API_KEY}": "$${LIVEKIT_API_SECRET}"
+        EOF
+
+        echo "Starting LiveKit with generated config..."
+        /livekit-server --config /etc/livekit/livekit.yaml
+    ports:
+      - "60000-60200:60000-60200/udp"
+      - "7880:7880" # Expose API port locally
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+    environment:
+      - "LIVEKIT_API_KEY=${LIVEKIT_API_KEY}"
+      - "LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 2. MySQL
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: echoforest-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: echoforest
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 3. Redis
+  # ==========================================
+  redis:
+    image: redis:alpine
+    container_name: echoforest-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - echo-net
+
+  # ==========================================
+  # 4. AI Server (Build locally)
+  # ==========================================
+  ai-server:
+    # [Master Branch Structure]
+    # echoforest-backend and echoforest-ai are siblings.
+    # Default path: ../echoforest-ai/inference
+    build: ${AI_REPO_PATH:-../echoforest-ai}/inference
+    image: echoforest-ai:local
+    container_name: echoforest-ai
+    restart: always
+    # ports:
+    #   - "8000:8000"
+    environment:
+      - HF_HOME=/code/model_cache
+    networks:
+      - echo-net
+
+networks:
+  echo-net:
+    driver: bridge
