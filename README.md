@@ -1,4 +1,4 @@
-﻿# 🌲 메아리의 숲 (Echo Forest)
+# 🌲 메아리의 숲 (Echo Forest)
 
 > **"나쁜 말은 저주가 되어, 좋은 말은 길이 되어 돌아오는 곳. </br> 감정의 힘으로 움직이는 메아리의 숲에서
 펼쳐지는 모험 이야기"**  
@@ -222,8 +222,7 @@ Content-Type: application/json
 
 ## 12. 영상 포트폴리오
 
-[![Video Label](http://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID_HERE)
-
+[![Video Label](https://img.youtube.com/vi/8m-AHCVeUrs/hqdefault.jpg)](https://youtu.be/8m-AHCVeUrs)
 > *클릭하여 시연 영상을 확인하세요.*
 
 ---
