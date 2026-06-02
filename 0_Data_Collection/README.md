@@ -25,7 +25,7 @@
 | **`datasets/`** ⭐ | `train_collected.tsv`(518) · `test_set.tsv`(688) · `_archive/` · README | **최종 데이터 단일 출처**(10라벨). 모든 학습·평가가 여기서 읽음 |
 | `labeling/` | `keywords.json` · `keywords.md` · `convert_keywords_to_tsv.py` | 우리가 게임하며 쓴 표현(긍정/부정)을 **키워드로 모아 → unSmile 10라벨 tsv(=train_collected 518)** 로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`12` + README | YouTube→STT→정제→8라벨 라벨→병합 (아래 표) |
-| `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` → `05_external` → `06_ai_labeled` | scripts 파이프라인의 **단계별 중간 산출물**(8라벨) |
+| `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` → `05_analysis`·`05_external` → `06_ai_labeled` | scripts 파이프라인의 **단계별 중간 산출물**(전부 8라벨 시도 기록). 단, `03/04`의 정제 STT는 테스트셋(688)의 출처 |
 | `unsmile/` | UnSmile 정제·STT변형본 (`UnSmile_Clean`, `UnSmile_Original`) | 8라벨 파이프라인이 쓰던 unSmile 가공본 (최상위 `UnSmile/`의 공식 원본과 별개) |
 | `utils/` | `analyze_labels.py`, `split_sentences.py`, `select_balanced.py` 등 | 수집 보조 유틸 + 처리 가이드 |
 | `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 |
