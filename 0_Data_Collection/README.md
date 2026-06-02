@@ -26,10 +26,11 @@
 | `labeling/` | `keywords.json` · `keywords.md` · `convert_keywords_to_tsv.py` | 우리가 게임하며 쓴 표현(긍정/부정)을 **키워드로 모아 → unSmile 10라벨 tsv(=train_collected 518)** 로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`12` + README | YouTube→STT→정제→8라벨 라벨→병합 (아래 표) |
 | `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` → `05_analysis`·`05_external` → `06_ai_labeled` | scripts 파이프라인의 **단계별 중간 산출물**(전부 8라벨 시도 기록). 단, `03/04`의 정제 STT는 테스트셋(688)의 출처 |
-| `unsmile/` | UnSmile 정제·STT변형본 (`UnSmile_Clean`, `UnSmile_Original`) | 8라벨 파이프라인이 쓰던 unSmile 가공본 (최상위 `UnSmile/`의 공식 원본과 별개) |
-| `utils/` | `analyze_labels.py`, `split_sentences.py`, `select_balanced.py` 등 | 수집 보조 유틸 + 처리 가이드 |
-| `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 |
+| `utils/` | `analyze_labels.py`, `split_sentences.py`, `select_balanced.py`, STT 처리 가이드 | 8라벨 시도 때 쓰던 보조 유틸(현재 입력 경로는 끊김, 기록용) |
+| `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 (Whisper 채택 전 비교) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
+
+> ℹ️ **공식 unSmile 원본은 최상위 [`UnSmile/`](../UnSmile)** (`UnSmile_Dataset`, `UnSmile_Dataset_Drop_개인지칭`)에 있고, 최종 파인튜닝([`3_UnSmile_Correction`](../3_UnSmile_Correction))이 그걸 읽습니다. 예전 8라벨 시도가 쓰던 unSmile 가공본(`unsmile/`)은 최종 파이프라인에서 안 써서 제거했습니다.
 
 ---
 
@@ -54,6 +55,7 @@
 
 > 자세한 8라벨 정의·실행법은 [`scripts/README.md`](scripts/README.md) 참고.
 > ※ 스크립트 경로는 `BASE_DIR = 0_Data_Collection`(부모) 기준이라, `scripts/`에서 실행해도 `processed_data/`·`raw_audio/`를 올바로 찾습니다.
+> ※ `08·09`(UnSmile 가공)는 예전에 로컬 unSmile 사본을 입력으로 썼는데, 그 사본은 제거됐습니다. 공식 원본은 최상위 [`UnSmile/`](../UnSmile)이며 이 두 스크립트는 미채택(기록용)입니다.
 
 ---
 
