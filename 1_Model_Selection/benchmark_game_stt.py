@@ -26,7 +26,7 @@ from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 # 📋 설정
 # ============================================================
 
-DATA_PATH = "data/game_test.tsv"
+DATA_PATH = "../0_Data_Collection/datasets/test_set.tsv"
 RESULTS_DIR = "results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
