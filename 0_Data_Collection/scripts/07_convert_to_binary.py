@@ -21,7 +21,7 @@ import csv
 # ============================================================
 # 경로 설정
 # ============================================================
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized_clean", "final_dataset_labeled.tsv")
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized_clean", "final_dataset_binary.tsv")
 

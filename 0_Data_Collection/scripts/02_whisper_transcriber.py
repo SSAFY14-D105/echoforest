@@ -23,7 +23,7 @@ from kiwipiepy import Kiwi
 # ==========================================
 # 설정 (Configuration)
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUDIO_DIR = os.path.join(BASE_DIR, "raw_audio")       # 원본 오디오 폴더
 OUTPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")    # 결과 텍스트 저장 폴더
 

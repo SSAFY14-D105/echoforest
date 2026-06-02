@@ -22,7 +22,7 @@ from datetime import datetime
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "03_cleaned_history")

@@ -22,7 +22,7 @@ import shutil
 from datetime import datetime
 
 # 파일 경로 설정
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FILE_UNSMILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_converted_8label.tsv")
 FILE_AUTO = os.path.join(BASE_DIR, "processed_data", "06_ai_labeled", "gemini_labeled_17k.tsv")
 

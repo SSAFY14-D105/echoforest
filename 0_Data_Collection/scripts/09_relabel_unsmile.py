@@ -28,7 +28,7 @@ import re
 # ============================================================
 # 경로 설정
 # ============================================================
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "05_external", "unsmile_converted_8label.tsv")
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "05_external", "unsmile_relabeled.tsv")
 

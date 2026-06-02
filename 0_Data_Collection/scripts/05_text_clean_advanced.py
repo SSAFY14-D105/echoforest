@@ -21,7 +21,7 @@ from collections import Counter
 # ============================================================
 # 경로 설정
 # ============================================================
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized_clean")
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "final_dataset_clean.tsv")

@@ -25,7 +25,7 @@ from kiwipiepy import Kiwi
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "04_anonymized_history")

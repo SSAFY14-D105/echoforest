@@ -38,7 +38,7 @@ MODEL_NAME = "gpt-4o-mini"  # Best Balance (Smart & Cheap)
 # ==========================================
 # 📂 경로 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 입력 1: UnSmile (3라벨 힌트 있음)
 FILE_UNSMILE = os.path.join(BASE_DIR, "processed_data", "05_external", "unsmile_3label.tsv")

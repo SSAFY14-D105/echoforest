@@ -17,9 +17,9 @@ import os
 import yt_dlp
 
 # 설정
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUDIO_DIR = os.path.join(BASE_DIR, "raw_audio")   # 오디오 저장소
-URL_LIST_FILE = os.path.join(BASE_DIR, "00_url_list.txt")
+URL_LIST_FILE = os.path.join(BASE_DIR, "scripts", "00_url_list.txt")
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
