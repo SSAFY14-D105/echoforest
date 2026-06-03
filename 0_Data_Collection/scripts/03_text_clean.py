@@ -16,8 +16,6 @@
 import os
 import glob
 import re
-import shutil
-from datetime import datetime
 
 # ==========================================
 # 설정
@@ -25,7 +23,6 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "03_cleaned_history")
 
 def clean_text(text):
     """
@@ -118,19 +115,10 @@ def main():
             # 라벨 자리는 비워둠 (나중에 채우기 위해)
             f.write(f"{sent}\t\n")
             
-    # 6. 아카이브 저장 (History)
-    if not os.path.exists(ARCHIVE_DIR):
-        os.makedirs(ARCHIVE_DIR)
-        
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    archive_file = os.path.join(ARCHIVE_DIR, f"merged_cleaned_{timestamp}.tsv")
-    shutil.copy(OUTPUT_FILE, archive_file)
-    
     print("=" * 40)
     print(f"Processing Complete!")
     print(f" - Scanned Files: {processed_files}")
     print(f" - Result File: {OUTPUT_FILE}")
-    print(f" - Archived to: {archive_file}")
     print("=" * 40)
 
 if __name__ == "__main__":

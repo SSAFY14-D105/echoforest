@@ -19,8 +19,6 @@
 import os
 import re
 import unicodedata
-import shutil
-from datetime import datetime
 from kiwipiepy import Kiwi
 
 # ==========================================
@@ -29,7 +27,6 @@ from kiwipiepy import Kiwi
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
 OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
-ARCHIVE_DIR = os.path.join(BASE_DIR, "processed_data", "archive", "04_anonymized_history")
 
 # 사용자 사전(닉네임). 호칭 없는 bare 닉네임도 잡으려면 영상마다 화자명을 여기 추가할 것.
 CUSTOM_USERS = [
@@ -147,12 +144,6 @@ def main():
         for sent in unique_sentences:
             f.write(f"{sent}\t\n")
 
-    # 아카이브
-    os.makedirs(ARCHIVE_DIR, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    archive_file = os.path.join(ARCHIVE_DIR, f"final_dataset_{timestamp}.tsv")
-    shutil.copy(OUTPUT_FILE, archive_file)
-
     total_in = dropped + len(kept)
     print("=" * 50)
     print("개인지칭 행 제거 결과")
@@ -160,7 +151,6 @@ def main():
     print(f" - 개인지칭 행 삭제:  {dropped} ({dropped/total_in*100:.1f}%)" if total_in else " - 입력 없음")
     print(f" - 유지(중복제거 전): {len(kept)}")
     print(f" - 최종(중복제거 후): {len(unique_sentences)}")
-    print(f" - 아카이브: {archive_file}")
     print("-" * 50)
     print("삭제된 문장 샘플(최대 20):")
     for s in dropped_samples:
