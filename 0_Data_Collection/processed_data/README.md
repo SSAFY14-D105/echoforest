@@ -8,7 +8,7 @@
 | `03_cleaned/` | `03_text_clean.py` | STT 병합·정제 문장 | `sentence  label` |
 | `04_anonymized/` | `04_text_anonymize.py` | 닉네임 → `[유저]` 익명화 (17,296행) | `sentence  label` |
 | `04_anonymized_clean/` | `05_text_clean_advanced.py` + 라벨링 | 고급 정제(15,282행) + 8라벨본 | `sentence label` / 8라벨 |
-| `05_analysis/` | `utils/analyze_labels.py` | 라벨 분포·키워드·샘플 통계 txt | 텍스트 |
+| `05_analysis/` | (구 8라벨 분석 스크립트, 제거됨) | 라벨 분포·키워드·샘플 통계 txt | 텍스트 |
 | `05_external/` | `08·09_*unsmile*.py` | UnSmile → 3/8라벨 변환본 | 3·8라벨 |
 | `06_ai_labeled/` | `11_ai_labeling.py` | Gemini 8라벨 자동 라벨 (+source) | 8라벨 |
 

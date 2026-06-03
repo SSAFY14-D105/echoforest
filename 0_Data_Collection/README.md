@@ -26,7 +26,6 @@
 | `labeling/` | `keywords.json` · `keywords.md` · `convert_keywords_to_tsv.py` | 우리가 게임하며 쓴 표현(긍정/부정)을 **키워드로 모아 → unSmile 10라벨 tsv(=train_collected 518)** 로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`12` + README | YouTube→STT→정제→8라벨 라벨→병합 (아래 표) |
 | `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` → `05_analysis`·`05_external` → `06_ai_labeled` | scripts 파이프라인의 **단계별 중간 산출물**(전부 8라벨 시도 기록). 단, `03/04`의 정제 STT는 테스트셋(688)의 출처 |
-| `utils/` | `analyze_labels.py`, `split_sentences.py`, `select_balanced.py`, STT 처리 가이드 | 8라벨 시도 때 쓰던 보조 유틸(현재 입력 경로는 끊김, 기록용) |
 | `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 (Whisper 채택 전 비교) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
 

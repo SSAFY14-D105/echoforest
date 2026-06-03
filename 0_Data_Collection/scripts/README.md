@@ -33,7 +33,8 @@ data_collection/
 │   ├── 08_prep_unsmile.py       # UnSmile 10라벨→3라벨
 │   ├── 09_relabel_unsmile.py    # UnSmile 8라벨 재라벨링
 │   ├── 11_ai_labeling.py        # Gemini AI 라벨링 (선택)
-│   └── 12_merge_final.py        # 최종 데이터 병합
+│   ├── 12_merge_final.py        # 최종 데이터 병합
+│   └── 수집_파이프라인_설계노트.md # 파이프라인 설계 의사결정 기록 (청킹·403우회·자모제거 이유)
 │
 ├── 📂 processed_data/           # 처리된 데이터
 │   ├── 04_anonymized_clean/     # STT 데이터 (최종)
@@ -47,7 +48,6 @@ data_collection/
 │       └── unsmile_relabeled.tsv    # 재라벨링 완료
 │
 ├── 📂 raw_audio/                # 원본 오디오 파일
-├── 📂 utils/                    # 유틸리티 모듈
 └── 📂 web_speech_api/           # 웹 STT 관련
 ```
 
