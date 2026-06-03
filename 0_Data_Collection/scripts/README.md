@@ -48,5 +48,6 @@ pip install yt-dlp faster-whisper torch kiwipiepy pandas transformers
 
 ## 🔎 주의 (품질)
 
+- **라벨 정책**: unSmile **10라벨 포맷은 유지**하되(공식·train_collected 호환), 게임 맥락상 실제 분류는 **`악플/욕설` vs `clean` 이진**만 한다. 이유 — 혐오 '대상' 세분류(여성/남성/지역/종교…)는 게임 채팅에 거의 없음 · unSmile은 multi-label이라 욕설/혐오 라벨만 보면 됨 · 기획서 목표가 "악플/욕설 Recall 개선". (상세 근거: `06_prelabel_unsmile.py` docstring · [`collected_game_chat/README`](../collected_game_chat))
 - `04` 개인지칭 삭제는 게임 채팅 특성상 비율이 높을 수 있음(파일럿 ~12%). 등록 닉네임(`CUSTOM_USERS`)에 **영상별 화자명을 추가**하면 bare 닉네임 탐지율↑.
 - `06`의 unSmile 사전라벨은 **게임 오더를 abuse로 오탐**하는 경향이 큼(이 프로젝트가 파인튜닝으로 풀려는 바로 그 문제). 그래서 abuse 후보를 확률순 정렬해두니 **사람 검수로 반드시 보정**할 것.

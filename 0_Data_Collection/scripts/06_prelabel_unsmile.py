@@ -10,6 +10,14 @@ unSmile 모델로 abuse/clean **사전라벨** → 사람 검수용 tsv 생성
 - 출력 포맷은 train_collected.tsv 와 동일한 unSmile 10라벨(문장 + 10칼럼)에
   검수 편의를 위한 보조 칼럼(사전라벨·abuse_prob·검수)을 앞에 둔다.
 
+[왜 10라벨 포맷이되 실제론 abuse/clean 이진인가]
+- 포맷은 공식 unSmile·train_collected와 동일하게 10라벨을 유지한다(모델 호환·데이터 일관성).
+- 그러나 게임 맥락에서 필요한 건 "부정 발언 탐지"뿐이고, 혐오 '대상' 세분류
+  (여성/남성/성소수자/인종/연령/지역/종교)는 게임 채팅에 거의 안 나온다.
+- unSmile은 multi-label이라 라벨을 독립적으로 예측 → 9개 혐오/욕설 라벨 중
+  최대 확률이 THRESHOLD 이상이면 `악플/욕설=1`, 아니면 `clean=1`로 이진 축약한다.
+- 기획서 핵심 목표도 "악플/욕설 Recall 개선"이라, 이 이진(욕설 vs clean)이면 충분하다.
+
 [입력] processed_data/04_anonymized_clean/final_dataset_clean.tsv
 [출력] processed_data/06_prelabeled/review_candidates.tsv
 
