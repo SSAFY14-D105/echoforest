@@ -30,6 +30,8 @@ collected_game_chat (메아리의숲+YouTube STT, 손수분류) ─→ datasets/
                                                           datasets/test_set.tsv (688, 고정) ─→ 모델선정·비교·양자화 평가
 ```
 
+> 03~06 산출물은 `source` 칼럼(출신 영상 id, 예: `audio_1`)을 들고 다닌다 → 영상별로 골라 쓰기·검수 추적 가능. 같은 문장이 여러 영상에 나오면 `audio_3;audio_7`처럼 `;`로 합쳐 보존(전역 중복제거).
+
 ## 🚀 실행 (conda)
 
 ```bash

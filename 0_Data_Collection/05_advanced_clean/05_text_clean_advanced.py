@@ -9,8 +9,9 @@ STT 데이터셋 고급 클리닝
 - 반복 표현 정리
 - 중복 문장 제거
 
-[입력] ../04_anonymize/final_dataset.tsv
-[출력] 이 폴더(05_advanced_clean)에 final_dataset_clean.tsv
+[입력] ../04_anonymize/final_dataset.tsv  (sentence \t source \t label)
+[출력] 이 폴더(05_advanced_clean)에 final_dataset_clean.tsv  (sentence \t source \t label)
+       - source(출신 영상 id) 보존; 정제로 문장이 같아져 합쳐질 땐 source를 ;로 병합.
 """
 
 import os
@@ -200,33 +201,41 @@ def main():
     print("\n🔄 클리닝 중...")
     
     removal_reasons = Counter()
-    cleaned_data = []
-    seen_sentences = set()
-    
+    cleaned_map = {}   # 정제 문장 -> {'source': set, 'label': str} (삽입 순서 유지)
+
     for row in data:
         sentence = row.get('sentence', '')
         label = row.get('label', '')
-        
+        source = row.get('source', '')
+
         # 클리닝
         cleaned = clean_sentence(sentence)
-        
+
         # 유지 여부 판단
         keep, reason = should_keep(cleaned)
-        
+
         if not keep:
             removal_reasons[reason] += 1
             continue
-        
-        # 중복 체크
-        if cleaned in seen_sentences:
+
+        # 중복 체크 (source는 합쳐서 보존)
+        if cleaned in cleaned_map:
             removal_reasons['중복 문장'] += 1
-            continue
-        
-        seen_sentences.add(cleaned)
-        cleaned_data.append({
-            'sentence': cleaned,
-            'label': label if label else ''
-        })
+        else:
+            cleaned_map[cleaned] = {'source': set(), 'label': label if label else ''}
+
+        for s in source.split(';'):
+            if s:
+                cleaned_map[cleaned]['source'].add(s)
+
+    cleaned_data = [
+        {
+            'sentence': sent,
+            'source': ";".join(sorted(v['source'])),
+            'label': v['label'],
+        }
+        for sent, v in cleaned_map.items()
+    ]
     
     # 결과 저장
     save_tsv(cleaned_data, OUTPUT_PATH)

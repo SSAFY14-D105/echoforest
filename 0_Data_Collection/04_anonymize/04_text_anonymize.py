@@ -10,14 +10,16 @@
   학습/평가에 인공 토큰 skew를 만든다. 그래서 치환이 아니라 제거.
 - Kiwi 형태소로 고유명사(NNP)·등록 닉네임을 탐지.
 
-[입력] ../03_clean/merged_stt_cleaned.tsv
-[출력] 이 폴더(04_anonymize)에 final_dataset.tsv  (개인지칭 행 제거됨)
+[입력] ../03_clean/merged_stt_cleaned.tsv  (sentence \t source \t label)
+[출력] 이 폴더(04_anonymize)에 final_dataset.tsv  (sentence \t source \t label, 개인지칭 행 제거됨)
+       - source(출신 영상 id) 칼럼은 그대로 보존; 중복 병합 시 ;로 합침.
 
 [의존성] pip install kiwipiepy
 """
 
 import os
 import re
+import csv
 import unicodedata
 from kiwipiepy import Kiwi
 
@@ -103,19 +105,20 @@ def main():
 
     print(f"Loading input file: {INPUT_FILE}...")
     try:
-        with open(INPUT_FILE, 'r', encoding='utf-8-sig') as f:
-            lines = f.readlines()
+        with open(INPUT_FILE, 'r', encoding='utf-8-sig', newline='') as f:
+            rows = list(csv.DictReader(f, delimiter='\t'))
     except Exception as e:
         print(f"Error reading input file: {e}")
         return
 
-    kept, dropped_samples = [], []
+    sent_to_sources = {}   # 정제 문장 -> 출신 영상 id 집합
+    dropped_samples = []
     dropped = 0
+    kept_rows = 0
 
-    for idx, line in enumerate(lines):
-        if idx == 0 and ("sentence" in line or "label" in line):
-            continue  # 헤더
-        raw_text = line.strip().split('\t')[0] if line.strip() else ""
+    for i, row in enumerate(rows):
+        raw_text = (row.get('sentence') or '').strip()
+        source = (row.get('source') or '').strip()
         if not raw_text:
             continue
 
@@ -130,27 +133,32 @@ def main():
                 dropped_samples.append(cleaned)
             continue
 
-        kept.append(cleaned)
+        kept_rows += 1
+        srcs = sent_to_sources.setdefault(cleaned, set())
+        for s in source.split(';'):
+            if s:
+                srcs.add(s)
 
-        if idx % 1000 == 0:
-            print(f"Processing... {idx}/{len(lines)}")
+        if i % 1000 == 0:
+            print(f"Processing... {i}/{len(rows)}")
 
-    unique_sentences = sorted(set(kept))
+    unique_sentences = sorted(sent_to_sources.keys())
 
     # 저장
     print(f"Saving to {OUTPUT_FILE}...")
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8-sig') as f:
-        f.write("sentence\tlabel\n")
+        f.write("sentence\tsource\tlabel\n")
         for sent in unique_sentences:
-            f.write(f"{sent}\t\n")
+            source_str = ";".join(sorted(sent_to_sources[sent]))
+            f.write(f"{sent}\t{source_str}\t\n")
 
-    total_in = dropped + len(kept)
+    total_in = dropped + kept_rows
     print("=" * 50)
     print("개인지칭 행 제거 결과")
     print(f" - 입력 문장:        {total_in}")
     print(f" - 개인지칭 행 삭제:  {dropped} ({dropped/total_in*100:.1f}%)" if total_in else " - 입력 없음")
-    print(f" - 유지(중복제거 전): {len(kept)}")
+    print(f" - 유지(중복제거 전): {kept_rows}")
     print(f" - 최종(중복제거 후): {len(unique_sentences)}")
     print("-" * 50)
     print("삭제된 문장 샘플(최대 20):")

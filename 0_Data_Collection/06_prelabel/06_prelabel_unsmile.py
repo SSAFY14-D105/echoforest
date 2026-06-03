@@ -18,8 +18,9 @@ unSmile 모델로 abuse/clean **사전라벨** → 사람 검수용 tsv 생성
   최대 확률이 THRESHOLD 이상이면 `악플/욕설=1`, 아니면 `clean=1`로 이진 축약한다.
 - 기획서 핵심 목표도 "악플/욕설 Recall 개선"이라, 이 이진(욕설 vs clean)이면 충분하다.
 
-[입력] ../05_advanced_clean/final_dataset_clean.tsv
+[입력] ../05_advanced_clean/final_dataset_clean.tsv  (sentence \t source \t label)
 [출력] 이 폴더(06_prelabel)에 review_candidates.tsv
+       - source(출신 영상 id) 칼럼을 문장 옆에 함께 출력 → 검수 시 어느 영상인지 추적 가능.
 
 [의존성] pip install transformers torch
 """
@@ -42,16 +43,19 @@ THRESHOLD = 0.3   # 혐오/욕설 라벨 중 최대 확률이 이 값 이상이�
 LABEL_COLS = ['여성/가족', '남성', '성소수자', '인종/국적', '연령', '지역', '종교', '기타 혐오', '악플/욕설', 'clean']
 
 
-def load_sentences(path):
+def load_rows(path):
+    """(문장, source) 행 로드. 입력 단계에서 이미 중복 제거되지만 한 번 더 보장."""
     rows = []
+    seen = set()
     with open(path, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f, delimiter='\t')
         for r in reader:
             s = (r.get('sentence') or r.get('문장') or '').strip()
-            if s:
-                rows.append(s)
-    # 입력 단계에서 이미 중복 제거되지만 한 번 더 보장
-    return list(dict.fromkeys(rows))
+            src = (r.get('source') or '').strip()
+            if s and s not in seen:
+                seen.add(s)
+                rows.append((s, src))
+    return rows
 
 
 def main():
@@ -59,8 +63,8 @@ def main():
         print(f"입력 파일 없음: {INPUT_FILE}  (먼저 03~05 실행)")
         return
 
-    sentences = load_sentences(INPUT_FILE)
-    print(f"사전라벨 대상 문장: {len(sentences)}")
+    rows = load_rows(INPUT_FILE)
+    print(f"사전라벨 대상 문장: {len(rows)}")
 
     print(f"unSmile 로딩... ({MODEL_ID})")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -75,12 +79,12 @@ def main():
     abuse_label_idx = [i for i, name in id2label.items() if name not in ('clean', '개인지칭')]
 
     results = []
-    for i, sent in enumerate(sentences):
+    for i, (sent, source) in enumerate(rows):
         inputs = tokenizer(sent, return_tensors='pt', truncation=True, max_length=128).to(device)
         with torch.no_grad():
             probs = torch.sigmoid(model(**inputs).logits[0]).cpu().numpy()
 
-        abuse_prob = float(max(probs[i] for i in abuse_label_idx))
+        abuse_prob = float(max(probs[j] for j in abuse_label_idx))
         is_abuse = abuse_prob >= THRESHOLD
 
         row = {c: 0 for c in LABEL_COLS}
@@ -91,19 +95,20 @@ def main():
 
         results.append({
             '문장': sent,
+            'source': source,
             '사전라벨': 'abuse' if is_abuse else 'clean',
             'abuse_prob': round(abuse_prob, 3),
             '검수': '',  # 사람이 O(맞음)/수정 라벨 기입
             **row,
         })
         if (i + 1) % 100 == 0:
-            print(f"  {i+1}/{len(sentences)}")
+            print(f"  {i+1}/{len(rows)}")
 
     # abuse 후보를 위로 정렬(검수 효율: 소수 클래스부터 확인)
     results.sort(key=lambda r: -r['abuse_prob'])
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    fieldnames = ['문장', '사전라벨', 'abuse_prob', '검수'] + LABEL_COLS
+    fieldnames = ['문장', 'source', '사전라벨', 'abuse_prob', '검수'] + LABEL_COLS
     with open(OUTPUT_FILE, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t')
         w.writeheader()

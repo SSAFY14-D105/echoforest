@@ -4,13 +4,14 @@
 기본 텍스트 정제 및 병합
 
 [목적]
-- 여러 STT 결과 파일을 하나로 병합
-- 숫자/기호/자모음 제거
-- 마스킹된 욕설 복구 (X → 실제 단어)
-- 중복 문장 제거
+- 여러 STT 결과 파일(audio_N.tsv)을 하나로 병합
+- 숫자/기호/자모음·외국어 노이즈 제거
+- 전역 중복 문장 제거 (여러 영상에 같은 문장이 있으면 source를 ;로 합침)
 
-[입력] ../02_stt/*.tsv
-[출력] 이 폴더(03_clean)에 merged_stt_cleaned.tsv
+[입력] ../02_stt/audio_*.tsv
+[출력] 이 폴더(03_clean)에 merged_stt_cleaned.tsv  (sentence \t source \t label)
+       - source = 출신 영상 id(파일명 stem, 예: audio_1) → 영상별 추출/필터용.
+         같은 문장이 여러 영상에 있으면 "audio_3;audio_7" 처럼 ;로 합쳐 보존.
 """
 
 import os
@@ -65,57 +66,61 @@ def clean_text(text):
 def main():
     print(f"Loading TSV files from {INPUT_DIR}...")
     
-    tsv_files = glob.glob(os.path.join(INPUT_DIR, "audio_*.tsv"))
-    all_sentences = []
-    
+    tsv_files = sorted(glob.glob(os.path.join(INPUT_DIR, "audio_*.tsv")))
+    sent_to_sources = {}   # 정제된 문장 -> 출신 영상 id 집합 (전역 중복제거 + source 보존)
+    raw_count = 0
     processed_files = 0
-    
+
     for fpath in tsv_files:
+        # 파일명 stem이 곧 출신 영상 id (예: audio_1.tsv -> "audio_1")
+        source = os.path.splitext(os.path.basename(fpath))[0]
         try:
             with open(fpath, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-                
+
             # 파일별 처리
             for line in lines:
                 # TSV 형식일 수 있으므로 탭으로 분리 후 첫 번째 컬럼 사용
                 # 혹은 그냥 텍스트 파일일 경우 전체 사용
                 parts = line.strip().split('\t')
                 raw_text = parts[0] if parts else ""
-                
+
                 # 헤더 라인("문장", "TSV" 등 포함) 건너뛰기
                 if "문장" in raw_text or "clean" in raw_text:
                     continue
-                
+
                 cleaned = clean_text(raw_text)
-                
+
                 # 너무 짧은 문장(1글자 이하)은 의미 없으므로 제외 (선택 사항)
                 if len(cleaned) < 2:
                     continue
-                    
-                all_sentences.append(cleaned)
-            
+
+                raw_count += 1
+                sent_to_sources.setdefault(cleaned, set()).add(source)
+
             processed_files += 1
-            
+
         except Exception as e:
             print(f"Error reading {os.path.basename(fpath)}: {e}")
 
-    print(f"Total raw sentences processed: {len(all_sentences)}")
-    
-    # 5. 중복 제거
-    unique_sentences = sorted(list(set(all_sentences)))
-    
+    print(f"Total raw sentences processed: {raw_count}")
+
+    # 5. 전역 중복 제거 (문장 단위) — source는 집합으로 합쳐 보존
+    unique_sentences = sorted(sent_to_sources.keys())
+
     print(f"Unique sentences after deduplication: {len(unique_sentences)}")
-    
-    # 저장 (TSV 포맷: sentence \t label)
+
+    # 저장 (TSV 포맷: sentence \t source \t label)
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8-sig') as f:
         # 헤더 작성
-        f.write("sentence\tlabel\n")
-        
+        f.write("sentence\tsource\tlabel\n")
+
         for sent in unique_sentences:
+            source_str = ";".join(sorted(sent_to_sources[sent]))
             # 라벨 자리는 비워둠 (나중에 채우기 위해)
-            f.write(f"{sent}\t\n")
-            
+            f.write(f"{sent}\t{source_str}\t\n")
+
     print("=" * 40)
     print(f"Processing Complete!")
     print(f" - Scanned Files: {processed_files}")
