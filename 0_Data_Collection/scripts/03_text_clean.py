@@ -41,47 +41,8 @@ def clean_text(text):
     # 0. Whisper 환각/반복 패턴 제거 (X2, X3 등)
     text = re.sub(r'[Xx]\d+', '', text)
     
-    # 0-1. 마스킹된 욕설 복구 (X -> 실제 욕설)
-    # 학습 효율을 위해 적나라한 표현으로 통일 (확실한 패턴만)
-    text = re.sub(r'[Xx]\s*될\s*뻔', '좆 될 뻔', text) # X 될 뻔 -> 좆 될 뻔
-    text = re.sub(r'씨[Xx]', '씨발', text)          # 씨X -> 씨발
-    text = re.sub(r'[Xx]발', '시발', text)
-    text = re.sub(r'[Xx]끼', '새끼', text)
-    text = re.sub(r'개[Xx]+', '개새끼', text) 
-    text = re.sub(r'[Xx]신', '병신', text)
-    text = re.sub(r'[Xx]나', '존나', text)
+    # (Web Speech 시절의 X-마스킹 욕설 복구 규칙 제거 — faster-whisper는 욕설을 원문 그대로 출력해 불필요)
 
-    # 0-1.5 어미가 붙은 욕설 (시X아, 새X야 등) - 우선순위 높음
-    # 사용자 요청 패턴 추가 (구체적 문맥)
-    text = re.sub(r'이\s*새[Xx]는', '이 새끼는', text)
-    text = re.sub(r'새[Xx]가', '새끼가', text)
-    text = re.sub(r'[Xx]{2}들이랑', '새끼들이랑', text)
-    text = re.sub(r'[Xx]{2}들아', '새끼들아', text)
-    text = re.sub(r'시[Xx]{2}들', '시발련들', text)
-    text = re.sub(r'시[Xx]{2}(?=[\s.,!?~]|$)', '시발련', text) # 단독 시XX -> 시발련
-    
-    # 앞뒤 공백 존X -> 존나 (Lookbehind 에러 수정: 두 단계로 분리)
-    text = re.sub(r'^존[Xx](?=[\s.,!?~]|$)', '존나', text)  # 문장 맨 앞
-    text = re.sub(r'([\s])존[Xx](?=[\s.,!?~]|$)', r'\1존나', text) # 앞에 공백 있음
-    
-    # X됐... / X같... 시리즈 (앞뒤 공백/경계 조건)
-    # 예: "아 X됐다" -> "아 좆됐다", "기분 X같네" -> "기분 좆같네"
-    text = re.sub(r'(^|[\s])[Xx]됐(?=[다어네])', r'\1좆됐', text) # X됐다, X됐어, X됐네
-    text = re.sub(r'(^|[\s])[Xx]같(?=[네아은])', r'\1좆같', text) # X같네, X같아, X같은
-    
-    # 사용자 요청: 문맥("이")이 있어 확실한 경우
-    text = re.sub(r'이\s*새[Xx]야', '이 새끼야', text)
-    text = re.sub(r'이\s*새[Xx]아', '이 새끼아', text)
-    
-    text = re.sub(r'시[Xx]아', '시발아', text)
-    text = re.sub(r'새[Xx]야', '새끼야', text)
-    text = re.sub(r'새[Xx]아', '새끼아', text)
-
-    # 0-2. 애매한 패턴 (시X, 새X) - 뒤에 글자가 안 붙을 때만 변환 (Lookahead)
-    # 예: "아 시X" -> "아 시발" (O) / "시X하자" -> 변환 X
-    text = re.sub(r'시[Xx](?=[\s.,!?~]|$)', '시발', text)
-    text = re.sub(r'새[Xx](?=[\s.,!?~]|$)', '새끼', text)
-    
     # 1. 숫자 제거 (사용자 요청으로 취소 - "1번님" 등의 표현 보존)
     # text = re.sub(r'\d+', '', text)
     

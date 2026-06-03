@@ -29,7 +29,7 @@ OUTPUT_PATH = os.path.join(OUTPUT_DIR, "final_dataset_clean.tsv")
 # ============================================================
 # 클리닝 설정
 # ============================================================
-MIN_CHAR_LENGTH = 5          # 최소 글자 수 (이하 제거)
+MIN_CHAR_LENGTH = 2          # 최소 글자 수 (이하 제거) — 시발/병신(2)·가자(2) 등 짧은 욕설·오더 보존
 MIN_KOREAN_RATIO = 0.3       # 최소 한글 비율 (이하 제거)
 MAX_REPEAT_COUNT = 3         # 동일 단어 연속 반복 허용 횟수
 MAX_ENGLISH_RATIO = 0.5      # 최대 영어 비율 (초과 시 제거)
@@ -44,11 +44,8 @@ NOISE_PATTERNS = [
     r'^[가-힣]{1}$',                   # 한 글자만 있는 경우
 ]
 
-# STT 환각/오류 키워드 (Whisper 오인식 패턴)
-STT_HALLUCINATION_KEYWORDS = [
-    "anal", "RPdish", "dochite", "alphathe", "ister", "perdition",
-    "bittor", "Leyme", "cantidad", "Allegro", "Tydmg", "cos요리",
-]
+# (옛 STT 환각 키워드 하드코딩 리스트 제거 — 새 환각은 못 잡고 stale.
+#  외국어 환각은 한글/영어 비율 필터 + 03의 화이트리스트가 처리)
 
 # ============================================================
 # 클리닝 함수들
@@ -76,14 +73,6 @@ def is_noise_pattern(text: str) -> bool:
     """노이즈 패턴 체크"""
     for pattern in NOISE_PATTERNS:
         if re.match(pattern, text.strip()):
-            return True
-    return False
-
-
-def has_stt_hallucination(text: str) -> bool:
-    """STT 환각 키워드 포함 여부"""
-    for keyword in STT_HALLUCINATION_KEYWORDS:
-        if keyword.lower() in text.lower():
             return True
     return False
 
@@ -157,10 +146,6 @@ def should_keep(text: str) -> tuple:
     english_ratio = get_english_ratio(text)
     if english_ratio > MAX_ENGLISH_RATIO:
         return False, f"영어 비율 높음 ({english_ratio:.1%})"
-    
-    # 5. STT 환각 체크
-    if has_stt_hallucination(text):
-        return False, "STT 환각 키워드"
     
     return True, ""
 
