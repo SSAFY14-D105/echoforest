@@ -10,8 +10,8 @@
   학습/평가에 인공 토큰 skew를 만든다. 그래서 치환이 아니라 제거.
 - Kiwi 형태소로 고유명사(NNP)·등록 닉네임을 탐지.
 
-[입력] processed_data/03_cleaned/merged_stt_cleaned.tsv
-[출력] processed_data/04_anonymized/final_dataset.tsv  (개인지칭 행 제거됨)
+[입력] ../03_clean/merged_stt_cleaned.tsv
+[출력] 이 폴더(04_anonymize)에 final_dataset.tsv  (개인지칭 행 제거됨)
 
 [의존성] pip install kiwipiepy
 """
@@ -24,9 +24,10 @@ from kiwipiepy import Kiwi
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
-OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
+HERE = os.path.dirname(os.path.abspath(__file__))      # 04_anonymize/
+ROOT = os.path.dirname(HERE)                            # 0_Data_Collection
+INPUT_FILE = os.path.join(ROOT, "03_clean", "merged_stt_cleaned.tsv")
+OUTPUT_FILE = os.path.join(HERE, "final_dataset.tsv")
 
 # 사용자 사전(닉네임). 호칭 없는 bare 닉네임도 잡으려면 영상마다 화자명을 여기 추가할 것.
 CUSTOM_USERS = [

@@ -9,8 +9,8 @@ STT 데이터셋 고급 클리닝
 - 반복 표현 정리
 - 중복 문장 제거
 
-[입력] processed_data/04_anonymized/final_dataset.tsv
-[출력] processed_data/04_anonymized_clean/final_dataset_clean.tsv
+[입력] ../04_anonymize/final_dataset.tsv
+[출력] 이 폴더(05_advanced_clean)에 final_dataset_clean.tsv
 """
 
 import os
@@ -21,9 +21,10 @@ from collections import Counter
 # ============================================================
 # 경로 설정
 # ============================================================
-SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INPUT_PATH = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized", "final_dataset.tsv")
-OUTPUT_DIR = os.path.join(SCRIPT_DIR, "processed_data", "04_anonymized_clean")
+HERE = os.path.dirname(os.path.abspath(__file__))      # 05_advanced_clean/
+ROOT = os.path.dirname(HERE)                            # 0_Data_Collection
+INPUT_PATH = os.path.join(ROOT, "04_anonymize", "final_dataset.tsv")
+OUTPUT_DIR = HERE
 OUTPUT_PATH = os.path.join(OUTPUT_DIR, "final_dataset_clean.tsv")
 
 # ============================================================

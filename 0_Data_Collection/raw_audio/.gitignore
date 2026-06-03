@@ -1,5 +1,0 @@
-# 원본 wav는 용량이 커서 로컬만(STT용). git에는 압축본(.opus)만 LFS로 올림.
-*
-!.gitignore
-!README.md
-!*.opus

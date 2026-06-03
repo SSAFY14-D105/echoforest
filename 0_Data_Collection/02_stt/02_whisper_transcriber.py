@@ -4,12 +4,12 @@
 Whisper 모델로 오디오를 텍스트로 변환 (STT)
 
 [목적]
-- raw_audio/*.wav 오디오 파일을 텍스트로 변환
+- ../01_download 의 오디오(wav)를 텍스트로 변환
 - faster-whisper (large-v3) 모델 사용
 - GPU 가속 지원 (CUDA)
 
-[입력] raw_audio/*.wav
-[출력] raw_data/01_faster_whisper/*.tsv
+[입력] ../01_download/*.wav (01 단계 오디오)
+[출력] 이 폴더(02_stt)에 audio_N.tsv
 
 [의존성] pip install faster-whisper kiwipiepy torch
 """
@@ -23,9 +23,10 @@ from kiwipiepy import Kiwi
 # ==========================================
 # 설정 (Configuration)
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AUDIO_DIR = os.path.join(BASE_DIR, "raw_audio")       # 원본 오디오 폴더
-OUTPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")    # 결과 텍스트 저장 폴더
+HERE = os.path.dirname(os.path.abspath(__file__))      # 02_stt/
+ROOT = os.path.dirname(HERE)                            # 0_Data_Collection
+AUDIO_DIR = os.path.join(ROOT, "01_download")          # 01 단계의 오디오(wav) 읽기
+OUTPUT_DIR = HERE                                       # STT tsv를 이 폴더에 저장
 
 # [수정됨] NVIDIA 라이브러리 경로 자동 탐색 및 등록 (CUDA 12 호환성 강화)
 def setup_nvidia_paths():

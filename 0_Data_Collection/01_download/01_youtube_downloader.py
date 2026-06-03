@@ -7,8 +7,8 @@
 - 00_url_list.txt에 있는 유튜브 URL에서 오디오(wav)만 추출
 - 게임 음성채팅 데이터 수집을 위한 첫 번째 단계
 
-[입력] 00_url_list.txt (유튜브 URL 목록)
-[출력] raw_audio/*.wav (오디오 파일)
+[입력] 00_url_list.txt (같은 폴더의 유튜브 URL 목록)
+[출력] 이 폴더(01_download)에 audio_N.wav(로컬) + audio_N.opus(git/LFS 압축본)
 
 [의존성] pip install yt-dlp
 """
@@ -17,10 +17,10 @@ import os
 import subprocess
 import yt_dlp
 
-# 설정
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AUDIO_DIR = os.path.join(BASE_DIR, "raw_audio")   # 오디오 저장소
-URL_LIST_FILE = os.path.join(BASE_DIR, "scripts", "00_url_list.txt")
+# 설정 (이 단계 폴더 = 01_download/ — 오디오·url·스크립트가 함께 있음)
+HERE = os.path.dirname(os.path.abspath(__file__))
+AUDIO_DIR = HERE                                       # wav/opus를 이 폴더에 저장
+URL_LIST_FILE = os.path.join(HERE, "00_url_list.txt")
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -106,4 +106,4 @@ if __name__ == "__main__":
         # git 보관용 압축본(opus) 생성 (원본 wav는 로컬에만 유지)
         compress_to_opus(idx)
         
-    print("\nAll downloads finished! Check 'raw_audio' folder.")
+    print("\nAll downloads finished! Check this (01_download) folder.")

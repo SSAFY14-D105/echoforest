@@ -9,8 +9,8 @@
 - 마스킹된 욕설 복구 (X → 실제 단어)
 - 중복 문장 제거
 
-[입력] raw_data/01_faster_whisper/*.tsv
-[출력] processed_data/03_cleaned/merged_stt_cleaned.tsv
+[입력] ../02_stt/*.tsv
+[출력] 이 폴더(03_clean)에 merged_stt_cleaned.tsv
 """
 
 import os
@@ -20,9 +20,10 @@ import re
 # ==========================================
 # 설정
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INPUT_DIR = os.path.join(BASE_DIR, "raw_data", "01_faster_whisper")
-OUTPUT_FILE = os.path.join(BASE_DIR, "processed_data", "03_cleaned", "merged_stt_cleaned.tsv")
+HERE = os.path.dirname(os.path.abspath(__file__))      # 03_clean/
+ROOT = os.path.dirname(HERE)                            # 0_Data_Collection
+INPUT_DIR = os.path.join(ROOT, "02_stt")               # 02 단계의 STT tsv
+OUTPUT_FILE = os.path.join(HERE, "merged_stt_cleaned.tsv")
 
 def clean_text(text):
     """

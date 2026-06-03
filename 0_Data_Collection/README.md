@@ -1,61 +1,60 @@
-# 0_Data_Collection — 데이터 수집·라벨링 단계
+# 0_Data_Collection — 데이터 수집·라벨링
 
-게임 음성채팅(STT) 데이터를 모으고, 정제하고, 라벨링해서 **파인튜닝/평가에 쓸 데이터셋을 만드는** 파이프라인입니다.
+게임 음성채팅(STT)을 모아 정제·라벨링해서 **파인튜닝/평가용 데이터셋**을 만드는 단계입니다.
+각 처리 단계가 **자기 폴더에 코드 + 그 단계의 출력 데이터를 함께** 둡니다(`01`→`06`).
 
----
+## 📁 구조
 
-## ⚠️ 먼저 읽기 — "수집"은 쓰였고, "8라벨 라벨링"만 안 쓰였습니다
-
-이 폴더는 **수집(데이터 모으기)** 과 **라벨링(분류 붙이기)** 두 일을 합니다. 라벨링은 방식이 두 번 바뀌었는데(8라벨→10라벨), **수집한 문장 자체는 그대로 최종에 쓰였어요.**
-
-| 부분 | 위치 | 최종 사용? |
-| :--- | :--- | :---: |
-| **데이터 수집** (YouTube→STT→정제) | `scripts/01~05`, `processed_data/04_anonymized_clean`(코퍼스) | ✅ **실제 데이터의 출처** — 테스트셋(688)의 게임 STT 부분이 여기 수집분에서 나옴(라벨링 원본은 `datasets/_archive`) |
-| 라벨링 ① **8라벨**(초기 시도) | (전부 제거 — velog에 기록) | ❌ **미채택** — 8라벨 체계·산출물 모두 정리, 10라벨로 선회 |
-| 라벨링 ② **10라벨 unSmile**(최종) | `collected_game_chat/`, `datasets/` | ✅ **파인튜닝·평가에 이게 쓰임** |
-
-> **핵심:** 8라벨 *분류 체계* 는 버렸지만, **그 데이터를 모은 수집 파이프라인(01~05)은 지금 테스트셋의 출처**라 필요합니다. 최종 학습/평가에 들어가는 라벨링된 데이터는 `datasets/`(10라벨)이고, 8라벨 산출물은 *버려진 라벨링 시도의 기록*으로 남아 있어요.
-
----
-
-## 📁 폴더 지도
-
-| 폴더/파일 | 내용 | 역할 |
+| 폴더 | 하는 일 | 입력 → 출력 |
 | :--- | :--- | :--- |
-| **`datasets/`** ⭐ | `train_collected.tsv`(518) · `test_set.tsv`(688) · `_archive/` · README | **최종 데이터 단일 출처**(10라벨). 모든 학습·평가가 여기서 읽음 |
-| `collected_game_chat/` ⭐ | `collected_game_chat.json` · `build_train_collected.py` · README | **손수 수집한 게임 채팅**(메아리의 숲 플레이 STT + YouTube STT, clean/negative) → unSmile 10라벨 tsv(=train_collected 518) |
-| `scripts/` | 수집 파이프라인 `00`~`05` + 설계노트 + README | YouTube→STT→정제→익명화 (아래 표) |
-| `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` (실행 시 생성) | 수집 파이프라인(`scripts/03~05`)의 **중간 산출물**(정제·익명화 STT) |
-| `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
+| `01_download/` | YouTube 오디오 다운로드 (yt-dlp, 403 우회) | `00_url_list.txt` → `audio_N.wav`(로컬)·`audio_N.opus`(LFS) |
+| `02_stt/` | faster-whisper large-v3 STT (GPU) | `../01_download` 오디오 → `audio_N.tsv` |
+| `03_clean/` | 병합·정제(기호·자모·외국어 노이즈, 중복) | `../02_stt` → `merged_stt_cleaned.tsv` |
+| `04_anonymize/` | **개인지칭(닉네임) 행 삭제** (Kiwi) | `../03_clean` → `final_dataset.tsv` |
+| `05_advanced_clean/` | 고급 정제(환각·중복, min 2자) | `../04_anonymize` → `final_dataset_clean.tsv` |
+| `06_prelabel/` | **unSmile abuse/clean 사전라벨** | `../05_advanced_clean` → `review_candidates.tsv` |
+| `collected_game_chat/` ⭐ | 손수 수집한 게임채팅(메아리의 숲 플레이 STT + YouTube STT)을 clean/negative 분류 | `*.json` → `datasets/train_collected.tsv`(518) |
+| `datasets/` ⭐ | **최종 단일 출처**: `train_collected`(518)·`test_set`(688)·`_archive` | 모든 학습·평가가 여기서 읽음 |
 
-> 📍 STT **엔진 선택**(Web Speech vs Whisper) 비교 실험은 데이터 수집이 아니라 모델 선정 단계라, [`1_Model_Selection/00_STT_Selection/`](../1_Model_Selection/00_STT_Selection)로 옮겼습니다.
+> `06`의 사전라벨은 **초안** → 사람이 `검수` 칼럼 확정 → 문장+10라벨만 추출해 학습 데이터에 합침(누수검증 후).
 
-> ℹ️ **공식 unSmile 원본은 최상위 [`UnSmile/`](../UnSmile)** (`UnSmile_Dataset`, `UnSmile_Dataset_Drop_개인지칭`)에 있고, 최종 파인튜닝([`3_UnSmile_Correction`](../3_UnSmile_Correction))이 그걸 읽습니다. 예전 8라벨 시도가 쓰던 unSmile 가공본(`unsmile/`)은 최종 파이프라인에서 안 써서 제거했습니다.
+## 🔗 흐름
 
----
-
-## 🔧 scripts/ — 수집 파이프라인 (01~05)
-
-실행 순서대로:
-
-| # | 스크립트 | 하는 일 |
-| :--- | :--- | :--- |
-| 00 | `00_url_list.txt` | 협동게임 YouTube URL 목록 |
-| 01 | `01_youtube_downloader.py` | URL → 오디오(wav) 다운로드 → `raw_audio/` (yt-dlp, 403 우회) |
-| 02 | `02_whisper_transcriber.py` | 오디오 → 텍스트 (**faster-whisper large-v3**, GPU) |
-| 03 | `03_text_clean.py` | STT 결과 병합 + 숫자/기호 제거 + 마스킹 욕설 복구 |
-| 04 | `04_text_anonymize.py` | 닉네임/고유명사 → `[유저]` 치환 (Kiwi 형태소) |
-| 05 | `05_text_clean_advanced.py` | 노이즈·STT 환각·중복 제거 |
-
-> 실행법·의존성은 [`scripts/README.md`](scripts/README.md), 설계 의사결정은 [`scripts/수집_파이프라인_설계노트.md`](scripts/수집_파이프라인_설계노트.md) 참고.
-> ※ 경로는 `BASE_DIR = 0_Data_Collection`(부모) 기준이라, `scripts/`에서 실행해도 `processed_data/`·`raw_audio/`를 올바로 찾습니다.
-> ※ 예전 8라벨 라벨링 스크립트(06~12)는 미채택이라 정리했고, 그 시도의 결과물만 [`processed_data/`](processed_data)에 대표본으로 남겼습니다.
-
----
-
-## 🎯 그래서 다음 단계로 뭐가 넘어가나
 ```
-collected_game_chat/ (메아리의 숲+YouTube STT, 손수분류) ─→ datasets/train_collected.tsv (518, 10라벨) ─→ 4_LoRA / 5_Full 추가학습
-YouTube 협동게임 STT + 사람 라벨링          ─→ datasets/test_set.tsv (688, 10라벨) ───────→ 1_Model_Selection·6_Comparison·8_Quantization 평가
+[수집 파이프라인] — 각 폴더에 코드+출력 함께
+01_download → 02_stt → 03_clean → 04_anonymize → 05_advanced_clean → 06_prelabel
+ (오디오)      (STT)     (정제)      (개인지칭삭제)     (고급정제)          (사전라벨) ─→ 사람검수 ─→ datasets/(학습보강)
+
+[기존 학습/평가 데이터]
+collected_game_chat (메아리의숲+YouTube STT, 손수분류) ─→ datasets/train_collected.tsv (518) ─→ 4_LoRA/5_Full 학습
+                                                          datasets/test_set.tsv (688, 고정) ─→ 모델선정·비교·양자화 평가
 ```
-> 데이터 무결성·구성은 [`datasets/README.md`](datasets/README.md)에 정리돼 있습니다.
+
+## 🚀 실행 (conda)
+
+```bash
+python 01_download/01_youtube_downloader.py
+python 02_stt/02_whisper_transcriber.py
+python 03_clean/03_text_clean.py
+python 04_anonymize/04_text_anonymize.py
+python 05_advanced_clean/05_text_clean_advanced.py
+python 06_prelabel/06_prelabel_unsmile.py
+```
+
+> conda 환경에서 `PYTHONUTF8=1`(이모지 cp949 크래시 방지), GPU STT는 `HF_HUB_DISABLE_SYMLINKS=1` 권장.
+> 의존성: `conda install ffmpeg -c conda-forge` + `pip install yt-dlp faster-whisper torch kiwipiepy pandas transformers`
+
+## 🏷️ 라벨 정책 — abuse/clean 이진
+
+unSmile **10라벨 포맷은 유지**하되(공식·train_collected 호환), 게임 맥락상 실제 분류는 **`악플/욕설` vs `clean` 이진**만 한다. 이유 — 혐오 '대상' 세분류(여성/남성/지역/종교…)는 게임 채팅에 거의 없음 · unSmile은 multi-label이라 욕설/혐오 라벨만 보면 됨 · 기획서 목표가 "악플/욕설 Recall 개선". (상세: `06` docstring · `collected_game_chat/README`)
+
+## 🗂️ git 정책
+
+- 원본 `*.wav`: 로컬만(용량). 압축본 `*.opus`: **LFS로 커밋**(원본 영상 삭제 대비 아카이브).
+- STT·정제 tsv: 작은 텍스트라 커밋(전사본 보존).
+
+## ℹ️ 참고
+
+- 예전 **8라벨 자체 분류 시도**는 미채택이라 제거하고 10라벨 unSmile로 선회(서사는 velog).
+- 공식 unSmile 원본은 최상위 [`UnSmile/`](../UnSmile), 보정은 [`3_UnSmile_Correction`](../3_UnSmile_Correction).
+- 파이프라인 설계 의사결정: [`수집_파이프라인_설계노트.md`](수집_파이프라인_설계노트.md).

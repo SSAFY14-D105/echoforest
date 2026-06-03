@@ -18,8 +18,8 @@ unSmile 모델로 abuse/clean **사전라벨** → 사람 검수용 tsv 생성
   최대 확률이 THRESHOLD 이상이면 `악플/욕설=1`, 아니면 `clean=1`로 이진 축약한다.
 - 기획서 핵심 목표도 "악플/욕설 Recall 개선"이라, 이 이진(욕설 vs clean)이면 충분하다.
 
-[입력] processed_data/04_anonymized_clean/final_dataset_clean.tsv
-[출력] processed_data/06_prelabeled/review_candidates.tsv
+[입력] ../05_advanced_clean/final_dataset_clean.tsv
+[출력] 이 폴더(06_prelabel)에 review_candidates.tsv
 
 [의존성] pip install transformers torch
 """
@@ -29,9 +29,10 @@ import csv
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INPUT_FILE = os.path.join(BASE_DIR, "processed_data", "04_anonymized_clean", "final_dataset_clean.tsv")
-OUTPUT_DIR = os.path.join(BASE_DIR, "processed_data", "06_prelabeled")
+HERE = os.path.dirname(os.path.abspath(__file__))      # 06_prelabel/
+ROOT = os.path.dirname(HERE)                            # 0_Data_Collection
+INPUT_FILE = os.path.join(ROOT, "05_advanced_clean", "final_dataset_clean.tsv")
+OUTPUT_DIR = HERE
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "review_candidates.tsv")
 
 MODEL_ID = "smilegate-ai/kor_unsmile"
