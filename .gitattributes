@@ -9,3 +9,4 @@
 /5_Model_Comparison/models/lora_game_kcelectra_v2.zip filter=lfs diff=lfs merge=lfs -text
 /5_Model_Comparison/models/lora_tutorial_kcbert_v1.zip filter=lfs diff=lfs merge=lfs -text
 /5_Model_Comparison/models/lora_tutorial_kcbert_v2.zip filter=lfs diff=lfs merge=lfs -text
+/0_Data_Collection/raw_audio/audio_1.wav filter=lfs diff=lfs merge=lfs -text

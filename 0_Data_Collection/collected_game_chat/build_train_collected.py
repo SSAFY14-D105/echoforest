@@ -2,12 +2,13 @@ import json
 import pandas as pd
 import os
 
-# 파일 경로 설정
-keywords_path = r'C:/SSAFY/S14P11D105/0_Keywords/keywords.json'
-output_path = r'C:/SSAFY/S14P11D105/1_Keywords_test_인식률_테스트/keywords_unsmile_format.tsv'
+# 파일 경로 (이 스크립트 기준 상대 경로)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+input_path = os.path.join(BASE_DIR, 'collected_game_chat.json')                 # 직접 수집한 게임 채팅(clean/negative)
+output_path = os.path.join(BASE_DIR, '..', 'datasets', 'train_collected.tsv')   # unSmile 10라벨 학습 tsv (518)
 
 # JSON 파일 로드
-with open(keywords_path, 'r', encoding='utf-8') as f:
+with open(input_path, 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 데이터 추출

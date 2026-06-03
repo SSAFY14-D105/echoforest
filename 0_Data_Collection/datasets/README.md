@@ -6,7 +6,7 @@
 
 | 파일 | 건수 | 구성 | 용도 |
 | :--- | :---: | :--- | :--- |
-| **train_collected.tsv** | 518 | clean 284 / abuse 234 | 파인튜닝 **추가 학습**(v2)에 투입되는 게임 STT |
+| **train_collected.tsv** | 518 | clean 284 / abuse 234 | 파인튜닝 **추가 학습**(v2)에 투입. 출처: 직접 수집한 게임 채팅([`../collected_game_chat/`](../collected_game_chat)) — YouTube STT 파이프라인과 별개 |
 | **test_set.tsv** | **688** | abuse 215 / clean 473 | **held-out 테스트셋** — 모델 선정·비교·양자화 평가에 공통 사용 |
 
 ### test_set.tsv 무결성 (검증됨)
