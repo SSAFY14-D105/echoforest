@@ -10,7 +10,7 @@
 
 | 부분 | 위치 | 최종 사용? |
 | :--- | :--- | :---: |
-| **데이터 수집** (YouTube→STT→정제) | `scripts/01~05`, `processed_data/`(텍스트) | ✅ **실제 데이터의 출처** — 테스트셋(688) 상당수가 여기 수집 STT에서 나옴 |
+| **데이터 수집** (YouTube→STT→정제) | `scripts/01~05`, `processed_data/04_anonymized_clean`(코퍼스) | ✅ **실제 데이터의 출처** — 테스트셋(688)의 게임 STT 부분이 여기 수집분에서 나옴(라벨링 원본은 `datasets/_archive`) |
 | 라벨링 ① **8라벨**(초기 시도) | `scripts/06·07·09·11·12`, `processed_data/`(8라벨 컬럼) | ❌ **미채택** — 같은 문장을 10라벨로 재라벨함 |
 | 라벨링 ② **10라벨 unSmile**(최종) | `labeling/`, `datasets/` | ✅ **파인튜닝·평가에 이게 쓰임** |
 
@@ -25,7 +25,7 @@
 | **`datasets/`** ⭐ | `train_collected.tsv`(518) · `test_set.tsv`(688) · `_archive/` · README | **최종 데이터 단일 출처**(10라벨). 모든 학습·평가가 여기서 읽음 |
 | `labeling/` | `keywords.json` · `keywords.md` · `convert_keywords_to_tsv.py` | 우리가 게임하며 쓴 표현(긍정/부정)을 **키워드로 모아 → unSmile 10라벨 tsv(=train_collected 518)** 로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`12` + README | YouTube→STT→정제→8라벨 라벨→병합 (아래 표) |
-| `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` → `05_analysis`·`05_external` → `06_ai_labeled` | scripts 파이프라인의 **단계별 중간 산출물**(전부 8라벨 시도 기록). 단, `03/04`의 정제 STT는 테스트셋(688)의 출처 |
+| `processed_data/` | `04_anonymized_clean`(코퍼스+수동8라벨) · `05_external`(unsmile 재라벨) · `06_ai_labeled`(Gemini 샘플) | **8라벨 시도의 대표 산출물만** 보존(중간 단계는 정리). 8라벨 미채택 |
 | `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 (Whisper 채택 전 비교) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
 

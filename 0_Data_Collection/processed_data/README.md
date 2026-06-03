@@ -1,15 +1,14 @@
-# processed_data — scripts 파이프라인 단계별 중간 산출물 (8라벨 시도 기록)
+# processed_data — 8라벨 시도의 대표 산출물 (핵심만 보존)
 
-`scripts/03~12`가 단계별로 떨어뜨린 중간 파일들입니다. **분류 체계(8라벨)는 최종 미채택**이라, 이 폴더 대부분은 *버려진 8라벨 시도의 기록*입니다.
-단, `03_cleaned` · `04_anonymized(_clean)`의 **정제된 STT 문장 자체**는 최종 테스트셋([`../datasets/test_set.tsv`](../datasets), 688)의 출처라 의미가 있습니다.
+게임 STT를 모아 **8라벨로 분류해보려던 시도**의 흔적입니다. 8라벨 체계는 **최종 미채택**(→ 10라벨 unSmile로 선회)이라, 수집·정제 중간 단계는 정리하고 **각 시도의 대표 결과물 1개씩**만 남겼습니다.
 
-| 하위 폴더 | 산출 스크립트 | 내용 | 포맷 |
-| :--- | :--- | :--- | :--- |
-| `03_cleaned/` | `03_text_clean.py` | STT 병합·정제 문장 | `sentence  label` |
-| `04_anonymized/` | `04_text_anonymize.py` | 닉네임 → `[유저]` 익명화 (17,296행) | `sentence  label` |
-| `04_anonymized_clean/` | `05_text_clean_advanced.py` + 라벨링 | 고급 정제(15,282행) + 8라벨본 | `sentence label` / 8라벨 |
-| `05_analysis/` | (구 8라벨 분석 스크립트, 제거됨) | 라벨 분포·키워드·샘플 통계 txt | 텍스트 |
-| `05_external/` | `08·09_*unsmile*.py` | UnSmile → 3/8라벨 변환본 | 3·8라벨 |
-| `06_ai_labeled/` | `11_ai_labeling.py` | Gemini 8라벨 자동 라벨 (+source) | 8라벨 |
+| 파일 | 무엇 | 라벨 |
+| :--- | :--- | :--- |
+| `04_anonymized_clean/final_dataset.tsv` | 수집·정제·익명화한 게임 STT **15,281문장** + 키워드 기반 **수동 8라벨** | 8라벨 |
+| `05_external/unsmile_relabeled.tsv` | 공식 UnSmile을 게임용 8라벨로 **재분류**해본 결과 | 8라벨 |
+| `06_ai_labeled/gemini_labeled_100.tsv` | Gemini로 **AI 자동 8라벨**을 붙여본 샘플(100문장) | 8라벨 |
 
-> 최종 학습/평가 데이터는 여기가 아니라 [`../datasets/`](../datasets)(10라벨)입니다. 전체 맥락은 [`../README.md`](../README.md).
+즉 8라벨을 **수동 · 외부데이터(unsmile) · AI** 3가지로 시도 → 모두 접고 **10라벨 unSmile** 채택.
+
+> 최종 학습/평가 데이터는 여기가 아니라 [`../datasets/`](../datasets)(10라벨)입니다. 테스트셋(688) 문장의 라벨링 원본은 [`../datasets/_archive/human_labeled_1666.tsv`](../datasets/_archive)에 보존돼 있습니다.
+> 수집·정제 단계(03~05) 중간 산출물은 정리했고, 단계 정의는 [`../scripts/README.md`](../scripts/README.md) · [설계노트](../scripts/수집_파이프라인_설계노트.md)에 남아 있습니다.

@@ -36,16 +36,13 @@ data_collection/
 │   ├── 12_merge_final.py        # 최종 데이터 병합
 │   └── 수집_파이프라인_설계노트.md # 파이프라인 설계 의사결정 기록 (청킹·403우회·자모제거 이유)
 │
-├── 📂 processed_data/           # 처리된 데이터
-│   ├── 04_anonymized_clean/     # STT 데이터 (최종)
-│   │   ├── final_dataset.tsv        # 원본
-│   │   ├── final_dataset_clean.tsv  # 정제됨
-│   │   └── final_dataset_labeled.tsv # 라벨 완료
-│   │
-│   └── 05_external/             # UnSmile 데이터
-│       ├── unsmile_3label.tsv       # 3라벨 (욕설/혐오/일반)
-│       ├── unsmile_converted_8label.tsv # 기존 8라벨
-│       └── unsmile_relabeled.tsv    # 재라벨링 완료
+├── 📂 processed_data/           # 8라벨 시도 대표 산출물 (핵심만)
+│   ├── 04_anonymized_clean/     # 수집 코퍼스 15,281 + 수동 8라벨
+│   │   └── final_dataset.tsv
+│   ├── 05_external/             # UnSmile → 게임 8라벨 재분류
+│   │   └── unsmile_relabeled.tsv
+│   └── 06_ai_labeled/           # Gemini AI 8라벨 샘플(100)
+│       └── gemini_labeled_100.tsv
 │
 ├── 📂 raw_audio/                # 원본 오디오 파일
 └── 📂 web_speech_api/           # 웹 STT 관련
