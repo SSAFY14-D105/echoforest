@@ -11,7 +11,7 @@
 | 부분 | 위치 | 최종 사용? |
 | :--- | :--- | :---: |
 | **데이터 수집** (YouTube→STT→정제) | `scripts/01~05`, `processed_data/04_anonymized_clean`(코퍼스) | ✅ **실제 데이터의 출처** — 테스트셋(688)의 게임 STT 부분이 여기 수집분에서 나옴(라벨링 원본은 `datasets/_archive`) |
-| 라벨링 ① **8라벨**(초기 시도) | `processed_data/`(결과물 3종) | ❌ **미채택** — 라벨링 스크립트는 정리, 결과물만 기록으로 남김 |
+| 라벨링 ① **8라벨**(초기 시도) | (전부 제거 — velog에 기록) | ❌ **미채택** — 8라벨 체계·산출물 모두 정리, 10라벨로 선회 |
 | 라벨링 ② **10라벨 unSmile**(최종) | `collected_game_chat/`, `datasets/` | ✅ **파인튜닝·평가에 이게 쓰임** |
 
 > **핵심:** 8라벨 *분류 체계* 는 버렸지만, **그 데이터를 모은 수집 파이프라인(01~05)은 지금 테스트셋의 출처**라 필요합니다. 최종 학습/평가에 들어가는 라벨링된 데이터는 `datasets/`(10라벨)이고, 8라벨 산출물은 *버려진 라벨링 시도의 기록*으로 남아 있어요.
@@ -25,7 +25,7 @@
 | **`datasets/`** ⭐ | `train_collected.tsv`(518) · `test_set.tsv`(688) · `_archive/` · README | **최종 데이터 단일 출처**(10라벨). 모든 학습·평가가 여기서 읽음 |
 | `collected_game_chat/` ⭐ | `collected_game_chat.json` · `build_train_collected.py` · README | **직접 수집한 게임 채팅**(clean/negative) → unSmile 10라벨 tsv(=train_collected 518)로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`05` + 설계노트 + README | YouTube→STT→정제→익명화 (아래 표) |
-| `processed_data/` | `04_anonymized_clean`(코퍼스+수동8라벨) · `05_external`(unsmile 재라벨) · `06_ai_labeled`(Gemini 샘플) | **8라벨 시도의 대표 산출물만** 보존(중간 단계는 정리). 8라벨 미채택 |
+| `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` (실행 시 생성) | 수집 파이프라인(`scripts/03~05`)의 **중간 산출물**(정제·익명화 STT) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
 
 > 📍 STT **엔진 선택**(Web Speech vs Whisper) 비교 실험은 데이터 수집이 아니라 모델 선정 단계라, [`1_Model_Selection/00_STT_Selection/`](../1_Model_Selection/00_STT_Selection)로 옮겼습니다.
