@@ -44,8 +44,7 @@ data_collection/
 │   └── 06_ai_labeled/           # Gemini AI 8라벨 샘플(100)
 │       └── gemini_labeled_100.tsv
 │
-├── 📂 raw_audio/                # 원본 오디오 파일
-└── 📂 web_speech_api/           # 웹 STT 관련
+└── 📂 raw_audio/                # 원본 오디오 파일
 ```
 
 ---

@@ -26,8 +26,9 @@
 | `labeling/` | `keywords.json` · `keywords.md` · `convert_keywords_to_tsv.py` | 우리가 게임하며 쓴 표현(긍정/부정)을 **키워드로 모아 → unSmile 10라벨 tsv(=train_collected 518)** 로 변환 |
 | `scripts/` | 수집 파이프라인 `00`~`12` + README | YouTube→STT→정제→8라벨 라벨→병합 (아래 표) |
 | `processed_data/` | `04_anonymized_clean`(코퍼스+수동8라벨) · `05_external`(unsmile 재라벨) · `06_ai_labeled`(Gemini 샘플) | **8라벨 시도의 대표 산출물만** 보존(중간 단계는 정리). 8라벨 미채택 |
-| `web_speech_api/` | `audio_1_google*.txt` | Web Speech API STT 출력 실험 기록 (Whisper 채택 전 비교) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
+
+> 📍 STT **엔진 선택**(Web Speech vs Whisper) 비교 실험은 데이터 수집이 아니라 모델 선정 단계라, [`1_Model_Selection/00_STT_Selection/`](../1_Model_Selection/00_STT_Selection)로 옮겼습니다.
 
 > ℹ️ **공식 unSmile 원본은 최상위 [`UnSmile/`](../UnSmile)** (`UnSmile_Dataset`, `UnSmile_Dataset_Drop_개인지칭`)에 있고, 최종 파인튜닝([`3_UnSmile_Correction`](../3_UnSmile_Correction))이 그걸 읽습니다. 예전 8라벨 시도가 쓰던 unSmile 가공본(`unsmile/`)은 최종 파이프라인에서 안 써서 제거했습니다.
 
