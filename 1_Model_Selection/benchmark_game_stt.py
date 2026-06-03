@@ -215,8 +215,8 @@ def create_visualizations(results):
     f1s = [r["abuse_f1"] * 100 for r in successful]
     latencies = [r["avg_latency"] for r in successful]
     
-    # 베스트 모델 인덱스
-    best_idx = np.argmax(recalls)
+    # 베스트 모델 인덱스 (선정 기준: Abuse F1 — recall-only는 over-flagging 모델을 잘못 선택)
+    best_idx = np.argmax(f1s)
     
     # Figure 1: 3-Panel 비교
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -258,23 +258,23 @@ def create_visualizations(results):
     fig, ax = plt.subplots(figsize=(10, 6))
     
     bar_colors = ['#27AE60' if i == best_idx else '#BDC3C7' for i in range(len(names))]
-    bars = ax.barh(names, recalls, color=bar_colors, edgecolor='black', linewidth=1)
-    
-    ax.set_xlabel('Abuse Recall (%)', fontsize=12)
-    ax.set_title(f'6 Model Benchmark → Best: {successful[best_idx]["model_name"]}', 
+    bars = ax.barh(names, f1s, color=bar_colors, edgecolor='black', linewidth=1)
+
+    ax.set_xlabel('Abuse F1 (%)', fontsize=12)
+    ax.set_title(f'Model Benchmark (selected by F1) → Best: {successful[best_idx]["model_name"]}',
                  fontsize=14, fontweight='bold')
     ax.set_xlim(0, 100)
-    
-    for i, (bar, val) in enumerate(zip(bars, recalls)):
+
+    for i, (bar, val) in enumerate(zip(bars, f1s)):
         color = 'white' if i == best_idx else 'black'
         weight = 'bold' if i == best_idx else 'normal'
-        ax.text(val - 3 if val > 15 else val + 1, i, f'{val:.1f}%', 
-                va='center', ha='right' if val > 15 else 'left', 
+        ax.text(val - 3 if val > 15 else val + 1, i, f'{val:.1f}%',
+                va='center', ha='right' if val > 15 else 'left',
                 fontsize=11, fontweight=weight, color=color)
-    
+
     # 베스트 모델 강조
-    ax.annotate('✅ SELECTED', xy=(recalls[best_idx], best_idx), 
-                xytext=(recalls[best_idx] + 5, best_idx + 0.3),
+    ax.annotate('✅ SELECTED', xy=(f1s[best_idx], best_idx),
+                xytext=(f1s[best_idx] + 5, best_idx + 0.3),
                 fontsize=10, fontweight='bold', color='#27AE60')
     
     plt.tight_layout()
@@ -330,12 +330,12 @@ def save_results(results, sentences_count):
     print(f"💾 저장: {RESULTS_DIR}/benchmark_results.json")
     
     # Markdown README
-    best = max(successful, key=lambda x: x["abuse_recall"])
+    best = max(successful, key=lambda x: x["abuse_f1"])
     
     md_content = f"""# 🎮 6개 모델 벤치마크 결과
 
 ## 📊 테스트 환경
-- **테스트 데이터**: `game_test.tsv` ({sentences_count}건)
+- **테스트 데이터**: `test_set.tsv` ({sentences_count}건, held-out)
 - **테스트 일시**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 - **데이터 출처**: 협동 게임 STT + 유튜브 협동게임 STT
 
@@ -347,27 +347,28 @@ def save_results(results, sentences_count):
 |------|:------------:|:--------:|:----:|
 """
     
-    for r in sorted(successful, key=lambda x: -x["abuse_recall"]):
+    for r in sorted(successful, key=lambda x: -x["abuse_f1"]):
         selected = "✅" if r["model_name"] == best["model_name"] else ""
         md_content += f"| {r['model_name']} | **{r['abuse_recall']*100:.2f}%** | {r['abuse_f1']*100:.2f}% | {selected} |\n"
     
     md_content += f"""
 ---
 
-## 🎯 UnSmile 선정 이유
+## 🎯 {best['model_name']} 선정 이유
 
-### 1. 최고 성능
-- **Abuse Recall**: {best['abuse_recall']*100:.2f}% (6개 모델 중 1위)
-- **Abuse F1**: {best['abuse_f1']*100:.2f}%
+### 1. 최고 성능 (선정 기준: Abuse F1)
+- **Abuse F1**: {best['abuse_f1']*100:.2f}% (모델 중 1위)
+- **Abuse Precision**: {best['abuse_precision']*100:.2f}% · **Recall**: {best['abuse_recall']*100:.2f}%
+- **Accuracy**: {best['accuracy']*100:.2f}% · **Clean F1**: {best['clean_f1']*100:.2f}%
+
+> ⚠️ 선정은 Recall이 아니라 **F1 기준**. 단순 Recall 최대 모델은 거의 모든 문장을 욕설로 분류해(Precision↓·오탐↑) 실사용 불가 → 균형 지표로 선정.
 
 ### 2. 한국어 혐오 발언 전용
-- Smilegate AI에서 개발한 **한국어 혐오 발언 탐지** 전용 모델
-- 댓글/채팅 데이터로 학습되어 게임 대화에 적합
+- Smilegate AI의 **한국어 혐오 발언 탐지** 전용 모델, 댓글/채팅 학습 → 게임 대화에 적합
 
 ### 3. 다른 모델 한계
-- **KoELECTRA 계열**: Fine-tuning 안 된 베이스 모델 → 성능 저조
-- **Korean Sentiment**: 일반 감정 분석 → 욕설 특화 X
-- **Multilingual**: 한국어 성능 부족
+- **KoELECTRA / Multilingual**: 베이스 모델 → over-flagging으로 Precision 저조
+- **KcELECTRA v2**: 일반 도메인 → 게임 욕설 특화 부족
 
 ---
 
@@ -436,8 +437,8 @@ if __name__ == "__main__":
     # 베스트 모델
     successful = [r for r in all_results if not r.get("error")]
     if successful:
-        best = max(successful, key=lambda x: x["abuse_recall"])
-        print(f"\n🏆 Best: {best['model_name']} (Abuse Recall: {best['abuse_recall']*100:.2f}%)")
+        best = max(successful, key=lambda x: x["abuse_f1"])
+        print(f"\n🏆 Best: {best['model_name']} (Abuse F1: {best['abuse_f1']*100:.2f}%)")
     
     # 시각화 및 저장
     create_visualizations(all_results)
