@@ -166,8 +166,9 @@ def main():
             chunks = []
             print(f"   - Saving progress directly to {os.path.basename(output_path)} every 100 segments...")
             
-            # Unsmile 데이터셋 형식 헤더 (개인지칭 -> 팀원사기저하 변경)
-            TSV_HEADER = "문장\t여성/가족\t남성\t성소수자\t인종/국적\t연령\t지역\t종교\t기타 혐오\t악플/욕설\tclean\t팀원사기저하"
+            # 공식 unSmile / train_collected.tsv 와 동일한 라벨 헤더
+            # (개인지칭·팀원사기저하 같은 커스텀/미사용 칼럼 제거 — 라벨은 이후 사전라벨+검수로 채움)
+            TSV_HEADER = "문장\t여성/가족\t남성\t성소수자\t인종/국적\t연령\t지역\t종교\t기타 혐오\t악플/욕설\tclean"
             
             # 'w' 모드로 열어서 시작 (기존 내용 있으면 날아감)
             with open(output_path, "w", encoding="utf-8") as f:
