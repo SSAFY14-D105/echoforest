@@ -6,7 +6,7 @@
 
 | 파일 | 건수 | 구성 | 용도 |
 | :--- | :---: | :--- | :--- |
-| **train_collected.tsv** | 518 | clean 284 / abuse 234 | 파인튜닝 **추가 학습**(v2)에 투입. 출처: 〈메아리의 숲〉 플레이 녹화 STT([`../collected_game_chat/`](../collected_game_chat)) — scripts의 YouTube 수집과 별개 |
+| **train_collected.tsv** | 518 | clean 284 / abuse 234 | 파인튜닝 **추가 학습**(v2)에 투입. 출처: 손수 수집한 게임 채팅([`../collected_game_chat/`](../collected_game_chat)) — 메아리의 숲 플레이 STT + YouTube 협동게임 STT **둘 다** |
 | **test_set.tsv** | **688** | abuse 215 / clean 473 | **held-out 테스트셋** — 모델 선정·비교·양자화 평가에 공통 사용 |
 
 ### test_set.tsv 무결성 (검증됨)

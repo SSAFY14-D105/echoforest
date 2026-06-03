@@ -23,7 +23,7 @@
 | 폴더/파일 | 내용 | 역할 |
 | :--- | :--- | :--- |
 | **`datasets/`** ⭐ | `train_collected.tsv`(518) · `test_set.tsv`(688) · `_archive/` · README | **최종 데이터 단일 출처**(10라벨). 모든 학습·평가가 여기서 읽음 |
-| `collected_game_chat/` ⭐ | `collected_game_chat.json` · `build_train_collected.py` · README | **〈메아리의 숲〉 플레이 녹화 STT**(clean/negative) → unSmile 10라벨 tsv(=train_collected 518)로 변환 |
+| `collected_game_chat/` ⭐ | `collected_game_chat.json` · `build_train_collected.py` · README | **손수 수집한 게임 채팅**(메아리의 숲 플레이 STT + YouTube STT, clean/negative) → unSmile 10라벨 tsv(=train_collected 518) |
 | `scripts/` | 수집 파이프라인 `00`~`05` + 설계노트 + README | YouTube→STT→정제→익명화 (아래 표) |
 | `processed_data/` | `03_cleaned` → `04_anonymized(_clean)` (실행 시 생성) | 수집 파이프라인(`scripts/03~05`)의 **중간 산출물**(정제·익명화 STT) |
 | `raw_audio/` | (비어있음, `.gitkeep`) | YouTube 오디오(.wav) 저장 위치 — 용량 커서 커밋 안 함 |
@@ -55,7 +55,7 @@
 
 ## 🎯 그래서 다음 단계로 뭐가 넘어가나
 ```
-collected_game_chat/ (메아리의 숲 플레이 STT) ─→ datasets/train_collected.tsv (518, 10라벨) ─→ 4_LoRA / 5_Full 추가학습
+collected_game_chat/ (메아리의 숲+YouTube STT, 손수분류) ─→ datasets/train_collected.tsv (518, 10라벨) ─→ 4_LoRA / 5_Full 추가학습
 YouTube 협동게임 STT + 사람 라벨링          ─→ datasets/test_set.tsv (688, 10라벨) ───────→ 1_Model_Selection·6_Comparison·8_Quantization 평가
 ```
 > 데이터 무결성·구성은 [`datasets/README.md`](datasets/README.md)에 정리돼 있습니다.
