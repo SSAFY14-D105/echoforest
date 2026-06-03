@@ -30,4 +30,4 @@
 
 ## 한계와 다음 단계
 
-Web Speech는 블랙박스(VAD·빔서치 튜닝 불가)지만 런타임 STT엔 그 튜닝이 불필요하다(텍스트만 확보). 다만 **학습=whisper / 런타임=web-speech** 라는 **train/serve skew**가 미측정 리스크로 남아 있다 — 측정 절차는 [`../STT_COMPARISON.md` §4](../STT_COMPARISON.md) 참고. 정확도가 생명인 학습데이터 수집엔 faster-whisper를 따로 쓴다([`../../../0_Data_Collection/02_stt`](../../../0_Data_Collection/02_stt)).
+Web Speech는 블랙박스(VAD·빔서치 튜닝 불가)지만 런타임 STT엔 그 튜닝이 불필요하다(텍스트만 확보). **학습=whisper / 런타임=web-speech** 차이가 있으나, 런타임은 **무BGM·단일화자(자기 마이크)** 라 web-speech에 유리한 조건이라 skew는 작다(학습데이터가 더 시끄러워 방향도 양성). 근거 [`../STT_COMPARISON.md` §4](../STT_COMPARISON.md). 정확도가 생명인 학습데이터 수집엔 faster-whisper를 따로 쓴다([`../../../0_Data_Collection/02_stt`](../../../0_Data_Collection/02_stt)).
