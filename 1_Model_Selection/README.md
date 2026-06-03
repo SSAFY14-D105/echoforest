@@ -1,45 +1,38 @@
-# 🎭 02_Sentiment_Analysis
+# 1_Model_Selection — STT·욕설탐지 모델 선정
 
-게임 내 유저 발화의 **감정/문맥 분석**을 위한 NLP 모델 평가 및 실험 폴더입니다.
+게임 음성채팅 파이프라인의 **두 모델**을 고르는 단계입니다.
+1. **STT 모델** (음성→텍스트): `00_STT_Selection/`
+2. **욕설/혐오 탐지 모델** (텍스트→abuse/clean): 이 폴더 루트의 벤치마크
 
-## 🎯 목표
+## 📂 구조
 
-브라우저(WebGPU)에서 실행 가능한 경량 NLP 모델을 찾기 위해:
-- 다양한 모델의 **정확도(Accuracy)** 비교
-- **레이턴시(Latency)** 측정
-- **메모리 사용량** 확인
-- 한국어 **부정적 문맥** 인식률 테스트
+| 경로 | 내용 |
+| :--- | :--- |
+| `00_STT_Selection/` | STT 후보 비교(`STT_COMPARISON.md`) + 브라우저 Web Speech API 실험(`web_speech_api/`) |
+| `benchmark_game_stt.py` / `.ipynb` | 6개 욕설탐지 모델을 `test_set.tsv`(688)로 벤치마크 |
+| `results/` | 벤치마크 산출물: `MODEL_BENCHMARK.md`·`benchmark_results.csv/.json`·비교 그래프 2종 |
+| `MODEL_SELECTION.md` | 선정 요약 메모 |
 
-## 📂 폴더 구조
+## 🏆 선정 결과 — UnSmile
 
+`test_set.tsv`(688, held-out) 기준 **Abuse F1**로 선정. (상세: [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
+
+| 모델 | Abuse F1 | 선정 |
+| :--- | :---: | :---: |
+| **UnSmile** (`smilegate-ai/kor_unsmile`) | **74.87%** | ✅ |
+| Multilingual / KoELECTRA / KcELECTRA | ≤ 43.79% | |
+
+> ⚠️ 선정 기준은 Recall이 아니라 **F1**. Recall만 최대인 모델(KoELECTRA Small 86.98%)은 거의 모든 문장을 욕설로 분류해 Precision이 무너져 실사용 불가 → 균형 지표로 선정.
+
+## 🚀 실행
+
+```bash
+python benchmark_game_stt.py   # ../0_Data_Collection/datasets/test_set.tsv 로 평가 → results/ 갱신
 ```
-02_Sentiment_Analysis/
-├── README.md              # 현재 파일
-├── CONTEXT.md             # 왜 감정 분석이 필요한가
-├── evaluation_guide.md    # 평가 방법론 및 지표 정의
-├── results/               # 실험 결과 저장
-│   └── TEMPLATE.md        # 결과 기록 템플릿
-└── models/                # 모델별 테스트
-    ├── 01_DistilKoBERT/
-    ├── 02_MobileBERT/
-    └── 03_TinyBERT/
-```
-
-## 🚀 Quick Start
-
-1. 평가 방법 확인: [`evaluation_guide.md`](./evaluation_guide.md)
-2. 실험 결과 기록: [`results/TEMPLATE.md`](./results/TEMPLATE.md) 복사 후 작성
-3. 모델별 테스트: `models/` 폴더에서 진행
-
-## 📊 평가 대상 모델
-
-| 모델 | 예상 크기 | 한국어 | 상태 |
-|------|----------|--------|------|
-| DistilKoBERT | ~65MB (양자화) | ✅ | 🔲 미테스트 |
-| MobileBERT | ~25MB (양자화) | ⚠️ 영어 | 🔲 미테스트 |
-| TinyBERT | ~15MB (양자화) | ⚠️ 영어 | 🔲 미테스트 |
 
 ## 📖 관련 문서
 
-- 프로젝트 전체 개요: [`../CONTEXT.md`](../CONTEXT.md)
-- STT 관련: [`../01_STT/`](../01_STT/)
+- 프로젝트 기술 개요(스택·아키텍처): [`../CONTEXT.md`](../CONTEXT.md)
+- 게임 기획서: [`../게임전체기획서.md`](../게임전체기획서.md)
+- 데이터셋 출처·라벨 정책: [`../0_Data_Collection/`](../0_Data_Collection/)
+- 선정한 UnSmile 파인튜닝: [`../4_LoRA_Fine_Tuning/`](../4_LoRA_Fine_Tuning/) · [`../5_Full_Fine_Tuning/`](../5_Full_Fine_Tuning/)
