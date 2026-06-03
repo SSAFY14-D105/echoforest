@@ -1,14 +1,14 @@
 # 1_Model_Selection — STT·욕설탐지 모델 선정
 
 게임 음성채팅 파이프라인의 **두 모델**을 고르는 단계입니다.
-1. **STT 모델** (음성→텍스트): `00_STT_Selection/`
+1. **STT 엔진** (음성→텍스트, 런타임): `00_STT_Engine_Selection/`
 2. **욕설/혐오 탐지 모델** (텍스트→abuse/clean): 이 폴더 루트의 벤치마크
 
 ## 📂 구조
 
 | 경로 | 내용 |
 | :--- | :--- |
-| `00_STT_Selection/` | STT 후보 비교(`STT_COMPARISON.md`) + 브라우저 Web Speech API 실험(`web_speech_api/`) |
+| `00_STT_Engine_Selection/` | 런타임 STT 엔진 선정(Web Speech API) — 근거 `STT_COMPARISON.md` + 실측·테스트 `web_speech_api/` |
 | `benchmark_game_stt.py` / `.ipynb` | 6개 욕설탐지 모델을 `test_set.tsv`(688)로 벤치마크 |
 | `results/` | 벤치마크 산출물: `MODEL_BENCHMARK.md`·`benchmark_results.csv/.json`·비교 그래프 2종 |
 | `MODEL_SELECTION.md` | 선정 요약 메모 |
