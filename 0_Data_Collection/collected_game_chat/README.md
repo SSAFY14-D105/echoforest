@@ -22,8 +22,8 @@
 | :--- | :--- |
 | 게임 컨텍스트 | 필요한 건 "부정적 발언 탐지"이지 혐오 대상 구분이 아님 |
 | 10개 카테고리 | 여성/남성/성소수자/인종/연령/지역/종교는 특정 집단 혐오용 → 게임엔 거의 안 나옴 |
-| 모델 동작 | unSmile은 multi-label → 라벨 독립 예측. 악플/욕설만 보면 됨 |
+| 모델 동작(추론) | unSmile은 multi-label → **9개 부정 라벨 중 하나라도 뜨면 abuse**, `clean`만이면 평문 |
 | 기획서 | 핵심 목표가 "악플/욕설 Recall 개선" |
 
-> unSmile은 multi-label이라 10개 다 예측하지만, 우리는 **악플/욕설·clean** 만 봅니다.
+> unSmile은 부정 라벨 9개를 각각 예측하지만(`clean` 아닌 게 **하나라도** 뜨면 abuse), 우리는 그 결과를 **abuse(`악플/욕설`) vs `clean`** 이진으로만 저장·사용합니다.
 > 실행: `python build_train_collected.py` → `../datasets/train_collected.tsv`(518) 갱신.

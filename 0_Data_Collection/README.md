@@ -46,7 +46,13 @@ python 06_prelabel/06_prelabel_unsmile.py
 
 ## 🏷️ 라벨 정책 — abuse/clean 이진
 
-unSmile **10라벨 포맷은 유지**하되(공식·train_collected 호환), 게임 맥락상 실제 분류는 **`악플/욕설` vs `clean` 이진**만 한다. 이유 — 혐오 '대상' 세분류(여성/남성/지역/종교…)는 게임 채팅에 거의 없음 · unSmile은 multi-label이라 욕설/혐오 라벨만 보면 됨 · 기획서 목표가 "악플/욕설 Recall 개선". (상세: `06` docstring · `collected_game_chat/README`)
+unSmile **10라벨 포맷은 유지**하되(공식·train_collected 호환), 우리 데이터는 **abuse vs clean 이진**으로 모은다.
+
+**판정 규칙**: unSmile의 **9개 부정 라벨**(여성/가족·남성·성소수자·인종/국적·연령·지역·종교·기타 혐오·악플/욕설) **중 하나라도** 임계값(0.3)을 넘으면 **abuse**, 하나도 안 뜨고 `clean`만이면 **평문(clean)**.
+- 즉 `clean`이 아닌 어떤 부정 라벨(예: 지역·종교 혐오)이 떠도 **모두 abuse로 잡는다** — "악플/욕설"만 보는 게 아님.
+- 다만 **저장**은 9개를 굳이 구분하지 않고 `악플/욕설=1`(abuse) / `clean=1`(평문) 한 쌍으로 이진화한다. 게임 채팅 부정 발언은 대부분 `악플/욕설`이고, 기획서 목표도 "악플/욕설 Recall 개선"이라 세부 '대상' 카테고리는 따로 보존하지 않는다.
+
+(코드 상세: `06_prelabel_unsmile.py` docstring)
 
 ## 🗂️ git 정책
 
