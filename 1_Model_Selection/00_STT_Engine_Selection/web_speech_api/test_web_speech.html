@@ -121,6 +121,12 @@
     r.onspeechstart = () => { speechStartTs = performance.now(); };
 
     r.onresult = (e) => {
+      // 첫 응답 지연 = 발화 시작 → 첫 결과(중간이든 확정이든). 스트리밍 응답성 지표
+      // (확정 기준으로 재면 발화 길이+침묵감지 시간이 섞여 과대평가됨)
+      if (firstLatency === null && speechStartTs !== null) {
+        firstLatency = Math.round(performance.now() - speechStartTs);
+        mLatency.textContent = firstLatency;
+      }
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
@@ -153,10 +159,6 @@
   function addFinal(text, confidence) {
     if (!text) return;
     const now = performance.now();
-    if (firstLatency === null && speechStartTs !== null) {
-      firstLatency = Math.round(now - speechStartTs);
-      mLatency.textContent = firstLatency;
-    }
     if (lastFinalTs !== null) { gapSum += now - lastFinalTs; gapN++; mAvg.textContent = Math.round(gapSum / gapN); }
     lastFinalTs = now;
 
