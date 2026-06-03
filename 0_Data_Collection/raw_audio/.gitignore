@@ -1,5 +1,5 @@
-# 다운로드한 오디오(.wav 등)는 용량이 커서 커밋하지 않음 — placeholder만 추적
+# 원본 wav는 용량이 커서 로컬만(STT용). git에는 압축본(.opus)만 LFS로 올림.
 *
-!.gitkeep
-!README.md
 !.gitignore
+!README.md
+!*.opus

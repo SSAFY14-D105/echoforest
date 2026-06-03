@@ -14,6 +14,7 @@
 """
 
 import os
+import subprocess
 import yt_dlp
 
 # 설정
@@ -57,6 +58,21 @@ def download_audio_only(url, idx):
     except Exception as e:
         print(f"   Failed: {e}")
 
+def compress_to_opus(idx):
+    """원본 wav → git 보관용 압축본(opus, ~32kbps). 원본 wav는 로컬 STT용으로만 유지."""
+    wav = os.path.join(AUDIO_DIR, f"audio_{idx}.wav")
+    opus = os.path.join(AUDIO_DIR, f"audio_{idx}.opus")
+    if not os.path.exists(wav) or os.path.exists(opus):
+        return
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", wav, "-c:a", "libopus", "-b:a", "32k", opus],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+        )
+        print(f"   Compressed (git 보관용) → {os.path.basename(opus)}")
+    except Exception as e:
+        print(f"   (opus 압축 실패: {e})")
+
 if __name__ == "__main__":
     if not os.path.exists(URL_LIST_FILE):
         print(f"Error: {URL_LIST_FILE} not found.")
@@ -80,12 +96,14 @@ if __name__ == "__main__":
                 has_part_file = True
                 break
         
-        # wav가 있고, part 파일(미완성본)이 없으면 건너뛰기
+        # wav가 있고, part 파일(미완성본)이 없으면 다운로드는 건너뛰기 (압축본은 보장)
         if os.path.exists(wav_path) and not has_part_file:
-            print(f"[{idx}] Skip (Already exists): {expected_wav}")
-            continue
-            
-        print(f"[{idx}] Downloading/Resuming...")
-        download_audio_only(url, idx)
+            print(f"[{idx}] Skip download (Already exists): {expected_wav}")
+        else:
+            print(f"[{idx}] Downloading/Resuming...")
+            download_audio_only(url, idx)
+
+        # git 보관용 압축본(opus) 생성 (원본 wav는 로컬에만 유지)
+        compress_to_opus(idx)
         
     print("\nAll downloads finished! Check 'raw_audio' folder.")
