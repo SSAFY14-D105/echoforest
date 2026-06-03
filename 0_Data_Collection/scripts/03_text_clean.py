@@ -148,6 +148,7 @@ def main():
     print(f"Unique sentences after deduplication: {len(unique_sentences)}")
     
     # 저장 (TSV 포맷: sentence \t label)
+    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8-sig') as f:
         # 헤더 작성
         f.write("sentence\tlabel\n")
