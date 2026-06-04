@@ -10,7 +10,7 @@
 | `01_download/` | YouTube 오디오 다운로드 (yt-dlp, 403 우회) | `00_url_list.txt` → `audio_N.wav`(로컬)·`audio_N.opus`(LFS) |
 | `02_stt/` | faster-whisper large-v3 STT (GPU) | `../01_download` 오디오 → `audio_N.tsv` |
 | `03_clean/` | 병합·정제(기호·자모·외국어 노이즈, 중복) | `../02_stt` → `merged_stt_cleaned.tsv` |
-| `04_anonymize/` | **개인지칭(닉네임) 행 삭제** (Kiwi) | `../03_clean` → `final_dataset.tsv` |
+| `04_anonymize/` | **개인지칭(닉네임) 토큰만 제거** (행 유지, Kiwi) | `../03_clean` → `final_dataset.tsv` |
 | `05_advanced_clean/` | 고급 정제(환각·중복, min 2자) | `../04_anonymize` → `final_dataset_clean.tsv` |
 | `06_prelabel/` | **unSmile abuse/clean 사전라벨** | `../05_advanced_clean` → `review_candidates.tsv` |
 | `collected_game_chat/` ⭐ | 손수 수집한 게임채팅(메아리의 숲 플레이 STT + YouTube STT)을 clean/negative 분류 | `*.json` → `datasets/train_collected.tsv`(518) |
@@ -23,7 +23,7 @@
 ```
 [수집 파이프라인] — 각 폴더에 코드+출력 함께
 01_download → 02_stt → 03_clean → 04_anonymize → 05_advanced_clean → 06_prelabel
- (오디오)      (STT)     (정제)      (개인지칭삭제)     (고급정제)          (사전라벨) ─→ 사람검수 ─→ datasets/(학습보강)
+ (오디오)      (STT)     (정제)      (닉네임토큰제거)    (고급정제)          (사전라벨) ─→ 사람검수 ─→ datasets/(학습보강)
 
 [기존 학습/평가 데이터]
 collected_game_chat (메아리의숲+YouTube STT, 손수분류) ─→ datasets/train_collected.tsv (518) ─→ 4_LoRA/5_Full 학습
