@@ -12,10 +12,10 @@
 
 | 파일명 | 설명 |
 |--------|------|
-| `keywords_unsmile_format.tsv` | 게임 keywords를 unSmile 형식으로 변환한 테스트 데이터 (512행: 헤더 1 + 데이터 511) |
+| `keywords_unsmile_format.tsv` | 게임 keywords를 unSmile 형식으로 변환한 테스트 데이터 (519행: 헤더 1 + 데이터 518) |
 | `baseline_test.py` | Python 스크립트 버전 테스트 코드 |
 | `baseline_test.ipynb` | Jupyter Notebook 버전 테스트 코드 |
-| `baseline_test_results.csv` | 전체 예측 결과 (문장별 확률, 정답 여부) - 513행: 헤더 1 + 데이터 512 |
+| `baseline_test_results.csv` | 전체 예측 결과 (문장별 확률, 정답 여부) - 519행: 헤더 1 + 데이터 518 |
 | `baseline_accuracy.png` | 성능 시각화 (Confusion Matrix 2개, 확률 분포, Bar Chart) |
 
 ---
@@ -235,8 +235,8 @@ F1 = 2 * (Precision * Recall) / (Precision + Recall) = 0.5858
 - **해석**: 
   - 좌상단 (279): Clean을 Clean으로 정확히 예측 ✓
   - 우상단 (5): Clean을 악플로 잘못 예측 ✗
-  - 좌하단 (132): **악플을 Clean으로 잘못 예측** ✗ ← 가장 큰 문제!
-  - 우하단 (95): 악플을 악플로 정확히 예측 ✓
+  - 좌하단 (135): **악플을 Clean으로 잘못 예측** ✗ ← 가장 큰 문제!
+  - 우하단 (99): 악플을 악플로 정확히 예측 ✓
 
 #### 2️⃣ 오른쪽 상단: Clean Classification - Confusion Matrix
 - **색상**: Greens (초록색 계열)
@@ -261,13 +261,13 @@ F1 = 2 * (Precision * Recall) / (Precision + Recall) = 0.5858
 - **빨간색 막대**: 악플/욕설 지표
 - **초록색 막대**: Clean 지표
 
-**해석**: 빨간색 Recall 막대가 **0.418**로 가장 낮음 → Fine-tuning 필요!
+**해석**: 빨간색 Recall 막대가 **0.4231**로 가장 낮음 → Fine-tuning 필요!
 
 ---
 
 ## ❌ 주요 인식 실패 케이스
 
-### 1. 악플인데 Clean으로 오분류 (False Negative) - 132건
+### 1. 악플인데 Clean으로 오분류 (False Negative) - 135건
 
 ```
 "살 좀 빼봐"                   (욕설 확률: 0.2632) ← Threshold 미달
@@ -416,8 +416,8 @@ df_clean.to_csv('unsmile_train_cleaned.csv', index=False)
 
 | 지표 | 현재 (Baseline) | 목표 |
 |------|-----------------|------|
-| 악플/욕설 Recall | 0.4185 | **≥ 0.75** |
-| 악플/욕설 F1-Score | 0.5810 | **≥ 0.80** |
+| 악플/욕설 Recall | 0.4231 | **≥ 0.75** |
+| 악플/욕설 F1-Score | 0.5858 | **≥ 0.80** |
 
 ### 개선 방향
 1. **False Negative 감소**: 게임 특유의 비난/불만 표현 학습
