@@ -8,14 +8,14 @@ Full Fine-tuning 기반 모든 파라미터 학습
 
 ```
 4_2_Full_Fine_Tuning/
-├── v1_corrected_only/           # 보정 데이터만 (10,490건)
+├── v1_corrected_only/           # 보정 데이터만 (14,690건)
 │   ├── full_game_kcelectra.py/.ipynb
 │   ├── full_tutorial_kcbert.py/.ipynb
 │   └── output/                  # 학습 결과 저장
 │       ├── full_game_kcelectra/
 │       └── full_tutorial_kcbert/
 │
-└── v2_corrected_plus_collected/ # 보정+수집 (11,009건)
+└── v2_corrected_plus_collected/ # 보정+수집 (15,208건)
     ├── full_game_kcelectra_v2.py/.ipynb
     ├── full_tutorial_kcbert_v2.py/.ipynb
     └── output/
@@ -27,8 +27,8 @@ Full Fine-tuning 기반 모든 파라미터 학습
 
 | 버전 | 데이터 | 건수 |
 |------|--------|------|
-| v1 | UnSmile 보정 | 10,490건 |
-| v2 | UnSmile 보정 + 게임 음성채팅 수집 | 11,009건 |
+| v1 | UnSmile 보정 | 14,690건 |
+| v2 | UnSmile 보정 + 게임 음성채팅 수집 | 15,208건 |
 
 ## 🔧 학습 설정
 

@@ -6,7 +6,7 @@ EchoForest AI - Full Fine-tuning v2 (Tutorial-based / KcBERT)
 - 모델: beomi/kcbert-base (공식 튜토리얼 모델)
 - 메트릭: LRAP (Label Ranking Average Precision)
 - 방식: Full Fine-tuning (모든 파라미터 학습)
-- 데이터: UnSmile 보정 10,490건 + 수집 519건 = 11,009건
+- 데이터: UnSmile 보정 14,690건 + 수집 518건 = 15,208건
 =============================================================================
 """
 

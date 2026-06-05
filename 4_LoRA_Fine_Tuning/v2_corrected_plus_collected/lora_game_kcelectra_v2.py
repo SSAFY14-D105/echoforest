@@ -6,7 +6,7 @@ EchoForest AI - LoRA Fine-tuning v2 (Game-optimized / KcELECTRA)
 - 모델: beomi/KcELECTRA-base-v2022 (한국어 최적화)
 - 메트릭: abuse_recall (악플 탐지율)
 - 방식: LoRA (Parameter-Efficient Fine-Tuning)
-- 데이터: UnSmile 보정 10,490건 + 수집 519건 = 11,009건
+- 데이터: UnSmile 보정 14,690건 + 수집 518건 = 15,208건
 =============================================================================
 """
 
