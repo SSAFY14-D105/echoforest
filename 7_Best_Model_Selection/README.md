@@ -1,5 +1,7 @@
 # 6. Best Model Selection
 
+> ⚠️ 아래 수치는 **옛 `game_test`(187건) 기준**(2026-02). 통합 `test_set`(482) 재평가 대기. 배경: [`AI_파이프라인_개요.md`](../AI_파이프라인_개요.md).
+
 ## 🏆 최종 선정 모델
 
 ### Full v2 Tutorial (kcbert-base)

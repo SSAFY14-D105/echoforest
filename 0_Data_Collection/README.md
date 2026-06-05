@@ -14,7 +14,7 @@
 | `05_advanced_clean/` | 고급 정제(환각·중복, min 2자) | `../04_anonymize` → `final_dataset_clean.tsv` |
 | `06_prelabel/` | **unSmile abuse/clean 사전라벨** | `../05_advanced_clean` → `review_candidates.tsv` |
 | `collected_game_chat/` ⭐ | 손수 수집한 게임채팅(메아리의 숲 플레이 STT + YouTube STT)을 clean/negative 분류 | `*.json` → `datasets/train_collected.tsv`(518) |
-| `datasets/` ⭐ | **최종 단일 출처**: `train_collected`(518)·`test_set`(688)·`_archive` | 모든 학습·평가가 여기서 읽음 |
+| `datasets/` ⭐ | **최종 단일 출처**: `train_collected`(518)·`test_set`(482)·`_archive` | 모든 학습·평가가 여기서 읽음 |
 
 > `06`의 사전라벨은 **초안** → 사람이 `검수` 칼럼 확정 → 문장+10라벨만 추출해 학습 데이터에 합침(누수검증 후).
 
@@ -27,7 +27,7 @@
 
 [기존 학습/평가 데이터]
 collected_game_chat (메아리의숲+YouTube STT, 손수분류) ─→ datasets/train_collected.tsv (518) ─→ 4_LoRA/5_Full 학습
-                                                          datasets/test_set.tsv (688, 고정) ─→ 모델선정·비교·양자화 평가
+                                                          datasets/test_set.tsv (482, 고정) ─→ 모델선정·비교·양자화 평가
 ```
 
 > 03~06 산출물은 `source` 칼럼(출신 영상 id, 예: `audio_1`)을 들고 다닌다 → 영상별로 골라 쓰기·검수 추적 가능. 같은 문장이 여러 영상에 나오면 `audio_3;audio_7`처럼 `;`로 합쳐 보존(전역 중복제거).

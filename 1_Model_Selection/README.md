@@ -9,13 +9,15 @@
 | 경로 | 내용 |
 | :--- | :--- |
 | `00_STT_Engine_Selection/` | 런타임 STT 엔진 선정(Web Speech API) — 근거 `STT_COMPARISON.md` + 실측·테스트 `web_speech_api/` |
-| `benchmark_game_stt.py` / `.ipynb` | 6개 욕설탐지 모델을 `test_set.tsv`(688)로 벤치마크 |
+| `benchmark_game_stt.py` / `.ipynb` | 6개 욕설탐지 모델을 `test_set.tsv`로 벤치마크 (아래 표 수치는 구 688판 기준) |
 | `results/` | 벤치마크 산출물: `MODEL_BENCHMARK.md`·`benchmark_results.csv/.json`·비교 그래프 2종 |
 | `MODEL_SELECTION.md` | 선정 요약 메모 |
 
 ## 🏆 선정 결과 — UnSmile
 
-`test_set.tsv`(688, held-out) 기준 **Abuse F1**로 선정. (상세: [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
+`test_set.tsv`(held-out) 기준 **Abuse F1**로 선정. (상세: [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
+
+> ⚠️ 아래 수치는 **구 `test_set`(688) 기준**(2026-06-03 측정). 현 `test_set`은 482로 재정제됨 → **482 재평가 대기**(재실행 시 수치 변동, 모델 선정 결론은 유지).
 
 | 모델 | Abuse F1 | 선정 |
 | :--- | :---: | :---: |
