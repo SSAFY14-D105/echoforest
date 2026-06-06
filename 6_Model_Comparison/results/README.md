@@ -1,131 +1,77 @@
-# 모델 비교 분석 결과
+# 6_Model_Comparison — 9개 모델 비교 결과 (test_set 482)
 
-> ⚠️ 아래 수치는 **옛 `game_test`(187건) 기준**(2026-02 측정, v2 학습과 6문장 누수 포함본). 통합 `test_set`은 **482로 재정제**됨 → **482 통합 재평가 대기**(순위·결론은 유지 예상). 배경: [`AI_파이프라인_개요.md`](../../AI_파이프라인_개요.md).
+baseline(파인튜닝 전) + 파인튜닝 8개를 **held-out `test_set`(482)** 으로 비교한 **메인 헤드라인**입니다.
 
-## 📋 개요
-본 분석은 혐오 표현 탐지를 위한 **9개 모델**의 성능을 비교 평가한 결과입니다.
-게임 내 음성 채팅(STT) 데이터를 활용하여 욕설/악플 탐지 성능을 측정하였습니다.
+- **abuse 판정**: `악플/욕설`(index 8) > 0.5 — 배포·Step 1·Step 2와 동일 정의
+- **지표**: Abuse/Clean Precision·Recall·F1 + LRAP · **임계값 0.5**
+- 생성: `python compare_models.py` → `comparison_results.csv/.json` · 차트는 `python plot_comparison.py`
 
-- **테스트 데이터**: game_test.tsv (187건)
-- **핵심 평가 지표**: Abuse Recall (욕설 탐지율)
-- **분류 임계값**: 0.5
+## 🏆 헤드라인 — 파인튜닝으로 Abuse Recall +27.8%p
 
----
+> **baseline 58.06% → 최고 85.89% (LoRA v2 Game)** · F1 기준 최고는 **Full v2 Game 87.32%**
 
-## 🏆 최종 결과
+![before/after](./abuse_recall_before_after.png)
+한국어판: [`abuse_recall_before_after_ko.png`](./abuse_recall_before_after_ko.png)
 
-### 최고 성능 모델: `Full v2 Tutorial`
-| 지표 | 값 | Baseline 대비 |
-|------|-----|---------------|
-| **Abuse Recall** | 0.8793 | +23.3%p |
-| **Abuse F1** | 0.9067 | +12.9%p |
-| **LRAP** | 0.9434 | +5.7%p |
+## 📊 전체 순위 (Abuse Recall 순)
 
-### Baseline 모델: `Baseline (kor_unsmile)`
-| 지표 | 값 |
-|------|-----|
-| Abuse Recall | 0.6466 |
-| Abuse F1 | 0.7772 |
-| LRAP | 0.8868 |
+| 모델 | Recall | F1 | Precision | LRAP | baseline 대비 |
+|------|:---:|:---:|:---:|:---:|:---:|
+| **LoRA v2 Game** | **85.89%** | 86.94% | 88.02% | 0.932 | **+27.8p** |
+| **Full v2 Game** | 84.68% | **87.32%** | 90.13% | **0.936** | +26.6p |
+| LoRA v2 Tutorial | 84.27% | 82.45% | 80.69% | 0.908 | +26.2p |
+| Full v2 Tutorial | 80.24% | 83.79% | 87.67% | 0.915 | +22.2p |
+| LoRA v1 Game | 78.63% | 84.42% | 91.12% | 0.924 | +20.6p |
+| LoRA v1 Tutorial | 72.18% | 79.91% | 89.50% | 0.902 | +14.1p |
+| Full v1 Game | 72.18% | 81.00% | 92.27% | 0.911 | +14.1p |
+| Full v1 Tutorial | 65.32% | 76.06% | 91.01% | 0.892 | +7.3p |
+| Baseline (kor_unsmile) | 58.06% | 72.73% | 97.30% | 0.887 | — |
 
----
+> baseline은 Precision 97.3%로 가장 높지만 Recall 58%(욕설 42% 놓침). 파인튜닝은 **Precision을 80~92%로 약간 내주는 대신 Recall을 크게 끌어올림** → F1·LRAP 상승.
 
-## 📊 전체 모델 순위
+## 🔬 핵심 인사이트
 
-| 순위 | 모델명 | Abuse Recall | Abuse F1 | LRAP | 개선율 |
-|------|--------|--------------|----------|------|--------|
-| 1 | Full v2 Tutorial | 0.8793 | 0.9067 | 0.9434 | +36.0% |
-| 2 | LoRA v2 Game | 0.8793 | 0.8793 | 0.9207 | +36.0% |
-| 3 | LoRA v2 Tutorial | 0.8793 | 0.8870 | 0.9244 | +36.0% |
-| 4 | Full v2 Game | 0.8707 | 0.8899 | 0.9296 | +34.7% |
-| 5 | LoRA v1 Game | 0.7759 | 0.8295 | 0.8917 | +20.0% |
-| 6 | LoRA v1 Tutorial | 0.7414 | 0.8269 | 0.8984 | +14.7% |
-| 7 | Full v1 Game | 0.7414 | 0.8230 | 0.8966 | +14.7% |
-| 8 | Full v1 Tutorial | 0.6983 | 0.8060 | 0.8939 | +8.0% |
-| 9 | Baseline (kor_unsmile) | 0.6466 | 0.7772 | 0.8868 | - |
+### 1. 게임 데이터(v2)가 결정적
+![v1 vs v2](./v1_vs_v2.png) · 한국어판: [`v1_vs_v2_ko.png`](./v1_vs_v2_ko.png)
 
----
+| | v1 (보정 unSmile만) | v2 (+ 게임 수집 518) | 차이 |
+|---|:---:|:---:|:---:|
+| 평균 Abuse Recall | 72.1% | **83.8%** | **+11.7%p** |
 
-## 🔍 분석 결과
+**모든 조합**에서 v2 > v1. 단 **518건의 게임 채팅**으로 +11.7%p — 도메인 데이터의 위력.
 
-### 1. 게임 데이터 추가 효과 (v1 vs v2)
-게임 특화 데이터를 추가한 **v2 모델**이 v1 대비 일관된 성능 향상을 보였습니다.
+### 2. LoRA ≈ Full
+평균 Recall: LoRA **80.2%** vs Full 75.6%. 성능 유사(이 셋에선 LoRA가 약간 우위) → **효율(메모리·속도) 면에서 LoRA 권장**.
 
-- v1 평균 Abuse Recall: **0.7393**
-- v2 평균 Abuse Recall: **0.8772**
-- 평균 개선: **+13.8%p**
+### 3. base 모델: Game(KcELECTRA) > Tutorial(kcbert)
+평균 Recall: Game base **80.4%** vs Tutorial 75.5%. 상위 4개 중 Game이 3개.
 
-**결론**: 도메인 특화 데이터 추가는 모델 성능 향상에 매우 효과적입니다.
+## ⚠️ best 모델이 바뀜 (Step 7 재선정 필요)
 
-### 2. Fine-tuning 방식 비교 (LoRA vs Full)
-- LoRA 평균 Abuse Recall: **0.8190**
-- Full FT 평균 Abuse Recall: **0.7974**
+> 옛 문서의 best **`Full v2 Tutorial`**(구 game_test 187 기준 Recall 87.93%)은 **test_set(482)에선 4위(80.24%)** 로 밀림.
+> 482 기준 후보:
+> - **Recall 최우선** → **LoRA v2 Game** (85.89%)
+> - **균형(F1·LRAP)·배포 안정성** → **Full v2 Game** (F1 87.32% / LRAP 0.936 / Precision 90.13%)
+>
+> → [`../7_Best_Model_Selection`](../7_Best_Model_Selection)에서 재선정. **양자화(8단계) 대상도 이에 맞춰 변경 필요**(현재 Full v2 Tutorial 양자화본은 stale).
 
-**결론**: 두 방식 모두 유사한 성능을 달성합니다. LoRA는 학습 효율성(메모리, 속도)이 장점입니다.
+## 📈 그래프 읽는 법
 
----
+**① `abuse_recall_before_after.png`** — 파인튜닝 효과(헤드라인)
+- 슬레이트(맨 아래) = **baseline 58.1%**(점선 = 그 기준선). 그 위 8개는 전부 파인튜닝 → 기준선을 넘김.
+- 틸 + `best` 알약 = **LoRA v2 Game 85.9%**. 막대가 점선에서 얼마나 오른쪽인지 = 개선폭.
 
-## 📈 시각화 자료 설명
+**② `v1_vs_v2.png`** — 게임 데이터 효과
+- 회색 점 = v1(게임 데이터 없이), 틸 점 = v2(+게임 518), 화살표 = v1→v2 상승.
+- 4개 조합 전부 오른쪽(상승)으로 화살표 → "게임 데이터가 핵심"을 한 장으로.
 
-### 1. before_after_comparison.png
-**4개 패널로 구성된 Before/After 비교 차트**
+## 📁 파일
+| 파일 | 내용 |
+| :--- | :--- |
+| `compare_models.py` | 9모델 평가(index-8 + LRAP) → CSV/JSON |
+| `plot_comparison.py` | 포트폴리오 차트(en/ko) — CSV 기반, 재추론 불필요 |
+| `comparison_results.csv` · `.json` | 전체 수치(TP/TN/FP/FN 포함) |
+| `_archive/` | 옛 game_test(187) 결과 백업 |
 
-- **좌상단 (Abuse Recall)**: 모든 모델의 욕설 탐지율 비교. 빨간 점선은 Baseline 기준선.
-- **우상단 (Abuse F1)**: Precision과 Recall의 조화 평균. 균형 잡힌 성능 지표.
-- **좌하단 (LRAP)**: Label Ranking Average Precision. 다중 라벨 분류 성능.
-- **우하단 (Improvement %)**: Baseline 대비 개선율. 녹색=개선, 빨간색=하락.
-
-**해석**: v2 모델들이 상위권에 위치하며, 게임 데이터 추가의 효과가 명확히 나타납니다.
-
-### 2. metrics_heatmap.png
-**전체 메트릭 히트맵**
-
-모든 모델 × 모든 평가 지표를 한눈에 비교할 수 있는 히트맵입니다.
-- 녹색이 진할수록 높은 성능
-- 빨간색이 진할수록 낮은 성능
-
-**해석**: 최상위 모델들은 대부분의 지표에서 녹색 계열을 보입니다.
-
-### 3. lora_vs_full.png
-**LoRA vs Full Fine-tuning 비교**
-
-- 좌측: LoRA 방식으로 학습된 4개 모델
-- 우측: Full Fine-tuning으로 학습된 4개 모델
-- 파란색 막대: Abuse Recall
-- 빨간색 막대: Abuse F1
-- 점선: Baseline 기준
-
-**해석**: 두 방식 모두 Baseline을 크게 상회하며, v2 모델들이 더 높은 성능을 보입니다.
-
-### 4. v1_vs_v2_comparison.png
-**게임 데이터 추가 효과 비교**
-
-- 회색: v1 (UnSmile 데이터만 사용)
-- 녹색: v2 (UnSmile + 게임 데이터)
-- 막대 위 숫자: v2 - v1 차이값
-
-**해석**: 모든 조합에서 v2가 v1보다 높은 성능을 보여, 게임 특화 데이터의 중요성을 입증합니다.
-
----
-
-## 📁 산출물 목록
-
-| 파일명 | 설명 |
-|--------|------|
-| `game_test_results.csv` | 전체 모델별 상세 메트릭 결과 |
-| `improvement_analysis.csv` | Baseline 대비 개선율 분석 |
-| `before_after_comparison.png` | 4개 주요 지표 비교 차트 |
-| `metrics_heatmap.png` | 전체 메트릭 히트맵 |
-| `lora_vs_full.png` | LoRA vs Full FT 비교 차트 |
-| `v1_vs_v2_comparison.png` | 게임 데이터 효과 비교 차트 |
-
----
-
-## 💡 권장 사항
-
-1. **프로덕션 배포**: `Full v2 Tutorial` 모델 권장
-2. **리소스 제약 시**: LoRA 모델 선택 (유사 성능, 높은 효율)
-3. **추가 개선**: 더 많은 게임 도메인 데이터 수집 권장
-
----
-*생성일시: 2026-02-08 18:39:12*
+## ▶️ 다음 단계
+[`../7_Best_Model_Selection`](../7_Best_Model_Selection)(482 기준 best 재선정) → [`../8_Quantization`](../8_Quantization)(선정 모델 INT8 양자화)

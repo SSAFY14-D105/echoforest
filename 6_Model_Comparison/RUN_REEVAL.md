@@ -1,5 +1,7 @@
 # 🔁 클린 테스트셋 재평가 실행 가이드
 
+> ✅ **완료(2026-06)**: `compare_models.py`로 9개 모델을 `test_set`(482)·index-8로 재평가 끝. 결과·그래프·인사이트는 **[`results/README.md`](results/README.md)**. 아래 노트북 절차는 *참고용(구 방식)* — 실제 재평가는 `python compare_models.py` → `python plot_comparison.py`로 수행.
+
 > 🔄 **갱신(2026-06)**: 통합 단일 테스트셋이 `0_Data_Collection/datasets/test_set.tsv`(**482**)로 확정됨. 아래 181/187 서술과 옛 폴더명(`5_Model_Comparison`·`7_Quantization`)은 당시 계획 기록 — **실제 재평가는 482로, 현재 폴더(`6_Model_Comparison`·`8_Quantization`)에서** 수행. 배경: [`../AI_파이프라인_개요.md`](../AI_파이프라인_개요.md).
 
 > **왜?** 기존 테스트셋 `game_test.tsv`(187건) 중 **6문장(전부 욕설)이 v2 학습 데이터(수집 518)와 겹쳐** 누수가 있었음. 이를 제거한 `game_test_clean.tsv`(181건)로 다시 평가해 무결성을 확보한다.
