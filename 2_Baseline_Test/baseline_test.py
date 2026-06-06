@@ -1,9 +1,10 @@
 """
 =============================================================================
-EchoForest AI - Baseline Test Script (Step 0)
+EchoForest AI - Baseline Test (base unSmile, 파인튜닝 전)
 =============================================================================
-목적: 기존 unSmile 모델로 게임 키워드 데이터 테스트
-환경: NVIDIA L40S GPU, Python 3.12, PyTorch 2.5.1+cu121
+목적: 파인튜닝 전 base unSmile 성능을 held-out test_set(482)으로 측정
+      → 공식 "before"(Step 1 UnSmile = Step 6 baseline과 동일) + 놓치는 게임 욕설 진단
+산출물: baseline_test_results.csv (문장별 확률) · baseline_accuracy.png
 =============================================================================
 """
 
@@ -17,9 +18,15 @@ from sklearn.metrics import classification_report, confusion_matrix, precision_r
 import warnings
 warnings.filterwarnings('ignore')
 
-# 한글 폰트 설정 (시각화용)
-plt.rcParams['font.family'] = 'Malgun Gothic'  # Windows 로컬 환경
-plt.rcParams['axes.unicode_minus'] = False     # 마이너스 부호 깨짐 방지
+# 폰트/팔레트 (크로스플랫폼 · 포트폴리오 톤)
+import matplotlib.font_manager as fm
+def _pick_font(cands):
+    avail = {f.name for f in fm.fontManager.ttflist}
+    return next((c for c in cands if c in avail), "DejaVu Sans")
+plt.rcParams['font.family'] = _pick_font(["Helvetica Neue", "Arial", "DejaVu Sans"])
+plt.rcParams['axes.unicode_minus'] = False
+INK, SUB, GRID = "#1F2933", "#9AA5B1", "#EBEEF1"
+ACCENT, SLATE, NEUTRAL = "#2A9D8F", "#4B5A68", "#C2CAD2"  # 틸(abuse)·슬레이트·뉴트럴
 
 # =============================================================================
 # 1. 설정
@@ -61,10 +68,8 @@ print(f"✓ 모델 로드 완료!")
 # =============================================================================
 print("\n[2/5] 테스트 데이터 로딩 중...")
 
-# TSV 파일 로드
-# 경로를 실제 환경에 맞게 수정하세요
-DATA_PATH = "keywords_unsmile_format.tsv"  # 같은 폴더에 있을 경우
-# DATA_PATH = "/path/to/keywords_unsmile_format.tsv"  # Colab/Jupyter에서 절대 경로
+# held-out test_set(482)로 baseline 측정 → Step 6 파인튜닝 결과와 직접 비교 가능한 "before"
+DATA_PATH = "../0_Data_Collection/datasets/test_set.tsv"
 
 df = pd.read_csv(DATA_PATH, sep='\t', encoding='utf-8')
 print(f"✓ 데이터 로드 완료: {len(df)}개 문장")
@@ -205,73 +210,63 @@ print("✓ 결과 저장: baseline_test_results.csv")
 # =============================================================================
 print("\n📊 시각화 생성 중...")
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+fn_cnt, total_abuse = len(false_negatives), int(y_true_abuse.sum())
+fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+fig.suptitle(f"Baseline — base unSmile on test_set ({len(df)})    "
+             f"Abuse Recall {abuse_recall*100:.1f}%  ·  misses {fn_cnt}/{total_abuse} abuse",
+             fontsize=14, fontweight='bold', color=INK, x=0.5, y=0.99)
 
-# 1. 악플/욕설 Confusion Matrix
+def _clean_ax(ax):
+    for s in ['top', 'right']:
+        ax.spines[s].set_visible(False)
+    ax.spines['left'].set_color(GRID); ax.spines['bottom'].set_color(GRID)
+    ax.tick_params(length=0, colors=SUB)
+
+# 1. Abuse Confusion Matrix
 ax1 = axes[0, 0]
-cm_abuse = confusion_matrix(y_true_abuse, abuse_preds)
-sns.heatmap(cm_abuse, annot=True, fmt='d', cmap='Blues', ax=ax1,
-            xticklabels=['Pred: Non-Abuse', 'Pred: Abuse'],
-            yticklabels=['True: Non-Abuse', 'True: Abuse'])
-ax1.set_title('Abuse Classification - Confusion Matrix', fontsize=12, fontweight='bold')
+sns.heatmap(confusion_matrix(y_true_abuse, abuse_preds), annot=True, fmt='d',
+            cmap=sns.light_palette(ACCENT, as_cmap=True), ax=ax1, cbar=False,
+            annot_kws={'fontsize': 15, 'fontweight': 'bold'}, linewidths=2, linecolor='white',
+            xticklabels=['Pred Non-Abuse', 'Pred Abuse'], yticklabels=['Actual Non-Abuse', 'Actual Abuse'])
+ax1.set_title('Abuse — Confusion Matrix  (FN=missed abuse)', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
+ax1.tick_params(length=0)
 
 # 2. Clean Confusion Matrix
 ax2 = axes[0, 1]
-cm_clean = confusion_matrix(y_true_clean, clean_preds)
-sns.heatmap(cm_clean, annot=True, fmt='d', cmap='Greens', ax=ax2,
-            xticklabels=['Pred: Non-Clean', 'Pred: Clean'],
-            yticklabels=['True: Non-Clean', 'True: Clean'])
-ax2.set_title('Clean Classification - Confusion Matrix', fontsize=12, fontweight='bold')
+sns.heatmap(confusion_matrix(y_true_clean, clean_preds), annot=True, fmt='d',
+            cmap=sns.light_palette(SLATE, as_cmap=True), ax=ax2, cbar=False,
+            annot_kws={'fontsize': 15, 'fontweight': 'bold'}, linewidths=2, linecolor='white',
+            xticklabels=['Pred Non-Clean', 'Pred Clean'], yticklabels=['Actual Non-Clean', 'Actual Clean'])
+ax2.set_title('Clean — Confusion Matrix', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
+ax2.tick_params(length=0)
 
-# 3. 확률 분포
+# 3. Abuse probability distribution (핵심 진단)
 ax3 = axes[1, 0]
-abuse_data = pd.DataFrame({
-    'Probability': abuse_probs,
-    'Actual': ['Negative (abuse)' if x == 1 else 'Clean' for x in y_true_abuse]
-})
-colors = {'Negative (abuse)': 'red', 'Clean': 'green'}
-for label, color in colors.items():
-    subset = abuse_data[abuse_data['Actual'] == label]
-    ax3.hist(subset['Probability'], bins=20, alpha=0.6, label=label, color=color)
-ax3.axvline(x=0.5, color='black', linestyle='--', label='Threshold (0.5)')
-ax3.set_xlabel('Abuse Probability')
-ax3.set_ylabel('Count')
-ax3.set_title('Abuse Probability Distribution by Actual Label', fontsize=12, fontweight='bold')
-ax3.legend()
+ax3.hist(abuse_probs[y_true_abuse == 1], bins=24, alpha=0.9, label='Actual abuse', color=ACCENT)
+ax3.hist(abuse_probs[y_true_clean == 1], bins=24, alpha=0.55, label='Actual clean', color=NEUTRAL)
+ax3.axvline(0.5, color=SLATE, linestyle='--', lw=1.5, label='Threshold 0.5')
+ax3.set_xlabel('Abuse probability', color=SUB); ax3.set_ylabel('Count', color=SUB)
+ax3.set_title('Abuse probability — abuse mass leaks left of 0.5 (= missed)', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
+ax3.legend(frameon=False)
+_clean_ax(ax3)
 
-# 4. 성능 지표 바 차트
+# 4. Abuse metrics — Recall is the gap
 ax4 = axes[1, 1]
-metrics = ['Precision', 'Recall', 'F1-Score']
-abuse_scores = [abuse_precision, abuse_recall, abuse_f1]
-clean_scores = [clean_precision, clean_recall, clean_f1]
-
+metrics = ['Precision', 'Recall', 'F1']
+scores = [abuse_precision, abuse_recall, abuse_f1]
 x = np.arange(len(metrics))
-width = 0.35
+bars = ax4.bar(x, scores, 0.5, color=[NEUTRAL, ACCENT, NEUTRAL])
+ax4.axhline(0.75, color=SLATE, linestyle='--', lw=1.2)
+ax4.text(2.5, 0.75, 'FT target ≥0.75', color=SLATE, fontsize=9, va='center', ha='right')
+ax4.set_xticks(x); ax4.set_xticklabels(metrics); ax4.set_ylim(0, 1.05)
+ax4.set_title('Abuse metrics — Recall is the gap fine-tuning closes', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
+_clean_ax(ax4)
+for b, v in zip(bars, scores):
+    ax4.text(b.get_x() + b.get_width() / 2, v + 0.02, f'{v:.2f}', ha='center', color=INK, fontweight='bold')
 
-bars1 = ax4.bar(x - width/2, abuse_scores, width, label='Abuse', color='red', alpha=0.7)
-bars2 = ax4.bar(x + width/2, clean_scores, width, label='Clean', color='green', alpha=0.7)
-
-ax4.set_ylabel('Score')
-ax4.set_title('Performance Metrics Comparison', fontsize=12, fontweight='bold')
-ax4.set_xticks(x)
-ax4.set_xticklabels(metrics)
-ax4.set_ylim(0, 1.1)
-ax4.legend()
-
-# 바 위에 숫자 표시
-for bar in bars1 + bars2:
-    height = bar.get_height()
-    ax4.annotate(f'{height:.3f}',
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, 3),
-                textcoords="offset points",
-                ha='center', va='bottom', fontsize=9)
-
-plt.tight_layout()
-plt.savefig('baseline_accuracy.png', dpi=150, bbox_inches='tight')
+plt.tight_layout(rect=[0, 0, 1, 0.96])
+plt.savefig('baseline_accuracy.png', dpi=200, bbox_inches='tight', facecolor='white')
 print("✓ 시각화 저장: baseline_accuracy.png")
-
-plt.show()
 
 # =============================================================================
 # 10. 최종 요약

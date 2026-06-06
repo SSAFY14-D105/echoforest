@@ -177,9 +177,8 @@ def benchmark_model(model_name, model_id, sentences, true_labels):
                 with torch.no_grad():
                     outputs = model(**inputs)
                     probs = torch.sigmoid(outputs.logits[0]).cpu().numpy()
-                # Multi-label: 9개 혐오 라벨(인덱스 0~8) 중 하나라도 0.5 초과하면 Abuse
-                hate_probs = probs[:9]  # 인덱스 0~8: 혐오 라벨 9개
-                is_abuse = np.any(hate_probs > 0.5)
+                # abuse = 악플/욕설(index 8) > 0.5 — 배포(FastAPI probs[8])·Step 6·Step 2 baseline과 동일 정의
+                is_abuse = probs[8] > 0.5
             elif model_id in KOELECTRA_FLAT:
                 inputs = tokenizer(sentence, return_tensors="pt", truncation=True, max_length=128)
                 if torch.cuda.is_available():

@@ -5,7 +5,8 @@
 ## 선정: UnSmile (`smilegate-ai/kor_unsmile`)
 
 - **평가**: `test_set.tsv`(482, held-out) · 임계값 0.5 · 5개 모델 비교(모두 분류 헤드 실제 로드)
-- **기준**: Abuse F1(Precision·Recall 조화평균). UnSmile **F1 74.0% 1위** (Precision 96.1% / Recall 60.1%)
+- **기준**: Abuse F1(Precision·Recall 조화평균). UnSmile **F1 72.7% 1위** (Precision 97.3% / Recall 58.1%)
+- **abuse 판정**: `악플/욕설`(index 8) > 0.5 — 배포(FastAPI `probs[8]`)·Step 2·Step 6과 동일
 - 한국어 혐오발언 전용 모델(Smilegate AI), 댓글/채팅으로 학습 → 게임 대화 도메인에 가장 근접
 
 ## 왜 Recall이 아니라 F1인가 (핵심)
@@ -13,7 +14,7 @@
 게임에선 "욕설을 놓치는 것(FN)"보다 **"멀쩡한 말을 욕설로 오탐(FP)"이 더 치명적** — 오탐은 곧 *욕 안 했는데 저주 발동*(최악의 UX).
 
 - **Korean Sentiment**: Recall 94.0%(1위)지만 clean 234건 중 **172건 오탐**(Precision 57.5%) → 실사용 불가
-- **UnSmile**: Recall 60.1%로 낮아 보여도 오탐 **단 6건**(Precision 96.1%) → 균형(F1) 1위
+- **UnSmile**: Recall 58.1%로 낮아 보여도 오탐 **단 4건**(Precision 97.3%) → 균형(F1) 1위
 
 ⇒ Recall만 보면 과탐 모델을 잘못 고른다. 그래서 **F1으로 선정**. (시각적 근거 = `6_model_comparison.png` 덤벨 그래프)
 
