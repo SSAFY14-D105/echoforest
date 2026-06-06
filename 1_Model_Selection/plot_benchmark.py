@@ -40,33 +40,34 @@ MUTED   = "#E0E4E8"   # noise 모델(흐리게)
 ACCENT  = "#2A9D8F"   # 승자 / Precision (틸)
 SLATE   = "#4B5A68"   # Recall (슬레이트)
 
-# 현 transformers에서 분류 헤드가 로드되지 않아 수치가 noise인 모델
-NOISE = {"KoELECTRA Small", "KoELECTRA Base", "KcELECTRA v2"}
+# noise 모델(분류 헤드 미로딩) 집합. 현재는 모두 헤드가 실제 로드돼 비어 있음.
+# (KoELECTRA는 수동 로드, KcELECTRA base는 헤드가 없어 벤치마크에서 제외)
+NOISE = set()
 
 # ── 문구(언어별) ───────────────────────────────────────────────────────────
 STRINGS = {
     "en": {
         "sel_title": "Model selection — Abuse F1",
-        "sel_sub":   "6 Korean models · test_set (482 held-out game-chat) · threshold 0.5",
+        "sel_sub":   "5 Korean models · test_set (482 held-out game-chat) · threshold 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "selected",
         "sel_foot":  "†  classification head not loaded in current transformers — "
                      "score is noise (off-the-shelf baseline only)",
         "trade_title": "Why F1 decides — precision vs recall",
-        "trade_sub":   "Valid candidates only · UnSmile balances both; Korean Sentiment over-flags",
+        "trade_sub":   "Precision vs recall per model · UnSmile is the most balanced (highest precision)",
         "trade_xlabel": "score  (%)",
         "precision": "Precision",
         "recall":    "Recall",
     },
     "ko": {
         "sel_title": "모델 선정 — Abuse F1",
-        "sel_sub":   "한국어 모델 6종 · test_set (482, held-out 게임채팅) · 임계값 0.5",
+        "sel_sub":   "한국어 모델 5종 · test_set (482, held-out 게임채팅) · 임계값 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "선정",
         "sel_foot":  "†  현 transformers에서 분류 헤드 미로딩 — "
                      "수치는 noise (off-the-shelf 대조군)",
         "trade_title": "왜 F1으로 선정하나 — 정밀도 vs 재현율",
-        "trade_sub":   "유효 후보만 · UnSmile은 균형, Korean Sentiment는 과탐(clean 오탐)",
+        "trade_sub":   "모델별 정밀도 vs 재현율 · UnSmile이 가장 균형(정밀도 최고)",
         "trade_xlabel": "점수  (%)",
         "precision": "정밀도",
         "recall":    "재현율",
@@ -144,7 +145,8 @@ def chart_selection(df, path, t):
     ax.set_xlabel(t["sel_xlabel"], fontsize=10.5)
 
     _title_block(ax, t["sel_title"], t["sel_sub"])
-    ax.text(0, -0.205, t["sel_foot"], transform=ax.transAxes, fontsize=8.7, color=SUB)
+    if any(m in NOISE for m in d["Model"]):   # noise 모델이 있을 때만 각주 표시
+        ax.text(0, -0.205, t["sel_foot"], transform=ax.transAxes, fontsize=8.7, color=SUB)
 
     fig.savefig(path, dpi=220, facecolor="white")
     plt.close(fig)
@@ -155,8 +157,8 @@ def chart_selection(df, path, t):
 def chart_tradeoff(df, path, t):
     d = df[~df["Model"].isin(NOISE)].sort_values("F1", ascending=True).reset_index(drop=True)
     n = len(d)
-    fig, ax = plt.subplots(figsize=(9.4, 4.35))
-    fig.subplots_adjust(left=0.235, right=0.875, top=0.72, bottom=0.20)
+    fig, ax = plt.subplots(figsize=(9.4, max(3.9, 1.7 + 0.62 * n)))
+    fig.subplots_adjust(left=0.235, right=0.875, top=0.80, bottom=0.15)
 
     y = np.arange(n)
     for i, row in d.iterrows():

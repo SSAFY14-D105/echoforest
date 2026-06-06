@@ -1,7 +1,7 @@
 """
-게임 STT 데이터 기반 6개 모델 벤치마크 (Step 1 · 모델 선정)
+게임 STT 데이터 기반 5개 모델 벤치마크 (Step 1 · 모델 선정)
 - test_set.tsv (482건, held-out) 사용
-- 6개 한국어 감정/혐오 분석 모델 비교 → Abuse F1 기준 선정
+- 5개 한국어 감정/혐오 분석 모델 비교 → Abuse F1 기준 선정 (모두 분류 헤드가 실제 로드되는 모델)
 - 산출물: results/ (benchmark_autogen.md 원시요약, benchmark_results.csv/.json, 그래프 en/ko 4종)
   ※ 큐레이션 문서(그래프 설명 등)는 results/MODEL_BENCHMARK.md (손으로 유지, 자동 덮어쓰기 안 함)
 
@@ -34,15 +34,16 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
-# 테스트할 6개 모델 (Korean Sentiment 포함 — MODEL_SELECTION.md의 #2 대안.
-#  over-flagging으로 Precision↓ 인 점도 결과로 함께 보고)
+# 테스트할 5개 모델 — 모두 분류 헤드가 실제로 로드되는 모델만.
+#  · KoELECTRA 2종: 저장 헤드가 구 형식(단일 Linear)이라 수동 로드(load_koelectra_sentiment)
+#  · beomi/KcELECTRA-base-v2022는 분류 헤드가 없는 base LM(ElectraForPreTraining)이라
+#    선정 후보에서 제외 — 이 base는 4·5단계에서 게임 데이터로 헤드를 학습시켜 사용
 MODELS_TO_TEST = [
     ("KoELECTRA Small", "monologg/koelectra-small-finetuned-sentiment"),
     ("KoELECTRA Base", "monologg/koelectra-base-finetuned-sentiment"),
     ("Multilingual", "nlptown/bert-base-multilingual-uncased-sentiment"),
     ("Korean Sentiment", "matthewburke/korean_sentiment"),
     ("UnSmile", "smilegate-ai/kor_unsmile"),
-    ("KcELECTRA v2", "beomi/KcELECTRA-base-v2022"),
 ]
 
 # 모델별 부정 라벨 매핑
@@ -92,6 +93,31 @@ def load_game_data():
 # 🧪 벤치마크
 # ============================================================
 
+# KoELECTRA 감정모델: 저장된 분류 헤드가 '단일 Linear(구 형식)'라, 표준 로더
+# (ElectraForSequenceClassification)는 헤드를 랜덤 초기화해버린다(수치=noise).
+# → 인코더(ElectraModel) + 단일 Linear를 [CLS]에 수동으로 붙여 학습된 헤드를 로드.
+KOELECTRA_FLAT = {
+    "monologg/koelectra-small-finetuned-sentiment",
+    "monologg/koelectra-base-finetuned-sentiment",
+}
+
+def load_koelectra_sentiment(model_id):
+    """반환 (tokenizer, encoder, head_linear). 라벨 index 0 = negative(=abuse)."""
+    import torch.nn as nn
+    from transformers import ElectraModel
+    from huggingface_hub import hf_hub_download
+    tok = AutoTokenizer.from_pretrained(model_id)
+    enc = ElectraModel.from_pretrained(model_id).eval()
+    sd = torch.load(hf_hub_download(model_id, "pytorch_model.bin"),
+                    map_location="cpu", weights_only=True)
+    head = nn.Linear(enc.config.hidden_size, sd["classifier.weight"].shape[0])
+    head.weight.data = sd["classifier.weight"]
+    head.bias.data = sd["classifier.bias"]
+    head.eval()
+    if torch.cuda.is_available():
+        enc, head = enc.cuda(), head.cuda()
+    return tok, enc, head
+
 def benchmark_model(model_name, model_id, sentences, true_labels):
     """단일 모델 벤치마크"""
     print(f"\n{'='*60}")
@@ -117,18 +143,19 @@ def benchmark_model(model_name, model_id, sentences, true_labels):
         start = time.time()
         
         device = 0 if torch.cuda.is_available() else -1
-        
+        tokenizer = model = classifier = ko_head = None
+
         if "unsmile" in model_id.lower():
             tokenizer = AutoTokenizer.from_pretrained(model_id)
             model = AutoModelForSequenceClassification.from_pretrained(model_id)
             model.eval()
             if torch.cuda.is_available():
                 model = model.cuda()
-            classifier = None
+        elif model_id in KOELECTRA_FLAT:
+            # 저장 헤드가 구 형식(단일 Linear)이라 표준 로더가 헤드를 랜덤초기화함 → 수동 로드
+            tokenizer, model, ko_head = load_koelectra_sentiment(model_id)
         else:
             classifier = pipeline("sentiment-analysis", model=model_id, device=device)
-            tokenizer = None
-            model = None
         
         result["load_time"] = time.time() - start
         print(f"✅ 로드 완료 ({result['load_time']:.2f}초)")
@@ -153,6 +180,13 @@ def benchmark_model(model_name, model_id, sentences, true_labels):
                 # Multi-label: 9개 혐오 라벨(인덱스 0~8) 중 하나라도 0.5 초과하면 Abuse
                 hate_probs = probs[:9]  # 인덱스 0~8: 혐오 라벨 9개
                 is_abuse = np.any(hate_probs > 0.5)
+            elif model_id in KOELECTRA_FLAT:
+                inputs = tokenizer(sentence, return_tensors="pt", truncation=True, max_length=128)
+                if torch.cuda.is_available():
+                    inputs = {k: v.cuda() for k, v in inputs.items()}
+                with torch.no_grad():
+                    pooled = model(**inputs).last_hidden_state[:, 0]   # 첫 토큰([CLS])
+                    is_abuse = int(ko_head(pooled)[0].argmax()) == 0    # idx 0 = negative(=abuse)
             else:
                 output = classifier(sentence)[0]
                 pred_label = output['label']
@@ -259,7 +293,7 @@ def save_results(results, sentences_count):
     # Markdown README
     best = max(successful, key=lambda x: x["abuse_f1"])
     
-    md_content = f"""# 🎮 6개 모델 벤치마크 결과 (자동 생성)
+    md_content = f"""# 🎮 5개 모델 벤치마크 결과 (자동 생성)
 
 > ⚙️ 이 파일은 `benchmark_game_stt.py`가 매 실행마다 **자동 생성**하는 원시 요약입니다.
 > 그래프 읽는 법·688 비교 등 **큐레이션 문서는** [`MODEL_BENCHMARK.md`](./MODEL_BENCHMARK.md).
@@ -296,19 +330,18 @@ def save_results(results, sentences_count):
 ### 2. 한국어 혐오 발언 전용
 - Smilegate AI의 **한국어 혐오 발언 탐지** 전용 모델, 댓글/채팅 학습 → 게임 대화에 적합
 
-### 3. 다른 모델 한계
-- **Korean Sentiment**: Recall 최고지만 clean 문장 다수를 욕설로 오탐(Precision↓) → over-flagging, 실사용 불가
-- **KoELECTRA Small/Base · KcELECTRA v2**: 현 transformers에서 분류 헤드가 로드되지 않아(랜덤 초기화) 수치가 noise성 — off-the-shelf로는 게임 욕설 탐지에 못 씀
-- **Multilingual**: 범용 별점 감정모델 → 게임 욕설 특화 부족(F1 중위권)
+### 3. 다른 모델 한계 — 감정 ≠ 욕설
+- 나머지 4종은 모두 **범용 감정모델**이라 "부정 감정"을 "욕설"로 간주 → 과탐(Precision 52~58%).
+- clean 234건 중 158~174건을 욕설로 오탐 → 게임에 쓰면 멀쩡한 말에 저주 발동 → 실사용 부적합.
 
-> ⚠️ **유효 비교 모델은 UnSmile·Korean Sentiment·Multilingual 3종**. KoELECTRA/KcELECTRA류는 분류 헤드 미로딩으로 수치가 비결정적(noise) — "튜닝 안 된 모델은 못 쓴다"는 대조군으로만 의미.
+> ℹ️ `beomi/KcELECTRA-base-v2022`는 분류 헤드가 없는 base LM이라 후보 제외(4·5단계 fine-tuning 대상). KoELECTRA 2종은 저장 헤드가 구 형식이라 수동 로드해 실수치 산출.
 
 ---
 
 ## 📈 시각화
 
-### 6개 모델 비교
-![6 Model Comparison](./6_model_comparison.png)
+### 모델 비교
+![Model Comparison](./6_model_comparison.png)
 
 ### 베스트 모델 선정
 ![Best Model Selection](./best_model_selection.png)
@@ -342,7 +375,7 @@ def save_results(results, sentences_count):
 # ============================================================
 
 if __name__ == "__main__":
-    print("🎮 게임 STT 데이터 기반 6개 모델 벤치마크")
+    print("🎮 게임 STT 데이터 기반 5개 모델 벤치마크")
     print("="*60)
     
     # 데이터 로드

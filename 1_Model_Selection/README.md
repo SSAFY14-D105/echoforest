@@ -9,7 +9,7 @@
 | 경로 | 내용 |
 | :--- | :--- |
 | `00_STT_Engine_Selection/` | 런타임 STT 엔진 선정(Web Speech API) — 근거 `STT_COMPARISON.md` + 실측 `web_speech_api/` |
-| `benchmark_game_stt.py` | 6개 욕설탐지 모델을 `test_set.tsv`(482)로 추론·평가 → `results/` 갱신 |
+| `benchmark_game_stt.py` | 5개 욕설탐지 모델을 `test_set.tsv`(482)로 추론·평가 → `results/` 갱신 |
 | `plot_benchmark.py` | 결과 CSV로 **포트폴리오용 차트**(영어/한국어) 렌더 — 추론과 분리(재추론 불필요) |
 | `benchmark_game_stt.ipynb` | 노트북 버전(참고) |
 | `results/` | 산출물: `MODEL_BENCHMARK.md`(상세+그래프 설명)·`benchmark_results.csv/.json`·그래프 4종(en/ko)·`_archive/`(구 결과) |
@@ -19,14 +19,17 @@
 
 `test_set.tsv`(482, held-out) · **임계값 0.5** · **Abuse F1** 기준 선정. (수치·그래프 상세 → [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
 
-| 모델 | Abuse Recall | **Abuse F1** | 비고 |
-| :--- | :---: | :---: | :--- |
-| **UnSmile** (`smilegate-ai/kor_unsmile`) | 60.1% | **74.0%** | ✅ 선정 (Precision 96.1%) |
-| Korean Sentiment | 94.0% | 71.4% | recall 1위지만 과탐(Precision 57.5%) |
-| Multilingual | 70.2% | 60.0% | 범용 감정모델 |
-| KoELECTRA Small/Base · KcELECTRA v2 | — | 8.7~65.1% | † 헤드 미로딩(noise) |
+| 모델 | Abuse Recall | **Abuse F1** | Precision | 유형 |
+| :--- | :---: | :---: | :---: | :--- |
+| **UnSmile** (`smilegate-ai/kor_unsmile`) | 60.1% | **74.0%** | **96.1%** | ✅ 선정 (한국어 혐오 전용) |
+| Korean Sentiment | 94.0% | 71.4% | 57.5% | 범용 감정(과탐) |
+| KoELECTRA Base | 90.3% | 69.3% | 56.3% | 범용 감정(과탐) |
+| KoELECTRA Small | 84.3% | 66.3% | 54.7% | 범용 감정(과탐) |
+| Multilingual | 70.2% | 60.0% | 52.4% | 범용 감정(과탐) |
 
-> **선정 기준은 Recall이 아니라 F1.** Korean Sentiment는 Recall 94%로 최고지만 clean 234건 중 **172건을 욕설로 오탐**(Precision 57.5%) → 게임에 쓰면 멀쩡한 말에 저주 발동. UnSmile은 오탐 **단 6건**(Precision 96.1%)이라 F1 1위. (KoELECTRA/KcELECTRA류는 현 transformers에서 분류 헤드가 안 실려 수치가 noise — 대조군)
+> **선정 기준은 Recall이 아니라 F1.** 감정모델 4종은 Recall(70~94%)은 높아도 부정 감정을 다 욕설로 오탐 → **Precision 52~58%**(clean 234건 중 158~174건 오탐) → 게임에 쓰면 멀쩡한 말에 저주 발동. UnSmile만 오탐 **6건**(Precision 96.1%)이라 F1 1위.
+>
+> ※ `beomi/KcELECTRA-base-v2022`는 분류 헤드가 없는 base LM이라 후보 제외(4·5단계에서 게임 데이터로 헤드 학습). KoELECTRA 2종은 저장 헤드가 구 형식이라 **수동 로드**해 실수치 산출.
 
 ## 🚀 실행
 
