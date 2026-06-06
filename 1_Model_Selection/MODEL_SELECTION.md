@@ -1,74 +1,37 @@
-# 🎯 감정 분석 모델 선정 결과
+# 모델 선정 — 근거 메모
 
-## 📊 최종 선정 모델
+> 수치·그래프는 [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md). 이 문서는 **왜 UnSmile을, 왜 F1으로 골랐나**와 그 과정의 트러블슈팅 교훈을 정리한다.
 
-| 모델 | 최적 Threshold | F1 Score | 선정 |
-|------|----------------|----------|------|
-| **UnSmile** | **16.26%** | **89.51%** | ✅ **선정** |
-| Korean Sentiment | 86.65% | 86.09% | 대안 |
+## 선정: UnSmile (`smilegate-ai/kor_unsmile`)
 
----
+- **평가**: `test_set.tsv`(482, held-out) · 임계값 0.5 · 6개 모델 비교
+- **기준**: Abuse F1(Precision·Recall 조화평균). UnSmile **F1 74.0% 1위** (Precision 96.1% / Recall 60.1%)
+- 한국어 혐오발언 전용 모델(Smilegate AI), 댓글/채팅으로 학습 → 게임 대화 도메인에 가장 근접
 
-## 🏆 UnSmile 모델 상세
+## 왜 Recall이 아니라 F1인가 (핵심)
 
-```
-모델: smilegate-ai/kor_unsmile
-최적 Threshold: 16.26%
-F1 Score: 89.51%
-Precision: 94.1%
-Recall: 85.3%
-Accuracy: 93.3%
-```
+게임에선 "욕설을 놓치는 것(FN)"보다 **"멀쩡한 말을 욕설로 오탐(FP)"이 더 치명적** — 오탐은 곧 *욕 안 했는데 저주 발동*(최악의 UX).
 
-**특징:**
-- 한국어 혐오 발언 탐지 전용 모델
-- Precision 94% = 욕설로 판단한 것의 94%가 진짜 욕설
-- 게임 저주 시스템에 적합
+- **Korean Sentiment**: Recall 94.0%(1위)지만 clean 234건 중 **172건 오탐**(Precision 57.5%) → 실사용 불가
+- **UnSmile**: Recall 60.1%로 낮아 보여도 오탐 **단 6건**(Precision 96.1%) → 균형(F1) 1위
 
----
+⇒ Recall만 보면 과탐 모델을 잘못 고른다. 그래서 **F1으로 선정**. (시각적 근거 = `6_model_comparison.png` 덤벨 그래프)
 
-## 🔧 트러블슈팅 기록
+## 트러블슈팅 교훈
 
-### 1. 라벨 매핑 문제
-**증상:** 모든 모델에서 F1 50% 고정
-**원인:** 모델별 라벨 의미가 다름
-```python
-# Korean Sentiment: LABEL_0 = 부정 (LABEL_1 아님!)
-# UnSmile: "악플/욕설" = 부정
-# KoELECTRA: "negative" = 부정
-```
-**해결:** MODEL_NEGATIVE_LABELS 매핑 테이블 추가
+1. **모델별 '부정' 라벨이 제각각** — 매핑을 안 맞추면 전 모델이 F1 50% 근처로 고정됨(초기 증상).
+   UnSmile `악플/욕설`(+혐오 8종) · Korean Sentiment `LABEL_0` · KoELECTRA `negative` · Multilingual `1~2 stars` → `MODEL_NEGATIVE_LABELS`로 통일.
+2. **임계값은 0.5 고정(공정 비교)** — 초기엔 모델별 threshold 튜닝도 탐색했으나, 모델마다 다른 임계값은 비교를 왜곡한다. 최종 벤치마크·파인튜닝·배포 모두 **0.5**로 통일.
+3. **튜닝 안 된 모델은 못 쓴다** — KoELECTRA/KcELECTRA는 분류 헤드가 (현 transformers에선 아예) 로드되지 않아 출력이 noise. base·범용 감정모델이 아니라 **도메인 학습된 모델**이 필요하다는 결론 → UnSmile 채택 후 게임 데이터로 fine-tuning(4·5단계).
 
-### 2. 욕설확률 표시 혼란
-**증상:** 같은 문장이 모델마다 다른 %로 표시
-**원인:** 라벨별로 score 해석이 다름
-**해결:** curse_score로 통일 (100% = 욕설)
+## 제외/비채택 모델
 
-### 3. KoELECTRA 시리즈 성능 저조
-**증상:** F1 50~60%, 모든 출력이 50% 근처
-**원인:** Fine-tuning 안 된 base 모델
-**결론:** 사용 불가, Fine-tuning 필요
+| 모델 | 사유 |
+| :--- | :--- |
+| KoELECTRA Small/Base · KcELECTRA v2 | 분류 헤드 미로딩 → 수치 noise (off-the-shelf 대조군) |
+| Multilingual | 범용 별점 감정모델 → F1 60% 중위권 |
+| Korean Sentiment | 과탐(Precision 57.5%) — 대안이나 실사용 부적합 |
 
-### 4. Threshold 이해
-**증상:** 1% threshold에서 F1 50%가 왜?
-**원인:** 모든 문장을 욕설로 판단 → TP 100%, FP 100%
-**결론:** 정상 동작, 모델 출력 자체가 50% 근처
+## 다음 단계
 
----
-
-## ❌ 제외된 모델들
-
-| 모델 | 문제 | 상태 |
-|------|------|------|
-| KoELECTRA Small | Fine-tuning 안 됨 | 사용 불가 |
-| KoELECTRA Base | Fine-tuning 안 됨 | 사용 불가 |
-| KcELECTRA v2 | Fine-tuning 안 됨 | 사용 불가 |
-| Multilingual | 한국어 성능 부족 | 대안 없음 |
-
----
-
-## 🚀 다음 단계
-
-1. **UnSmile 브라우저 통합** - Transformers.js로 변환
-2. **Threshold 16.26% 적용** - 게임에서 사용
-3. **(선택) Fine-tuning** - 게임 데이터로 추가 학습
+UnSmile을 게임 STT 데이터로 fine-tuning → [`../4_LoRA_Fine_Tuning`](../4_LoRA_Fine_Tuning) · [`../5_Full_Fine_Tuning`](../5_Full_Fine_Tuning)

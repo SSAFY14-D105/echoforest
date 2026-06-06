@@ -1,12 +1,12 @@
 """
-🎮 게임 STT 데이터 기반 6개 모델 벤치마크
-- game_test.tsv (188건) 사용
-- 6개 감정분석 모델 비교
-- 발표용 시각화 생성
+게임 STT 데이터 기반 6개 모델 벤치마크 (Step 1 · 모델 선정)
+- test_set.tsv (482건, held-out) 사용
+- 6개 한국어 감정/혐오 분석 모델 비교 → Abuse F1 기준 선정
+- 산출물: results/ (benchmark_autogen.md 원시요약, benchmark_results.csv/.json, 그래프 en/ko 4종)
+  ※ 큐레이션 문서(그래프 설명 등)는 results/MODEL_BENCHMARK.md (손으로 유지, 자동 덮어쓰기 안 함)
 
-사용법: 
-    cd C:\SSAFY\S14P11D105-stt-model-test\01_AI\02_Sentiment_Analysis
-    conda activate [your-env]
+사용법:
+    cd 1_Model_Selection
     python benchmark_game_stt.py
 """
 
@@ -34,11 +34,13 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
-# 테스트할 5개 모델 (Korean Sentiment 제외 - 오탐 많음)
+# 테스트할 6개 모델 (Korean Sentiment 포함 — MODEL_SELECTION.md의 #2 대안.
+#  over-flagging으로 Precision↓ 인 점도 결과로 함께 보고)
 MODELS_TO_TEST = [
     ("KoELECTRA Small", "monologg/koelectra-small-finetuned-sentiment"),
     ("KoELECTRA Base", "monologg/koelectra-base-finetuned-sentiment"),
     ("Multilingual", "nlptown/bert-base-multilingual-uncased-sentiment"),
+    ("Korean Sentiment", "matthewburke/korean_sentiment"),
     ("UnSmile", "smilegate-ai/kor_unsmile"),
     ("KcELECTRA v2", "beomi/KcELECTRA-base-v2022"),
 ]
@@ -62,7 +64,7 @@ MODEL_NEGATIVE_LABELS = {
 HATE_COLUMNS = ['여성/가족', '남성', '성소수자', '인종/국적', '연령', '지역', '종교', '기타 혐오', '악플/욕설']
 
 def load_game_data():
-    """game_test.tsv 로드 - 9개 혐오 라벨 중 하나라도 1이면 Abuse"""
+    """test_set.tsv 로드 - 9개 혐오 라벨 중 하나라도 1이면 Abuse"""
     df = pd.read_csv(DATA_PATH, sep='\t')
     
     sentences = []
@@ -202,85 +204,10 @@ def benchmark_model(model_name, model_id, sentences, true_labels):
 # ============================================================
 
 def create_visualizations(results):
-    """발표용 시각화 생성"""
-    
-    successful = [r for r in results if not r.get("error")]
-    if not successful:
-        print("❌ 성공한 모델 없음")
-        return
-    
-    # 데이터 준비
-    names = [r["model_name"] for r in successful]
-    recalls = [r["abuse_recall"] * 100 for r in successful]
-    f1s = [r["abuse_f1"] * 100 for r in successful]
-    latencies = [r["avg_latency"] for r in successful]
-    
-    # 베스트 모델 인덱스 (선정 기준: Abuse F1 — recall-only는 over-flagging 모델을 잘못 선택)
-    best_idx = np.argmax(f1s)
-    
-    # Figure 1: 3-Panel 비교
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    
-    colors = ['#2ECC71' if i == best_idx else '#3498DB' for i in range(len(names))]
-    
-    # 1) Abuse Recall
-    ax = axes[0]
-    bars = ax.barh(names, recalls, color=colors, edgecolor='black', linewidth=0.8)
-    ax.set_xlabel('Abuse Recall (%)', fontsize=11)
-    ax.set_title('🎯 Abuse Recall (Higher is Better)', fontsize=12, fontweight='bold')
-    ax.set_xlim(0, 100)
-    for i, (bar, val) in enumerate(zip(bars, recalls)):
-        ax.text(val + 1, i, f'{val:.1f}%', va='center', fontsize=9, fontweight='bold' if i == best_idx else 'normal')
-    
-    # 2) Abuse F1
-    ax = axes[1]
-    bars = ax.barh(names, f1s, color=colors, edgecolor='black', linewidth=0.8)
-    ax.set_xlabel('Abuse F1 Score (%)', fontsize=11)
-    ax.set_title('⚖️ Abuse F1 Score', fontsize=12, fontweight='bold')
-    ax.set_xlim(0, 100)
-    for i, (bar, val) in enumerate(zip(bars, f1s)):
-        ax.text(val + 1, i, f'{val:.1f}%', va='center', fontsize=9)
-    
-    # 3) Latency
-    ax = axes[2]
-    bars = ax.barh(names, latencies, color=colors, edgecolor='black', linewidth=0.8)
-    ax.set_xlabel('Latency (ms)', fontsize=11)
-    ax.set_title('⚡ Inference Latency', fontsize=12, fontweight='bold')
-    for i, (bar, val) in enumerate(zip(bars, latencies)):
-        ax.text(val + 0.5, i, f'{val:.1f}ms', va='center', fontsize=9)
-    
-    plt.tight_layout()
-    plt.savefig(f'{RESULTS_DIR}/6_model_comparison.png', dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"📊 저장: {RESULTS_DIR}/6_model_comparison.png")
-    
-    # Figure 2: 베스트 모델 하이라이트
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    bar_colors = ['#27AE60' if i == best_idx else '#BDC3C7' for i in range(len(names))]
-    bars = ax.barh(names, f1s, color=bar_colors, edgecolor='black', linewidth=1)
-
-    ax.set_xlabel('Abuse F1 (%)', fontsize=12)
-    ax.set_title(f'Model Benchmark (selected by F1) → Best: {successful[best_idx]["model_name"]}',
-                 fontsize=14, fontweight='bold')
-    ax.set_xlim(0, 100)
-
-    for i, (bar, val) in enumerate(zip(bars, f1s)):
-        color = 'white' if i == best_idx else 'black'
-        weight = 'bold' if i == best_idx else 'normal'
-        ax.text(val - 3 if val > 15 else val + 1, i, f'{val:.1f}%',
-                va='center', ha='right' if val > 15 else 'left',
-                fontsize=11, fontweight=weight, color=color)
-
-    # 베스트 모델 강조
-    ax.annotate('✅ SELECTED', xy=(f1s[best_idx], best_idx),
-                xytext=(f1s[best_idx] + 5, best_idx + 0.3),
-                fontsize=10, fontweight='bold', color='#27AE60')
-    
-    plt.tight_layout()
-    plt.savefig(f'{RESULTS_DIR}/best_model_selection.png', dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"📊 저장: {RESULTS_DIR}/best_model_selection.png")
+    """[deprecated] 차트는 plot_benchmark.render_charts()로 분리됨.
+    포트폴리오용 디자인을 results/benchmark_results.csv 기반으로 그린다
+    (모델 추론과 분리 → 재추론 없이 재렌더 가능). main에서 save_results 후 호출."""
+    pass
 
 # ============================================================
 # 💾 결과 저장
@@ -332,7 +259,10 @@ def save_results(results, sentences_count):
     # Markdown README
     best = max(successful, key=lambda x: x["abuse_f1"])
     
-    md_content = f"""# 🎮 6개 모델 벤치마크 결과
+    md_content = f"""# 🎮 6개 모델 벤치마크 결과 (자동 생성)
+
+> ⚙️ 이 파일은 `benchmark_game_stt.py`가 매 실행마다 **자동 생성**하는 원시 요약입니다.
+> 그래프 읽는 법·688 비교 등 **큐레이션 문서는** [`MODEL_BENCHMARK.md`](./MODEL_BENCHMARK.md).
 
 ## 📊 테스트 환경
 - **테스트 데이터**: `test_set.tsv` ({sentences_count}건, held-out)
@@ -367,8 +297,11 @@ def save_results(results, sentences_count):
 - Smilegate AI의 **한국어 혐오 발언 탐지** 전용 모델, 댓글/채팅 학습 → 게임 대화에 적합
 
 ### 3. 다른 모델 한계
-- **KoELECTRA / Multilingual**: 베이스 모델 → over-flagging으로 Precision 저조
-- **KcELECTRA v2**: 일반 도메인 → 게임 욕설 특화 부족
+- **Korean Sentiment**: Recall 최고지만 clean 문장 다수를 욕설로 오탐(Precision↓) → over-flagging, 실사용 불가
+- **KoELECTRA Small/Base · KcELECTRA v2**: 현 transformers에서 분류 헤드가 로드되지 않아(랜덤 초기화) 수치가 noise성 — off-the-shelf로는 게임 욕설 탐지에 못 씀
+- **Multilingual**: 범용 별점 감정모델 → 게임 욕설 특화 부족(F1 중위권)
+
+> ⚠️ **유효 비교 모델은 UnSmile·Korean Sentiment·Multilingual 3종**. KoELECTRA/KcELECTRA류는 분류 헤드 미로딩으로 수치가 비결정적(noise) — "튜닝 안 된 모델은 못 쓴다"는 대조군으로만 의미.
 
 ---
 
@@ -400,9 +333,9 @@ def save_results(results, sentences_count):
 3. 최적 모델 INT8 양자화
 """
     
-    with open(f'{RESULTS_DIR}/MODEL_BENCHMARK.md', 'w', encoding='utf-8') as f:
+    with open(f'{RESULTS_DIR}/benchmark_autogen.md', 'w', encoding='utf-8') as f:
         f.write(md_content)
-    print(f"📝 저장: {RESULTS_DIR}/MODEL_BENCHMARK.md")
+    print(f"📝 저장: {RESULTS_DIR}/benchmark_autogen.md (원시 요약 · 큐레이션은 MODEL_BENCHMARK.md)")
 
 # ============================================================
 # 🚀 메인
@@ -440,9 +373,12 @@ if __name__ == "__main__":
         best = max(successful, key=lambda x: x["abuse_f1"])
         print(f"\n🏆 Best: {best['model_name']} (Abuse F1: {best['abuse_f1']*100:.2f}%)")
     
-    # 시각화 및 저장
-    create_visualizations(all_results)
+    # 저장(CSV/JSON/MD) 후, 포트폴리오 차트는 plot_benchmark에서 CSV 기반 렌더(영어+한국어)
     save_results(all_results, len(sentences))
+    from plot_benchmark import render_charts
+    _csv = os.path.join(RESULTS_DIR, "benchmark_results.csv")
+    render_charts(_csv, RESULTS_DIR, lang="en", suffix="")
+    render_charts(_csv, RESULTS_DIR, lang="ko", suffix="_ko")
     
     print("\n✅ 벤치마크 완료!")
     print(f"   결과: {RESULTS_DIR}/")
