@@ -22,6 +22,8 @@
 
 > **한 줄**: 감정모델 4종은 Recall은 높아도 **Precision이 52~58%(과탐)**, UnSmile만 **Precision 96%**라 F1 1위.
 
+> 🎯 **Step 1의 결론은 "UnSmile 선정"이지 "완성"이 아니다.** UnSmile은 **파인튜닝의 가장 좋은 출발점** — 게임 채팅에서 **Recall 60.08%(욕설 248건 중 99건을 놓침)** 가 한계다. 임계값을 낮춰 더 잡으려 하면 멀쩡한 게임 오더(`가만히 있어라 좀`)까지 과탐하는 *threshold 딜레마*에 빠진다. → 이 한계를 **게임 데이터 fine-tuning(3~7단계)** 으로 푼다(Recall↑ & Precision 유지). 배경: [`../../AI_파이프라인_개요.md`](../../AI_파이프라인_개요.md)
+
 ---
 
 ## 🔁 구 688판 대비 (재정제 전후, UnSmile)
@@ -112,7 +114,8 @@
 
 ---
 
-## 🚀 다음 단계
+## 🚀 다음 단계 — Step 1은 "베이스 선정", 이제 fine-tuning
+선정한 UnSmile의 게임 채팅 **Recall 60%를 끌어올리는 것**이 목표(Precision은 유지):
 1. UnSmile 기반으로 **게임 STT 데이터로 Fine-tuning** (LoRA/Full)
 2. 8개 파인튜닝 모델 + baseline 비교 → 최적 모델 선정
 3. 최적 모델 INT8 양자화
