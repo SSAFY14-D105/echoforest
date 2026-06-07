@@ -10,7 +10,8 @@ Full Fine-tuning 기반 모든 파라미터 학습
 5_Full_Fine_Tuning/
 ├── v1_corrected_only/           # 보정 데이터만 (14,690건)
 │   ├── full_game_kcelectra.py/.ipynb
-│   ├── full_tutorial_kcbert.py/.ipynb
+│   ├── full_tutorial_bert.py
+│   ├── full_tutorial_kcbert.ipynb
 │   └── output/                  # 학습 결과 저장
 │       ├── full_game_kcelectra/
 │       └── full_tutorial_kcbert/
@@ -41,10 +42,12 @@ gradient_accumulation_steps = 2
 
 ## 📈 모델 비교
 
-| 노트북 | 모델 | 메트릭 |
+| 실험 | 모델 | 메트릭 |
 |--------|------|--------|
 | `full_game_kcelectra` | KcELECTRA-base-v2022 | abuse_recall |
 | `full_tutorial_kcbert` | kcbert-base | LRAP |
+
+> v1 kcbert 실험은 로컬 실행 스크립트명이 `full_tutorial_bert.py`, 노트북명이 `full_tutorial_kcbert.ipynb`입니다. 산출물 폴더명은 `full_tutorial_kcbert/`로 통일되어 Step 6 비교 코드와 연결됩니다.
 
 ## ⚠️ 참고
 Full Fine-tuning은 LoRA보다 학습 시간이 길고 메모리 사용량이 높습니다.

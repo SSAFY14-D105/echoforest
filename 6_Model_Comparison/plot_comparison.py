@@ -7,7 +7,11 @@ results/comparison_results.csv 를 읽어 차트를 렌더(재추론 불필요).
   ③ v1_vs_v2.png                  — 게임 데이터 효과(v1 보정만 vs v2 +게임수집)
 사용: cd 6_Model_Comparison && python plot_comparison.py
 """
-import os, pandas as pd, numpy as np
+import os
+from glob import glob
+from pathlib import Path
+
+import pandas as pd, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt, matplotlib.font_manager as fm
 from matplotlib.lines import Line2D
@@ -15,9 +19,29 @@ from matplotlib.lines import Line2D
 def _font(c):
     a = {f.name for f in fm.fontManager.ttflist}
     return next((x for x in c if x in a), "DejaVu Sans")
+
+def _font_from_files(patterns, fallback_names):
+    for pattern in patterns:
+        for font_path in glob(str(Path(pattern).expanduser())):
+            path = Path(font_path)
+            if path.exists():
+                fm.fontManager.addfont(str(path))
+                return fm.FontProperties(fname=str(path)).get_name()
+    return _font(fallback_names)
+
 FONT_EN = _font(["Helvetica Neue","Avenir Next","Arial","DejaVu Sans"])
-FONT_KO = _font(["Apple SD Gothic Neo","AppleGothic","Nanum Gothic","DejaVu Sans"])
-INK,SUB,GRID,NEUTRAL,MUTED,ACCENT,SLATE = "#1F2933","#9AA5B1","#EBEEF1","#C2CAD2","#E0E4E8","#2A9D8F","#4B5A68"
+FONT_KO = _font_from_files(
+    [
+        "/Users/sondahyun/Pretendard-1.3.9/public/static/Pretendard-*.otf",
+        "/Users/sondahyun/Pretendard-1.3.9/public/variable/PretendardVariable.ttf",
+        "~/Library/Fonts/Pretendard*.otf",
+        "~/Library/Fonts/Pretendard*.ttf",
+        "/Library/Fonts/Pretendard*.otf",
+        "/Library/Fonts/Pretendard*.ttf",
+    ],
+    ["Pretendard","Apple SD Gothic Neo","AppleGothic","Nanum Gothic","DejaVu Sans"],
+)
+INK,SUB,GRID,NEUTRAL,MUTED,ACCENT,SLATE = "#1F2933","#9AA5B1","#EBEEF1","#C2CAD2","#E0E4E8","#2F9D91","#4B5A68"
 WARN = "#C2703D"  # 정밀도 하락(작은 비용) 표시용
 
 SELECTED = "Full v2 Game"   # F1·LRAP·Precision 1위 → Step 1 기준(F1·정밀도)과 일관
@@ -26,14 +50,14 @@ def _disp(m):   # 표시명: Game/Tutorial은 base 모델이므로 명시 (Game=
     return m.replace("Game", "KcELECTRA").replace("Tutorial", "kcbert")
 
 STR = {
- "en": {"h_title":"Fine-tuning lifts abuse recall","h_word":"fine-tuned up to","h_xlabel":"Abuse Recall  (%)",
-        "before":"baseline","selected":"selected",
+ "en": {"h_title":"Recall view — fine-tuning catches more abuse","h_xlabel":"Abuse Recall  (%)",
+        "before":"baseline","selected":"F1-selected","recall_best":"recall best","h_note":"Recall-only chart",
         "t_title":"The trade-off — a little precision for a lot of recall",
         "t_sub":"Baseline vs selected (Full v2 Game) · F1 confirms the net win",
         "v_title":"Game data is what matters — v1 vs v2","v_sub":"v1 = corrected unSmile only   ·   v2 = + 518 collected game lines",
         "v_xlabel":"Abuse Recall  (%)","v1":"v1 (correction only)","v2":"v2 (+ game data)"},
- "ko": {"h_title":"파인튜닝이 욕설 탐지율을 끌어올린다","h_word":"파인튜닝 최대","h_xlabel":"Abuse Recall  (%)",
-        "before":"baseline","selected":"선정",
+ "ko": {"h_title":"Recall 관점 — 파인튜닝이 욕설을 더 많이 잡는다","h_xlabel":"Abuse Recall  (%)",
+        "before":"baseline","selected":"F1 선정","recall_best":"Recall 1위","h_note":"Recall 전용 그래프",
         "t_title":"트레이드오프 — 정밀도 약간 내주고 재현율 크게 얻음",
         "t_sub":"Baseline vs 선정(Full v2 Game) · F1이 순이득을 확인",
         "v_title":"결국 게임 데이터가 핵심 — v1 vs v2","v_sub":"v1 = 보정 unSmile만   ·   v2 = + 수집 게임채팅 518",
@@ -55,29 +79,42 @@ def chart_headline(df, path, t):
     d = df.sort_values("abuse_recall", ascending=True).reset_index(drop=True)
     base_r = float(df[df["model"]=="Baseline"]["abuse_recall"].iloc[0])*100
     max_r = float(d["abuse_recall"].max())*100
+    selected_r = float(df[df["model"]==SELECTED]["abuse_recall"].iloc[0])*100
     n = len(d); y = np.arange(n)
     fig, ax = plt.subplots(figsize=(9.9, 0.52*n+2.0))
     fig.subplots_adjust(left=0.30, right=0.965, top=1-1.5/(0.52*n+2.0), bottom=1.0/(0.52*n+2.0))
     colors=[SLATE if m=="Baseline" else (ACCENT if m==SELECTED else NEUTRAL) for m in d["model"]]
     ax.barh(y, d["abuse_recall"]*100, height=0.62, color=colors, zorder=3)
     ax.axvline(base_r, color=SLATE, ls="--", lw=1.3, zorder=2)
+    bi = int(d.index[d["model"]=="Baseline"][0]); si = int(d.index[d["model"]==SELECTED][0])
+    ri = int(d["abuse_recall"].idxmax())
     ax.set_yticks(y); ax.set_yticklabels([_disp(m) for m in d["model"]], fontsize=12)
     for tick,m in zip(ax.get_yticklabels(), d["model"]):
         if m=="Baseline": tick.set_color(SLATE)
         if m==SELECTED: tick.set_fontweight("bold")
     for i,v in enumerate(d["abuse_recall"]*100):
-        m=d["model"].iloc[i]; hot=(m=="Baseline" or m==SELECTED)
+        m=d["model"].iloc[i]; hot=(m=="Baseline" or m==SELECTED or i==ri)
         ax.text(v-1.6 if hot else v+1.2, i, f"{v:.1f}", va="center", ha="right" if hot else "left",
-                color="white" if hot else INK, fontweight="bold" if hot else "normal", fontsize=11.5, zorder=5)
-    bi = int(d.index[d["model"]=="Baseline"][0]); si = int(d.index[d["model"]==SELECTED][0])
+                color="white" if m in {"Baseline", SELECTED} else INK,
+                fontweight="bold" if hot else "normal", fontsize=11.5, zorder=5)
     ax.text(base_r+1.5, bi, t["before"], va="center", ha="left", color=SLATE, fontsize=10, fontstyle="italic")
+    if ri != si:
+        recall_best_value = d["abuse_recall"].iloc[ri] * 100
+        ax.text(recall_best_value+2.0, ri, t["recall_best"], va="center", ha="left",
+                color="white", fontsize=10.5, fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="#8FA3AE", edgecolor="none"))
     ax.text(d["abuse_recall"].iloc[si]*100+3.5, si, t["selected"], va="center", ha="left",
             color="white", fontsize=10.5, fontweight="bold",
             bbox=dict(boxstyle="round,pad=0.4", facecolor=ACCENT, edgecolor="none"))
     ax.set_xlim(0,100); ax.set_xticks([0,20,40,60,80,100])
     ax.xaxis.grid(True,color=GRID,lw=1.2,zorder=0); ax.set_axisbelow(True); _despine(ax,keep=())
     ax.set_xlabel(t["h_xlabel"], fontsize=10.5)
-    _title(ax, t["h_title"], f"test_set 482 · baseline {base_r:.1f}% — {t['h_word']} {max_r:.1f}%  (+{max_r-base_r:.1f}p)")
+    _title(
+        ax,
+        t["h_title"],
+        f"test_set 482 · {t['h_note']}: best {max_r:.1f}% vs F1-selected {selected_r:.1f}% "
+        f"(+{selected_r-base_r:.1f}p vs baseline)",
+    )
     fig.savefig(path, dpi=220, facecolor="white"); plt.close(fig); print("saved", path)
 
 # ── ② 트레이드오프 (결정타): baseline vs selected, P/R/F1 ───────────────────

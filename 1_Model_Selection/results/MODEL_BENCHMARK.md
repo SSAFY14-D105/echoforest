@@ -119,4 +119,4 @@
 선정한 UnSmile의 게임 채팅 **Recall 58%를 끌어올리는 것**이 목표(Precision은 유지):
 1. UnSmile 기반으로 **게임 STT 데이터로 Fine-tuning** (LoRA/Full)
 2. 8개 파인튜닝 모델 + baseline 비교 → 최적 모델 선정
-3. 최적 모델 INT8 양자화
+3. 최적 모델 압축/배포 평가(FP16 우선, INT8 보정 검토)

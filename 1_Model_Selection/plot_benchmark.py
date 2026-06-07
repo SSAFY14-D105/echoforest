@@ -13,6 +13,8 @@ results/benchmark_results.csv 를 읽어 차트를 렌더한다. 모델 추론(b
 사용:  cd 1_Model_Selection && python plot_benchmark.py
 """
 import os
+from glob import glob
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -29,15 +31,34 @@ def _pick_font(cands):
             return c
     return "DejaVu Sans"
 
+def _preferred_font_from_files(patterns, fallback_names):
+    for pattern in patterns:
+        for font_path in glob(str(Path(pattern).expanduser())):
+            path = Path(font_path)
+            if path.exists():
+                fm.fontManager.addfont(str(path))
+                return fm.FontProperties(fname=str(path)).get_name()
+    return _pick_font(fallback_names)
+
 FONT_EN = _pick_font(["Helvetica Neue", "Avenir Next", "Helvetica", "Arial", "DejaVu Sans"])
-FONT_KO = _pick_font(["Apple SD Gothic Neo", "AppleGothic", "Nanum Gothic", "NanumGothic", "DejaVu Sans"])
+FONT_KO = _preferred_font_from_files(
+    [
+        "/Users/sondahyun/Pretendard-1.3.9/public/static/Pretendard-*.otf",
+        "/Users/sondahyun/Pretendard-1.3.9/public/variable/PretendardVariable.ttf",
+        "~/Library/Fonts/Pretendard*.otf",
+        "~/Library/Fonts/Pretendard*.ttf",
+        "/Library/Fonts/Pretendard*.otf",
+        "/Library/Fonts/Pretendard*.ttf",
+    ],
+    ["Pretendard", "Apple SD Gothic Neo", "AppleGothic", "Nanum Gothic", "NanumGothic", "DejaVu Sans"],
+)
 
 INK     = "#1F2933"   # 본문/강조 텍스트
 SUB     = "#9AA5B1"   # 보조 텍스트·축
 GRID    = "#EBEEF1"   # 옅은 격자
 NEUTRAL = "#C2CAD2"   # 일반 막대(승자 외)
 MUTED   = "#E0E4E8"   # noise 모델(흐리게)
-ACCENT  = "#2A9D8F"   # 승자 / Precision (틸)
+ACCENT  = "#2F9D91"   # 승자 / Precision (틸)
 SLATE   = "#4B5A68"   # Recall (슬레이트)
 
 # noise 모델(분류 헤드 미로딩) 집합. 현재는 모두 헤드가 실제 로드돼 비어 있음.

@@ -10,7 +10,8 @@ LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning
 4_LoRA_Fine_Tuning/
 ├── v1_corrected_only/           # 보정 데이터만 (14,690건)
 │   ├── lora_game_kcelectra.py/.ipynb
-│   ├── lora_tutorial_kcbert.py/.ipynb
+│   ├── lora_tutorial_bert.py
+│   ├── lora_tutorial_kcbert.ipynb
 │   └── output/                  # 학습 결과 저장
 │       ├── lora_game_kcelectra/
 │       └── lora_tutorial_kcbert/
@@ -41,10 +42,12 @@ target_modules = ["query", "key", "value"]
 
 ## 📈 모델 비교
 
-| 노트북 | 모델 | 메트릭 |
+| 실험 | 모델 | 메트릭 |
 |--------|------|--------|
 | `lora_game_kcelectra` | KcELECTRA-base-v2022 | abuse_recall |
 | `lora_tutorial_kcbert` | kcbert-base | LRAP |
+
+> v1 kcbert 실험은 로컬 실행 스크립트명이 `lora_tutorial_bert.py`, 노트북명이 `lora_tutorial_kcbert.ipynb`입니다. 산출물 폴더명은 `lora_tutorial_kcbert/`로 통일되어 Step 6 비교 코드와 연결됩니다.
 
 ## 🚀 실행 방법
 

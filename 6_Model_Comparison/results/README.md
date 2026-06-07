@@ -4,7 +4,7 @@ baseline(파인튜닝 전) + 파인튜닝 8개를 **held-out `test_set`(482)** �
 
 - **abuse 판정**: `악플/욕설`(index 8) > 0.5 — 배포·Step 1·Step 2와 동일 정의 · **임계값 0.5**
 - **지표**: Abuse/Clean Precision·Recall·F1 + **LRAP**(다중라벨 랭킹 품질, threshold 무관)
-- 생성: `python compare_models.py` → `comparison_results.csv/.json` · 차트 `python plot_comparison.py`
+- 생성: `python compare_models.py` → `comparison_results.csv/.json` · 포트폴리오 차트 `python plot_comparison.py` · 논문용 PNG/PDF `python plot_paper_figures.py`
 
 ## 📛 모델 이름 읽는 법
 
@@ -24,14 +24,14 @@ baseline(파인튜닝 전) + 파인튜닝 8개를 **held-out `test_set`(482)** �
 ![before/after](./abuse_recall_before_after.png)
 한국어판: [`abuse_recall_before_after_ko.png`](./abuse_recall_before_after_ko.png)
 
-> baseline 58.06%에서 파인튜닝 8개가 전부 기준선(점선)을 넘김. **최고 Recall 85.89%(LoRA v2 KcELECTRA), 선정 84.68%(Full v2 KcELECTRA)**.
+> 이 그래프는 **Recall만 보는 헤드라인 그래프**입니다. baseline 58.06%에서 파인튜닝 8개가 전부 기준선(점선)을 넘겼고, **Recall 1위는 LoRA v2 KcELECTRA 85.89%**, **최종 선정은 F1/Precision/LRAP 1위인 Full v2 KcELECTRA 84.68%**입니다.
 
 ## 🎯 결정타 — 공짜가 아니다: 정밀도를 내주고 재현율을 얻었다 (F1이 순이득 확인)
 
 ![trade-off](./tradeoff_baseline_vs_best.png)
 한국어판: [`tradeoff_baseline_vs_best_ko.png`](./tradeoff_baseline_vs_best_ko.png)
 
-Recall만 보면 과장이다. **같이 봐야 정직하다**:
+Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 정직합니다**:
 
 | | Precision | Recall | **F1** |
 |---|:---:|:---:|:---:|
@@ -82,9 +82,9 @@ Recall만 보면 과장이다. **같이 봐야 정직하다**:
 ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 187 기준)은 482에선 **4위(80.24%)** 로 밀림 → 최신 선정·압축 대상은 **Full v2 KcELECTRA**로 갱신 완료.
 
 ## 📈 그래프 읽는 법
-- **① before/after** — 슬레이트=baseline 58.1%(점선 기준), 그 위 8개가 전부 파인튜닝. 틸+`선정`=Full v2 KcELECTRA.
+- **① before/after** — Recall 전용 그래프. muted gray=baseline 58.1%(점선 기준), `Recall 1위`=LoRA v2 KcELECTRA, teal `F1 선정`=Full v2 KcELECTRA.
 - **② trade-off** — Precision만 막대가 내려가고(−7p, 작은 비용), Recall·F1은 크게 오름(+27p·+15p). "F1 순이득"을 한 장으로.
-- **③ v1 vs v2** — 회색(v1)→틸(v2) 화살표, 4조합 전부 상승 = 게임 데이터 효과.
+- **③ v1 vs v2** — soft gray(v1)→teal(v2) 화살표, 4조합 전부 상승 = 게임 데이터 효과. 색만으로 구분하지 않도록 점·화살표·수치 라벨을 함께 사용.
 
 ## 📁 파일
 | 파일 | 내용 |

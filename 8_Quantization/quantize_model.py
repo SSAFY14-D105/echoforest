@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib import font_manager
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -75,12 +76,16 @@ THRESHOLD = 0.5
 MAX_LENGTH = 128
 BATCH_SIZE = 32
 
-PRIMARY = "#14B8A6"
-PRIMARY_LIGHT = "#CCFBF1"
-SECONDARY = "#60A5FA"
-ACCENT = "#FB923C"
-GRID = "#E5E7EB"
-TEXT = "#1F2937"
+PRIMARY = "#2F9D91"
+PRIMARY_LIGHT = "#D8ECE8"
+SECONDARY = "#C2CAD2"
+ACCENT = "#B8A56D"
+GRID = "#EBEEF1"
+TEXT = "#3C4650"
+CONFUSION_CMAP = LinearSegmentedColormap.from_list(
+    "echoforest_teal_gray",
+    ["#F7F9FA", "#D8ECE8", "#88C7C0", "#2F9D91", "#2E5E68"],
+)
 
 
 def configure_fonts() -> None:
@@ -116,7 +121,7 @@ def configure_fonts() -> None:
     plt.rcParams.update(
         {
             "axes.unicode_minus": False,
-            "axes.edgecolor": "#CBD5E1",
+            "axes.edgecolor": "#DDE3E8",
             "axes.labelcolor": TEXT,
             "xtick.color": TEXT,
             "ytick.color": TEXT,
@@ -270,7 +275,7 @@ def plot_confusion_matrices(original: dict, quantized: dict) -> None:
     vmax = max(int(m.max()) for _, m in matrices)
 
     for ax, (title, matrix) in zip(axes, matrices):
-        ax.imshow(matrix, cmap="YlGnBu", vmin=0, vmax=vmax)
+        ax.imshow(matrix, cmap=CONFUSION_CMAP, vmin=0, vmax=vmax)
         ax.set_title(title, pad=10, fontweight="bold")
         ax.set_xlabel("Predicted")
         ax.set_ylabel("Actual")
@@ -367,7 +372,7 @@ def plot_quantization_dashboard(report: dict) -> None:
 
     ax = axes[1, 1]
     cm = np.array(int8["confusion_matrix"])
-    im = ax.imshow(cm, cmap="YlGnBu")
+    im = ax.imshow(cm, cmap=CONFUSION_CMAP)
     ax.set_title("INT8 Confusion Matrix (quality drift)", fontweight="bold")
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
@@ -418,7 +423,7 @@ def plot_per_label_f1(metrics_df: pd.DataFrame) -> None:
     ax.set_xticks(x, supported_labels)
     ax.set_title("Per-label F1 Preservation", fontweight="bold")
     ax.grid(axis="y", color=GRID, linewidth=0.8)
-    ax.legend(frameon=False, loc="lower center", ncols=3)
+    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.10), ncols=3)
     save_figure(fig, "per_label_f1")
 
 

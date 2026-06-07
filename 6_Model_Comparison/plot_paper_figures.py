@@ -44,13 +44,13 @@ DISPLAY = {
     "Full v2 Tutorial": "Full v2\nkcbert",
 }
 
-PRIMARY = "#14B8A6"
-PRIMARY_LIGHT = "#CCFBF1"
-SECONDARY = "#60A5FA"
-MUTED = "#CBD5E1"
-ACCENT = "#F97316"
-GRID = "#E5E7EB"
-TEXT = "#1F2937"
+PRIMARY = "#2F9D91"
+PRIMARY_LIGHT = "#D8ECE8"
+SECONDARY = "#C2CAD2"
+MUTED = "#DDE3E8"
+ACCENT = "#7E8F9B"
+GRID = "#EBEEF1"
+TEXT = "#3C4650"
 
 
 def configure_fonts() -> None:
@@ -88,7 +88,7 @@ def configure_fonts() -> None:
             "axes.unicode_minus": False,
             "figure.facecolor": "white",
             "axes.facecolor": "white",
-            "axes.edgecolor": "#CBD5E1",
+            "axes.edgecolor": "#DDE3E8",
             "axes.labelcolor": TEXT,
             "xtick.color": TEXT,
             "ytick.color": TEXT,
@@ -121,7 +121,7 @@ def plot_model_ranking(df: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(8.6, 6.2))
     ax.barh(y, ordered["abuse_f1"] * 100, color=colors, height=0.68)
-    ax.scatter(ordered["abuse_recall"] * 100, y, color=ACCENT, s=44, zorder=3, label="Recall")
+    ax.scatter(ordered["abuse_recall"] * 100, y, color=ACCENT, s=46, zorder=3, label="Recall", edgecolor="white", linewidth=0.7)
     ax.set_yticks(y, [DISPLAY.get(model, model) for model in ordered["model"]])
     ax.set_xlabel("Abuse F1 score (%)")
     ax.set_xlim(55, 92)
@@ -142,7 +142,7 @@ def plot_model_ranking(df: pd.DataFrame) -> None:
 
     ax.axvline(
         float(df[df["model"] == BASELINE]["abuse_f1"].iloc[0]) * 100,
-        color=SECONDARY,
+        color=ACCENT,
         linewidth=1.4,
         linestyle="--",
         alpha=0.65,
@@ -159,7 +159,7 @@ def plot_model_ranking_ko(df: pd.DataFrame) -> None:
 
     fig, ax = plt.subplots(figsize=(8.6, 6.2))
     ax.barh(y, ordered["abuse_f1"] * 100, color=colors, height=0.68)
-    ax.scatter(ordered["abuse_recall"] * 100, y, color=ACCENT, s=44, zorder=3, label="재현율")
+    ax.scatter(ordered["abuse_recall"] * 100, y, color=ACCENT, s=46, zorder=3, label="재현율", edgecolor="white", linewidth=0.7)
     ax.set_yticks(y, [DISPLAY.get(model, model) for model in ordered["model"]])
     ax.set_xlabel("악플/욕설 F1 점수 (%)")
     ax.set_xlim(55, 92)
@@ -172,7 +172,7 @@ def plot_model_ranking_ko(df: pd.DataFrame) -> None:
 
     ax.axvline(
         float(df[df["model"] == BASELINE]["abuse_f1"].iloc[0]) * 100,
-        color=SECONDARY,
+        color=ACCENT,
         linewidth=1.4,
         linestyle="--",
         alpha=0.65,
@@ -208,9 +208,9 @@ def plot_selected_tradeoff(df: pd.DataFrame) -> None:
     ax.legend(frameon=False, loc="upper center", ncols=2)
 
     for xpos, value in zip(x - width / 2, base_values):
-        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10)
+        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10, color=ACCENT)
     for xpos, value in zip(x + width / 2, selected_values):
-        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10)
+        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10, color=PRIMARY, fontweight="bold")
 
     save(fig, "paper_selected_tradeoff")
 
@@ -241,114 +241,102 @@ def plot_selected_tradeoff_ko(df: pd.DataFrame) -> None:
     ax.legend(frameon=False, loc="upper center", ncols=2)
 
     for xpos, value in zip(x - width / 2, base_values):
-        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10)
+        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10, color=ACCENT)
     for xpos, value in zip(x + width / 2, selected_values):
-        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10)
+        ax.text(xpos, value + 2.0, f"{value:.1f}", ha="center", va="bottom", fontsize=10, color=PRIMARY, fontweight="bold")
 
     save(fig, "paper_selected_tradeoff_ko")
 
 
 def plot_domain_data_effect(df: pd.DataFrame) -> None:
     pairs = [
-        ("LoRA v1 Game", "LoRA v2 Game", "LoRA / KcELECTRA", "#3B82F6", "o", "-"),
-        ("LoRA v1 Tutorial", "LoRA v2 Tutorial", "LoRA / kcbert", "#FB923C", "s", "--"),
-        ("Full v1 Game", "Full v2 Game", "Full / KcELECTRA", "#14B8A6", "^", "-."),
-        ("Full v1 Tutorial", "Full v2 Tutorial", "Full / kcbert", "#A78BFA", "D", ":"),
+        ("LoRA v1 Game", "LoRA v2 Game", "LoRA / KcELECTRA"),
+        ("LoRA v1 Tutorial", "LoRA v2 Tutorial", "LoRA / kcbert"),
+        ("Full v1 Game", "Full v2 Game", "Full / KcELECTRA"),
+        ("Full v1 Tutorial", "Full v2 Tutorial", "Full / kcbert"),
     ]
-    fig, ax = plt.subplots(figsize=(8.0, 5.7))
-    xs = [0, 1]
-    label_y = {
-        "LoRA / KcELECTRA": 87.0,
-        "Full / KcELECTRA": 84.7,
-        "LoRA / kcbert": 82.7,
-        "Full / kcbert": 80.2,
-    }
+    fig, ax = plt.subplots(figsize=(8.2, 4.9))
+    y = np.arange(len(pairs))[::-1]
 
-    for before, after, label, color, marker, linestyle in pairs:
+    for row, (before, after, label) in zip(y, pairs):
         v1 = float(df[df["model"] == before]["abuse_recall"].iloc[0]) * 100
         v2 = float(df[df["model"] == after]["abuse_recall"].iloc[0]) * 100
-        ax.plot(
-            xs,
-            [v1, v2],
-            marker=marker,
-            linestyle=linestyle,
-            linewidth=2.5,
-            markersize=7,
-            color=color,
-            alpha=0.95,
-            label=f"{label} ({v2:.1f}%)",
+        ax.plot([v1, v2], [row, row], color=GRID, linewidth=4.8, solid_capstyle="round", zorder=1)
+        ax.annotate(
+            "",
+            xy=(v2 - 0.6, row),
+            xytext=(v1 + 0.6, row),
+            arrowprops=dict(arrowstyle="->", color=PRIMARY, lw=1.8),
+            zorder=4,
         )
-        ax.text(
-            1.08,
-            label_y[label],
-            f"{label}\n{v2:.1f}%",
-            color=color,
-            va="center",
-            ha="left",
-            fontsize=9,
-            fontweight="bold",
-        )
-        ax.plot([1.0, 1.06], [v2, label_y[label]], color=color, linewidth=1.1, alpha=0.55)
+        ax.scatter([v1], [row], color=SECONDARY, s=140, zorder=3, edgecolor="white", linewidth=0.8)
+        ax.scatter([v2], [row], color=PRIMARY, s=150, zorder=5, edgecolor="white", linewidth=0.8)
+        ax.text(v1, row + 0.22, f"{v1:.0f}", color=SECONDARY, ha="center", va="bottom", fontsize=10)
+        ax.text(v2, row + 0.22, f"{v2:.0f}", color=PRIMARY, ha="center", va="bottom", fontsize=10, fontweight="bold")
 
-    ax.set_xlim(-0.08, 1.42)
-    ax.set_ylim(60, 90)
-    ax.set_xticks(xs, ["v1\ncorrected UnSmile", "v2\n+ game data"])
-    ax.set_ylabel("Abuse Recall (%)")
-    ax.grid(axis="y", color=GRID, linewidth=0.8)
+    base_r = float(df[df["model"] == BASELINE]["abuse_recall"].iloc[0]) * 100
+    ax.axvline(base_r, color=ACCENT, linestyle="--", linewidth=1.2, alpha=0.55)
+    ax.text(base_r, -0.58, f"baseline {base_r:.0f}", color=ACCENT, ha="center", va="top", fontsize=9.5)
+    ax.set_xlim(56, 89)
+    ax.set_ylim(-0.75, len(pairs) - 0.35)
+    ax.set_yticks(y, [label for _, _, label in pairs])
+    ax.set_xlabel("Abuse Recall (%)")
+    ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_title("Effect of adding 518 game-chat training samples", fontweight="bold", pad=12)
-    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncols=2, handlelength=2.6, columnspacing=1.2)
+    ax.legend(
+        handles=[
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=SECONDARY, markersize=9, label="v1 corrected UnSmile"),
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=PRIMARY, markersize=9, label="v2 + game data"),
+        ],
+        frameon=False,
+        loc="lower right",
+    )
     save(fig, "paper_domain_data_effect")
 
 
 def plot_domain_data_effect_ko(df: pd.DataFrame) -> None:
     pairs = [
-        ("LoRA v1 Game", "LoRA v2 Game", "LoRA / KcELECTRA", "#3B82F6", "o", "-"),
-        ("LoRA v1 Tutorial", "LoRA v2 Tutorial", "LoRA / kcbert", "#FB923C", "s", "--"),
-        ("Full v1 Game", "Full v2 Game", "Full / KcELECTRA", "#14B8A6", "^", "-."),
-        ("Full v1 Tutorial", "Full v2 Tutorial", "Full / kcbert", "#A78BFA", "D", ":"),
+        ("LoRA v1 Game", "LoRA v2 Game", "LoRA / KcELECTRA"),
+        ("LoRA v1 Tutorial", "LoRA v2 Tutorial", "LoRA / kcbert"),
+        ("Full v1 Game", "Full v2 Game", "Full / KcELECTRA"),
+        ("Full v1 Tutorial", "Full v2 Tutorial", "Full / kcbert"),
     ]
-    fig, ax = plt.subplots(figsize=(8.0, 5.7))
-    xs = [0, 1]
-    label_y = {
-        "LoRA / KcELECTRA": 87.0,
-        "Full / KcELECTRA": 84.7,
-        "LoRA / kcbert": 82.7,
-        "Full / kcbert": 80.2,
-    }
+    fig, ax = plt.subplots(figsize=(8.2, 4.9))
+    y = np.arange(len(pairs))[::-1]
 
-    for before, after, label, color, marker, linestyle in pairs:
+    for row, (before, after, label) in zip(y, pairs):
         v1 = float(df[df["model"] == before]["abuse_recall"].iloc[0]) * 100
         v2 = float(df[df["model"] == after]["abuse_recall"].iloc[0]) * 100
-        ax.plot(
-            xs,
-            [v1, v2],
-            marker=marker,
-            linestyle=linestyle,
-            linewidth=2.5,
-            markersize=7,
-            color=color,
-            alpha=0.95,
-            label=f"{label} ({v2:.1f}%)",
+        ax.plot([v1, v2], [row, row], color=GRID, linewidth=4.8, solid_capstyle="round", zorder=1)
+        ax.annotate(
+            "",
+            xy=(v2 - 0.6, row),
+            xytext=(v1 + 0.6, row),
+            arrowprops=dict(arrowstyle="->", color=PRIMARY, lw=1.8),
+            zorder=4,
         )
-        ax.text(
-            1.08,
-            label_y[label],
-            f"{label}\n{v2:.1f}%",
-            color=color,
-            va="center",
-            ha="left",
-            fontsize=9,
-            fontweight="bold",
-        )
-        ax.plot([1.0, 1.06], [v2, label_y[label]], color=color, linewidth=1.1, alpha=0.55)
+        ax.scatter([v1], [row], color=SECONDARY, s=140, zorder=3, edgecolor="white", linewidth=0.8)
+        ax.scatter([v2], [row], color=PRIMARY, s=150, zorder=5, edgecolor="white", linewidth=0.8)
+        ax.text(v1, row + 0.22, f"{v1:.0f}", color=SECONDARY, ha="center", va="bottom", fontsize=10)
+        ax.text(v2, row + 0.22, f"{v2:.0f}", color=PRIMARY, ha="center", va="bottom", fontsize=10, fontweight="bold")
 
-    ax.set_xlim(-0.08, 1.42)
-    ax.set_ylim(60, 90)
-    ax.set_xticks(xs, ["v1\n보정 UnSmile", "v2\n+ 게임 데이터"])
-    ax.set_ylabel("악플/욕설 재현율 (%)")
-    ax.grid(axis="y", color=GRID, linewidth=0.8)
+    base_r = float(df[df["model"] == BASELINE]["abuse_recall"].iloc[0]) * 100
+    ax.axvline(base_r, color=ACCENT, linestyle="--", linewidth=1.2, alpha=0.55)
+    ax.text(base_r, -0.58, f"baseline {base_r:.0f}", color=ACCENT, ha="center", va="top", fontsize=9.5)
+    ax.set_xlim(56, 89)
+    ax.set_ylim(-0.75, len(pairs) - 0.35)
+    ax.set_yticks(y, [label for _, _, label in pairs])
+    ax.set_xlabel("악플/욕설 재현율 (%)")
+    ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_title("게임 채팅 518건 추가 학습 효과", fontweight="bold", pad=12)
-    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncols=2, handlelength=2.6, columnspacing=1.2)
+    ax.legend(
+        handles=[
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=SECONDARY, markersize=9, label="v1 보정 UnSmile"),
+            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=PRIMARY, markersize=9, label="v2 + 게임 데이터"),
+        ],
+        frameon=False,
+        loc="lower right",
+    )
     save(fig, "paper_domain_data_effect_ko")
 
 

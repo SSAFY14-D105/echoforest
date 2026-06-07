@@ -67,4 +67,4 @@
 ## 🚀 다음 단계
 1. UnSmile 기반으로 **게임 STT 데이터로 Fine-tuning**
 2. LoRA vs Full Fine-tuning 비교
-3. 최적 모델 INT8 양자화
+3. 최적 모델 압축/배포 평가(FP16 우선, INT8 보정 검토)
