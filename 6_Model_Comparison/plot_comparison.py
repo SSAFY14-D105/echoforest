@@ -22,6 +22,9 @@ WARN = "#C2703D"  # 정밀도 하락(작은 비용) 표시용
 
 SELECTED = "Full v2 Game"   # F1·LRAP·Precision 1위 → Step 1 기준(F1·정밀도)과 일관
 
+def _disp(m):   # 표시명: Game/Tutorial은 base 모델이므로 명시 (Game=KcELECTRA, Tutorial=kcbert)
+    return m.replace("Game", "KcELECTRA").replace("Tutorial", "kcbert")
+
 STR = {
  "en": {"h_title":"Fine-tuning lifts abuse recall","h_word":"fine-tuned up to","h_xlabel":"Abuse Recall  (%)",
         "before":"baseline","selected":"selected",
@@ -53,12 +56,12 @@ def chart_headline(df, path, t):
     base_r = float(df[df["model"]=="Baseline"]["abuse_recall"].iloc[0])*100
     max_r = float(d["abuse_recall"].max())*100
     n = len(d); y = np.arange(n)
-    fig, ax = plt.subplots(figsize=(9.6, 0.52*n+2.0))
-    fig.subplots_adjust(left=0.27, right=0.965, top=1-1.5/(0.52*n+2.0), bottom=1.0/(0.52*n+2.0))
+    fig, ax = plt.subplots(figsize=(9.9, 0.52*n+2.0))
+    fig.subplots_adjust(left=0.30, right=0.965, top=1-1.5/(0.52*n+2.0), bottom=1.0/(0.52*n+2.0))
     colors=[SLATE if m=="Baseline" else (ACCENT if m==SELECTED else NEUTRAL) for m in d["model"]]
     ax.barh(y, d["abuse_recall"]*100, height=0.62, color=colors, zorder=3)
     ax.axvline(base_r, color=SLATE, ls="--", lw=1.3, zorder=2)
-    ax.set_yticks(y); ax.set_yticklabels(d["model"], fontsize=12)
+    ax.set_yticks(y); ax.set_yticklabels([_disp(m) for m in d["model"]], fontsize=12)
     for tick,m in zip(ax.get_yticklabels(), d["model"]):
         if m=="Baseline": tick.set_color(SLATE)
         if m==SELECTED: tick.set_fontweight("bold")
@@ -85,7 +88,7 @@ def chart_tradeoff(df, path, t):
     labels=["Precision","Recall","F1"]; x=np.arange(3); w=0.36
     fig,ax=plt.subplots(figsize=(9.2,5.0)); fig.subplots_adjust(left=0.08,right=0.96,top=0.78,bottom=0.13)
     ax.bar(x-w/2, base, w, color=NEUTRAL, zorder=3, label=t["before"])
-    ax.bar(x+w/2, sel,  w, color=ACCENT,  zorder=3, label=f"{t['selected']} · Full v2 Game")
+    ax.bar(x+w/2, sel,  w, color=ACCENT,  zorder=3, label=f"{t['selected']} · {_disp(SELECTED)}")
     for xi,(b,s) in enumerate(zip(base,sel)):
         ax.text(xi-w/2, b+1.2, f"{b:.0f}", ha="center", color=SUB, fontsize=11)
         ax.text(xi+w/2, s+1.2, f"{s:.0f}", ha="center", color=INK, fontsize=11, fontweight="bold")
@@ -100,14 +103,14 @@ def chart_tradeoff(df, path, t):
 
 # ── ③ v1 vs v2 ─────────────────────────────────────────────────────────────
 def chart_v1v2(df, path, t):
-    combos=[("LoRA Game","LoRA v1 Game","LoRA v2 Game"),("LoRA Tutorial","LoRA v1 Tutorial","LoRA v2 Tutorial"),
-            ("Full Game","Full v1 Game","Full v2 Game"),("Full Tutorial","Full v1 Tutorial","Full v2 Tutorial")]
+    combos=[("LoRA · KcELECTRA","LoRA v1 Game","LoRA v2 Game"),("LoRA · kcbert","LoRA v1 Tutorial","LoRA v2 Tutorial"),
+            ("Full · KcELECTRA","Full v1 Game","Full v2 Game"),("Full · kcbert","Full v1 Tutorial","Full v2 Tutorial")]
     def rec(m):
         r=df[df["model"]==m]["abuse_recall"]; return float(r.iloc[0])*100 if len(r) else np.nan
     rows=[(lab,rec(v1),rec(v2)) for lab,v1,v2 in combos]
     base_r=float(df[df["model"]=="Baseline"]["abuse_recall"].iloc[0])*100
     n=len(rows); y=np.arange(n)
-    fig,ax=plt.subplots(figsize=(9.6,4.6)); fig.subplots_adjust(left=0.21,right=0.95,top=0.74,bottom=0.16)
+    fig,ax=plt.subplots(figsize=(9.9,4.6)); fig.subplots_adjust(left=0.27,right=0.95,top=0.74,bottom=0.16)
     for i,(lab,v1,v2) in enumerate(rows):
         ax.plot([v1,v2],[i,i],color=GRID,lw=4,zorder=1,solid_capstyle="round")
         ax.scatter(v1,i,s=140,color=NEUTRAL,zorder=3); ax.scatter(v2,i,s=140,color=ACCENT,zorder=3)
