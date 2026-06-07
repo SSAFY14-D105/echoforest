@@ -30,7 +30,7 @@ warnings.filterwarnings('ignore')
 # 설정
 # =============================================================================
 MODEL_NAME = "beomi/kcbert-base"
-OUTPUT_DIR = "./output_tutorial_lora"
+OUTPUT_DIR = "./output/lora_tutorial_kcbert"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 EPOCHS = 5

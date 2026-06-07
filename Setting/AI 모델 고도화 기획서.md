@@ -1,311 +1,165 @@
-# 🎮 EchoForest AI 모델 고도화 기획서 (v2)
+# EchoForest AI 모델 고도화 기획서
 
-## 📌 프로젝트 개요
+> 최신 기준: `test_set.tsv` 482건, 최종 모델 **Full v2 KcELECTRA**, 권장 압축 산출물 **FP16**. 전체 결론은 [`../AI_튜닝_최종_보고서.md`](../AI_튜닝_최종_보고서.md)와 동일합니다.
 
-### 목표
-게임 음성 채팅에서 **부정적 발언(욕설, 비난, 분노 표현)**을 더 정확하게 탐지하기 위해 기존 Smilegate unSmile 모델을 **게임 도메인에 맞게 Fine-tuning**
+## 1. 프로젝트 목표
 
-### 현재 문제점
-- unSmile 모델은 일반 댓글 데이터로 학습됨
-- 게임 특유 표현 인식 부족: "빡치다", "빡대가리", "열받다" 등
-- 게임 상황 오탐: "죽어 죽어"(몬스터에게), "피해 피해" 등을 욕설로 오인
-- **Baseline 악플/욕설 Recall: 0.6466** (개선 필요!)
+EchoForest는 협동 게임 안에서 플레이어의 음성/텍스트 발화를 감지해 저주 시스템에 반영합니다. 목표는 단순 욕설 키워드 필터가 아니라, 게임 맥락에서 실제로 분위기를 해치는 부정 발언을 안정적으로 잡는 AI 모델을 만드는 것입니다.
 
-### 핵심 전략
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    EchoForest AI 고도화 파이프라인               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Step 1: 데이터 수집 및 라벨링                                   │
-│          - 게임 STT 데이터 v1 수집 (518건) - Baseline 테스트용   │
-│          - 게임 STT 데이터 v2 수집 (187건) - 최종 테스트용       │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 2: Baseline 테스트 (현재 모델 성능 파악)                   │
-│          - 기존 unSmile 모델에 v1 데이터 테스트                  │
-│          - 인식률 떨어지는 표현 목록화 (시각화)                  │
-│          - False Negative 분석 (악플인데 놓친 표현)              │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 3: unSmile 데이터셋 보정                                   │
-│          - Baseline에서 발견된 인식률 저하 표현 수정             │
-│          - 예: "빡친다" clean → 악플/욕설 재라벨링               │
-│          - 개인지칭 라벨 제거 (14,690건)                         │
-│                    │                                             │
-│                    ▼                                             │
-│  ┌─────────────────┴─────────────────┐                          │
-│  │                                   │                          │
-│  ▼                                   ▼                          │
-│  Step 4-1: LoRA            Step 4-2: Full Fine-tuning           │
-│  Fine-tuning               (전체 가중치 학습)                    │
-│  - v1: unSmile 보정 데이터  - v1: unSmile 보정 데이터            │
-│  - v2: + 게임 STT 518건    - v2: + 게임 STT 518건               │
-│  │                                   │                          │
-│  └─────────────────┬─────────────────┘                          │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 5: 최종 테스트 (v2 데이터 187건)                           │
-│          - 9개 모델 비교 (Baseline + 8개 Fine-tuned)             │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 6: 최적 모델 선택 → Full v2 Tutorial ✅                    │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 7: INT8 양자화 (CPU 추론 최적화)                           │
-│                    │                                             │
-│                    ▼                                             │
-│  Step 8: AI 서버 (FastAPI)에 이식/배포                           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+### 운영 요구사항
+
+| 요구 | 이유 |
+|------|------|
+| 높은 Recall | 실제 욕설/비난을 놓치면 저주 시스템이 작동하지 않음 |
+| 충분한 Precision | 정상 오더를 욕설로 오탐하면 가짜 저주가 발생함 |
+| 빠른 추론 | 음성채팅을 5초 배치 단위로 처리해야 함 |
+| 압축 가능성 | FastAPI 서버에 부담 없이 올릴 수 있어야 함 |
+
+## 2. 문제 정의: 왜 fine-tuning이 필요한가
+
+기본 후보인 `smilegate-ai/kor_unsmile`은 한국어 악성 댓글 데이터에 강하지만, 게임 음성채팅의 표현은 일반 댓글과 다릅니다.
+
+- "발목잡지마", "제대로 좀 해", "너 때문에 죽잖아"처럼 직접 욕설이 아닌 비난을 놓침
+- threshold를 낮추면 "가만히 있어", "빨리 와" 같은 정상 게임 오더까지 오탐할 수 있음
+- 즉 threshold 하나로 Recall과 Precision을 동시에 해결하기 어려움
+
+Baseline 수치도 같은 문제를 보여줍니다.
+
+| 모델 | Precision | Recall | F1 | FP | FN |
+|------|:---:|:---:|:---:|:---:|:---:|
+| Baseline `kor_unsmile` | 97.30% | 58.06% | 72.73% | 4 | 104 |
+
+Baseline은 오탐은 4건뿐이지만, 실제 abuse 248건 중 104건을 놓쳤습니다. 따라서 게임 도메인 데이터로 모델 자체를 다시 학습시키는 전략이 필요합니다.
+
+## 3. 전체 파이프라인
+
+```mermaid
+flowchart TD
+    A["게임 STT 데이터 수집"] --> B["학습/평가 데이터 분리"]
+    B --> C["Baseline kor_unsmile 평가"]
+    C --> D["unSmile 라벨 보정"]
+    D --> E["LoRA fine-tuning 4개"]
+    D --> F["Full fine-tuning 4개"]
+    E --> G["9개 모델 비교"]
+    F --> G
+    G --> H["Full v2 KcELECTRA 선정"]
+    H --> I["INT8/FP16 압축 평가"]
+    I --> J["FP16 배포 후보 권장"]
 ```
 
----
+| 단계 | 산출물 | 상태 |
+|------|--------|:---:|
+| 데이터 수집/정제 | `train_collected.tsv` 518, `test_set.tsv` 482 | 완료 |
+| Baseline 평가 | Recall 58.06%, F1 72.73% | 완료 |
+| unSmile 보정 | train 14,690 / valid 3,663 | 완료 |
+| LoRA 학습 | 4개 모델 | 완료 |
+| Full FT 학습 | 4개 모델 | 완료 |
+| 모델 비교 | baseline + 8개 모델 | 완료 |
+| 최종 모델 선정 | Full v2 KcELECTRA | 완료 |
+| 압축/배포 평가 | FP16 권장, INT8 보정 필요 | 완료 |
 
-## ✅ 프로젝트 결과 (완료)
+## 4. 데이터 구성과 무결성
 
-### 🏆 최종 성과
+| 데이터셋 | 건수 | 경로 | 용도 |
+|----------|:---:|------|------|
+| 게임 수집 학습 데이터 | 518 | `0_Data_Collection/datasets/train_collected.tsv` | v2 학습에 추가 |
+| 최종 평가 데이터 | 482 | `0_Data_Collection/datasets/test_set.tsv` | 모델 비교/선정/압축 평가 |
+| 보정 unSmile train | 14,690 | `3_UnSmile_Correction/unsmile_train_corrected.tsv` | v1/v2 공통 학습 기반 |
+| 보정 unSmile valid | 3,663 | `3_UnSmile_Correction/unsmile_valid_corrected.tsv` | 검증 및 INT8 threshold 보정 |
 
-| 지표 | Before (Baseline) | After (Best) | After (양자화) | 개선 |
-|------|:-----------------:|:------------:|:-------------:|:----:|
-| **Abuse Recall** | 64.66% | **87.93%** | **87.93%** | **+36.0%** |
-| **Abuse F1** | 77.72% | **90.67%** | **90.67%** | **+16.7%** |
-| **모델 크기** | - | 415.53 MB | **88.93 MB** | **4.67x 압축** |
+검토 결과:
 
-### 🏆 최종 배포 모델: **Full v2 Tutorial (kcbert) - INT8 Quantized**
+- `test_set.tsv` 482건은 고유 문장 482건
+- `train_collected.tsv` 518건은 고유 문장 518건
+- `test_set`과 `train_collected`/`unsmile_train_corrected`/`unsmile_valid_corrected` 간 문장 overlap 0
+- unSmile 보정본은 개인지칭 제거 후 train 39건, valid 5건을 clean→abuse로 재라벨링
 
-### 전체 모델 순위
-| 순위 | 모델 | Abuse Recall | Baseline 대비 |
-|:---:|------|:---:|:---:|
-| **1** | Full v2 Tutorial ✅ | **0.8793** | **+36.0%** |
-| **1** | LoRA v2 Game | **0.8793** | **+36.0%** |
-| **1** | LoRA v2 Tutorial | **0.8793** | **+36.0%** |
-| 4 | Full v2 Game | 0.8707 | +34.7% |
-| 5 | LoRA v1 Game | 0.7759 | +20.0% |
-| 6 | LoRA v1 Tutorial | 0.7414 | +14.7% |
-| 6 | Full v1 Game | 0.7414 | +14.7% |
-| 8 | Full v1 Tutorial | 0.6983 | +8.0% |
-| 9 | Baseline (kor_unsmile) | 0.6466 | - |
+## 5. 실험 설계
 
----
+8개 fine-tuned 모델은 다음 3축 조합으로 구성했습니다.
 
-## 📊 데이터 구성
+| 축 | 값 | 의미 |
+|----|----|------|
+| 학습 방식 | LoRA / Full | 경량 어댑터 vs 전체 가중치 학습 |
+| 데이터 버전 | v1 / v2 | v1=보정 unSmile만, v2=게임 수집 518건 추가 |
+| base 모델 | KcELECTRA / kcbert | 한국어 사전학습 모델 비교 |
 
-### 수집 데이터 (게임 STT)
-| 데이터셋 | 건수 | 파일 경로 | 용도 |
-|---------|:----:|----------|------|
-| **v1 (Keywords)** | 518건 | `2_Baseline_Test/keywords_unsmile_format.tsv` | Baseline 테스트 + v2 학습 |
-| **v2 (Test)** | 187건 | `5_Model_Comparison/data/game_test.tsv` | **최종 모델 테스트** |
+비교 대상은 baseline까지 포함해 총 9개입니다. 이 구조는 "데이터 추가 효과", "학습 방식 효과", "base 모델 효과"를 분리해서 설명할 수 있어 실험 설계가 탄탄합니다.
 
-> 두 데이터셋 모두 직접 게임 STT + 유튜브 협력게임 STT에서 수집
+## 6. 모델 비교 결과
 
-### 학습 데이터
-| 버전 | 학습 데이터 | 설명 |
-|------|------------|------|
-| **v1** | UnSmile 보정 (14,690건) | 라벨 오류 보정만 적용 |
-| **v2** | UnSmile 보정 + v1 Keywords (518건) | 게임 도메인 데이터 추가 |
+| 모델 | Recall | F1 | Precision | LRAP |
+|------|:---:|:---:|:---:|:---:|
+| LoRA v2 KcELECTRA | **85.89%** | 86.94% | 88.02% | 0.932 |
+| **Full v2 KcELECTRA** | 84.68% | **87.32%** | **90.13%** | **0.936** |
+| LoRA v2 kcbert | 84.27% | 82.45% | 80.69% | 0.908 |
+| Full v2 kcbert | 80.24% | 83.79% | 87.67% | 0.915 |
+| LoRA v1 KcELECTRA | 78.63% | 84.42% | 91.12% | 0.924 |
+| LoRA v1 kcbert | 72.18% | 79.91% | 89.50% | 0.902 |
+| Full v1 KcELECTRA | 72.18% | 81.00% | 92.27% | 0.911 |
+| Full v1 kcbert | 65.32% | 76.06% | 91.01% | 0.892 |
+| Baseline | 58.06% | 72.73% | 97.30% | 0.887 |
 
-### 데이터 흐름 요약
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  v1: keywords_unsmile_format.tsv (518건)                         │
-│  └→ Baseline 테스트 (기존 모델 문제점 파악)                      │
-│  └→ v2 학습 데이터로 사용 (도메인 특화)                          │
-├─────────────────────────────────────────────────────────────────┤
-│  v2: game_test.tsv (187건) - 별도 수집                           │
-│  └→ 최종 테스트용 (9개 모델 비교)                                │
-└─────────────────────────────────────────────────────────────────┘
-```
+### 핵심 인사이트
 
----
+1. **게임 데이터(v2)가 가장 큰 개선 요인**
 
-## 📅 세부 실행 일정
+| 비교 | v1 평균 Recall | v2 평균 Recall | 차이 |
+|------|:---:|:---:|:---:|
+| 평균 | 72.1% | 83.8% | +11.7%p |
 
-| 단계 | 작업 | 상세 내용 | 상태 |
-|------|------|-----------|:----:|
-| **1** | 데이터 수집 | v1(518건) + v2(187건) 수집 및 라벨링 | ✅ |
-| **2** | Baseline 테스트 | v1 데이터로 기존 unSmile 모델 테스트 | ✅ |
-| **3** | unSmile 데이터 보정 | 인식률 저하 표현 재라벨링 (14,690건) | ✅ |
-| **4-1** | LoRA Fine-tuning | v1/v2 × Game/Tutorial (4개 모델) | ✅ |
-| **4-2** | Full Fine-tuning | v1/v2 × Game/Tutorial (4개 모델) | ✅ |
-| **5** | 최종 테스트 | v2 데이터로 9개 모델 비교 | ✅ |
-| **6** | 모델 선택 | Full v2 Tutorial 선정 | ✅ |
-| **7** | INT8 양자화 | 4.67x 압축, 성능 손실 0% | ✅ |
-| **8** | 서버 배포 | FastAPI 서버에 배포 | ⏳ |
+2. **Full v2 KcELECTRA 선정이 타당**
 
----
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 F1·Precision·LRAP 1위입니다. Recall 차이는 482문장 중 3문장 수준이라, 게임 UX 관점에서는 더 높은 Precision과 F1을 선택하는 것이 안전합니다.
 
-## 🔬 핵심 인사이트
+3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 
-### 1. 도메인 데이터가 핵심 (가장 중요한 발견)
+Baseline은 abuse로 예측한 문장이 적어 FP가 4건뿐이었지만, 실제 abuse 104건을 놓쳤습니다. 최종 모델은 TP를 144→210으로 늘려 더 많은 부정 발언을 잡았고, 그 과정에서 FP가 4→23으로 증가했습니다. 그래서 Precision은 낮아졌지만 Recall과 F1은 크게 올랐습니다.
 
-| 비교 | v1 (일반 데이터만) | v2 (게임 데이터 추가) | 차이 |
-|------|:------------------:|:--------------------:|:----:|
-| 평균 Abuse Recall | 73.93% | **87.60%** | **+13.67%p** |
+## 7. 최종 모델
 
-> **518건의 게임 데이터**만으로 **+13%p 이상** 성능 향상!
+| 항목 | 값 |
+|------|----|
+| 표시명 | **Full v2 KcELECTRA** |
+| 내부 폴더명 | `full_game_kcelectra_v2` |
+| 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
+| 학습 방식 | Full fine-tuning |
+| 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
+| 선정 기준 | F1·Precision·LRAP 1위 |
 
-### 2. LoRA ≈ Full Fine-tuning
+| 지표 | Baseline | 최종 모델 | 개선 |
+|------|:---:|:---:|:---:|
+| Abuse Recall | 58.06% | 84.68% | +26.62%p |
+| Abuse F1 | 72.73% | 87.32% | +14.59%p |
+| LRAP | 0.887 | 0.936 | +0.049 |
 
-| 방법론 | 평균 Recall | 학습 시간 | GPU 메모리 |
-|--------|:-----------:|:---------:|:---------:|
-| LoRA | 83.44% | ~30분 | ~8GB |
-| Full FT | 83.00% | ~2시간 | ~16GB |
+## 8. 압축/배포 최적화
 
-> 성능 차이 미미 → **효율성 면에서 LoRA 권장**
+### 압축 결과
 
-### 3. 베이스 모델 차이 미미
+| 모델 | 크기 | CPU 지연시간 | Precision | Recall | F1 |
+|------|:---:|:---:|:---:|:---:|:---:|
+| 원본 | 487.48 MiB | 34.04 ms | 90.13% | 84.68% | 87.32% |
+| INT8 Dynamic | 242.88 MiB | 14.01 ms | 97.21% | 70.16% | 81.50% |
+| FP16 | 243.75 MiB | 13.90 ms | 90.13% | 84.68% | 87.32% |
 
-| 베이스 모델 | v2 평균 Recall |
-|------------|:--------------:|
-| KcELECTRA (Game) | 87.50% |
-| kcbert (Tutorial) | 87.93% |
+### 배포 판단
 
-> **어떤 모델을 쓰든 데이터가 더 중요**
+- **FP16 권장**: 2배 압축 + 성능 완전 보존 + 일반 `from_pretrained()` 로드 가능
+- **INT8 fixed 0.5 비권장**: Recall이 84.68% → 70.16%로 하락
+- **INT8 보정 대안**: threshold 0.21 적용 시 F1 87.17%까지 회복하지만, FP가 23→29로 증가
 
----
+## 9. 산출물
 
-## 📚 기반 지식: unSmile 데이터셋/모델
-
-### 데이터셋 구조
-| 항목 | 내용 |
+| 목적 | 경로 |
 |------|------|
-| **출처** | Smilegate AI |
-| **규모** | Train 15,005건 + Valid 3,737건 = 18,742건 |
-| **모델** | BERT 기반 (BertForSequenceClassification) |
-| **분류 유형** | Multi-label Classification |
+| 최종 보고서 | `AI_튜닝_최종_보고서.md` |
+| 모델 비교 그래프 | `6_Model_Comparison/results/paper_*.png`, `paper_*_ko.png` |
+| 최종 선정 문서 | `7_Best_Model_Selection/README.md` |
+| 권장 압축 모델 | `8_Quantization/fp16_model/` |
+| 양자화 리포트 | `8_Quantization/results/quantization_report.json` |
+| 양자화 그래프 | `8_Quantization/results/*_ko.png`, `*.pdf` |
 
-### 10개 카테고리
-| # | 카테고리 | 설명 | 게임 관련성 |
-|---|----------|------|:-----------:|
-| 8 | **악플/욕설** | 비하/욕설 🎯 **핵심!** | ⭐⭐⭐ |
-| 9 | clean | 정상 문장 | ⭐⭐⭐ |
-| 0-7 | 혐오 카테고리 | 여성/남성/성소수자/인종/연령/지역/종교/기타 | ⭐ |
+## 10. 최종 한 줄
 
----
-
-## 📁 산출물
-
-### 데이터
-| 파일 | 설명 |
-|------|------|
-| `game_stt_v1.tsv` | 게임 STT 데이터 v1 (518건) - 학습용 |
-| `game_test.tsv` | 게임 STT 데이터 v2 (187건) - 테스트용 |
-| `unsmile_train_corrected.tsv` | 보정된 UnSmile 데이터 (14,690건) |
-
-### 모델 (8개)
-| 경로 | 설명 |
-|------|------|
-| `4_1_LoRA_Fine_Tuning/v1.../lora_game_kcelectra/merged_model` | LoRA v1 Game |
-| `4_1_LoRA_Fine_Tuning/v1.../lora_tutorial_kcbert/merged_model` | LoRA v1 Tutorial |
-| `4_1_LoRA_Fine_Tuning/v2.../lora_game_kcelectra_v2/merged_model` | LoRA v2 Game |
-| `4_1_LoRA_Fine_Tuning/v2.../lora_tutorial_kcbert_v2/merged_model` | LoRA v2 Tutorial |
-| `4_2_Full_Fine_Tuning/v1.../full_game_kcelectra/best_model` | Full v1 Game |
-| `4_2_Full_Fine_Tuning/v1.../full_tutorial_kcbert/best_model` | Full v1 Tutorial |
-| `4_2_Full_Fine_Tuning/v2.../full_game_kcelectra_v2/best_model` | Full v2 Game |
-| `4_2_Full_Fine_Tuning/v2.../full_tutorial_kcbert_v2/best_model` | **Full v2 Tutorial ✅** |
-
-### 분석 결과
-| 파일 | 설명 |
-|------|------|
-| `5_Model_Comparison/results/game_test_results.csv` | 9개 모델 비교 결과 |
-| `5_Model_Comparison/results/before_after_comparison.png` | Before/After 비교 차트 |
-| `5_Model_Comparison/results/v1_vs_v2_comparison.png` | v1 vs v2 비교 차트 |
-| `5_Model_Comparison/results/metrics_heatmap.png` | 전체 메트릭 히트맵 |
-
----
-
-## ✅ 성공 기준 달성 여부
-
-| 지표 | 목표 | 실제 결과 | 달성 |
-|------|:----:|:--------:|:----:|
-| 악플/욕설 Recall | ≥ 0.75 | **0.8793** | ✅ **초과 달성** |
-| Abuse F1 Score | ≥ 0.80 | **0.9067** | ✅ **초과 달성** |
-| LRAP | ≥ 0.90 | **0.9434** | ✅ **초과 달성** |
-
----
-
-## Step 7: INT8 양자화 ✅ (완료)
-
-### 7.1 양자화 결과: **SUCCESS**
-
-| 항목 | Original | Quantized | 변화 |
-|------|:--------:|:---------:|:----:|
-| **모델 크기** | 415.53 MB | 88.93 MB | **4.67x 압축** |
-| **추론 속도** | 8.55 ms | 8.47 ms | 1.01x 빠름 |
-| **Abuse Recall** | 0.8793 | 0.8793 | **0% 손실** |
-| **Abuse F1** | 0.9067 | 0.9067 | 0% 손실 |
-
-> **결론**: 모델 크기 78.6% 감소, 성능 손실 없음 - 양자화 성공!
-
-### 7.2 Confusion Matrix (동일)
-| | Pred Non-Abuse | Pred Abuse |
-|---|:---:|:---:|
-| **Actual Non-Abuse** | 64 | 7 |
-| **Actual Abuse** | 14 | 102 |
-
-### 7.3 양자화 산출물
-| 파일 | 설명 |
-|------|------|
-| `7_Quantization/results/quantization_dashboard.png` | 메인 대시보드 (6-panel) |
-| `7_Quantization/results/confusion_matrices.png` | Confusion Matrix 비교 |
-| `7_Quantization/results/quantization_results.csv` | 주요 메트릭 요약 |
-| `7_Quantization/results/quantization_report.json` | JSON 리포트 |
-
----
-
-## Step 8: AI 서버 배포 (예정)
-
-### 8.1 FastAPI 서버 구성
-```python
-from fastapi import FastAPI
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-
-app = FastAPI()
-
-MODEL_PATH = "./quantized_model"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-model.eval()
-
-@app.post("/analyze")
-async def analyze_text(text: str):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=128)
-    
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = torch.sigmoid(outputs.logits[0])
-    
-    is_negative = probs[8] > 0.5  # 악플/욕설
-    
-    return {
-        "text": text,
-        "is_negative": bool(is_negative),
-        "abuse_score": float(probs[8]),
-    }
-```
-
----
-
-## 🎯 결론
-
-### 핵심 한 줄 요약
-> **518건의 게임 데이터로 욕설 탐지율 65% → 88% (+36%), 양자화로 모델 크기 5분의 1 축소 🎉**
-
-### 프로젝트 성공 요인
-1. **도메인 특화 데이터 확보** - 직접 게임/유튜브 STT 데이터 수집
-2. **체계적 실험 설계** - LoRA vs Full FT, v1 vs v2 비교
-3. **Baseline 분석** - 기존 모델의 한계점 정확히 파악 후 개선
-4. **INT8 양자화** - 성능 손실 없이 모델 크기 4.67배 압축
-
-### 최종 산출물
-| 항목 | 경로 |
-|------|------|
-| **양자화 모델** | `7_Quantization/quantized_model/` |
-| **분석 결과** | `7_Quantization/results/` |
-
-### 다음 단계
-| 단계 | 작업 | 예상 시간 |
-|------|------|:---------:|
-| Step 8 | FastAPI 서버 배포 | 30분 |
+> EchoForest AI 고도화는 **게임 도메인 데이터 518건과 unSmile 라벨 보정**으로 baseline의 낮은 Recall 문제를 해결했고, **Full v2 KcELECTRA**를 최종 모델로 선정했습니다. 배포 압축은 fixed-threshold INT8보다 **FP16 압축 모델**이 안전합니다.

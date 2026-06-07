@@ -1,4 +1,4 @@
-# 4_2_Full_Fine_Tuning
+# 5_Full_Fine_Tuning
 
 Full Fine-tuning 기반 모든 파라미터 학습
 
@@ -7,7 +7,7 @@ Full Fine-tuning 기반 모든 파라미터 학습
 ## 📁 디렉토리 구조
 
 ```
-4_2_Full_Fine_Tuning/
+5_Full_Fine_Tuning/
 ├── v1_corrected_only/           # 보정 데이터만 (14,690건)
 │   ├── full_game_kcelectra.py/.ipynb
 │   ├── full_tutorial_kcbert.py/.ipynb

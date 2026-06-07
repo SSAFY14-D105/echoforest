@@ -79,7 +79,7 @@ Recall만 보면 과장이다. **같이 봐야 정직하다**:
 **Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`) — **F1 87.32 / Precision 90.13 / LRAP 0.936 모두 1위**. Step 1에서 정한 *"오탐이 치명적이라 F1·정밀도로 고른다"* 기준과 정확히 일관.
 - *대안*: **LoRA v2 KcELECTRA** — Recall 1등 + LoRA(경량). 효율을 최우선하면 이쪽도 동급. (정밀도 88 vs 90으로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 선정)
 
-⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 187 기준)은 482에선 **4위(80.24%)** 로 밀림 → 선정·양자화 대상 변경 필요.
+⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 187 기준)은 482에선 **4위(80.24%)** 로 밀림 → 최신 선정·압축 대상은 **Full v2 KcELECTRA**로 갱신 완료.
 
 ## 📈 그래프 읽는 법
 - **① before/after** — 슬레이트=baseline 58.1%(점선 기준), 그 위 8개가 전부 파인튜닝. 틸+`선정`=Full v2 KcELECTRA.
@@ -91,8 +91,9 @@ Recall만 보면 과장이다. **같이 봐야 정직하다**:
 | :--- | :--- |
 | `compare_models.py` | 9모델 평가(index-8 + LRAP) → CSV/JSON |
 | `plot_comparison.py` | 포트폴리오 차트 3종 en/ko — CSV 기반, 재추론 불필요 |
+| `plot_paper_figures.py` | 논문 삽입용 PNG/PDF 그래프 3종 en/ko |
 | `comparison_results.csv` · `.json` | 전체 수치(TP/TN/FP/FN 포함) |
 | `_archive/` | 옛 game_test(187) 결과 백업 |
 
 ## ▶️ 다음 단계
-[`../7_Best_Model_Selection`](../7_Best_Model_Selection)(Full v2 KcELECTRA 확정) → [`../8_Quantization`](../8_Quantization)(선정 모델 INT8 재양자화)
+[`../7_Best_Model_Selection`](../7_Best_Model_Selection)(Full v2 KcELECTRA 확정) → [`../8_Quantization`](../8_Quantization)(FP16 권장, INT8 보정 필요)

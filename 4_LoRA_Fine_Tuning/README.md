@@ -1,4 +1,4 @@
-# 4_1_LoRA_Fine_Tuning
+# 4_LoRA_Fine_Tuning
 
 LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning
 
@@ -7,7 +7,7 @@ LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning
 ## 📁 디렉토리 구조
 
 ```
-4_1_LoRA_Fine_Tuning/
+4_LoRA_Fine_Tuning/
 ├── v1_corrected_only/           # 보정 데이터만 (14,690건)
 │   ├── lora_game_kcelectra.py/.ipynb
 │   ├── lora_tutorial_kcbert.py/.ipynb

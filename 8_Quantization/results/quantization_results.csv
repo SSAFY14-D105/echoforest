@@ -1,9 +1,7 @@
-﻿Metric,Original,Quantized,Difference
-Model Size (MB),415.53,88.93,-326.60
-Inference (ms),8.55,8.47,-0.08
-Abuse Precision,0.9358,0.9358,+0.0000
-Abuse Recall,0.8793,0.8793,+0.0000
-Abuse F1,0.9067,0.9067,+0.0000
-Clean Precision,0.8442,0.8442,+0.0000
-Clean Recall,0.9155,0.9155,+0.0000
-Clean F1,0.8784,0.8784,+0.0000
+﻿Metric,Original,INT8 Dynamic,FP16,INT8 Diff,FP16 Diff
+Model size (MiB),487.48,242.88,243.75,50.2% smaller,50.0% smaller
+"Inference latency (ms, CPU)",34.04,14.01,13.90,2.43x,2.45x
+Abuse Precision,0.9013,0.9721,0.9013,+0.0708,+0.0000
+Abuse Recall,0.8468,0.7016,0.8468,-0.1452,+0.0000
+Abuse F1,0.8732,0.8150,0.8732,-0.0582,+0.0000
+Clean F1,0.8843,0.8625,0.8843,-0.0218,+0.0000

@@ -52,8 +52,9 @@ model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH).eval()
 ```
 
 ## ▶️ 다음 단계
-[`../8_Quantization`](../8_Quantization) — **이 모델(Full v2 KcELECTRA)을 INT8 재양자화**.
-> ⚠️ 현재 `8_Quantization/quantized_model`은 옛 best(Full v2 kcbert)를 양자화한 **stale 산출물** → 선정 모델로 다시 양자화 필요.
+[`../8_Quantization`](../8_Quantization) — **이 모델(Full v2 KcELECTRA)을 기준으로 압축/배포 최적화 완료**.
+
+최신 결론은 **FP16 압축 모델 권장**입니다. INT8 Dynamic은 크기·속도 개선은 있지만 fixed threshold 0.5에서 Recall이 크게 떨어져, threshold 보정과 운영 false-positive 검토 없이는 배포하지 않는 것이 안전합니다.
 
 ## 📋 한 줄 요약
 > **Full v2 KcELECTRA**(KcELECTRA base · Full FT · 게임데이터) 선정 — test_set(482)에서 **Abuse F1 87.32%(baseline 대비 +14.6%p)·Precision 90.13%·LRAP 0.936 모두 1위**. Step 1의 F1·정밀도 기준과 일관.

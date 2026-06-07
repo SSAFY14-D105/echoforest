@@ -30,7 +30,7 @@ warnings.filterwarnings('ignore')
 # 설정
 # =============================================================================
 MODEL_NAME = "beomi/KcELECTRA-base-v2022"
-OUTPUT_DIR = "./output_game_lora"
+OUTPUT_DIR = "./output/lora_game_kcelectra"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 EPOCHS = 10
