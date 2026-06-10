@@ -163,9 +163,14 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/gallery.png" width="260"/><br/>갤러리</td>
-    <td align="center"><img src="docs/email.png" width="260"/><br/>이메일</td>
-    <td align="center"><img src="docs/send_image.png" width="260"/><br/>전송</td>
+    <th>갤러리</th>
+    <th>이메일</th>
+    <th>전송</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gallery.png" height="200"/></td>
+    <td align="center"><img src="docs/email.png" height="200"/></td>
+    <td align="center"><img src="docs/send_image.png" height="200"/></td>
   </tr>
 </table>
 
