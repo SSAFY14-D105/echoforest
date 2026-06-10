@@ -170,7 +170,7 @@
   <tr>
     <td align="center"><img src="docs/gallery.png" height="200"/></td>
     <td align="center"><img src="docs/email.png" height="200"/></td>
-    <td align="center"><img src="docs/send_image.png" height="200"/></td>
+    <td align="center"><img src="docs/send_image.jpeg" height="200"/></td>
   </tr>
 </table>
 
