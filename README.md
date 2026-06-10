@@ -85,13 +85,16 @@
 
 - 방을 만들어 친구를 초대하거나 매칭으로 **4인 파티**를 구성하고, 카메라·마이크를 켠 채 함께 게임을 준비합니다.
 
-<p align="center"><img src="docs/ingame.gif" width="600"/></p>
-
-> 실제 인게임 플레이 — 4인이 함께 숲을 모험하는 협동 플랫포머
+<table>
+  <tr><th>실제 인게임 플레이 — 4인 협동 플랫포머</th></tr>
+  <tr><td align="center"><img src="docs/ingame.gif" width="600"/></td></tr>
+</table>
 
 ## 🗣️ 음성 인식 → 저주 스택
 
-<p align="center"><img src="docs/저주스택.gif" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/저주스택.gif" width="600"/></td></tr>
+</table>
 
 - 플레이어의 음성을 **Web Speech API**로 텍스트화하고 **5초 단위로 배치**해 AI 서버로 전송합니다.
 - **AI 모델**이 발화의 부정어 심각도를 판정해 저주 스택을 실시간으로 쌓습니다. (`+5 / +3 / +1`)
@@ -148,14 +151,18 @@
 
 ## 📸 모션 인식 엔딩 미션
 
-<p align="center"><img src="docs/엔딩미션.gif" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/엔딩미션.gif" width="600"/></td></tr>
+</table>
 
 - 스테이지 클리어 후 **MediaPipe**로 14종 포즈를 실시간 인식합니다.
 - **4명 모두** 배정된 포즈를 성공하면 기념 사진이 자동 촬영됩니다.
 
 ## 📊 게임 완료 통계
 
-<p align="center"><img src="docs/stat.png" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/stat.png" width="600"/></td></tr>
+</table>
 
 - 게임 종료 후 **플레이 시간·저주 발동/해제 횟수·발화 통계** 등을 요약해 함께한 모험을 돌아봅니다.
 
