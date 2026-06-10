@@ -254,9 +254,9 @@ Content-Type: application/json
 
 # 영상 포트폴리오
 
-> *클릭하여 시연 영상을 확인하세요.*
-
-[![메아리의 숲 시연 영상](https://img.youtube.com/vi/8m-AHCVeUrs/hqdefault.jpg)](https://youtu.be/8m-AHCVeUrs)
+<p align="center">
+  <a href="https://youtu.be/8m-AHCVeUrs"><img src="docs/d.png" width="640"/></a>
+</p>
 
 # 팀원 소개
 
