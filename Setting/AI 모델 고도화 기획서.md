@@ -27,9 +27,9 @@ Baseline 수치도 같은 문제를 보여줍니다.
 
 | 모델 | Precision | Recall | F1 | FP | FN |
 |------|:---:|:---:|:---:|:---:|:---:|
-| Baseline `kor_unsmile` | 97.30% | 58.06% | 72.73% | 4 | 104 |
+| Baseline `kor_unsmile` | 96.13% | 60.08% | 73.95% | 6 | 99 |
 
-Baseline은 오탐은 4건뿐이지만, 실제 abuse 248건 중 104건을 놓쳤습니다. 따라서 게임 도메인 데이터로 모델 자체를 다시 학습시키는 전략이 필요합니다.
+Baseline은 오탐은 4건뿐이지만, 실제 abuse 248건 중 99건을 놓쳤습니다. 따라서 게임 도메인 데이터로 모델 자체를 다시 학습시키는 전략이 필요합니다.
 
 ## 3. 전체 파이프라인
 
@@ -50,7 +50,7 @@ flowchart TD
 | 단계 | 산출물 | 상태 |
 |------|--------|:---:|
 | 데이터 수집/정제 | `train_collected.tsv` 518, `test_set.tsv` 482 | 완료 |
-| Baseline 평가 | Recall 58.06%, F1 72.73% | 완료 |
+| Baseline 평가 | Recall 60.08%, F1 73.95% | 완료 |
 | unSmile 보정 | train 14,690 / valid 3,663 | 완료 |
 | LoRA 학습 | 4개 모델 | 완료 |
 | Full FT 학습 | 4개 모델 | 완료 |
@@ -91,14 +91,14 @@ flowchart TD
 | 모델 | Recall | F1 | Precision | LRAP |
 |------|:---:|:---:|:---:|:---:|
 | LoRA v2 KcELECTRA | **85.89%** | 86.94% | 88.02% | 0.932 |
-| **Full v2 KcELECTRA** | 84.68% | **87.32%** | **90.13%** | **0.936** |
+| **Full v2 KcELECTRA** | 85.48% | **87.78%** | **90.21%** | **0.936** |
 | LoRA v2 kcbert | 84.27% | 82.45% | 80.69% | 0.908 |
 | Full v2 kcbert | 80.24% | 83.79% | 87.67% | 0.915 |
 | LoRA v1 KcELECTRA | 78.63% | 84.42% | 91.12% | 0.924 |
 | LoRA v1 kcbert | 72.18% | 79.91% | 89.50% | 0.902 |
 | Full v1 KcELECTRA | 72.18% | 81.00% | 92.27% | 0.911 |
 | Full v1 kcbert | 65.32% | 76.06% | 91.01% | 0.892 |
-| Baseline | 58.06% | 72.73% | 97.30% | 0.887 |
+| Baseline | 60.08% | 73.95% | 96.13% | 0.887 |
 
 ### 핵심 인사이트
 
@@ -106,15 +106,15 @@ flowchart TD
 
 | 비교 | v1 평균 Recall | v2 평균 Recall | 차이 |
 |------|:---:|:---:|:---:|
-| 평균 | 72.1% | 83.8% | +11.7%p |
+| 평균 | 72.1% | 83.8% | +11.5%p |
 
 2. **Full v2 KcELECTRA 선정이 타당**
 
-LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 F1·Precision·LRAP 1위입니다. Recall 차이는 482문장 중 3문장 수준이라, 게임 UX 관점에서는 더 높은 Precision과 F1을 선택하는 것이 안전합니다.
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위에 오탐(FP)이 가장 적습니다(F1은 LoRA v2와 사실상 동률). Recall 차이는 482문장 중 3문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
 
 3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 
-Baseline은 abuse로 예측한 문장이 적어 FP가 4건뿐이었지만, 실제 abuse 104건을 놓쳤습니다. 최종 모델은 TP를 144→210으로 늘려 더 많은 부정 발언을 잡았고, 그 과정에서 FP가 4→23으로 증가했습니다. 그래서 Precision은 낮아졌지만 Recall과 F1은 크게 올랐습니다.
+Baseline은 abuse로 예측한 문장이 적어 FP가 6건뿐이었지만, 실제 abuse 99건을 놓쳤습니다. 최종 모델은 TP를 149→212으로 늘려 더 많은 부정 발언을 잡았고, 그 과정에서 FP가 6→23으로 증가했습니다. 그래서 Precision은 낮아졌지만 Recall과 F1은 크게 올랐습니다.
 
 ## 7. 최종 모델
 
@@ -125,12 +125,12 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 4건뿐이었지만, 실�
 | 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
 | 학습 방식 | Full fine-tuning |
 | 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
-| 선정 기준 | F1·Precision·LRAP 1위 |
+| 선정 기준 | LRAP 1위, 오탐 최소(FP 23), F1 동률 |
 
 | 지표 | Baseline | 최종 모델 | 개선 |
 |------|:---:|:---:|:---:|
-| Abuse Recall | 58.06% | 84.68% | +26.62%p |
-| Abuse F1 | 72.73% | 87.32% | +14.59%p |
+| Abuse Recall | 60.08% | 85.48% | +25.40%p |
+| Abuse F1 | 73.95% | 87.78% | +13.83%p |
 | LRAP | 0.887 | 0.936 | +0.049 |
 
 ## 8. 압축/배포 최적화
@@ -139,15 +139,15 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 4건뿐이었지만, 실�
 
 | 모델 | 크기 | CPU 지연시간 | Precision | Recall | F1 |
 |------|:---:|:---:|:---:|:---:|:---:|
-| 원본 | 487.48 MiB | 34.04 ms | 90.13% | 84.68% | 87.32% |
+| 원본 | 487.48 MiB | 34.04 ms | 90.21% | 85.48% | 87.78% |
 | INT8 Dynamic | 242.88 MiB | 14.01 ms | 97.21% | 70.16% | 81.50% |
-| FP16 | 243.75 MiB | 13.90 ms | 90.13% | 84.68% | 87.32% |
+| FP16 | 243.75 MiB | 13.90 ms | 90.21% | 85.48% | 87.78% |
 
 ### 배포 판단
 
 - **FP16 권장**: 2배 압축 + 성능 완전 보존 + 일반 `from_pretrained()` 로드 가능
-- **INT8 fixed 0.5 비권장**: Recall이 84.68% → 70.16%로 하락
-- **INT8 보정 대안**: threshold 0.21 적용 시 F1 87.17%까지 회복하지만, FP가 23→29로 증가
+- **INT8 fixed 0.5 비권장**: Recall이 85.48% → 70.16%로 하락
+- **INT8 보정 대안**: threshold 0.26 적용 시 F1 88.94%까지 회복(FP는 23→18로 오히려 감소). 단 임계값 재보정이 필요해 drop-in인 FP16 우선
 
 ## 9. 산출물
 

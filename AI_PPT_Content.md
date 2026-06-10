@@ -1,4 +1,4 @@
-# EchoForest AI 욕설 탐지 시스템 — 발표 자료 초안
+# EchoForest AI 욕설 탐지 시스템, 발표 자료 초안
 
 최신 실험 기준 발표 흐름입니다. 수치는 `test_set.tsv` 482건 기준이며, 최종 모델은 **Full v2 KcELECTRA**, 압축 배포 후보는 **FP16**입니다.
 
@@ -26,7 +26,7 @@ Web Speech API → Spring WebSocket → FastAPI AI 모델 → 저주 스택
 
 | 모델 | Precision | Recall | F1 | FP | FN |
 |------|:---:|:---:|:---:|:---:|:---:|
-| Baseline `kor_unsmile` | 97.30% | 58.06% | 72.73% | 4 | 104 |
+| Baseline `kor_unsmile` | 96.13% | 60.08% | 73.95% | 6 | 99 |
 
 ### 발표 포인트
 - `kor_unsmile`은 한국어 악성 댓글 모델이라 직접 욕설에는 강함
@@ -42,7 +42,7 @@ Web Speech API → Spring WebSocket → FastAPI AI 모델 → 저주 스택
 |--------|:---:|------|
 | 보정 unSmile train | 14,690 | 기본 학습 데이터 |
 | 게임 수집 데이터 | 518 | v2 학습에 추가 |
-| held-out test_set | 482 | 최종 평가 |
+| 학습에 쓰지 않은 test_set | 482 | 최종 평가 |
 
 ### 발표 포인트
 - `test_set`은 학습 데이터와 overlap 0으로 검증
@@ -73,13 +73,13 @@ flowchart LR
 ## 슬라이드 5. 모델 비교 결과
 
 ### 제목
-Fine-tuning으로 Recall 58.06% → 84.68%
+Fine-tuning으로 Recall 60.08% → 85.48%
 
 | 지표 | Baseline | Full v2 KcELECTRA | 변화 |
 |------|:---:|:---:|:---:|
-| Precision | 97.30% | 90.13% | -7.17%p |
-| Recall | 58.06% | 84.68% | +26.62%p |
-| F1 | 72.73% | 87.32% | +14.59%p |
+| Precision | 96.13% | 90.21% | -5.92%p |
+| Recall | 60.08% | 85.48% | +25.40%p |
+| F1 | 73.95% | 87.78% | +13.83%p |
 | LRAP | 0.887 | 0.936 | +0.049 |
 
 ### 권장 그래프
@@ -97,7 +97,7 @@ Fine-tuning으로 Recall 58.06% → 84.68%
 
 | 비교 | v1 평균 Recall | v2 평균 Recall | 차이 |
 |------|:---:|:---:|:---:|
-| 평균 | 72.1% | 83.8% | +11.7%p |
+| 평균 | 72.1% | 83.8% | +11.5%p |
 
 ### 권장 그래프
 - `6_Model_Comparison/results/paper_domain_data_effect_ko.png`
@@ -113,13 +113,13 @@ Full v2 KcELECTRA 선정
 
 | 후보 | Recall | F1 | Precision | LRAP |
 |------|:---:|:---:|:---:|:---:|
-| LoRA v2 KcELECTRA | 85.89% | 86.94% | 88.02% | 0.932 |
-| **Full v2 KcELECTRA** | 84.68% | **87.32%** | **90.13%** | **0.936** |
+| LoRA v2 KcELECTRA | 87.90% | 87.90% | 87.90% | 0.932 |
+| **Full v2 KcELECTRA** | 85.48% | **87.78%** | **90.21%** | **0.936** |
 
 ### 발표 포인트
 - Recall만 보면 LoRA v2 KcELECTRA가 1위
 - 하지만 차이는 482문장 중 약 3문장 수준
-- Full v2 KcELECTRA는 F1·Precision·LRAP 모두 1위라 최종 선택이 더 안전
+- Full v2 KcELECTRA는 LRAP 1위·오탐 최소(FP 23)라 게임 UX 관점에서 더 안전(F1은 LoRA v2와 동률)
 
 ## 슬라이드 8. 압축/배포 최적화
 
@@ -128,9 +128,9 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 
 | 모델 | 크기 | CPU 지연시간 | Recall | F1 | 판단 |
 |------|:---:|:---:|:---:|:---:|------|
-| 원본 | 487.48 MiB | 34.04 ms | 84.68% | 87.32% | 기준 |
+| 원본 | 487.48 MiB | 34.04 ms | 85.48% | 87.78% | 기준 |
 | INT8 | 242.88 MiB | 14.01 ms | 70.16% | 81.50% | 비권장 |
-| FP16 | 243.75 MiB | 13.90 ms | 84.68% | 87.32% | **권장** |
+| FP16 | 243.75 MiB | 13.90 ms | 85.48% | 87.78% | **권장** |
 
 ### 권장 그래프
 - `8_Quantization/results/quantization_dashboard_ko.png`
@@ -139,7 +139,7 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 
 ### 발표 포인트
 - INT8은 크기/속도는 좋아졌지만 abuse 미탐이 38→74건으로 증가
-- threshold 0.21 보정 시 F1은 회복되지만 오탐이 증가해 운영 검토 필요
+- threshold 0.26 보정 시 F1 88.94%로 회복(오탐 18건). 단 임계값 재보정이 필요해 drop-in인 FP16 우선
 - FP16은 원본 성능을 그대로 유지하면서 2배 압축되어 배포 후보로 가장 안전
 
 ## 슬라이드 9. 최종 요약
@@ -150,10 +150,10 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 | 항목 | 결과 |
 |------|------|
 | 최종 모델 | Full v2 KcELECTRA |
-| 성능 개선 | Recall 58.06% → 84.68%, F1 72.73% → 87.32% |
+| 성능 개선 | Recall 60.08% → 85.48%, F1 73.95% → 87.78% |
 | 핵심 원인 | 게임 도메인 데이터 518건 추가 |
 | 권장 압축 | FP16 |
 | INT8 판단 | threshold 보정 후 재검토 |
 
 ### 한 줄 스크립트
-> 기본 unSmile은 오탐은 적지만 게임 맥락의 부정 발언을 많이 놓쳤고, 게임 도메인 fine-tuning으로 F1을 72.73%에서 87.32%까지 끌어올렸습니다. 배포 단계에서는 INT8 fixed threshold가 Recall을 훼손해, 현재는 성능을 보존하는 FP16 압축 모델이 가장 안전한 선택입니다.
+> 기본 unSmile은 오탐은 적지만 게임 맥락의 부정 발언을 많이 놓쳤고, 게임 도메인 fine-tuning으로 F1을 73.95%에서 87.78%까지 끌어올렸습니다. 배포 단계에서는 INT8 fixed threshold가 Recall을 훼손해, 현재는 성능을 보존하는 FP16 압축 모델이 가장 안전한 선택입니다.
