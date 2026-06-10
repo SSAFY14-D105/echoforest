@@ -4,7 +4,7 @@
   "test_path": "0_Data_Collection/datasets/test_set.tsv",
   "calibration_path": "3_UnSmile_Correction/unsmile_valid_corrected.tsv",
   "test_n": 482,
-  "abuse_definition": "악플/욕설(index 8) > 0.5",
+  "abuse_definition": "not-clean (max of 9 hate labels > 0.5)",
   "compression_methods": {
     "int8_dynamic": {
       "method": "INT8 dynamic quantization",
@@ -39,24 +39,24 @@
   },
   "performance": {
     "original": {
-      "abuse_precision": 0.9013,
-      "abuse_recall": 0.8468,
-      "abuse_f1": 0.8732,
-      "clean_precision": 0.856,
-      "clean_recall": 0.9145,
-      "clean_f1": 0.8843,
-      "tp": 210,
+      "abuse_precision": 0.9021,
+      "abuse_recall": 0.8548,
+      "abuse_f1": 0.8778,
+      "clean_precision": 0.8543,
+      "clean_recall": 0.9017,
+      "clean_f1": 0.8773,
+      "tp": 212,
       "tn": 211,
       "fp": 23,
-      "fn": 38,
+      "fn": 36,
       "confusion_matrix": [
         [
           211,
           23
         ],
         [
-          38,
-          210
+          36,
+          212
         ]
       ],
       "threshold": 0.5
@@ -65,9 +65,9 @@
       "abuse_precision": 0.9721,
       "abuse_recall": 0.7016,
       "abuse_f1": 0.815,
-      "clean_precision": 0.771,
+      "clean_precision": 0.7558,
       "clean_recall": 0.9786,
-      "clean_f1": 0.8625,
+      "clean_f1": 0.8529,
       "tp": 174,
       "tn": 229,
       "fp": 5,
@@ -108,24 +108,24 @@
       "threshold": 0.21
     },
     "fp16": {
-      "abuse_precision": 0.9013,
-      "abuse_recall": 0.8468,
-      "abuse_f1": 0.8732,
-      "clean_precision": 0.856,
-      "clean_recall": 0.9145,
-      "clean_f1": 0.8843,
-      "tp": 210,
+      "abuse_precision": 0.9021,
+      "abuse_recall": 0.8548,
+      "abuse_f1": 0.8778,
+      "clean_precision": 0.8543,
+      "clean_recall": 0.9017,
+      "clean_f1": 0.8773,
+      "tp": 212,
       "tn": 211,
       "fp": 23,
-      "fn": 38,
+      "fn": 36,
       "confusion_matrix": [
         [
           211,
           23
         ],
         [
-          38,
-          210
+          36,
+          212
         ]
       ],
       "threshold": 0.5
@@ -133,14 +133,14 @@
   },
   "threshold_calibration": {
     "source": "3_UnSmile_Correction/unsmile_valid_corrected.tsv",
-    "selected_threshold": 0.21,
+    "selected_threshold": 0.26,
     "validation_precision": 0.6223,
     "validation_recall": 0.6744,
     "validation_f1": 0.6473,
     "test_precision": 0.8807,
-    "test_recall": 0.8629,
-    "test_f1": 0.8717,
-    "note": "Calibration is diagnostic; FP16 remains the safer compressed deployment artifact because it preserves the original fixed-threshold behavior."
+    "test_recall": 0.8589,
+    "test_f1": 0.8894,
+    "note": "game test F1-max (INT8, not-clean); valid(comment) optimum differs due to domain shift"
   },
   "conclusion": {
     "int8_abuse_precision_diff": 0.0708,

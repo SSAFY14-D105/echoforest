@@ -7,7 +7,7 @@ Selected model:
 
 Evaluation:
     0_Data_Collection/datasets/test_set.tsv
-    abuse = `악플/욕설` (index 8) > 0.5
+    abuse = not-clean (clean 제외 9개 라벨 max > 0.5)
 
 Outputs:
     quantized_model/model_int8.pt
@@ -185,10 +185,14 @@ def evaluate(probs: np.ndarray, labels: np.ndarray, threshold: float = THRESHOLD
     preds = (probs > threshold).astype(int)
     summary: dict[str, float | int | list[list[int]]] = {}
 
-    for idx, key in [(ABUSE_IDX, "abuse"), (CLEAN_IDX, "clean")]:
+    # abuse = not-clean (clean 제외 9개 라벨 max > threshold), 배포·Step 2·Step 6과 동일 정의
+    hate_idx = list(range(CLEAN_IDX))  # 0..8 = 9개 혐오 라벨
+    abuse_gt = (labels[:, hate_idx].sum(axis=1) > 0).astype(int)
+    abuse_pred = (preds[:, hate_idx].sum(axis=1) > 0).astype(int)
+    for key, gt, pred in [("abuse", abuse_gt, abuse_pred), ("clean", labels[:, CLEAN_IDX], preds[:, CLEAN_IDX])]:
         precision, recall, f1, _ = precision_recall_fscore_support(
-            labels[:, idx],
-            preds[:, idx],
+            gt,
+            pred,
             average="binary",
             zero_division=0,
         )
@@ -196,7 +200,7 @@ def evaluate(probs: np.ndarray, labels: np.ndarray, threshold: float = THRESHOLD
         summary[f"{key}_recall"] = round(float(recall), 4)
         summary[f"{key}_f1"] = round(float(f1), 4)
 
-    tn, fp, fn, tp = confusion_matrix(labels[:, ABUSE_IDX], preds[:, ABUSE_IDX]).ravel()
+    tn, fp, fn, tp = confusion_matrix(abuse_gt, abuse_pred).ravel()
     summary.update(tp=int(tp), tn=int(tn), fp=int(fp), fn=int(fn))
     summary["confusion_matrix"] = [[int(tn), int(fp)], [int(fn), int(tp)]]
     summary["threshold"] = round(float(threshold), 4)
@@ -523,7 +527,7 @@ This directory stores the INT8 dynamic-quantized state dict for **Full v2 KcELEC
 
 Current INT8 status: **{int8_status}**.
 
-- Fixed threshold: `악플/욕설` index 8 > 0.5
+- Fixed threshold: not-clean (clean 제외 9개 라벨 max) > 0.5
 - Original Abuse Recall/F1: {report["performance"]["original"]["abuse_recall"]:.4f} / {report["performance"]["original"]["abuse_f1"]:.4f}
 - INT8 Abuse Recall/F1: {report["performance"]["int8_dynamic"]["abuse_recall"]:.4f} / {report["performance"]["int8_dynamic"]["abuse_f1"]:.4f}
 - INT8 calibrated threshold: {report["threshold_calibration"]["selected_threshold"]:.2f}
@@ -555,7 +559,7 @@ quantized_model = torch.ao.quantization.quantize_dynamic(
 ).eval()
 quantized_model.load_state_dict(torch.load(INT8_STATE, map_location="cpu"))
 
-# abuse = sigmoid(logits)[8] > 0.5
+# abuse = sigmoid(logits)[:9].max() > 0.5  (not-clean)
 ```
 """
     (OUT_DIR / "README.md").write_text(guide, encoding="utf-8")
@@ -660,7 +664,7 @@ def main() -> None:
         "test_path": str(TEST_PATH.relative_to(ROOT)),
         "calibration_path": str(VALID_PATH.relative_to(ROOT)),
         "test_n": int(len(test)),
-        "abuse_definition": "악플/욕설(index 8) > 0.5",
+        "abuse_definition": "not-clean (max of 9 hate labels > 0.5)",
         "compression_methods": {
             "int8_dynamic": {
                 "method": "INT8 dynamic quantization",

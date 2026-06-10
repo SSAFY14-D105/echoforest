@@ -142,7 +142,7 @@ def plot_dashboard_ko(report: dict) -> None:
     ax.bar(x + width, fp16_values, width, label="FP16", color=PRIMARY)
     ax.set_xticks(x, metrics)
     ax.set_ylim(0, 100)
-    ax.set_ylabel("악플/욕설 탐지 점수 (%)")
+    ax.set_ylabel("부정어 탐지 점수 (%)")
     ax.set_title("성능 보존 여부", fontweight="bold")
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.legend(frameon=False, loc="lower left")
@@ -153,8 +153,8 @@ def plot_dashboard_ko(report: dict) -> None:
     ax.set_title("INT8 혼동행렬: 미탐 증가", fontweight="bold")
     ax.set_xlabel("예측")
     ax.set_ylabel("실제")
-    ax.set_xticks([0, 1], ["정상", "욕설"])
-    ax.set_yticks([0, 1], ["정상", "욕설"])
+    ax.set_xticks([0, 1], ["정상", "부정어"])
+    ax.set_yticks([0, 1], ["정상", "부정어"])
     for row in range(2):
         for col in range(2):
             ax.text(col, row, str(cm[row, col]), ha="center", va="center", color="white" if cm[row, col] > cm.max() * 0.55 else TEXT, fontsize=16, fontweight="bold")
@@ -175,8 +175,8 @@ def plot_confusion_ko(report: dict) -> None:
         ax.set_title(title, fontweight="bold")
         ax.set_xlabel("예측")
         ax.set_ylabel("실제")
-        ax.set_xticks([0, 1], ["정상", "욕설"])
-        ax.set_yticks([0, 1], ["정상", "욕설"])
+        ax.set_xticks([0, 1], ["정상", "부정어"])
+        ax.set_yticks([0, 1], ["정상", "부정어"])
         for row in range(2):
             for col in range(2):
                 ax.text(col, row, str(matrix[row, col]), ha="center", va="center", color="white" if matrix[row, col] > vmax * 0.55 else TEXT, fontsize=15, fontweight="bold")
@@ -229,11 +229,14 @@ def plot_threshold_ko(report: dict) -> None:
     ax.plot(sweep["threshold"], sweep["f1"] * 100, label="F1", color=PRIMARY, linewidth=2.4)
     ax.axvline(0.5, color=SECONDARY, linestyle="--", linewidth=1.2, alpha=0.7)
     ax.axvline(calibrated_threshold, color=PRIMARY, linestyle=":", linewidth=1.8, alpha=0.85)
-    ax.scatter([best["threshold"]], [best["f1"] * 100], color=PRIMARY, s=60, zorder=5)
-    ax.text(best["threshold"] + 0.015, best["f1"] * 100, f"test 최고 F1 {best['f1'] * 100:.1f}%\n@ {best['threshold']:.2f}", va="center", fontsize=10, color=PRIMARY)
-    ax.text(0.515, fixed["recall"] * 100 - 9, "고정\n0.50", va="center", fontsize=10, color=SECONDARY)
-    ax.text(calibrated_threshold + 0.015, calibrated["f1"] * 100 - 8, f"valid 보정\n{calibrated_threshold:.2f}", va="center", fontsize=10, color=PRIMARY)
-    ax.set_xlabel("INT8 악플/욕설 임계값")
+    ax.scatter([calibrated["threshold"]], [calibrated["f1"] * 100], color=PRIMARY, s=64, zorder=5)
+    ax.annotate(f"배포 임계값 {calibrated_threshold:.2f}\ntest F1 {calibrated['f1'] * 100:.1f}%",
+                xy=(calibrated["threshold"], calibrated["f1"] * 100),
+                xytext=(calibrated["threshold"] + 0.09, calibrated["f1"] * 100 + 3),
+                fontsize=10, color=PRIMARY, fontweight="bold",
+                arrowprops=dict(arrowstyle="-", color=PRIMARY, lw=0.9))
+    ax.text(0.515, fixed["recall"] * 100 - 9, "고정 0.50", va="center", fontsize=10, color=SECONDARY)
+    ax.set_xlabel("INT8 부정어 임계값")
     ax.set_ylabel("점수 (%)")
     ax.set_ylim(0, 105)
     ax.grid(color=GRID, linewidth=0.8)

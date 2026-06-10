@@ -4,12 +4,12 @@ This directory stores the INT8 dynamic-quantized state dict for **Full v2 KcELEC
 
 Current INT8 status: **not recommended for deployment**.
 
-- Fixed threshold: `악플/욕설` index 8 > 0.5
-- Original Abuse Recall/F1: 0.8468 / 0.8732
+- 판정 규칙: not-clean (clean 제외 9개 라벨 max sigmoid > 0.5)
+- Original Abuse Recall/F1: 0.8548 / 0.8778
 - INT8 Abuse Recall/F1: 0.7016 / 0.8150
-- INT8 calibrated threshold: 0.21
-- INT8 calibrated test Recall/F1: 0.8629 / 0.8717
-- FP16 Abuse Recall/F1: 0.8468 / 0.8732
+- INT8 calibrated threshold: 0.26
+- INT8 calibrated test Recall/F1: 0.8589 / 0.8894
+- FP16 Abuse Recall/F1: 0.8548 / 0.8778
 
 The FP16 artifact in `../fp16_model/` is the recommended compressed artifact when metric
 preservation is more important than INT8 CPU speed.
