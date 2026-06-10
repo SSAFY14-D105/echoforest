@@ -101,12 +101,20 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/거대화저주.gif" width="250"/><br/><b>거대화</b><br/>크기 2배 · 이동/점프력 감소</td>
-    <td align="center"><img src="docs/반전저주.gif" width="250"/><br/><b>반전</b><br/>방향키 조작 반대</td>
-    <td align="center"><img src="docs/시한폭탄저주.gif" width="250"/><br/><b>시한폭탄</b><br/>5초 내 미해제 시 즉사</td>
+    <th>거대화</th>
+    <th>반전</th>
+    <th>시한폭탄</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/거대화저주.gif" height="240"/></td>
+    <td align="center"><img src="docs/반전저주.gif" height="240"/></td>
+    <td align="center"><img src="docs/시한폭탄저주.gif" height="240"/></td>
   </tr>
 </table>
 
+- **거대화** — 크기 2배 · 이동/점프력 감소
+- **반전** — 방향키 조작 반대
+- **시한폭탄** — 5초 내 미해제 시 즉사
 - 부정 스택이 가득 차면 위 **3종 저주** 중 하나가 랜덤으로 발동됩니다.
 - 저주는 **본인이 풀 수 없고**, 동료의 긍정어로 **FIFO 순서**대로 해제됩니다.
 
