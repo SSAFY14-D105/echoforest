@@ -137,14 +137,14 @@
 
 ## 🧩 협동 스테이지 기믹
 
-<table>
-  <tr>
-    <td align="center"><img src="docs/stage1.png" width="400"/><br/>Stage 1</td>
-    <td align="center"><img src="docs/stage2.png" width="400"/><br/>Stage 2</td>
-  </tr>
-</table>
+<p align="center"><b>Stage 1</b></p>
+<p align="center"><img src="docs/stage1.png" width="820"/></p>
+
+<p align="center"><b>Stage 2</b></p>
+<p align="center"><img src="docs/stage2.png" width="560"/></p>
 
 - 혼자서는 통과할 수 없는 **협동 퍼즐과 기믹**을 호흡을 맞춰 클리어합니다.
+- 각 스테이지의 **레벨 전체 구조**가 한눈에 담기도록 설계해, 팀이 경로를 함께 계획합니다.
 
 ## 📸 모션 인식 엔딩 미션
 
