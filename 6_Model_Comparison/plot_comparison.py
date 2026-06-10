@@ -44,24 +44,28 @@ FONT_KO = _font_from_files(
 INK,SUB,GRID,NEUTRAL,MUTED,ACCENT,SLATE = "#1F2933","#9AA5B1","#EBEEF1","#C2CAD2","#E0E4E8","#2F9D91","#4B5A68"
 WARN = "#C2703D"  # 정밀도 하락(작은 비용) 표시용
 
-SELECTED = "Full v2 Game"   # F1·LRAP·Precision 1위 → Step 1 기준(F1·정밀도)과 일관
+SELECTED = "Full v2 Game"   # LRAP 1위 + 오탐 최소(FP 23), F1은 LoRA v2와 동률 → Step 1 정밀도 기준과 일관
 
 def _disp(m):   # 표시명: Game/Tutorial은 base 모델이므로 명시 (Game=KcELECTRA, Tutorial=kcbert)
     return m.replace("Game", "KcELECTRA").replace("Tutorial", "kcbert")
 
 STR = {
  "en": {"h_title":"Recall view — fine-tuning catches more abuse","h_xlabel":"Abuse Recall  (%)",
-        "before":"baseline","selected":"F1-selected","recall_best":"recall best","h_note":"Recall-only chart",
+        "before":"baseline","selected":"final pick","recall_best":"highest recall","h_note":"Recall-only chart",
+        "h_sub":"All 8 fine-tuned models beat baseline 60.1%. Selection by LRAP + deployment threshold, not Recall (Full v2)",
+        "h_foot":"v1 = corrected comments only,  v2 = + 518 collected game lines  (base: KcELECTRA / kcbert)",
         "t_title":"The trade-off — a little precision for a lot of recall",
         "t_sub":"Baseline vs selected (Full v2 Game) · F1 confirms the net win",
         "v_title":"Game data is what matters — v1 vs v2","v_sub":"v1 = corrected unSmile only   ·   v2 = + 518 collected game lines",
         "v_xlabel":"Abuse Recall  (%)","v1":"v1 (correction only)","v2":"v2 (+ game data)"},
- "ko": {"h_title":"Recall 관점 — 파인튜닝이 욕설을 더 많이 잡는다","h_xlabel":"Abuse Recall  (%)",
-        "before":"baseline","selected":"F1 선정","recall_best":"Recall 1위","h_note":"Recall 전용 그래프",
-        "t_title":"트레이드오프 — 정밀도 약간 내주고 재현율 크게 얻음",
-        "t_sub":"Baseline vs 선정(Full v2 Game) · F1이 순이득을 확인",
-        "v_title":"결국 게임 데이터가 핵심 — v1 vs v2","v_sub":"v1 = 보정 unSmile만   ·   v2 = + 수집 게임채팅 518",
-        "v_xlabel":"Abuse Recall  (%)","v1":"v1 (보정만)","v2":"v2 (+게임)"},
+ "ko": {"h_title":"파인튜닝할수록 부정어를 더 많이 잡는다","h_xlabel":"Abuse Recall  (%)",
+        "before":"baseline","selected":"최종 선정","recall_best":"Recall 최다","h_note":"Recall 전용 그래프",
+        "h_sub":"파인튜닝 8종 모두 baseline 60.1% 초과. 모델 선정은 Recall 아닌 LRAP과 배포 임계값 기준(Full v2)",
+        "h_foot":"v1 = 댓글 보정만 학습,  v2 = + 게임채팅 518건 추가 학습   (base: KcELECTRA / kcbert)",
+        "t_title":"정밀도 약간 내주고 재현율을 크게 얻는 교환",
+        "t_sub":"Baseline vs 선정(Full v2 Game), F1이 순이득을 확인",
+        "v_title":"결국 게임 데이터가 핵심 (v1 vs v2)","v_sub":"v1 = 보정 unSmile만,  v2 = 수집 게임채팅 518 추가",
+        "v_xlabel":"Abuse Recall  (%)","v1":"v1: 댓글 보정만","v2":"v2: +게임채팅 518"},
 }
 
 def _style(font):
@@ -109,13 +113,9 @@ def chart_headline(df, path, t):
     ax.set_xlim(0,100); ax.set_xticks([0,20,40,60,80,100])
     ax.xaxis.grid(True,color=GRID,lw=1.2,zorder=0); ax.set_axisbelow(True); _despine(ax,keep=())
     ax.set_xlabel(t["h_xlabel"], fontsize=10.5)
-    _title(
-        ax,
-        t["h_title"],
-        f"test_set 482 · {t['h_note']}: best {max_r:.1f}% vs F1-selected {selected_r:.1f}% "
-        f"(+{selected_r-base_r:.1f}p vs baseline)",
-    )
-    fig.savefig(path, dpi=220, facecolor="white"); plt.close(fig); print("saved", path)
+    _title(ax, t["h_title"], t["h_sub"])
+    ax.text(0, -0.115, t["h_foot"], transform=ax.transAxes, fontsize=8.8, color=SUB, ha="left")
+    fig.savefig(path, dpi=220, facecolor="white", bbox_inches="tight"); plt.close(fig); print("saved", path)
 
 # ── ② 트레이드오프 (결정타): baseline vs selected, P/R/F1 ───────────────────
 def chart_tradeoff(df, path, t):
@@ -125,7 +125,7 @@ def chart_tradeoff(df, path, t):
     labels=["Precision","Recall","F1"]; x=np.arange(3); w=0.36
     fig,ax=plt.subplots(figsize=(9.2,5.0)); fig.subplots_adjust(left=0.08,right=0.96,top=0.78,bottom=0.13)
     ax.bar(x-w/2, base, w, color=NEUTRAL, zorder=3, label=t["before"])
-    ax.bar(x+w/2, sel,  w, color=ACCENT,  zorder=3, label=f"{t['selected']} · {_disp(SELECTED)}")
+    ax.bar(x+w/2, sel,  w, color=ACCENT,  zorder=3, label=f"{t['selected']} ({_disp(SELECTED)})")
     for xi,(b,s) in enumerate(zip(base,sel)):
         ax.text(xi-w/2, b+1.2, f"{b:.0f}", ha="center", color=SUB, fontsize=11)
         ax.text(xi+w/2, s+1.2, f"{s:.0f}", ha="center", color=INK, fontsize=11, fontweight="bold")
@@ -136,7 +136,7 @@ def chart_tradeoff(df, path, t):
     ax.yaxis.grid(True,color=GRID,lw=1.2,zorder=0); ax.set_axisbelow(True); _despine(ax,keep=())
     ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.16), ncol=2, frameon=False, fontsize=11)
     _title(ax, t["t_title"], t["t_sub"])
-    fig.savefig(path, dpi=220, facecolor="white"); plt.close(fig); print("saved", path)
+    fig.savefig(path, dpi=220, facecolor="white", bbox_inches="tight"); plt.close(fig); print("saved", path)
 
 # ── ③ v1 vs v2 ─────────────────────────────────────────────────────────────
 def chart_v1v2(df, path, t):
