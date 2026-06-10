@@ -2,7 +2,7 @@
 =============================================================================
 EchoForest AI - Baseline Test (base unSmile, 파인튜닝 전)
 =============================================================================
-목적: 파인튜닝 전 base unSmile 성능을 held-out test_set(482)으로 측정
+목적: 파인튜닝 전 base unSmile 성능을 학습에 안 쓴 평가셋 test_set(482)으로 측정
       → 공식 "before"(Step 1 UnSmile = Step 6 baseline과 동일) + 놓치는 게임 욕설 진단
 산출물: baseline_test_results.csv (문장별 확률) · baseline_accuracy.png
 =============================================================================
@@ -68,7 +68,7 @@ print(f"✓ 모델 로드 완료!")
 # =============================================================================
 print("\n[2/5] 테스트 데이터 로딩 중...")
 
-# held-out test_set(482)로 baseline 측정 → Step 6 파인튜닝 결과와 직접 비교 가능한 "before"
+# 학습에 안 쓴 평가셋 test_set(482)로 baseline 측정 → Step 6 파인튜닝 결과와 직접 비교 가능한 "before"
 DATA_PATH = "../0_Data_Collection/datasets/test_set.tsv"
 
 df = pd.read_csv(DATA_PATH, sep='\t', encoding='utf-8')
@@ -120,10 +120,10 @@ print("\n[3/5] 예측 실행 중...")
 probs = predict_batch(df['문장'].values)
 predictions = (probs > THRESHOLD).astype(int)
 
-# 악플/욕설 (index 8)과 clean (index 9) 추출
-abuse_probs = probs[:, 8]
+# abuse = not-clean(clean 제외 9개 라벨 max), clean = index 9
+abuse_probs = probs[:, :9].max(axis=1)  # not-clean: clean 제외 9개 max
 clean_probs = probs[:, 9]
-abuse_preds = predictions[:, 8]
+abuse_preds = (predictions[:, :9].sum(axis=1) > 0).astype(int)  # not-clean
 clean_preds = predictions[:, 9]
 
 print("✓ 예측 완료!")
@@ -212,8 +212,8 @@ print("\n📊 시각화 생성 중...")
 
 fn_cnt, total_abuse = len(false_negatives), int(y_true_abuse.sum())
 fig, axes = plt.subplots(2, 2, figsize=(13, 10))
-fig.suptitle(f"Baseline — base unSmile on test_set ({len(df)})    "
-             f"Abuse Recall {abuse_recall*100:.1f}%  ·  misses {fn_cnt}/{total_abuse} abuse",
+fig.suptitle(f"Baseline: base unSmile on test_set ({len(df)})    "
+             f"Abuse Recall {abuse_recall*100:.1f}%  |  misses {fn_cnt}/{total_abuse} abuse",
              fontsize=14, fontweight='bold', color=INK, x=0.5, y=0.99)
 
 def _clean_ax(ax):
@@ -228,7 +228,7 @@ sns.heatmap(confusion_matrix(y_true_abuse, abuse_preds), annot=True, fmt='d',
             cmap=sns.light_palette(ACCENT, as_cmap=True), ax=ax1, cbar=False,
             annot_kws={'fontsize': 15, 'fontweight': 'bold'}, linewidths=2, linecolor='white',
             xticklabels=['Pred Non-Abuse', 'Pred Abuse'], yticklabels=['Actual Non-Abuse', 'Actual Abuse'])
-ax1.set_title('Abuse — Confusion Matrix  (FN=missed abuse)', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
+ax1.set_title('Abuse Confusion Matrix  (FN=missed abuse)', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
 ax1.tick_params(length=0)
 
 # 2. Clean Confusion Matrix
@@ -237,7 +237,7 @@ sns.heatmap(confusion_matrix(y_true_clean, clean_preds), annot=True, fmt='d',
             cmap=sns.light_palette(SLATE, as_cmap=True), ax=ax2, cbar=False,
             annot_kws={'fontsize': 15, 'fontweight': 'bold'}, linewidths=2, linecolor='white',
             xticklabels=['Pred Non-Clean', 'Pred Clean'], yticklabels=['Actual Non-Clean', 'Actual Clean'])
-ax2.set_title('Clean — Confusion Matrix', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
+ax2.set_title('Clean Confusion Matrix', fontsize=12, fontweight='bold', color=INK, loc='left', pad=10)
 ax2.tick_params(length=0)
 
 # 3. Abuse probability distribution (핵심 진단)
@@ -246,7 +246,7 @@ ax3.hist(abuse_probs[y_true_abuse == 1], bins=24, alpha=0.9, label='Actual abuse
 ax3.hist(abuse_probs[y_true_clean == 1], bins=24, alpha=0.55, label='Actual clean', color=NEUTRAL)
 ax3.axvline(0.5, color=SLATE, linestyle='--', lw=1.5, label='Threshold 0.5')
 ax3.set_xlabel('Abuse probability', color=SUB); ax3.set_ylabel('Count', color=SUB)
-ax3.set_title('Abuse probability — abuse mass leaks left of 0.5 (= missed)', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
+ax3.set_title('Abuse probability: mass leaks left of 0.5 (= missed)', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
 ax3.legend(frameon=False)
 _clean_ax(ax3)
 
@@ -259,7 +259,7 @@ bars = ax4.bar(x, scores, 0.5, color=[NEUTRAL, ACCENT, NEUTRAL])
 ax4.axhline(0.75, color=SLATE, linestyle='--', lw=1.2)
 ax4.text(2.5, 0.75, 'FT target ≥0.75', color=SLATE, fontsize=9, va='center', ha='right')
 ax4.set_xticks(x); ax4.set_xticklabels(metrics); ax4.set_ylim(0, 1.05)
-ax4.set_title('Abuse metrics — Recall is the gap fine-tuning closes', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
+ax4.set_title('Abuse metrics: Recall is the gap fine-tuning closes', fontsize=11.5, fontweight='bold', color=INK, loc='left', pad=10)
 _clean_ax(ax4)
 for b, v in zip(bars, scores):
     ax4.text(b.get_x() + b.get_width() / 2, v + 0.02, f'{v:.2f}', ha='center', color=INK, fontweight='bold')

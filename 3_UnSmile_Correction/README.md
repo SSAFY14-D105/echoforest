@@ -1,12 +1,14 @@
-# 3_UnSmile_Correction — 공식 unSmile 라벨 보정
+# 3_UnSmile_Correction, 공식 unSmile 라벨 보정
 
 공식 unSmile 학습 데이터의 **라벨 오류를 게임 도메인 기준으로 보정**하는 단계입니다.
+
+![unSmile 라벨 보정 전후](results/correction_ko.png)
 
 > 📖 **왜 보정하나(threshold 딜레마)** → [AI 파이프라인 개요](../AI_파이프라인_개요.md) · **수치 종합** → [기획서](<../Setting/AI 모델 고도화 기획서.md>)
 
 ## ⭐ 한 줄 요약
 
-- **입력**: `UnSmile/UnSmile_Dataset_Drop_개인지칭/` — 개인지칭 행·칼럼이 **이미 제거된** 공식 데이터셋
+- **입력**: `UnSmile/UnSmile_Dataset_Drop_개인지칭/`, 개인지칭 행·칼럼이 **이미 제거된** 공식 데이터셋
 - **이 폴더가 한 일**: 문장·행은 그대로 두고 **라벨만** `clean → 악플/욕설`로 보정 (**train 39건 / valid 5건**)
 - **안 한 것**: 행 삭제 ❌, 자모(`ㅋㅋ`)·짧은 문장 제거 ❌
 
@@ -26,14 +28,14 @@ UnSmile/UnSmile_Dataset_Drop_개인지칭           train 14,690 / valid 3,663 �
 unsmile_train/valid_corrected.tsv               train 14,690 / valid 3,663 · 라벨만 변경
 ```
 
-### ① 개인지칭 제거 — 사전 단계(이 폴더 밖)
+### ① 개인지칭 제거, 사전 단계(이 폴더 밖)
 
 - 개인지칭(닉네임 지칭) 라벨은 **abuse/clean 이진 과제와 무관**해 행·칼럼째 제거 (라벨 정책: [`0_Data_Collection`](../0_Data_Collection/README.md))
-- train **15,005 → 14,690** (−315), valid **3,737 → 3,663** (−74) — 삭제분은 **전부 `개인지칭==1`** (원본 개인지칭 개수와 정확히 일치, 검증됨)
+- train **15,005 → 14,690** (−315), valid **3,737 → 3,663** (−74), 삭제분은 **전부 `개인지칭==1`** (원본 개인지칭 개수와 정확히 일치, 검증됨)
 - `개인지칭` 칼럼 자체도 삭제 (12칼럼 → 11칼럼)
-- ⚠️ 이 변환의 생성 스크립트는 레포에 남아있지 않음 — 산출물 `UnSmile_Dataset_Drop_개인지칭`을 원본과 비교해 "개인지칭 행·칼럼 제거"임을 **코드로 검증**함
+- ⚠️ 이 변환의 생성 스크립트는 레포에 남아있지 않음, 산출물 `UnSmile_Dataset_Drop_개인지칭`을 원본과 비교해 "개인지칭 행·칼럼 제거"임을 **코드로 검증**함
 
-### ② 라벨 보정 — 이 폴더의 작업
+### ② 라벨 보정, 이 폴더의 작업
 
 `clean=1`이지만 게임 부정어를 포함한 문장을 `악플/욕설=1, clean=0`으로 정정.
 
@@ -58,12 +60,12 @@ unsmile_train/valid_corrected.tsv               train 14,690 / valid 3,663 · �
 키워드엔 걸렸지만 **실제로는 clean**인 문장은 abuse로 올리지 않고 clean 유지:
 
 - 찬송가 `주 예수보다 더 귀한것은 없네…`, 칭찬 `제대로 된 ai구나`, 인용 `워렌버핏 말… 챙기지 못해`, 자기고백 `소주+삼겹살 포기못해`, 양보 `퀴어로 사는 것까지 말리진 못해도…`
-- train 9건 + valid 3건 — 최종 보정본에서 **clean으로 유지됨**(직접 확인). 코드: [`util/revert_false_positives.py`](util/revert_false_positives.py)
+- train 9건 + valid 3건, 최종 보정본에서 **clean으로 유지됨**(직접 확인). 코드: [`util/revert_false_positives.py`](util/revert_false_positives.py)
 
 ## ❓ 안 한 것 (자주 묻는)
 
 - **행 삭제**: 개인지칭(사전 단계) 외에는 없음
-- **자모만 문장**(`ㅋㅋ`·`ㅇㅇ` 류): 원본 train 14개 → 보정본 14개, valid 3 → 3 — **그대로 보존**
+- **자모만 문장**(`ㅋㅋ`·`ㅇㅇ` 류): 원본 train 14개 → 보정본 14개, valid 3 → 3, **그대로 보존**
 - 자모·짧은 노이즈 제거는 unSmile 보정이 아니라 **게임 STT 수집 파이프라인**([`0_Data_Collection`](../0_Data_Collection) 03·05 정제) 쪽 작업
 
 ## 📁 파일

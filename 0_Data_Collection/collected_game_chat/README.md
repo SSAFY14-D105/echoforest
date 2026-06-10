@@ -1,4 +1,4 @@
-# collected_game_chat — 손수 수집·분류한 게임 채팅 데이터
+# collected_game_chat, 손수 수집·분류한 게임 채팅 데이터
 
 **두 소스**의 실제 게임 음성채팅이 모두 들어 있습니다:
 1. 사람들이 **〈메아리의 숲〉(우리 게임)을 플레이하는 걸 녹화 → STT**
@@ -15,7 +15,7 @@
 | `build_train_collected.py` | json → unSmile 10라벨 tsv 변환 → `../datasets/train_collected.tsv`(518) |
 | `README.md` | 이 문서 |
 
-## 라벨링 방식 — 악플/욕설 vs clean 이진으로 충분
+## 라벨링 방식, 악플/욕설 vs clean 이진으로 충분
 `clean_sentences` → `clean=1`, `negative_sentences` → `악플/욕설=1` (나머지 8개 혐오 라벨은 0). unSmile 10라벨 포맷을 그대로 쓰되, 게임 맥락에선 **"부정 발언 탐지"** 만 필요하고 혐오 대상(여성/남성/지역/종교…) 세분류는 거의 안 나오기 때문입니다.
 
 | 관점 | 설명 |
