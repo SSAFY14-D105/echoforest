@@ -255,7 +255,7 @@ Content-Type: application/json
 # 영상 포트폴리오
 
 <p align="center">
-  <a href="https://youtu.be/8m-AHCVeUrs"><img src="docs/d.png" width="640"/></a>
+  <a href="https://youtu.be/8m-AHCVeUrs"><img src="docs/video_thumbnail.png" width="640"/></a>
 </p>
 
 # 팀원 소개
