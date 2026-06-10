@@ -1,0 +1,42 @@
+[
+  {
+    "model": "UnSmile",
+    "AP": 91.94,
+    "AUROC": 89.37,
+    "F1_at_0_5": 73.95,
+    "F1_max": 81.28,
+    "F1_max_thr": 0.2
+  },
+  {
+    "model": "Korean Sentiment",
+    "AP": 79.25,
+    "AUROC": 80.21,
+    "F1_at_0_5": 71.36,
+    "F1_max": 77.71,
+    "F1_max_thr": 0.85
+  },
+  {
+    "model": "KoELECTRA Base",
+    "AP": 66.56,
+    "AUROC": 64.18,
+    "F1_at_0_5": 69.35,
+    "F1_max": 69.76,
+    "F1_max_thr": 0.75
+  },
+  {
+    "model": "KoELECTRA Small",
+    "AP": 64.54,
+    "AUROC": 61.15,
+    "F1_at_0_5": 66.35,
+    "F1_max": 68.82,
+    "F1_max_thr": 0.25
+  },
+  {
+    "model": "Multilingual",
+    "AP": 52.15,
+    "AUROC": 48.82,
+    "F1_at_0_5": 59.9,
+    "F1_max": 67.68,
+    "F1_max_thr": 0.1
+  }
+]

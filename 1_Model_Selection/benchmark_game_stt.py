@@ -1,6 +1,6 @@
 """
 게임 STT 데이터 기반 5개 모델 벤치마크 (Step 1 · 모델 선정)
-- test_set.tsv (482건, held-out) 사용
+- test_set.tsv (482건, 학습에 안 쓴 평가셋) 사용
 - 5개 한국어 감정/혐오 분석 모델 비교 → Abuse F1 기준 선정 (모두 분류 헤드가 실제 로드되는 모델)
 - 산출물: results/ (benchmark_autogen.md 원시요약, benchmark_results.csv/.json, 그래프 en/ko 4종)
   ※ 큐레이션 문서(그래프 설명 등)는 results/MODEL_BENCHMARK.md (손으로 유지, 자동 덮어쓰기 안 함)
@@ -177,8 +177,8 @@ def benchmark_model(model_name, model_id, sentences, true_labels):
                 with torch.no_grad():
                     outputs = model(**inputs)
                     probs = torch.sigmoid(outputs.logits[0]).cpu().numpy()
-                # abuse = 악플/욕설(index 8) > 0.5 — 배포(FastAPI probs[8])·Step 6·Step 2 baseline과 동일 정의
-                is_abuse = probs[8] > 0.5
+                # abuse = not-clean (clean 제외 9개 라벨 max > 0.5) — 배포·Step 6·Step 2 baseline과 동일 정의
+                is_abuse = probs[:9].max() > 0.5
             elif model_id in KOELECTRA_FLAT:
                 inputs = tokenizer(sentence, return_tensors="pt", truncation=True, max_length=128)
                 if torch.cuda.is_available():
@@ -298,7 +298,7 @@ def save_results(results, sentences_count):
 > 그래프 읽는 법·688 비교 등 **큐레이션 문서는** [`MODEL_BENCHMARK.md`](./MODEL_BENCHMARK.md).
 
 ## 📊 테스트 환경
-- **테스트 데이터**: `test_set.tsv` ({sentences_count}건, held-out)
+- **테스트 데이터**: `test_set.tsv` ({sentences_count}건, 학습에 안 쓴 평가셋)
 - **테스트 일시**: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 - **데이터 출처**: 협동 게임 STT + 유튜브 협동게임 STT
 
@@ -324,14 +324,14 @@ def save_results(results, sentences_count):
 - **Abuse Precision**: {best['abuse_precision']*100:.2f}% · **Recall**: {best['abuse_recall']*100:.2f}%
 - **Accuracy**: {best['accuracy']*100:.2f}% · **Clean F1**: {best['clean_f1']*100:.2f}%
 
-> ⚠️ 선정은 Recall이 아니라 **F1 기준**. 단순 Recall 최대 모델은 거의 모든 문장을 욕설로 분류해(Precision↓·오탐↑) 실사용 불가 → 균형 지표로 선정.
+> ⚠️ 선정은 Recall이 아니라 **임계값 무관 AP 기준**(상세: threshold_free_selection.py). 단순 Recall 최대 모델은 거의 모든 문장을 부정어로 분류해(Precision↓, 오탐↑) 실사용 불가. 아래 F1@0.5는 참고 운영점.
 
 ### 2. 한국어 혐오 발언 전용
 - Smilegate AI의 **한국어 혐오 발언 탐지** 전용 모델, 댓글/채팅 학습 → 게임 대화에 적합
 
-### 3. 다른 모델 한계 — 감정 ≠ 욕설
-- 나머지 4종은 모두 **범용 감정모델**이라 "부정 감정"을 "욕설"로 간주 → 과탐(Precision 52~58%).
-- clean 234건 중 158~174건을 욕설로 오탐 → 게임에 쓰면 멀쩡한 말에 저주 발동 → 실사용 부적합.
+### 3. 다른 모델 한계, 감정 ≠ 부정어
+- 나머지 4종은 모두 **범용 감정모델**이라 "부정 감정"을 "부정어"로 간주 → 과탐(Precision 52~58%).
+- clean 234건 중 158~174건을 부정어로 오탐 → 게임에 쓰면 멀쩡한 말에 저주 발동 → 실사용 부적합.
 
 > ℹ️ `beomi/KcELECTRA-base-v2022`는 분류 헤드가 없는 base LM이라 후보 제외(4·5단계 fine-tuning 대상). KoELECTRA 2종은 저장 헤드가 구 형식이라 수동 로드해 실수치 산출.
 

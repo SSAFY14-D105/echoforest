@@ -1,0 +1,6 @@
+﻿model,AP,AUROC,F1_at_0_5,F1_max,F1_max_thr
+UnSmile,91.94,89.37,73.95,81.28,0.2
+Korean Sentiment,79.25,80.21,71.36,77.71,0.85
+KoELECTRA Base,66.56,64.18,69.35,69.76,0.75
+KoELECTRA Small,64.54,61.15,66.35,68.82,0.25
+Multilingual,52.15,48.82,59.9,67.68,0.1

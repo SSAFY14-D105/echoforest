@@ -69,7 +69,7 @@ NOISE = set()
 STRINGS = {
     "en": {
         "sel_title": "Model selection — Abuse F1",
-        "sel_sub":   "5 Korean models · test_set (482 held-out game-chat) · threshold 0.5",
+        "sel_sub":   "5 Korean models · test_set (482 game-chat, unseen in training) · threshold 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "selected",
         "sel_foot":  "†  classification head not loaded in current transformers — "
@@ -81,14 +81,14 @@ STRINGS = {
         "recall":    "Recall",
     },
     "ko": {
-        "sel_title": "모델 선정 — Abuse F1",
-        "sel_sub":   "한국어 모델 5종 · test_set (482, held-out 게임채팅) · 임계값 0.5",
+        "sel_title": "모델 선정 (Abuse F1 기준)",
+        "sel_sub":   "한국어 모델 5종, 학습에 쓰지 않은 test_set 482(게임채팅), 임계값 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "선정",
-        "sel_foot":  "†  현 transformers에서 분류 헤드 미로딩 — "
+        "sel_foot":  "†  현 transformers에서 분류 헤드 미로딩, "
                      "수치는 noise (off-the-shelf 대조군)",
-        "trade_title": "왜 F1으로 선정하나 — 정밀도 vs 재현율",
-        "trade_sub":   "모델별 정밀도 vs 재현율 · UnSmile이 가장 균형(정밀도 최고)",
+        "trade_title": "정밀도 vs 재현율로 보는 선정 이유",
+        "trade_sub":   "모델별 정밀도 vs 재현율, UnSmile이 가장 균형(정밀도 최고)",
         "trade_xlabel": "점수  (%)",
         "precision": "정밀도",
         "recall":    "재현율",
