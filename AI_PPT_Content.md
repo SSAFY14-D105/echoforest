@@ -97,7 +97,7 @@ Fine-tuning으로 Recall 60.08% → 85.48%
 
 | 비교 | v1 평균 Recall | v2 평균 Recall | 차이 |
 |------|:---:|:---:|:---:|
-| 평균 | 72.1% | 83.8% | +11.5%p |
+| 평균 | 74.0% | 85.5% | +11.5%p |
 
 ### 권장 그래프
 - `6_Model_Comparison/results/paper_domain_data_effect_ko.png`

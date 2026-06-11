@@ -67,12 +67,12 @@ Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 �
 
 | | v1 (보정 unSmile만) | v2 (+ 게임 수집 518) | 차이 |
 |---|:---:|:---:|:---:|
-| 평균 Abuse Recall | 72.1% | **83.8%** | **+11.5%p** |
+| 평균 Abuse Recall | 74.0% | **85.5%** | **+11.5%p** |
 
 **모든 조합**에서 v2 > v1. 단 **518건의 게임 채팅**으로 +11.5%p. (v1도 Step 3 보정으로 게임 키워드 44건이 들어가 있어, 도메인 적응의 *대부분*은 v2의 수집 데이터가 만든 것)
 
 ### 2. LoRA ≈ Full · Game(KcELECTRA) > Tutorial(kcbert)
-평균 Recall: LoRA 80.2% vs Full 75.6% / Game base 80.4% vs Tutorial 75.5%. **LoRA가 Full에 동등 이상(게다가 가벼움)**, base는 Game(KcELECTRA)이 우세.
+평균 Recall: LoRA 82.3% vs Full 77.2% / Game base 81.8% vs Tutorial 77.7%. **LoRA가 Full에 동등 이상(게다가 가벼움)**, base는 Game(KcELECTRA)이 우세.
 
 ## ✅ 선정, Full v2 KcELECTRA (Step 7)
 
