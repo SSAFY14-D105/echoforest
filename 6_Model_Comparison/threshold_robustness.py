@@ -93,7 +93,7 @@ for s in ax.spines.values(): s.set_visible(False)
 ax.tick_params(length=0)
 ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False, fontsize=10)
 ax.set_title("임계값을 바꿔도 순위가 유지되는가 (9모델 sweep)", loc="left", pad=24, fontsize=15, fontweight="bold", color=INK)
-ax.text(0, 1.02, "abuse = not-clean. 어느 임계값에서 봐도 v2 게임 모델이 상위 = 0.5 비교가 공정했다는 증거",
+ax.text(0, 1.02, "abuse = not-clean. v1=댓글 보정만 / v2=+게임채팅 518건 / 어느 임계값에서도 v2 KcELECTRA가 상위",
         transform=ax.transAxes, fontsize=10, color="#9AA5B1")
 fig.savefig("results/threshold_robustness_ko.png", dpi=220, facecolor="white", bbox_inches="tight"); plt.close(fig)
 print("\nsaved results/threshold_robustness_ko.png + threshold_robustness_f1.csv")
