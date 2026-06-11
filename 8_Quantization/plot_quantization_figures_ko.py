@@ -27,7 +27,7 @@ REPORT = RESULTS / "quantization_report.json"
 
 PRIMARY = "#2F9D91"
 SECONDARY = "#C2CAD2"
-ACCENT = "#B8A56D"
+ACCENT = "#5E7E9E"
 GRID = "#EBEEF1"
 TEXT = "#3C4650"
 CONFUSION_CMAP = LinearSegmentedColormap.from_list(

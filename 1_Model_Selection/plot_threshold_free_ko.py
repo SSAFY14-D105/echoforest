@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt, matplotlib.font_manager as fm
 
 ROOT = Path(__file__).resolve().parent
 INK, SUB, GRID = "#1F2933", "#9AA5B1", "#EBEEF1"
-PRIMARY, ACCENT, SECONDARY, SLATE = "#2F9D91", "#B8A56D", "#C2CAD2", "#4B5A68"
+PRIMARY, ACCENT, SECONDARY, SLATE = "#2F9D91", "#5E7E9E", "#C2CAD2", "#4B5A68"
 
 def font():
     for fp in glob("/Users/sondahyun/Pretendard-1.3.9/public/static/Pretendard-*.otf"):

@@ -78,7 +78,7 @@ def font():
     return "AppleGothic"
 plt.rcParams.update({"font.family": font(), "axes.unicode_minus": False, "font.size": 12})
 INK, GRID = "#1F2933", "#EBEEF1"
-COL = {"Full v2 KcELECTRA":"#2F9D91","LoRA v2 KcELECTRA":"#B8A56D","LoRA v2 kcbert":"#8FA3AE",
+COL = {"Full v2 KcELECTRA":"#2F9D91","LoRA v2 KcELECTRA":"#5E7E9E","LoRA v2 kcbert":"#8FA3AE",
        "LoRA v1 KcELECTRA":"#C2CAD2","Baseline":"#4B5A68"}
 fig, ax = plt.subplots(figsize=(9.6, 5.4)); fig.subplots_adjust(left=0.09, right=0.78, top=0.84, bottom=0.12)
 for name in ["Full v2 KcELECTRA","LoRA v2 KcELECTRA","LoRA v2 kcbert","LoRA v1 KcELECTRA","Baseline"]:
