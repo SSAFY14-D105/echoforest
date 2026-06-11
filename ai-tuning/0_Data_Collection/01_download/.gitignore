@@ -1,0 +1,2 @@
+# 원본 wav는 용량이 커서 로컬만(STT용). 압축본 .opus는 LFS로 커밋(코드·url·README도 추적).
+*.wav

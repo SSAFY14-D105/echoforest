@@ -1,0 +1,156 @@
+{
+  "selected_model": "Full v2 KcELECTRA (full_game_kcelectra_v2)",
+  "model_path": "5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model",
+  "test_path": "0_Data_Collection/datasets/test_set.tsv",
+  "calibration_path": "3_UnSmile_Correction/unsmile_valid_corrected.tsv",
+  "test_n": 482,
+  "abuse_definition": "not-clean (max of 9 hate labels > 0.5)",
+  "compression_methods": {
+    "int8_dynamic": {
+      "method": "INT8 dynamic quantization",
+      "target_layers": "torch.nn.Linear",
+      "backend_engine": "qnnpack",
+      "artifact": "quantized_model/model_int8.pt"
+    },
+    "fp16": {
+      "method": "FP16 half-precision weights",
+      "artifact": "fp16_model/model.safetensors"
+    }
+  },
+  "size": {
+    "original_safetensors_mb": 487.48,
+    "int8_dynamic_mb": 242.88,
+    "fp16_safetensors_mb": 243.75,
+    "int8_compression": 2.01,
+    "fp16_compression": 2.0,
+    "int8_reduction_pct": 50.2,
+    "fp16_reduction_pct": 50.0,
+    "params": 127784458
+  },
+  "speed": {
+    "original_ms": 34.04,
+    "original_sd_ms": 0.86,
+    "int8_dynamic_ms": 14.01,
+    "int8_dynamic_sd_ms": 2.37,
+    "fp16_ms": 13.9,
+    "fp16_sd_ms": 1.65,
+    "int8_speedup": 2.43,
+    "fp16_speedup": 2.45
+  },
+  "performance": {
+    "original": {
+      "abuse_precision": 0.9021,
+      "abuse_recall": 0.8548,
+      "abuse_f1": 0.8778,
+      "clean_precision": 0.8543,
+      "clean_recall": 0.9017,
+      "clean_f1": 0.8773,
+      "tp": 212,
+      "tn": 211,
+      "fp": 23,
+      "fn": 36,
+      "confusion_matrix": [
+        [
+          211,
+          23
+        ],
+        [
+          36,
+          212
+        ]
+      ],
+      "threshold": 0.5
+    },
+    "int8_dynamic": {
+      "abuse_precision": 0.9721,
+      "abuse_recall": 0.7016,
+      "abuse_f1": 0.815,
+      "clean_precision": 0.7558,
+      "clean_recall": 0.9786,
+      "clean_f1": 0.8529,
+      "tp": 174,
+      "tn": 229,
+      "fp": 5,
+      "fn": 74,
+      "confusion_matrix": [
+        [
+          229,
+          5
+        ],
+        [
+          74,
+          174
+        ]
+      ],
+      "threshold": 0.5
+    },
+    "int8_dynamic_calibrated": {
+      "abuse_precision": 0.9221,
+      "abuse_recall": 0.8589,
+      "abuse_f1": 0.8894,
+      "clean_precision": 0.8606,
+      "clean_recall": 0.9231,
+      "clean_f1": 0.8907,
+      "tp": 213,
+      "tn": 216,
+      "fp": 18,
+      "fn": 35,
+      "confusion_matrix": [
+        [
+          216,
+          18
+        ],
+        [
+          35,
+          213
+        ]
+      ],
+      "threshold": 0.26
+    },
+    "fp16": {
+      "abuse_precision": 0.9021,
+      "abuse_recall": 0.8548,
+      "abuse_f1": 0.8778,
+      "clean_precision": 0.8543,
+      "clean_recall": 0.9017,
+      "clean_f1": 0.8773,
+      "tp": 212,
+      "tn": 211,
+      "fp": 23,
+      "fn": 36,
+      "confusion_matrix": [
+        [
+          211,
+          23
+        ],
+        [
+          36,
+          212
+        ]
+      ],
+      "threshold": 0.5
+    }
+  },
+  "threshold_calibration": {
+    "source": "3_UnSmile_Correction/unsmile_valid_corrected.tsv",
+    "selected_threshold": 0.26,
+    "validation_precision": 0.6223,
+    "validation_recall": 0.6744,
+    "validation_f1": 0.6473,
+    "test_precision": 0.9221,
+    "test_recall": 0.8589,
+    "test_f1": 0.8894,
+    "note": "Selected on validation data; test metrics are measured at the selected INT8 not-clean threshold."
+  },
+  "conclusion": {
+    "int8_abuse_precision_diff": 0.0708,
+    "int8_abuse_recall_diff": -0.1452,
+    "int8_abuse_f1_diff": -0.0582,
+    "fp16_abuse_precision_diff": 0.0,
+    "fp16_abuse_recall_diff": 0.0,
+    "fp16_abuse_f1_diff": 0.0,
+    "int8_success": false,
+    "fp16_success": true,
+    "recommendation": "Use FP16 compressed artifact for deployment. INT8 dynamic is not acceptable at fixed threshold 0.5; it can be considered only with threshold calibration and explicit false-positive trade-off review."
+  }
+}

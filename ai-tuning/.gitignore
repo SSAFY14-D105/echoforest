@@ -1,0 +1,11 @@
+echoforest-backend/
+echoforest-frontend/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# 임시 실행 로그 (다운로드/STT 진행 로그)
+_*.log

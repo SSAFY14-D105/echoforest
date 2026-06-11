@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Web Speech API STT 테스트 — 메아리의 숲</title>
+<style>
+  :root { --pink:#e84393; --pink-soft:#fde4ef; --ink:#2d2d2d; --muted:#8a8a8a; --ok:#27ae60; --bad:#e74c3c; }
+  * { box-sizing: border-box; }
+  body { font-family: "Pretendard","맑은 고딕",system-ui,sans-serif; margin:0; background:#faf7f9; color:var(--ink); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:20px; line-height:1.6; }
+  .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+  button { font-size:15px; font-weight:600; padding:10px 18px; border:none; border-radius:10px; cursor:pointer; }
+  #startBtn { background:var(--pink); color:#fff; }
+  #startBtn:disabled { background:#ddd; color:#999; cursor:not-allowed; }
+  #stopBtn { background:#fff; color:var(--pink); border:1.5px solid var(--pink); }
+  #stopBtn:disabled { border-color:#ddd; color:#bbb; cursor:not-allowed; }
+  .ghost { background:#fff; color:var(--muted); border:1.5px solid #e0e0e0; }
+  label.opt { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .status { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; padding:6px 12px; border-radius:20px; background:#eee; color:#666; }
+  .status.live { background:#fde4ef; color:var(--pink); }
+  .dot { width:9px; height:9px; border-radius:50%; background:#bbb; }
+  .status.live .dot { background:var(--pink); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:18px 0; }
+  .metric { background:#fff; border:1px solid #f0e6ec; border-radius:12px; padding:12px 14px; text-align:center; }
+  .metric .v { font-size:24px; font-weight:700; color:var(--pink); }
+  .metric .k { font-size:11px; color:var(--muted); margin-top:2px; }
+  .panel { background:#fff; border:1px solid #f0e6ec; border-radius:12px; padding:16px; margin-bottom:16px; }
+  .panel h2 { font-size:13px; color:var(--muted); margin:0 0 10px; text-transform:uppercase; letter-spacing:.5px; }
+  #interim { min-height:28px; font-size:18px; color:#aaa; font-style:italic; }
+  #finalLog { list-style:none; margin:0; padding:0; max-height:340px; overflow:auto; }
+  #finalLog li { padding:9px 4px; border-bottom:1px dashed #f0e6ec; font-size:16px; line-height:1.5; display:flex; gap:10px; }
+  #finalLog li:last-child { border-bottom:none; }
+  #finalLog .t { color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; padding-top:3px; }
+  #finalLog .c { color:var(--muted); font-size:12px; margin-left:auto; white-space:nowrap; }
+  .empty { color:#ccc; font-size:14px; }
+  .err { color:var(--bad); font-size:13px; font-weight:600; margin-top:8px; min-height:18px; }
+  .unsupported { background:#fff3f3; border:1px solid #ffd2d2; color:var(--bad); padding:16px; border-radius:12px; font-size:14px; line-height:1.6; }
+  code { background:#f4eef1; padding:1px 6px; border-radius:5px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎙️ Web Speech API STT 테스트</h1>
+  <p class="sub">
+    메아리의 숲 런타임 STT(브라우저 음성→텍스트) 엔진을 직접 확인하는 페이지입니다.<br />
+    <b>크롬(Chrome)에서 열고</b> 마이크 권한을 허용한 뒤 말해 보세요 — 실시간 인식 결과와 응답 지연을 측정합니다.
+    (욕설도 검열 없이 원문 인식되는지 함께 확인할 수 있습니다.)
+  </p>
+
+  <div id="unsupported" class="unsupported" style="display:none;">
+    ⚠️ 이 브라우저는 Web Speech API(<code>webkitSpeechRecognition</code>)를 지원하지 않습니다.<br />
+    <b>데스크톱 Chrome</b> 또는 Edge에서 열어 주세요. (Firefox/Safari 미지원)
+  </div>
+
+  <div id="app" style="display:none;">
+    <div class="controls">
+      <button id="startBtn">● 인식 시작</button>
+      <button id="stopBtn" disabled>■ 정지</button>
+      <button id="clearBtn" class="ghost">초기화</button>
+      <button id="copyBtn" class="ghost">결과 복사</button>
+      <span id="status" class="status"><span class="dot"></span><span id="statusText">대기 중</span></span>
+      <label class="opt"><input type="checkbox" id="interimChk" checked /> 중간결과(interim)</label>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="v" id="mSeg">0</div><div class="k">최종 문장 수</div></div>
+      <div class="metric"><div class="v" id="mLatency">–</div><div class="k">첫 응답 지연(ms)</div></div>
+      <div class="metric"><div class="v" id="mAvg">–</div><div class="k">평균 문장 간격(ms)</div></div>
+      <div class="metric"><div class="v" id="mWords">0</div><div class="k">인식 단어 수</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>실시간(중간) 인식</h2>
+      <div id="interim"></div>
+    </div>
+
+    <div class="panel">
+      <h2>확정 결과</h2>
+      <ul id="finalLog"><li class="empty">아직 인식된 문장이 없습니다. “인식 시작”을 눌러 말해 보세요.</li></ul>
+    </div>
+
+    <div id="err" class="err"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = (id) => document.getElementById(id);
+
+  if (!SR) {
+    $("unsupported").style.display = "block";
+    return;
+  }
+  $("app").style.display = "block";
+
+  const startBtn = $("startBtn"), stopBtn = $("stopBtn"), clearBtn = $("clearBtn"), copyBtn = $("copyBtn");
+  const statusEl = $("status"), statusText = $("statusText"), interimEl = $("interim");
+  const finalLog = $("finalLog"), errEl = $("err"), interimChk = $("interimChk");
+  const mSeg = $("mSeg"), mLatency = $("mLatency"), mAvg = $("mAvg"), mWords = $("mWords");
+
+  let recognition = null;
+  let listening = false;        // 사용자가 켠 상태 (continuous 유지용)
+  let segCount = 0, wordCount = 0;
+  let speechStartTs = null;     // 발화 시작 시각
+  let firstLatency = null;      // 첫 응답 지연
+  let lastFinalTs = null, gapSum = 0, gapN = 0;
+
+  function buildRecognition() {
+    const r = new SR();
+    r.lang = "ko-KR";
+    r.continuous = true;
+    r.interimResults = interimChk.checked;
+    r.maxAlternatives = 1;
+
+    r.onstart = () => setLive(true, "인식 중…");
+    r.onspeechstart = () => { speechStartTs = performance.now(); };
+
+    r.onresult = (e) => {
+      // 첫 응답 지연 = 발화 시작 → 첫 결과(중간이든 확정이든). 스트리밍 응답성 지표
+      // (확정 기준으로 재면 발화 길이+침묵감지 시간이 섞여 과대평가됨)
+      if (firstLatency === null && speechStartTs !== null) {
+        firstLatency = Math.round(performance.now() - speechStartTs);
+        mLatency.textContent = firstLatency;
+      }
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        const alt = res[0];
+        if (res.isFinal) {
+          addFinal(alt.transcript.trim(), alt.confidence);
+        } else {
+          interim += alt.transcript;
+        }
+      }
+      interimEl.textContent = interim;
+    };
+
+    r.onerror = (e) => {
+      if (e.error === "no-speech" || e.error === "aborted") return; // 흔한 무해 케이스
+      // 권한 거부류는 자동 재시작(onend) 루프를 막기 위해 청취 종료
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") listening = false;
+      errEl.textContent = "오류: " + e.error +
+        (e.error === "not-allowed" ? " (마이크 권한을 허용해야 합니다)" : "");
+    };
+
+    // continuous라도 크롬이 침묵 후 종료 → 사용자가 켠 상태면 자동 재시작
+    r.onend = () => {
+      if (listening) { try { r.start(); } catch (_) {} }
+      else setLive(false, "대기 중");
+    };
+    return r;
+  }
+
+  function addFinal(text, confidence) {
+    if (!text) return;
+    const now = performance.now();
+    if (lastFinalTs !== null) { gapSum += now - lastFinalTs; gapN++; mAvg.textContent = Math.round(gapSum / gapN); }
+    lastFinalTs = now;
+
+    segCount++;
+    wordCount += text.split(/\s+/).filter(Boolean).length;
+    mSeg.textContent = segCount;
+    mWords.textContent = wordCount;
+
+    const empty = finalLog.querySelector(".empty");
+    if (empty) empty.remove();
+
+    const li = document.createElement("li");
+    const ts = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+    const conf = (confidence && confidence > 0) ? Math.round(confidence * 100) + "%" : "—";
+    li.innerHTML = `<span class="t">${ts}</span><span class="x"></span><span class="c">conf ${conf}</span>`;
+    li.querySelector(".x").textContent = text;
+    finalLog.appendChild(li);
+    finalLog.scrollTop = finalLog.scrollHeight;
+  }
+
+  function setLive(on, label) {
+    statusEl.classList.toggle("live", on);
+    statusText.textContent = label;
+    startBtn.disabled = on;
+    stopBtn.disabled = !on;
+  }
+
+  startBtn.onclick = () => {
+    errEl.textContent = "";
+    speechStartTs = null; firstLatency = null;
+    recognition = buildRecognition();
+    listening = true;
+    try { recognition.start(); } catch (e) { errEl.textContent = "시작 실패: " + e.message; listening = false; }
+  };
+
+  stopBtn.onclick = () => {
+    listening = false;
+    if (recognition) recognition.stop();
+    interimEl.textContent = "";
+  };
+
+  clearBtn.onclick = () => {
+    finalLog.innerHTML = '<li class="empty">아직 인식된 문장이 없습니다.</li>';
+    interimEl.textContent = "";
+    segCount = wordCount = 0; firstLatency = null; lastFinalTs = null; gapSum = 0; gapN = 0;
+    mSeg.textContent = "0"; mWords.textContent = "0"; mLatency.textContent = "–"; mAvg.textContent = "–";
+  };
+
+  copyBtn.onclick = () => {
+    const lines = [...finalLog.querySelectorAll("li:not(.empty) .x")].map((n) => n.textContent);
+    navigator.clipboard.writeText(lines.join("\n")).then(
+      () => { copyBtn.textContent = "복사됨!"; setTimeout(() => (copyBtn.textContent = "결과 복사"), 1200); }
+    );
+  };
+
+  interimChk.onchange = () => { if (recognition) recognition.interimResults = interimChk.checked; };
+})();
+</script>
+</body>
+</html>
