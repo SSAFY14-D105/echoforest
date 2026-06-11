@@ -57,7 +57,7 @@ Baseline은 오탐은 적지만 실제 abuse 248건 중 99건을 놓쳤습니다
 
 Precision이 낮아진 이유는 모델이 더 많은 문장을 abuse로 잡기 시작했기 때문입니다. Baseline은 매우 보수적으로 예측해서 TP 149 / FP 6였고, 최종 모델은 게임식 비난까지 잡으면서 TP가 212로 늘었습니다. 동시에 정상 발화를 abuse로 찍은 FP도 23으로 늘어 Precision은 96.13%에서 90.21%로 내려갔습니다. 즉 "더 잘 잡는다"는 Recall 개선이고, 그 과정에서 false positive가 일부 늘어난 trade-off입니다.
 
-선정 기준은 타당합니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 오탐(FP 23)이 가장 적으며, F1은 LoRA v2와 사실상 동률입니다. 게임 저주 시스템에서는 오탐이 UX에 직접 영향을 주므로, Recall 3문장 차이보다 Precision/F1 우위가 더 설득력 있습니다.
+선정 기준은 타당합니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적으며(FP 23 vs 30), F1은 사실상 동률입니다. 게임 저주 시스템에서는 오탐이 UX에 직접 영향을 주므로, Recall 6문장 차이보다 Precision/LRAP 우위가 더 설득력 있습니다.
 
 ## 4. 결: 압축 최적화와 배포 판단
 
@@ -76,7 +76,7 @@ INT8은 threshold를 0.26으로 보정하면 F1을 88.94%까지 회복합니다(
 | INT8 기준 | Precision | Recall | F1 | FP | FN |
 |-----------|:---:|:---:|:---:|:---:|:---:|
 | fixed 0.50 | 97.21% | 70.16% | 81.50% | 5 | 74 |
-| valid 보정 0.26 | 92.21% | 85.89% | 88.94% | 18 | 35 |
+| INT8 보정 후보 0.26 | 92.21% | 85.89% | 88.94% | 18 | 35 |
 
 다만 INT8은 고정 0.5에서 Recall이 무너지고, 위 회복도 **임계값 재보정**을 거쳐야 가능합니다(FP16은 보정 없이 drop-in). 따라서 운영 우선순위는 **FP16 배포 → 운영 로그 수집 → INT8 threshold 보정 재검토**가 좋습니다.
 
@@ -120,4 +120,4 @@ INT8은 threshold를 0.26으로 보정하면 F1을 88.94%까지 회복합니다(
 
 전체 기승전결은 잘 나왔습니다. 특히 "threshold 딜레마"를 문제로 잡고, 그 해결책을 데이터 보정과 게임 도메인 수집으로 연결한 점이 강합니다. 최신 결과 기준으로는 결론을 이렇게 가져가면 가장 정직하고 설득력 있습니다.
 
-> 게임 도메인 fine-tuning으로 baseline의 낮은 Recall 문제를 해결했고, Full v2 KcELECTRA가 LRAP 1위·최소 오탐(FP 23) 기준 최종 모델로 타당하다. 압축 단계에서는 INT8 fixed threshold가 성능을 훼손하므로 즉시 배포하지 않고, FP16 압축 모델을 우선 배포 후보로 삼는 것이 안전하다.
+> 게임 도메인 fine-tuning으로 baseline의 낮은 Recall 문제를 해결했고, Full v2 KcELECTRA가 LRAP 1위·상위 v2 후보 중 낮은 오탐(FP 23) 기준 최종 모델로 타당하다. 압축 단계에서는 INT8 fixed threshold가 성능을 훼손하므로 즉시 배포하지 않고, FP16 압축 모델을 우선 배포 후보로 삼는 것이 안전하다.

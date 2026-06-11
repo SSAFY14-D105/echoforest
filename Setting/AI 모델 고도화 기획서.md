@@ -29,7 +29,7 @@ Baseline 수치도 같은 문제를 보여줍니다.
 |------|:---:|:---:|:---:|:---:|:---:|
 | Baseline `kor_unsmile` | 96.13% | 60.08% | 73.95% | 6 | 99 |
 
-Baseline은 오탐은 4건뿐이지만, 실제 abuse 248건 중 99건을 놓쳤습니다. 따라서 게임 도메인 데이터로 모델 자체를 다시 학습시키는 전략이 필요합니다.
+Baseline은 오탐은 6건뿐이지만, 실제 abuse 248건 중 99건을 놓쳤습니다. 따라서 게임 도메인 데이터로 모델 자체를 다시 학습시키는 전략이 필요합니다.
 
 ## 3. 전체 파이프라인
 
@@ -90,7 +90,7 @@ flowchart TD
 
 | 모델 | Recall | F1 | Precision | LRAP |
 |------|:---:|:---:|:---:|:---:|
-| LoRA v2 KcELECTRA | **85.89%** | 86.94% | 88.02% | 0.932 |
+| LoRA v2 KcELECTRA | **87.90%** | 87.90% | 87.90% | 0.932 |
 | **Full v2 KcELECTRA** | 85.48% | **87.78%** | **90.21%** | **0.936** |
 | LoRA v2 kcbert | 84.27% | 82.45% | 80.69% | 0.908 |
 | Full v2 kcbert | 80.24% | 83.79% | 87.67% | 0.915 |
@@ -106,11 +106,11 @@ flowchart TD
 
 | 비교 | v1 평균 Recall | v2 평균 Recall | 차이 |
 |------|:---:|:---:|:---:|
-| 평균 | 72.1% | 83.8% | +11.5%p |
+| 평균 | 74.0% | 85.5% | +11.5%p |
 
 2. **Full v2 KcELECTRA 선정이 타당**
 
-LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위에 오탐(FP)이 가장 적습니다(F1은 LoRA v2와 사실상 동률). Recall 차이는 482문장 중 3문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 482문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
 
 3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 
@@ -125,7 +125,7 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 6건뿐이었지만, 실�
 | 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
 | 학습 방식 | Full fine-tuning |
 | 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
-| 선정 기준 | LRAP 1위, 오탐 최소(FP 23), F1 동률 |
+| 선정 기준 | LRAP 1위, 상위 v2 후보 중 낮은 오탐(FP 23), F1 사실상 동률 |
 
 | 지표 | Baseline | 최종 모델 | 개선 |
 |------|:---:|:---:|:---:|

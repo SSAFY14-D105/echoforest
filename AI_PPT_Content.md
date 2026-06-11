@@ -118,8 +118,8 @@ Full v2 KcELECTRA 선정
 
 ### 발표 포인트
 - Recall만 보면 LoRA v2 KcELECTRA가 1위
-- 하지만 차이는 482문장 중 약 3문장 수준
-- Full v2 KcELECTRA는 LRAP 1위·오탐 최소(FP 23)라 게임 UX 관점에서 더 안전(F1은 LoRA v2와 동률)
+- 하지만 차이는 abuse 248문장 중 6문장 수준
+- Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적어(FP 23 vs 30) 게임 UX 관점에서 더 안전(F1은 사실상 동률)
 
 ## 슬라이드 8. 압축/배포 최적화
 
@@ -138,7 +138,7 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 - `8_Quantization/results/threshold_sweep_ko.png`
 
 ### 발표 포인트
-- INT8은 크기/속도는 좋아졌지만 abuse 미탐이 38→74건으로 증가
+- INT8은 크기/속도는 좋아졌지만 abuse 미탐이 36→74건으로 증가(+38건)
 - threshold 0.26 보정 시 F1 88.94%로 회복(오탐 18건). 단 임계값 재보정이 필요해 drop-in인 FP16 우선
 - FP16은 원본 성능을 그대로 유지하면서 2배 압축되어 배포 후보로 가장 안전
 

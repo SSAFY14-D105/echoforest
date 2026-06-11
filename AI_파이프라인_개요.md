@@ -38,6 +38,18 @@ Recall을 올리려고 threshold를 낮추면 정상 게임 오더까지 과탐�
 | 7 | [`7_Best_Model_Selection`](7_Best_Model_Selection) | 최종 모델 확정 | **Full v2 KcELECTRA** |
 | 8 | [`8_Quantization`](8_Quantization) | 압축/배포 최적화 | **FP16 권장**, INT8 보정 필요 |
 
+## 같은 UnSmile 숫자가 다르게 보이는 이유
+
+세 단계 모두 같은 `smilegate-ai/kor_unsmile`과 같은 `test_set`(482)을 보지만, **재는 지표가 다릅니다.**
+
+| 위치 | 표시 숫자 | 의미 |
+|------|:---:|------|
+| Step 1 모델 선정 | AP 91.94 | 5개 후보를 고르기 위한 이진 abuse 랭킹 지표. threshold와 무관 |
+| Step 2 baseline | Recall 60.08 / F1 73.95 | 실제 배포 규칙과 같은 `not-clean > 0.5` 고정 판정 결과 |
+| Step 6 모델 비교 | LRAP 0.8869 | 10개 라벨 전체 확률 순위를 보는 다중라벨 랭킹 지표. threshold와 무관 |
+
+즉 Step 1의 AP 91.94와 Step 6의 LRAP 0.8869는 둘 다 threshold-free 지표지만 **같은 계산식이 아닙니다**. Step 2의 Recall/F1은 threshold 0.5를 실제로 잘라서 만든 운영점 성능이고, Step 1 표의 F1@0.5·Step 6 baseline 행과 같은 값입니다.
+
 ## 데이터
 
 | 데이터 | 건수 | 역할 |
@@ -57,7 +69,7 @@ Recall을 올리려고 threshold를 낮추면 정상 게임 오더까지 과탐�
 | 내부 폴더명 | `full_game_kcelectra_v2` |
 | 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
 | 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
-| 선정 이유 | LRAP 1위, 오탐 최소(FP 23), F1 동률 |
+| 선정 이유 | LRAP 1위, 상위 v2 후보 중 낮은 오탐(FP 23), F1 사실상 동률 |
 
 | 지표 | Baseline | Full v2 KcELECTRA | 변화 |
 |------|:---:|:---:|:---:|
