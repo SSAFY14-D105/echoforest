@@ -85,27 +85,27 @@
       "threshold": 0.5
     },
     "int8_dynamic_calibrated": {
-      "abuse_precision": 0.8807,
-      "abuse_recall": 0.8629,
-      "abuse_f1": 0.8717,
-      "clean_precision": 0.6499,
-      "clean_recall": 0.9915,
-      "clean_f1": 0.7851,
-      "tp": 214,
-      "tn": 205,
-      "fp": 29,
-      "fn": 34,
+      "abuse_precision": 0.9221,
+      "abuse_recall": 0.8589,
+      "abuse_f1": 0.8894,
+      "clean_precision": 0.8606,
+      "clean_recall": 0.9231,
+      "clean_f1": 0.8907,
+      "tp": 213,
+      "tn": 216,
+      "fp": 18,
+      "fn": 35,
       "confusion_matrix": [
         [
-          205,
-          29
+          216,
+          18
         ],
         [
-          34,
-          214
+          35,
+          213
         ]
       ],
-      "threshold": 0.21
+      "threshold": 0.26
     },
     "fp16": {
       "abuse_precision": 0.9021,
@@ -137,10 +137,10 @@
     "validation_precision": 0.6223,
     "validation_recall": 0.6744,
     "validation_f1": 0.6473,
-    "test_precision": 0.8807,
+    "test_precision": 0.9221,
     "test_recall": 0.8589,
     "test_f1": 0.8894,
-    "note": "game test F1-max (INT8, not-clean); valid(comment) optimum differs due to domain shift"
+    "note": "Selected on validation data; test metrics are measured at the selected INT8 not-clean threshold."
   },
   "conclusion": {
     "int8_abuse_precision_diff": 0.0708,

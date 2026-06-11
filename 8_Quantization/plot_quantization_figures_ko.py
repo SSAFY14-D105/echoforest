@@ -230,7 +230,7 @@ def plot_threshold_ko(report: dict) -> None:
     ax.axvline(0.5, color=SECONDARY, linestyle="--", linewidth=1.2, alpha=0.7)
     ax.axvline(calibrated_threshold, color=PRIMARY, linestyle=":", linewidth=1.8, alpha=0.85)
     ax.scatter([calibrated["threshold"]], [calibrated["f1"] * 100], color=PRIMARY, s=64, zorder=5)
-    ax.annotate(f"배포 임계값 {calibrated_threshold:.2f}\ntest F1 {calibrated['f1'] * 100:.1f}%",
+    ax.annotate(f"INT8 보정 후보 {calibrated_threshold:.2f}\ntest F1 {calibrated['f1'] * 100:.1f}%",
                 xy=(calibrated["threshold"], calibrated["f1"] * 100),
                 xytext=(calibrated["threshold"] + 0.09, calibrated["f1"] * 100 + 3),
                 fontsize=10, color=PRIMARY, fontweight="bold",

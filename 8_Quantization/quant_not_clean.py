@@ -81,7 +81,9 @@ print("\n[infer] INT8 valid (not-clean F1-max threshold)")
 valid = load(VALID); yv = valid[LABELS].values
 pv = probs_of(int8, tok, valid["문장"].astype(str).tolist())
 sel = max(np.round(np.arange(0.1,0.91,0.01),2), key=lambda thr: nc_at(pv, yv, thr)[2])
+vcp, vcr, vcf = nc_at(pv, yv, float(sel))
 ptp, ptr, ptf = nc_at(pi, y, float(sel))
+rc = nc_eval(pi, y, float(sel))
 print(f"INT8 not-clean valid F1-max threshold = {sel}  -> game test R={ptr:.4f} F1={ptf:.4f}")
 
 # threshold_sweep.csv (INT8 not-clean, game test)
@@ -94,11 +96,17 @@ pd.DataFrame(rows).to_csv(RES/"threshold_sweep.csv", index=False, encoding="utf-
 rep = json.load(open(RES/"quantization_report.json", encoding="utf-8"))
 rep["performance"]["original"].update(ro)
 rep["performance"]["int8_dynamic"].update(ri)
+rep["performance"]["int8_dynamic_calibrated"] = rc
 rep["performance"]["fp16"].update(rf)
 rep.setdefault("threshold_calibration", {})
 rep["threshold_calibration"]["selected_threshold"] = float(sel)
+rep["threshold_calibration"]["validation_precision"] = round(float(vcp),4)
+rep["threshold_calibration"]["validation_recall"] = round(float(vcr),4)
+rep["threshold_calibration"]["validation_f1"] = round(float(vcf),4)
+rep["threshold_calibration"]["test_precision"] = round(float(ptp),4)
 rep["threshold_calibration"]["test_recall"] = round(float(ptr),4)
 rep["threshold_calibration"]["test_f1"] = round(float(ptf),4)
+rep["threshold_calibration"]["note"] = "Selected on validation data; test metrics are measured at the selected INT8 not-clean threshold."
 rep["abuse_definition"] = "not-clean (max of 9 hate labels > 0.5)"
 json.dump(rep, open(RES/"quantization_report.json","w",encoding="utf-8"), ensure_ascii=False, indent=2)
 print("\nreport + threshold_sweep.csv 갱신 완료")

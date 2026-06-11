@@ -545,7 +545,7 @@ apply the same dynamic quantization, then load this state dict.
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-MODEL_PATH = "../5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model"
+MODEL_PATH = "../../5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model"
 INT8_STATE = "model_int8.pt"
 
 torch.backends.quantized.engine = "{engine}"
