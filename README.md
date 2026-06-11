@@ -85,13 +85,16 @@
 
 - 방을 만들어 친구를 초대하거나 매칭으로 **4인 파티**를 구성하고, 카메라·마이크를 켠 채 함께 게임을 준비합니다.
 
-<p align="center"><img src="docs/ingame.gif" width="600"/></p>
-
-> 실제 인게임 플레이 — 4인이 함께 숲을 모험하는 협동 플랫포머
+<table>
+  <tr><th>실제 인게임 플레이</th></tr>
+  <tr><td align="center"><img src="docs/ingame.gif" width="600"/></td></tr>
+</table>
 
 ## 🗣️ 음성 인식 → 저주 스택
 
-<p align="center"><img src="docs/저주스택.gif" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/저주스택.gif" width="600"/></td></tr>
+</table>
 
 - 플레이어의 음성을 **Web Speech API**로 텍스트화하고 **5초 단위로 배치**해 AI 서버로 전송합니다.
 - **AI 모델**이 발화의 부정어 심각도를 판정해 저주 스택을 실시간으로 쌓습니다. (`+5 / +3 / +1`)
@@ -101,12 +104,20 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/거대화저주.gif" width="250"/><br/><b>거대화</b><br/>크기 2배 · 이동/점프력 감소</td>
-    <td align="center"><img src="docs/반전저주.gif" width="250"/><br/><b>반전</b><br/>방향키 조작 반대</td>
-    <td align="center"><img src="docs/시한폭탄저주.gif" width="250"/><br/><b>시한폭탄</b><br/>5초 내 미해제 시 즉사</td>
+    <th>거대화</th>
+    <th>반전</th>
+    <th>시한폭탄</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/거대화저주.gif" height="240"/></td>
+    <td align="center"><img src="docs/반전저주.gif" height="240"/></td>
+    <td align="center"><img src="docs/시한폭탄저주.gif" height="240"/></td>
   </tr>
 </table>
 
+- **거대화**: 크기 2배 · 이동/점프력 감소
+- **반전**: 방향키 조작 반대
+- **시한폭탄**: 5초 내 미해제 시 즉사
 - 부정 스택이 가득 차면 위 **3종 저주** 중 하나가 랜덤으로 발동됩니다.
 - 저주는 **본인이 풀 수 없고**, 동료의 긍정어로 **FIFO 순서**대로 해제됩니다.
 
@@ -130,24 +141,32 @@
 ## 🧩 협동 스테이지 기믹
 
 <table>
-  <tr>
-    <td align="center"><img src="docs/stage1.png" width="400"/><br/>Stage 1</td>
-    <td align="center"><img src="docs/stage2.png" width="400"/><br/>Stage 2</td>
-  </tr>
+  <tr><th>Stage 1</th></tr>
+  <tr><td align="center"><img src="docs/stage1.png" width="820"/></td></tr>
+</table>
+
+<table>
+  <tr><th>Stage 2</th></tr>
+  <tr><td align="center"><img src="docs/stage2.png" width="560"/></td></tr>
 </table>
 
 - 혼자서는 통과할 수 없는 **협동 퍼즐과 기믹**을 호흡을 맞춰 클리어합니다.
+- 각 스테이지의 **레벨 전체 구조**가 한눈에 담기도록 설계해, 팀이 경로를 함께 계획합니다.
 
 ## 📸 모션 인식 엔딩 미션
 
-<p align="center"><img src="docs/엔딩미션.gif" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/엔딩미션.gif" width="600"/></td></tr>
+</table>
 
 - 스테이지 클리어 후 **MediaPipe**로 14종 포즈를 실시간 인식합니다.
 - **4명 모두** 배정된 포즈를 성공하면 기념 사진이 자동 촬영됩니다.
 
 ## 📊 게임 완료 통계
 
-<p align="center"><img src="docs/stat.png" width="600"/></p>
+<table>
+  <tr><td align="center"><img src="docs/stat.png" width="600"/></td></tr>
+</table>
 
 - 게임 종료 후 **플레이 시간·저주 발동/해제 횟수·발화 통계** 등을 요약해 함께한 모험을 돌아봅니다.
 
@@ -155,9 +174,14 @@
 
 <table>
   <tr>
-    <td align="center"><img src="docs/gallery.png" width="260"/><br/>갤러리</td>
-    <td align="center"><img src="docs/email.png" width="260"/><br/>이메일</td>
-    <td align="center"><img src="docs/send_image.png" width="260"/><br/>전송</td>
+    <th>갤러리</th>
+    <th>이메일</th>
+    <th>전송</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/gallery.png" height="200"/></td>
+    <td align="center"><img src="docs/email.png" height="200"/></td>
+    <td align="center"><img src="docs/send_image.jpeg" height="200"/></td>
   </tr>
 </table>
 
@@ -241,9 +265,9 @@ Content-Type: application/json
 
 # 영상 포트폴리오
 
-> *클릭하여 시연 영상을 확인하세요.*
-
-[![메아리의 숲 시연 영상](https://img.youtube.com/vi/8m-AHCVeUrs/hqdefault.jpg)](https://youtu.be/8m-AHCVeUrs)
+<p align="center">
+  <a href="https://youtu.be/8m-AHCVeUrs"><img src="docs/video_thumbnail.png" width="640"/></a>
+</p>
 
 # 팀원 소개
 
