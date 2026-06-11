@@ -4,7 +4,7 @@ plot_benchmark.py — 모델선정 벤치마크 '포트폴리오용' 차트 (pre
 results/benchmark_results.csv 를 읽어 차트를 렌더한다. 모델 추론(benchmark_game_stt.py)과
 분리돼 있어 **재추론 없이** 다시 그릴 수 있다. 영어(기본)·한국어 두 버전을 모두 생성한다.
 
-  best_model_selection.png / _ko.png — Abuse F1 랭킹(= 선정 결과)
+  best_model_selection.png / _ko.png — Abuse F1@0.5 운영점 비교
   6_model_comparison.png    / _ko.png — 유효 후보 3종의 Precision–Recall 트레이드오프(덤벨)
 
 디자인: 에디토리얼 좌측정렬 타이틀 · 뮤트 그레이 + 단일 틸 액센트 · 무테/무격자(옅은 격자만).
@@ -68,7 +68,7 @@ NOISE = set()
 # ── 문구(언어별) ───────────────────────────────────────────────────────────
 STRINGS = {
     "en": {
-        "sel_title": "Model selection — Abuse F1",
+        "sel_title": "F1@0.5 operating-point comparison",
         "sel_sub":   "5 Korean models · test_set (482 game-chat, unseen in training) · threshold 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "selected",
@@ -81,7 +81,7 @@ STRINGS = {
         "recall":    "Recall",
     },
     "ko": {
-        "sel_title": "모델 선정 (Abuse F1 기준)",
+        "sel_title": "F1@0.5 운영점 비교",
         "sel_sub":   "한국어 모델 5종, 학습에 쓰지 않은 test_set 482(게임채팅), 임계값 0.5",
         "sel_xlabel": "Abuse F1  (%)",
         "selected":  "선정",

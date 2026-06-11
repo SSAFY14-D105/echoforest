@@ -1,7 +1,7 @@
 """
 게임 STT 데이터 기반 5개 모델 벤치마크 (Step 1 · 모델 선정)
 - test_set.tsv (482건, 학습에 안 쓴 평가셋) 사용
-- 5개 한국어 감정/혐오 분석 모델 비교 → Abuse F1 기준 선정 (모두 분류 헤드가 실제 로드되는 모델)
+- 5개 한국어 감정/혐오 분석 모델 비교 → AP 기준 선정, F1@0.5는 참고 운영점 (모두 분류 헤드가 실제 로드되는 모델)
 - 산출물: results/ (benchmark_autogen.md 원시요약, benchmark_results.csv/.json, 그래프 en/ko 4종)
   ※ 큐레이션 문서(그래프 설명 등)는 results/MODEL_BENCHMARK.md (손으로 유지, 자동 덮어쓰기 안 함)
 
@@ -45,6 +45,16 @@ MODELS_TO_TEST = [
     ("Korean Sentiment", "matthewburke/korean_sentiment"),
     ("UnSmile", "smilegate-ai/kor_unsmile"),
 ]
+
+
+def load_threshold_free_scores():
+    """AP 기준 선정 결과가 있으면 읽고, 없으면 F1@0.5 fallback을 허용한다."""
+    path = os.path.join(RESULTS_DIR, "threshold_free_selection.csv")
+    if not os.path.exists(path):
+        return {}
+    df = pd.read_csv(path, encoding="utf-8-sig")
+    return {str(row["model"]): float(row["AP"]) for _, row in df.iterrows()}
+
 
 # 모델별 부정 라벨 매핑
 MODEL_NEGATIVE_LABELS = {
@@ -290,7 +300,20 @@ def save_results(results, sentences_count):
     print(f"💾 저장: {RESULTS_DIR}/benchmark_results.json")
     
     # Markdown README
-    best = max(successful, key=lambda x: x["abuse_f1"])
+    ap_scores = load_threshold_free_scores()
+    has_ap = bool(ap_scores)
+    criterion_label = "AP(임계값 무관)" if has_ap else "F1@0.5"
+    best = max(successful, key=lambda x: (ap_scores.get(x["model_name"], -1.0), x["abuse_f1"]) if has_ap else x["abuse_f1"])
+    ap_metric_line = (
+        f"- **AP**: {ap_scores[best['model_name']]:.2f}% (임계값 무관 선정 지표)"
+        if best["model_name"] in ap_scores
+        else "- **AP**: threshold_free_selection.csv 미생성, F1@0.5 기준으로 임시 선정"
+    )
+    sorted_results = sorted(
+        successful,
+        key=lambda x: (ap_scores.get(x["model_name"], -1.0), x["abuse_f1"]) if has_ap else x["abuse_f1"],
+        reverse=True,
+    )
     
     md_content = f"""# 🎮 5개 모델 벤치마크 결과 (자동 생성)
 
@@ -306,25 +329,27 @@ def save_results(results, sentences_count):
 
 ## 🏆 결과 요약
 
-| 모델 | Abuse Recall | Abuse F1 | 선정 |
-|------|:------------:|:--------:|:----:|
+| 모델 | AP | Abuse Recall | Abuse F1@0.5 | 선정 |
+|------|:--:|:------------:|:------------:|:----:|
 """
     
-    for r in sorted(successful, key=lambda x: -x["abuse_f1"]):
+    for r in sorted_results:
         selected = "✅" if r["model_name"] == best["model_name"] else ""
-        md_content += f"| {r['model_name']} | **{r['abuse_recall']*100:.2f}%** | {r['abuse_f1']*100:.2f}% | {selected} |\n"
+        ap_text = f"{ap_scores[r['model_name']]:.2f}%" if r["model_name"] in ap_scores else "-"
+        md_content += f"| {r['model_name']} | {ap_text} | **{r['abuse_recall']*100:.2f}%** | {r['abuse_f1']*100:.2f}% | {selected} |\n"
     
     md_content += f"""
 ---
 
 ## 🎯 {best['model_name']} 선정 이유
 
-### 1. 최고 성능 (선정 기준: Abuse F1)
-- **Abuse F1**: {best['abuse_f1']*100:.2f}% (모델 중 1위)
+### 1. 최고 성능 (선정 기준: {criterion_label}, F1@0.5는 참고)
+{ap_metric_line}
+- **Abuse F1@0.5**: {best['abuse_f1']*100:.2f}%
 - **Abuse Precision**: {best['abuse_precision']*100:.2f}% · **Recall**: {best['abuse_recall']*100:.2f}%
 - **Accuracy**: {best['accuracy']*100:.2f}% · **Clean F1**: {best['clean_f1']*100:.2f}%
 
-> ⚠️ 선정은 Recall이 아니라 **임계값 무관 AP 기준**(상세: threshold_free_selection.py). 단순 Recall 최대 모델은 거의 모든 문장을 부정어로 분류해(Precision↓, 오탐↑) 실사용 불가. 아래 F1@0.5는 참고 운영점.
+> ⚠️ 선정은 Recall이 아니라 **{criterion_label} 기준**(상세: threshold_free_selection.py). 단순 Recall 최대 모델은 거의 모든 문장을 부정어로 분류해(Precision↓, 오탐↑) 실사용 불가. 아래 F1@0.5는 참고 운영점.
 
 ### 2. 한국어 혐오 발언 전용
 - Smilegate AI의 **한국어 혐오 발언 탐지** 전용 모델, 댓글/채팅 학습 → 게임 대화에 적합
@@ -402,8 +427,13 @@ if __name__ == "__main__":
     # 베스트 모델
     successful = [r for r in all_results if not r.get("error")]
     if successful:
-        best = max(successful, key=lambda x: x["abuse_f1"])
-        print(f"\n🏆 Best: {best['model_name']} (Abuse F1: {best['abuse_f1']*100:.2f}%)")
+        ap_scores = load_threshold_free_scores()
+        if ap_scores:
+            best = max(successful, key=lambda x: (ap_scores.get(x["model_name"], -1.0), x["abuse_f1"]))
+            print(f"\n🏆 Best: {best['model_name']} (AP: {ap_scores.get(best['model_name'], 0):.2f}%, F1@0.5: {best['abuse_f1']*100:.2f}%)")
+        else:
+            best = max(successful, key=lambda x: x["abuse_f1"])
+            print(f"\n🏆 Best: {best['model_name']} (Abuse F1@0.5: {best['abuse_f1']*100:.2f}%)")
     
     # 저장(CSV/JSON/MD) 후, 포트폴리오 차트는 plot_benchmark에서 CSV 기반 렌더(영어+한국어)
     save_results(all_results, len(sentences))

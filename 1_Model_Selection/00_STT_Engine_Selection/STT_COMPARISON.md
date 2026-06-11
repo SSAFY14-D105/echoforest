@@ -17,7 +17,7 @@
 | ✅ **측정함** | 응답지연 **~669ms**(발화→첫 인식), 한국어 인식 confidence 84~87% | [`web_speech_api/test_web_speech.html`](web_speech_api/test_web_speech.html) (재현 가능) |
 | ✅ **정성 확인** | 한국어 구어체 + **욕설을 검열 없이 원문 인식** | [`web_speech_api/webspeech_sample_*.txt`](web_speech_api/) |
 | 🧩 **논증(설계)** | 무인프라·실시간·배포 단순 → 런타임 적합 | 아래 §1–§3 |
-| ⚠️ **못 잼(리스크)** | STT **정확도/WER**, 정답(ground-truth) 전사가 없어 수치화 불가 |, |
+| ⚠️ **못 잼(리스크)** | STT **정확도/WER**, 정답(ground-truth) 전사가 없어 수치화 불가 | 해당 없음 |
 | 🧩 **가정(조건 분석)** | train/serve skew는 **무BGM·단일화자** 런타임에선 작음(방향도 양성) | §4 |
 
 > 즉 "Web Speech가 정확하다"를 숫자로 증명한 게 아니라, **런타임 요구(실시간·무인프라·욕설 인식)에 충분하고 실용적**이라는 *엔지니어링 결정*이다. 정확도 리스크는 §4처럼 **인지하고 관리**한다.

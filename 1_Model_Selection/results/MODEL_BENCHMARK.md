@@ -7,7 +7,7 @@
 - **모델 수**: 5개 (모두 분류 헤드가 실제로 로드되는 모델만) · **선정 기준**: AP(평균정밀도, 임계값 무관) · **비교 운영점**: F1@0.5
 - **abuse 판정 = not-clean(clean이 아니면 부정어, 9개 라벨 max > 0.5)**, 실제 배포·Step 2 baseline·Step 6과 **동일 정의** (UnSmile).
 - ℹ️ `beomi/KcELECTRA-base-v2022`는 **분류 헤드가 없는 base LM**(ElectraForPreTraining)이라 선정 후보에서 **제외**(4·5단계에서 게임 데이터로 헤드 학습).
-- ℹ️ KoELECTRA 2종은 저장 헤드가 구 형식(단일 Linear)이라 표준 로더가 못 읽음 → **인코더+단일 Linear 수동 로드**해 실수치 산출(근거: [`../MODEL_SELECTION.md`](../MODEL_SELECTION.md)).
+- ℹ️ KoELECTRA 2종은 저장 헤드가 구 형식(단일 Linear)이라 표준 로더가 못 읽음 → **인코더+단일 Linear 수동 로드**해 실수치 산출(근거: [`../README.md`](../README.md)의 트러블슈팅 메모).
 
 ---
 
@@ -85,7 +85,7 @@
 > 영어판 + 한국어판(`_ko`) 제공. 생성: `python plot_benchmark.py` (CSV 기반, 재추론 불필요).
 > 두 그래프는 **한 쌍**으로 읽는다, ①은 *"누가 1등인가"*, ②는 *"왜 Precision까지 보는가"*.
 
-### ① 선정, Abuse F1 랭킹
+### ① Abuse F1@0.5 운영점 비교
 ![Best Model Selection](./best_model_selection.png)
 한국어판: [`best_model_selection_ko.png`](./best_model_selection_ko.png)
 
@@ -98,9 +98,9 @@
 
 **읽어내는 것**: UnSmile이 1위. 단, F1만 보면 격차가 작아 보인다(74.0 vs 71~60). **격차의 본질(왜 UnSmile이 실사용 가능한가)은 ②에서** Precision으로 드러난다.
 
-> **결론**: AP 1위(F1@0.5도 1위) = **UnSmile 선정**.
+> **결론**: AP 1위(F1@0.5도 1위) = **UnSmile 선정**. 단 선정의 주 지표는 F1 한 점이 아니라 AP입니다.
 
-### ② 왜 F1으로 뽑았나, Precision vs Recall (덤벨)
+### ② 왜 Precision까지 보는가, Precision vs Recall (덤벨)
 ![Model Comparison](./6_model_comparison.png)
 한국어판: [`6_model_comparison_ko.png`](./6_model_comparison_ko.png)
 

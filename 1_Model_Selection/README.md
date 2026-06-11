@@ -13,11 +13,10 @@
 | `plot_benchmark.py` | 결과 CSV로 **포트폴리오용 차트**(영어/한국어) 렌더, 추론과 분리(재추론 불필요) |
 | `benchmark_game_stt.ipynb` | 노트북 버전(참고) |
 | `results/` | 산출물: `MODEL_BENCHMARK.md`(상세+그래프 설명)·`benchmark_results.csv`·그래프(en/ko) |
-| `MODEL_SELECTION.md` | 선정 근거 메모(기준·트러블슈팅 교훈) |
 
 ## 🏆 선정 결과, UnSmile
 
-`test_set.tsv`(482, 학습에 안 쓴 평가셋) 5종 비교. **선정 기준은 임계값과 무관한 AP(평균정밀도)**, UnSmile 91.9%로 2위(+12.7%p) 압도. F1@0.5는 참고 운영점. (상세 → [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
+`test_set.tsv`(482, 학습에 안 쓴 평가셋) 5종 비교. **선정 기준은 임계값과 무관한 AP(평균정밀도)**, UnSmile 91.9%로 2위보다 +12.7%p 앞섰습니다. F1@0.5는 참고 운영점입니다. (상세 → [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md))
 
 ![베이스 선정: 임계값과 무관한 AP + 임계값 sweep](results/selection_threshold_free_ko.png)
 
@@ -36,6 +35,13 @@
 
 > 🎯 **이 선정은 "완성"이 아니라 "파인튜닝의 출발점".** UnSmile도 게임 채팅에선 **Recall 60%(부정어의 40%를 놓침)** 가 한계, 임계값을 낮춰 더 잡으려 하면 멀쩡한 게임 오더(`가만히 있어라 좀`)까지 과탐하는 *threshold 딜레마*에 빠진다. 이 한계를 **게임 데이터 fine-tuning(3~7단계)** 으로 푼다(Recall↑ · Precision 유지). → [`../AI_파이프라인_개요.md`](../AI_파이프라인_개요.md)
 
+## 🧩 선정 과정에서 확인한 함정
+
+1. 모델별 "부정" 라벨이 제각각입니다. UnSmile은 혐오 8종+악플/욕설, Korean Sentiment는 `LABEL_0`, KoELECTRA는 `negative`, Multilingual은 `1~2 stars`를 abuse로 맞춰야 합니다.
+2. KoELECTRA 감정모델 2종은 저장된 분류 헤드가 구 형식이라 표준 로더가 헤드를 랜덤 초기화할 수 있습니다. 그래서 `benchmark_game_stt.py`에서 인코더+단일 Linear를 수동 로드해 실수치를 산출했습니다.
+3. `beomi/KcELECTRA-base-v2022`는 분류 헤드가 없는 base LM이라 off-the-shelf 분류 후보에서 제외했습니다. 이 모델은 4·5단계에서 게임 데이터로 새 헤드를 학습시키는 대상으로 사용합니다.
+4. 모델 비교는 0.5 운영점 수치만 보지 않고 AP로 선정합니다. 0.5 F1은 보고용 비교점이고, 운영 임계값은 별도 캘리브레이션 대상입니다.
+
 ## 🚀 실행
 
 ```bash
@@ -47,7 +53,6 @@ python plot_benchmark.py       # (선택) 차트만 다시 그리기, 재추론 
 ## 📖 관련 문서
 
 - 선정 상세 + **그래프 읽는 법**: [`results/MODEL_BENCHMARK.md`](./results/MODEL_BENCHMARK.md)
-- 선정 근거·트러블슈팅 교훈: [`MODEL_SELECTION.md`](./MODEL_SELECTION.md)
 - STT 엔진 결정: [`00_STT_Engine_Selection/STT_COMPARISON.md`](./00_STT_Engine_Selection/STT_COMPARISON.md)
 - 프로젝트 개요·데이터: [`../AI_파이프라인_개요.md`](../AI_파이프라인_개요.md) · [`../0_Data_Collection/`](../0_Data_Collection/)
 - 선정한 UnSmile 파인튜닝: [`../4_LoRA_Fine_Tuning/`](../4_LoRA_Fine_Tuning/) · [`../5_Full_Fine_Tuning/`](../5_Full_Fine_Tuning/)

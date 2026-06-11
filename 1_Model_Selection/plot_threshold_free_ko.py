@@ -44,7 +44,7 @@ for yi, (n, v) in enumerate(zip(names, vals)):
              fontsize=11.5, fontweight="bold" if n == "UnSmile" else "normal", zorder=4)
 axA.text(vals[-1] + 1.0, ypos[-1], "선정", va="center", ha="left", color=PRIMARY, fontsize=10.5, fontweight="bold")
 axA.set_yticks(ypos); axA.set_yticklabels([KO[n] for n in names], fontsize=11)
-axA.set_xlim(45, 100); axA.set_xlabel("AP · 평균정밀도 (%)", fontsize=10.5)
+axA.set_xlim(0, 100); axA.set_xlabel("AP · 평균정밀도 (%)", fontsize=10.5)
 for s in axA.spines.values(): s.set_visible(False)
 axA.tick_params(length=0); axA.xaxis.grid(True, color=GRID, lw=1.1, zorder=0); axA.set_axisbelow(True)
 axA.set_title("임계값과 무관한 선정 지표", loc="left", pad=30, fontsize=14.5, fontweight="bold", color=INK)
