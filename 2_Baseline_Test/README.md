@@ -3,7 +3,7 @@
 선정한 **base unSmile**(파인튜닝 전)을 **학습에 쓰지 않은 `test_set`(482)** 으로 측정하는 단계입니다.
 이 수치가 4~7단계 파인튜닝의 **출발점("before")** 이고, Step 6의 baseline과 동일합니다.
 
-![baseline 진단: test_set 482에서 부정어 248건 중 99건 미탐](baseline_accuracy.png)
+![baseline 진단: test_set 482에서 부정어 248건 중 99건 미탐](baseline_accuracy_ko.png)
 
 > 📖 전체 흐름·동기(threshold 딜레마): [`../AI_파이프라인_개요.md`](../AI_파이프라인_개요.md) · 모델 선정: [`../1_Model_Selection`](../1_Model_Selection)
 
