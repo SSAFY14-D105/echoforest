@@ -115,38 +115,32 @@ def load_results() -> pd.DataFrame:
 
 
 def plot_model_ranking(df: pd.DataFrame) -> None:
-    ordered = df.sort_values("abuse_f1", ascending=True).copy()
+    ordered = df.sort_values("lrap", ascending=True).copy()
     y = np.arange(len(ordered))
     colors = [PRIMARY if model == SELECTED else SECONDARY if model == BASELINE else MUTED for model in ordered["model"]]
 
     fig, ax = plt.subplots(figsize=(8.6, 6.2))
-    ax.barh(y, ordered["abuse_f1"] * 100, color=colors, height=0.68)
-    ax.scatter(ordered["abuse_recall"] * 100, y, color=ACCENT, s=46, zorder=3, label="Recall", edgecolor="white", linewidth=0.7)
+    ax.barh(y, ordered["lrap"] * 100, color=colors, height=0.68)
     ax.set_yticks(y, [DISPLAY.get(model, model) for model in ordered["model"]])
-    ax.set_xlabel("Abuse F1 score (%)")
-    ax.set_xlim(55, 92)
+    ax.set_xlabel("LRAP × 100 (threshold-free ranking metric)")
+    ax.set_xlim(85, 96)
     ax.grid(axis="x", color=GRID, linewidth=0.8)
-    ax.set_title("Model ranking on the evaluation set (n=482)", fontweight="bold", pad=12)
+    ax.set_title("Model ranking by LRAP on the held-out evaluation set (n=482)", fontweight="bold", pad=30)
+    ax.text(0.5, 1.035,
+            "v1 = correction-only training,  v2 = + 518 game-chat samples   (base: KcELECTRA / kcbert,  method: Full / LoRA)",
+            transform=ax.transAxes, fontsize=9.3, color="#9AA5B1", ha="center")
 
     for idx, row in ordered.iterrows():
         pos = list(ordered.index).index(idx)
-        ax.text(
-            row["abuse_f1"] * 100 + 0.6,
-            pos,
-            f"{row['abuse_f1'] * 100:.1f}",
-            va="center",
-            ha="left",
-            fontsize=10,
-            color=TEXT,
-        )
+        ax.text(row["lrap"] * 100 + 0.15, pos, f"{row['lrap'] * 100:.1f}", va="center", ha="left", fontsize=10, color=TEXT)
 
     ax.axvline(
-        float(df[df["model"] == BASELINE]["abuse_f1"].iloc[0]) * 100,
+        float(df[df["model"] == BASELINE]["lrap"].iloc[0]) * 100,
         color=ACCENT,
         linewidth=1.4,
         linestyle="--",
         alpha=0.65,
-        label="Baseline F1",
+        label="Baseline LRAP",
     )
     ax.legend(frameon=False, loc="lower right")
     save(fig, "paper_model_ranking")
@@ -195,7 +189,7 @@ def plot_selected_tradeoff(df: pd.DataFrame) -> None:
     x = np.arange(len(metrics))
     width = 0.36
     ax.bar(x - width / 2, base_values, width, label="Baseline", color=SECONDARY)
-    ax.bar(x + width / 2, selected_values, width, label="Full v2 KcELECTRA", color=PRIMARY)
+    ax.bar(x + width / 2, selected_values, width, label="Full v2 KcELECTRA (+518 game-chat, selected)", color=PRIMARY)
     ax.set_xticks(x, metrics)
     ax.set_ylim(0, 112)
     ax.set_ylabel("Score (%)")
@@ -228,7 +222,7 @@ def plot_selected_tradeoff_ko(df: pd.DataFrame) -> None:
     x = np.arange(len(metrics))
     width = 0.36
     ax.bar(x - width / 2, base_values, width, label="Baseline (파인튜닝 전)", color=SECONDARY)
-    ax.bar(x + width / 2, selected_values, width, label="Full v2 (게임 학습 후, 선정)", color=PRIMARY)
+    ax.bar(x + width / 2, selected_values, width, label="Full v2 KcELECTRA (게임채팅 518건 추가, 선정)", color=PRIMARY)
     ax.set_xticks(x, metrics)
     ax.set_ylim(0, 112)
     ax.set_ylabel("점수 (%)")
