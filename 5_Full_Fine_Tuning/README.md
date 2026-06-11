@@ -6,6 +6,8 @@ Full Fine-tuning 기반 모든 파라미터 학습
 
 ![Full Fine-Tuning 학습 곡선 (Full v2 KcELECTRA)](results/training_curve_ko.png)
 
+> 첫 그래프는 `test_set.tsv` 기준 4개 Full FT 모델 비교이고, 두 번째 그래프는 Full v2 KcELECTRA의 validation 학습 로그입니다.
+
 > 📖 **파인튜닝 동기(threshold 딜레마)·전체 파이프라인 흐름** → [AI 파이프라인 개요](../AI_파이프라인_개요.md)
 
 ## 📁 디렉토리 구조

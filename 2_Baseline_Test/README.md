@@ -11,7 +11,7 @@
 - **모델**: `smilegate-ai/kor_unsmile` (파인튜닝 전 원본)
 - **데이터**: `../0_Data_Collection/datasets/test_set.tsv` (482 · abuse 248 / clean 234)
 - **abuse 판정**: not-clean(clean이 아니면 부정어, 9개 라벨 max sigmoid > **0.5**), 배포와 Step 6, Step 8과 **동일 정의**
-- ※ multi-label(sigmoid)이라 각 라벨이 독립 → 임계값은 `1/10`(softmax)이 아니라 라벨별 **0.5**(sigmoid Yes/No)가 비교 기준. 실제 배포는 더 낮게 캘리브레이션(8단계)
+- ※ multi-label(sigmoid)이라 각 라벨이 독립 → 임계값은 `1/10`(softmax)이 아니라 라벨별 **0.5**(sigmoid Yes/No)가 비교 기준. 운영 임계값은 별도 캘리브레이션 대상이지만, 현재 권장 압축 산출물인 FP16은 0.5 기준 성능을 그대로 보존합니다.
 
 ## 📊 결과, base unSmile on test_set(482)
 
@@ -29,6 +29,7 @@
 | **Actual Abuse** | **99 (FN)** | 149 (TP) |
 
 > Step 1의 UnSmile 행과 **정확히 동일**(R 60.08 / P 96.13 / F1 73.95 / FP 6 / FN 99), 같은 모델·데이터·정의.
+> 단, Step 1의 큰 선정 숫자 **AP 91.94**는 threshold-free 랭킹 지표라 이 표의 Recall/F1과 직접 비교하는 값이 아닙니다. Step 6의 **LRAP 0.8869**도 10개 라벨 전체 순위를 보는 다른 threshold-free 지표입니다.
 
 ## 🎯 핵심, "before"이자 파인튜닝의 동기
 

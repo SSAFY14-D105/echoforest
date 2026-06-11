@@ -62,10 +62,10 @@ def stage0():
 # ── Stage 3: unSmile 보정 전후 ─────────────────────────────────────────
 def stage3():
     cats = ["악플/욕설", "clean", "카테고리 혐오"]
-    before = [3143, 3739, 8123]; after = [3128, 3700, 7862]
+    before = [3089, 3739, 7862]; after = [3128, 3700, 7862]
     x = np.arange(len(cats)); w = 0.36
     fig, ax = plt.subplots(figsize=(8.8, 5.0)); fig.subplots_adjust(left=0.10, right=0.96, top=0.78, bottom=0.12)
-    ax.bar(x-w/2, before, w, color=SECONDARY, label="원본 (15,005)", zorder=3)
+    ax.bar(x-w/2, before, w, color=SECONDARY, label="개인지칭 제거 후 (14,690)", zorder=3)
     ax.bar(x+w/2, after, w, color=PRIMARY, label="보정 (14,690)", zorder=3)
     for xi, (b, a) in enumerate(zip(before, after)):
         ax.text(xi-w/2, b+90, f"{b:,}", ha="center", fontsize=10, color=SUB)
@@ -73,7 +73,7 @@ def stage3():
     ax.set_xticks(x); ax.set_xticklabels(cats, fontsize=12)
     ax.set_ylim(0, 9700); despine(ax); ax.yaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
     ax.legend(loc="upper left", frameon=False, fontsize=10.5)
-    title(ax, "3. unSmile 라벨 보정", "개인지칭 라벨 제거(315건 정리) + 게임 부정어 키워드 기준 clean→abuse 보정")
+    title(ax, "3. unSmile 라벨 보정", "같은 14,690행에서 게임 부정어 키워드 기준 clean→abuse 39건 보정")
     save(fig, str(ROOT/"3_UnSmile_Correction/results/correction_ko.png"))
 
 # ── Stage 4: LoRA vs Full FT ───────────────────────────────────────────
@@ -103,6 +103,27 @@ def stage4():
         {"KcELECTRA": [85.41, 87.90], "kcbert": [80.96, 83.27]},
         {"KcELECTRA": [80.24, 87.90], "kcbert": [74.60, 86.29]},
         "4_LoRA_Fine_Tuning/results/lora_models_ko.png")
+
+
+def stage4_training_curve():
+    ep = list(range(1, 11))
+    tr = [0.3207, 0.2294, 0.1520, 0.1336, 0.1193, 0.1131, 0.1060, 0.1078, 0.1013, 0.1032]
+    va = [0.273981, 0.175130, 0.143568, 0.133208, 0.122073, 0.116931, 0.119880, 0.116324, 0.114371, 0.114944]
+    lrap = [0.585884, 0.813355, 0.845140, 0.860402, 0.875845, 0.883432, 0.879030, 0.882829, 0.887409, 0.886291]
+    fig, ax = plt.subplots(figsize=(9.0, 5.0)); fig.subplots_adjust(left=0.10, right=0.90, top=0.78, bottom=0.12)
+    ax.plot(ep, tr, "-o", color=ACCENT, lw=2.2, label="Training Loss", zorder=3)
+    ax.plot(ep, va, "-o", color=PRIMARY, lw=2.4, label="Validation Loss", zorder=3)
+    ax.set_xlabel("Epoch"); ax.set_ylabel("Loss"); ax.set_xticks(ep); ax.set_ylim(0, 0.36)
+    despine(ax, keep=()); ax.yaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
+    ax2 = ax.twinx(); ax2.plot(ep, lrap, "--s", color=SLATE, lw=1.8, label="LRAP(valid)", zorder=2)
+    ax2.set_ylabel("LRAP", color=SLATE); ax2.set_ylim(0.4, 1.0); ax2.tick_params(length=0)
+    for s in ax2.spines.values(): s.set_visible(False)
+    l1,la1=ax.get_legend_handles_labels(); l2,la2=ax2.get_legend_handles_labels()
+    ax.legend(l1+l2, la1+la2, loc="center right", frameon=False, fontsize=10.5)
+    title(ax, "4. LoRA Fine-Tuning 학습 곡선 (LoRA v2 KcELECTRA)",
+          "10 epoch, LoRA r=16, Loss 안정 수렴, valid LRAP 0.89까지 상승")
+    save(fig, str(ROOT/"4_LoRA_Fine_Tuning/results/training_curve_ko.png"))
+
 
 # ── Stage 5: Full FT 학습 곡선 ─────────────────────────────────────────
 def stage5():
@@ -153,5 +174,5 @@ def stage7():
     save(fig, str(ROOT/"7_Best_Model_Selection/results/final_selection_ko.png"))
 
 if __name__ == "__main__":
-    stage0(); stage3(); stage4(); stage5(); stage5_models(); stage7()
+    stage0(); stage3(); stage4(); stage4_training_curve(); stage5(); stage5_models(); stage7()
     print("done")
