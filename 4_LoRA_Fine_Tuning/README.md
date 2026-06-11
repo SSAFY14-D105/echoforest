@@ -2,7 +2,7 @@
 
 LoRA (Low-Rank Adaptation) 기반 Parameter-Efficient Fine-Tuning
 
-![LoRA vs Full Fine-Tuning (not-clean)](results/lora_vs_full_ko.png)
+![LoRA 파인튜닝: base 2종(KcELECTRA·kcbert) × 데이터 v1/v2](results/lora_models_ko.png)
 
 > 📖 **파인튜닝 동기(threshold 딜레마)·전체 파이프라인 흐름** → [AI 파이프라인 개요](../AI_파이프라인_개요.md)
 

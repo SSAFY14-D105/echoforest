@@ -77,22 +77,32 @@ def stage3():
     save(fig, str(ROOT/"3_UnSmile_Correction/results/correction_ko.png"))
 
 # ── Stage 4: LoRA vs Full FT ───────────────────────────────────────────
+def _models_chart(title_t, sub, f1, rec, outname):
+    """base 2종(KcELECTRA, kcbert) x 데이터 v1/v2 비교. 막대=Abuse F1, 위 R=Recall (not-clean)."""
+    bases = ["KcELECTRA", "kcbert"]; x = np.arange(len(bases)); w = 0.36
+    v1f = [f1[b][0] for b in bases]; v2f = [f1[b][1] for b in bases]
+    v1r = [rec[b][0] for b in bases]; v2r = [rec[b][1] for b in bases]
+    fig, ax = plt.subplots(figsize=(9.0, 5.4)); fig.subplots_adjust(left=0.09, right=0.96, top=0.73, bottom=0.16)
+    ax.bar(x-w/2, v1f, w, color=ACCENT, label="v1 (댓글 보정만)", zorder=3)
+    ax.bar(x+w/2, v2f, w, color=PRIMARY, label="v2 (+ 게임채팅 518건)", zorder=3)
+    def lab(xc, fv, rv, bold):
+        ax.text(xc, fv+4.2, f"{fv:.1f}", ha="center", fontsize=11, color=INK, fontweight=("bold" if bold else "normal"))
+        ax.text(xc, fv+0.9, f"R {rv:.1f}", ha="center", fontsize=8.5, color=SUB)
+    for xi in range(len(bases)):
+        lab(x[xi]-w/2, v1f[xi], v1r[xi], False)
+        lab(x[xi]+w/2, v2f[xi], v2r[xi], True)
+    ax.set_xticks(x); ax.set_xticklabels(bases, fontsize=12.5); ax.set_ylim(0, 100); ax.set_yticks([0,25,50,75,100])
+    ax.set_ylabel("Abuse F1 (%)"); despine(ax); ax.yaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.16), ncol=2, frameon=False, fontsize=10.5)
+    title(ax, title_t, sub); save(fig, str(ROOT/outname))
+
 def stage4():
-    metrics = ["Recall", "Precision", "F1"]
-    lora = [87.90, 87.90, 87.90]; full = [85.48, 90.21, 87.78]
-    x = np.arange(len(metrics)); w = 0.36
-    fig, ax = plt.subplots(figsize=(8.8, 5.0)); fig.subplots_adjust(left=0.09, right=0.96, top=0.76, bottom=0.16)
-    ax.bar(x-w/2, lora, w, color=ACCENT, label="LoRA v2 (r=16, α=32)", zorder=3)
-    ax.bar(x+w/2, full, w, color=PRIMARY, label="Full FT v2", zorder=3)
-    for xi, (l, f) in enumerate(zip(lora, full)):
-        ax.text(xi-w/2, l+0.6, f"{l:.1f}", ha="center", fontsize=10.5, color=INK)
-        ax.text(xi+w/2, f+0.6, f"{f:.1f}", ha="center", fontsize=10.5, color=INK, fontweight="bold")
-    ax.set_xticks(x); ax.set_xticklabels(metrics, fontsize=12.5); ax.set_ylim(0, 100)
-    ax.set_yticks([0,25,50,75,100]); despine(ax); ax.yaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.18), ncol=2, frameon=False, fontsize=10.5)
-    title(ax, "4. LoRA vs Full Fine-Tuning (KcELECTRA, not-clean)",
-          "LoRA는 Recall 우위, Full FT는 Precision 우위 → 게임은 오탐 비용이 커 Full FT 선정")
-    save(fig, str(ROOT/"4_LoRA_Fine_Tuning/results/lora_vs_full_ko.png"))
+    _models_chart(
+        "4. LoRA 파인튜닝: base 2종 x 데이터 v1/v2",
+        "막대=Abuse F1, R=Recall (not-clean). KcELECTRA v2가 LoRA 중 최고 (F1 87.9)",
+        {"KcELECTRA": [85.41, 87.90], "kcbert": [80.96, 83.27]},
+        {"KcELECTRA": [80.24, 87.90], "kcbert": [74.60, 86.29]},
+        "4_LoRA_Fine_Tuning/results/lora_models_ko.png")
 
 # ── Stage 5: Full FT 학습 곡선 ─────────────────────────────────────────
 def stage5():
@@ -111,6 +121,14 @@ def stage5():
     title(ax, "5. Full Fine-Tuning 학습 곡선 (Full v2 KcELECTRA)",
           "5 epoch, lr 2e-5, batch 16, Loss 안정 수렴, valid LRAP 0.88까지 상승")
     save(fig, str(ROOT/"5_Full_Fine_Tuning/results/training_curve_ko.png"))
+
+def stage5_models():
+    _models_chart(
+        "5. Full Fine-Tuning: base 2종 x 데이터 v1/v2",
+        "막대=Abuse F1, R=Recall (not-clean). KcELECTRA v2가 최종 선정 (F1 87.8)",
+        {"KcELECTRA": [81.80, 87.78], "kcbert": [77.42, 84.82]},
+        {"KcELECTRA": [73.39, 85.48], "kcbert": [67.74, 82.26]},
+        "5_Full_Fine_Tuning/results/full_models_ko.png")
 
 # ── Stage 7: 최종 모델 선정 ────────────────────────────────────────────
 def stage7():
@@ -135,5 +153,5 @@ def stage7():
     save(fig, str(ROOT/"7_Best_Model_Selection/results/final_selection_ko.png"))
 
 if __name__ == "__main__":
-    stage0(); stage3(); stage4(); stage5(); stage7()
+    stage0(); stage3(); stage4(); stage5(); stage5_models(); stage7()
     print("done")
