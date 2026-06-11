@@ -123,7 +123,7 @@ def plot_model_ranking(df: pd.DataFrame) -> None:
     ax.barh(y, ordered["lrap"] * 100, color=colors, height=0.68)
     ax.set_yticks(y, [DISPLAY.get(model, model) for model in ordered["model"]])
     ax.set_xlabel("LRAP × 100 (threshold-free ranking metric)")
-    ax.set_xlim(85, 96)
+    ax.set_xlim(0, 100)
     ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_title("Model ranking by LRAP on the held-out evaluation set (n=482)", fontweight="bold", pad=30)
     ax.text(0.5, 1.035,
@@ -155,7 +155,7 @@ def plot_model_ranking_ko(df: pd.DataFrame) -> None:
     ax.barh(y, ordered["lrap"] * 100, color=colors, height=0.68)
     ax.set_yticks(y, [DISPLAY.get(model, model) for model in ordered["model"]])
     ax.set_xlabel("LRAP × 100 (임계값에 휘둘리지 않는 랭킹 지표)")
-    ax.set_xlim(85, 96)
+    ax.set_xlim(0, 100)
     ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_title("학습에 쓰지 않은 평가셋 482개로 측정한 모델별 LRAP", fontweight="bold", pad=30)
     ax.text(0.5, 1.035,

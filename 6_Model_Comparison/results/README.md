@@ -6,6 +6,8 @@ baseline(파인튜닝 전) + 파인튜닝 8개를 **학습에 쓰지 않은 `tes
 - **지표**: Abuse/Clean Precision·Recall·F1 + **LRAP**(다중라벨 랭킹 품질, threshold 무관)
 - 생성: `python compare_models.py` → `comparison_results.csv/.json` · 포트폴리오 차트 `python plot_comparison.py` · 논문용 PNG/PDF `python plot_paper_figures.py`
 
+> **UnSmile 숫자 주의**: Step 1의 UnSmile **AP 91.94**는 5개 후보를 고르기 위한 이진 abuse 랭킹 지표이고, Step 2의 **Recall 60.08 / F1 73.95**는 threshold 0.5로 실제 판정한 운영점 성능입니다. 이 문서의 baseline **LRAP 0.8869**는 10개 라벨 전체 순위를 보는 다중라벨 랭킹 지표라 AP와 계산식이 다릅니다.
+
 ## 📛 모델 이름 읽는 법
 
 모델 이름은 **`[방식] [데이터] [base]`** 3축의 조합입니다 (예: `Full v2 Game`).
@@ -24,7 +26,7 @@ baseline(파인튜닝 전) + 파인튜닝 8개를 **학습에 쓰지 않은 `tes
 ![before/after](./abuse_recall_before_after.png)
 한국어판: [`abuse_recall_before_after_ko.png`](./abuse_recall_before_after_ko.png)
 
-> 이 그래프는 **Recall만 보는 헤드라인 그래프**입니다. baseline 60.08%에서 파인튜닝 8개가 전부 기준선(점선)을 넘겼고, **Recall 1위는 LoRA v2 KcELECTRA 87.90%**, **최종 선정은 오탐 최소(FP 23)·LRAP 1위인 Full v2 KcELECTRA 85.48%**입니다(F1은 LoRA v2와 동률).
+> 이 그래프는 **Recall만 보는 헤드라인 그래프**입니다. baseline 60.08%에서 파인튜닝 8개가 전부 기준선(점선)을 넘겼고, **Recall 1위는 LoRA v2 KcELECTRA 87.90%**, **최종 선정은 LoRA v2보다 오탐이 적고(FP 23 vs 30) LRAP 1위인 Full v2 KcELECTRA 85.48%**입니다(F1은 사실상 동률).
 
 ## 🎯 결정타, 공짜가 아니다: 정밀도를 내주고 재현율을 얻었다 (F1이 순이득 확인)
 
@@ -76,9 +78,9 @@ Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 �
 
 ## ✅ 선정, Full v2 KcELECTRA (Step 7)
 
-> **상위 3개(LoRA v2 KcELECTRA · Full v2 KcELECTRA · LoRA v2 kcbert)는 Recall이 통계적 동률**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **482문장 중 단 3문장 차이**. 즉 "Recall 1등"은 noise이고, 변별은 **Precision·F1**에서 난다.
+> **상위 3개(LoRA v2 KcELECTRA · Full v2 KcELECTRA · LoRA v2 kcbert)는 Recall이 통계적 동률**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. 즉 "Recall 1등"만으로는 부족하고, 변별은 **Precision·F1·LRAP**에서 납니다.
 
-**Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`), **LRAP 0.936 1위 · 오탐 FP 23개로 최소 · F1 87.78(LoRA v2와 동률) · Precision 90.21**. Step 1에서 정한 *"오탐이 치명적이라 정밀도로 고른다"* 기준과 일관.
+**Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`), **LRAP 0.936 1위 · LoRA v2 대비 낮은 오탐(FP 23 vs 30) · F1 87.78(사실상 동률) · Precision 90.21**. Step 1에서 정한 *"오탐이 치명적이라 정밀도로 고른다"* 기준과 일관.
 - *대안*: **LoRA v2 KcELECTRA**, Recall 1등 + LoRA(경량). 효율을 최우선하면 이쪽도 동급. (정밀도 88 vs 90으로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 선정)
 
 ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 187 기준)은 482에선 **4위(80.24%)** 로 밀림 → 최신 선정·압축 대상은 **Full v2 KcELECTRA**로 갱신 완료.
@@ -97,4 +99,4 @@ Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 �
 | `comparison_results.csv` · `.json` | 전체 수치(TP/TN/FP/FN 포함) |
 
 ## ▶️ 다음 단계
-[`../7_Best_Model_Selection`](../7_Best_Model_Selection)(Full v2 KcELECTRA 확정) → [`../8_Quantization`](../8_Quantization)(FP16 권장, INT8 보정 필요)
+[`../../7_Best_Model_Selection`](../../7_Best_Model_Selection)(Full v2 KcELECTRA 확정) → [`../../8_Quantization`](../../8_Quantization)(FP16 권장, INT8 보정 필요)

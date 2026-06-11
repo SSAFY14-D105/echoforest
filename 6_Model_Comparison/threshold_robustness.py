@@ -86,7 +86,7 @@ for name in ["Full v2 KcELECTRA","LoRA v2 KcELECTRA","LoRA v2 kcbert","LoRA v1 K
         lw = 2.8 if name == "Full v2 KcELECTRA" else 1.8
         ax.plot(THRS, curves[name], "-o", ms=3, lw=lw, color=COL.get(name,"#999"), label=name)
 ax.axvline(0.5, color="#9AA5B1", ls="--", lw=1.2); ax.text(0.505, 32, "비교용 0.5", color="#9AA5B1", fontsize=9)
-ax.axvline(0.28, color="#2F9D91", ls=":", lw=1.5); ax.text(0.285, 27, "배포 ~0.28", color="#2F9D91", fontsize=9)
+ax.axvline(0.28, color="#2F9D91", ls=":", lw=1.5); ax.text(0.285, 27, "보정 후보 ~0.28", color="#2F9D91", fontsize=9)
 ax.set_xlabel("임계값 (다이얼)"); ax.set_ylabel("Abuse F1 (%)"); ax.set_ylim(25, 95)
 ax.grid(color=GRID, lw=1); ax.set_axisbelow(True)
 for s in ax.spines.values(): s.set_visible(False)
