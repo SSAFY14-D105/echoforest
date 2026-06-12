@@ -56,8 +56,10 @@ print("=" * 60)
 # 데이터 로드 및 전처리
 # =============================================================================
 print("\n[1/4] 데이터 로딩...")
-TRAIN_PATH = "../3_UnSmile_Correction/unsmile_train_corrected.tsv"
-VALID_PATH = "../3_UnSmile_Correction/unsmile_valid_corrected.tsv"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+TRAIN_PATH = os.path.join(BASE_DIR, "3_UnSmile_Correction", "unsmile_train_corrected.tsv")
+VALID_PATH = os.path.join(BASE_DIR, "3_UnSmile_Correction", "unsmile_valid_corrected.tsv")
 
 train_df = pd.read_csv(TRAIN_PATH, sep='\t', encoding='utf-8')
 valid_df = pd.read_csv(VALID_PATH, sep='\t', encoding='utf-8')
