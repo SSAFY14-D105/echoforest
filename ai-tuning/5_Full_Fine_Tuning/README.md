@@ -40,11 +40,13 @@ Full Fine-tuning 기반 모든 파라미터 학습
 ## 🔧 학습 설정
 
 ```python
+# KcELECTRA(game) 계열 공통
 EPOCHS = 5
 LEARNING_RATE = 2e-5  # Full FT는 LoRA보다 낮은 LR
 BATCH_SIZE = 16       # 메모리 절약
-gradient_accumulation_steps = 2
 ```
+
+> ⚠️ **v1과 v2의 학습 설정이 완전히 같지는 않습니다.** 최종 선정 모델 Full v2 KcELECTRA에는 `gradient_accumulation_steps=2`(실효 배치 32)와 조기 종료 인내값 3이 적용됐지만, v1 Full KcELECTRA에는 누적이 없고(실효 배치 16) 인내값이 2입니다. 따라서 이 한 쌍의 v1→v2 차이에는 게임 데이터 외에 배치·종료 설정 변화가 섞여 있습니다. 도메인 데이터 효과 자체는 설정이 동일한 나머지 세 쌍(LoRA KcELECTRA·LoRA kcbert·Full kcbert)에서 일관되게 재현됩니다.
 
 ## 📈 모델 비교
 

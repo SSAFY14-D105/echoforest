@@ -143,9 +143,9 @@
     "note": "Selected on validation data; test metrics are measured at the selected INT8 not-clean threshold."
   },
   "conclusion": {
-    "int8_abuse_precision_diff": 0.0708,
-    "int8_abuse_recall_diff": -0.1452,
-    "int8_abuse_f1_diff": -0.0582,
+    "int8_abuse_precision_diff": 0.07,
+    "int8_abuse_recall_diff": -0.1532,
+    "int8_abuse_f1_diff": -0.0628,
     "fp16_abuse_precision_diff": 0.0,
     "fp16_abuse_recall_diff": 0.0,
     "fp16_abuse_f1_diff": 0.0,

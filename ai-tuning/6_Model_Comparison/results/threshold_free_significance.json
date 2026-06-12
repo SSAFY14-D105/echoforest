@@ -1,0 +1,79 @@
+{
+  "test_n": 482,
+  "abuse": 248,
+  "clean": 234,
+  "abuse_definition": "not-clean (max of 9 hate labels > 0.5)",
+  "note": "AP/AUROC는 캐시된 not-clean 점수 기준 임계값 무관 지표. McNemar/부트스트랩은 상위 2개 @0.5 비교(시드 42).",
+  "threshold_free": [
+    {
+      "model": "Full v2 KcELECTRA",
+      "ap": 96.21,
+      "auroc": 95.22
+    },
+    {
+      "model": "LoRA v2 KcELECTRA",
+      "ap": 96.04,
+      "auroc": 94.8
+    },
+    {
+      "model": "Full v2 kcbert",
+      "ap": 94.8,
+      "auroc": 93.82
+    },
+    {
+      "model": "LoRA v1 KcELECTRA",
+      "ap": 94.59,
+      "auroc": 93.05
+    },
+    {
+      "model": "Full v1 KcELECTRA",
+      "ap": 93.64,
+      "auroc": 91.61
+    },
+    {
+      "model": "LoRA v2 kcbert",
+      "ap": 93.03,
+      "auroc": 91.45
+    },
+    {
+      "model": "LoRA v1 kcbert",
+      "ap": 92.1,
+      "auroc": 89.98
+    },
+    {
+      "model": "Baseline",
+      "ap": 91.94,
+      "auroc": 89.37
+    },
+    {
+      "model": "Full v1 kcbert",
+      "ap": 91.14,
+      "auroc": 89.7
+    }
+  ],
+  "mcnemar_top2": {
+    "model_a": "Full v2 KcELECTRA",
+    "model_b": "LoRA v2 KcELECTRA",
+    "b": 18,
+    "c": 17,
+    "chi2": 0.0,
+    "p_value": 1.0,
+    "significant_at_0_05": false
+  },
+  "bootstrap_top2": {
+    "model_a": "Full v2 KcELECTRA",
+    "model_b": "LoRA v2 KcELECTRA",
+    "B": 2000,
+    "seed": 42,
+    "f1_diff_pp": -0.14,
+    "f1_diff_95ci": [
+      -2.54,
+      2.27
+    ],
+    "fp_diff_95ci": [
+      -16,
+      1
+    ],
+    "tie": true
+  }
+}

@@ -98,6 +98,12 @@ rep["performance"]["original"].update(ro)
 rep["performance"]["int8_dynamic"].update(ri)
 rep["performance"]["int8_dynamic_calibrated"] = rc
 rep["performance"]["fp16"].update(rf)
+# conclusion 차이값도 not-clean 기준으로 재계산(단일라벨 옛값 방지)
+rep.setdefault("conclusion", {})
+for _k, _a, _b in [("int8", ri, ro), ("fp16", rf, ro)]:
+    rep["conclusion"][f"{_k}_abuse_precision_diff"] = round(_a["abuse_precision"] - _b["abuse_precision"], 4)
+    rep["conclusion"][f"{_k}_abuse_recall_diff"] = round(_a["abuse_recall"] - _b["abuse_recall"], 4)
+    rep["conclusion"][f"{_k}_abuse_f1_diff"] = round(_a["abuse_f1"] - _b["abuse_f1"], 4)
 rep.setdefault("threshold_calibration", {})
 rep["threshold_calibration"]["selected_threshold"] = float(sel)
 rep["threshold_calibration"]["validation_precision"] = round(float(vcp),4)

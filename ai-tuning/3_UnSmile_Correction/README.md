@@ -60,7 +60,7 @@ unsmile_train/valid_corrected.tsv               train 14,690 / valid 3,663 · �
 키워드엔 걸렸지만 **실제로는 clean**인 문장은 abuse로 올리지 않고 clean 유지:
 
 - 찬송가 `주 예수보다 더 귀한것은 없네…`, 칭찬 `제대로 된 ai구나`, 인용 `워렌버핏 말… 챙기지 못해`, 자기고백 `소주+삼겹살 포기못해`, 양보 `퀴어로 사는 것까지 말리진 못해도…`
-- train 9건 + valid 3건, 최종 보정본에서 **clean으로 유지됨**(직접 확인). 코드: [`util/revert_false_positives.py`](util/revert_false_positives.py)
+- train 9건 + valid 3건, 최종 보정본에서 **clean으로 유지됨**(직접 확인). 이 제외는 `correct_train.py`·`correct_valid.py`에 **통합**됨(목록·근거: [`util/revert_false_positives.py`](util/revert_false_positives.py)).
 
 ## ❓ 안 한 것 (자주 묻는)
 
@@ -87,8 +87,8 @@ unsmile_train/valid_corrected.tsv               train 14,690 / valid 3,663 · �
 ## 🚀 실행
 
 ```bash
-python 3_UnSmile_Correction/correct_code/correct_train.py
-python 3_UnSmile_Correction/correct_code/correct_valid.py
-python 3_UnSmile_Correction/util/revert_false_positives.py   # 오탐 복구
-python 3_UnSmile_Correction/util/verify_correction.py        # 검증
+python 3_UnSmile_Correction/correct_code/correct_train.py   # 키워드 재라벨 + 오탐 제외 → 최종 39건
+python 3_UnSmile_Correction/correct_code/correct_valid.py   # → 최종 5건
+python 3_UnSmile_Correction/util/verify_correction.py        # 검증(39/5)
 ```
+> 오탐 복구(revert)는 위 보정 스크립트에 **통합**돼, 재실행 시 산출물·로그가 39/5로 재현됩니다. `util/revert_false_positives.py`는 FP 목록·근거 참고용이라 단독 실행은 불필요합니다.

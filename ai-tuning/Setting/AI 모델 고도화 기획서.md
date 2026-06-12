@@ -91,13 +91,13 @@ flowchart TD
 | 모델 | Recall | F1 | Precision | LRAP |
 |------|:---:|:---:|:---:|:---:|
 | LoRA v2 KcELECTRA | **87.90%** | 87.90% | 87.90% | 0.932 |
+| LoRA v2 kcbert | 86.29% | 83.27% | 80.45% | 0.908 |
 | **Full v2 KcELECTRA** | 85.48% | **87.78%** | **90.21%** | **0.936** |
-| LoRA v2 kcbert | 84.27% | 82.45% | 80.69% | 0.908 |
-| Full v2 kcbert | 80.24% | 83.79% | 87.67% | 0.915 |
-| LoRA v1 KcELECTRA | 78.63% | 84.42% | 91.12% | 0.924 |
-| LoRA v1 kcbert | 72.18% | 79.91% | 89.50% | 0.902 |
-| Full v1 KcELECTRA | 72.18% | 81.00% | 92.27% | 0.911 |
-| Full v1 kcbert | 65.32% | 76.06% | 91.01% | 0.892 |
+| Full v2 kcbert | 82.26% | 84.82% | 87.55% | 0.915 |
+| LoRA v1 KcELECTRA | 80.24% | 85.41% | 91.28% | 0.924 |
+| LoRA v1 kcbert | 74.60% | 80.96% | 88.52% | 0.903 |
+| Full v1 KcELECTRA | 73.39% | 81.80% | 92.39% | 0.911 |
+| Full v1 kcbert | 67.74% | 77.42% | 90.32% | 0.892 |
 | Baseline | 60.08% | 73.95% | 96.13% | 0.887 |
 
 ### 핵심 인사이트
@@ -110,7 +110,7 @@ flowchart TD
 
 2. **Full v2 KcELECTRA 선정이 타당**
 
-LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 482문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 abuse 248문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
 
 3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 

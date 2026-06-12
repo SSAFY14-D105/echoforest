@@ -14,8 +14,8 @@ corr_train = pd.read_csv('3_UnSmile_Correction/unsmile_train_corrected.tsv', sep
 corr_valid = pd.read_csv('3_UnSmile_Correction/unsmile_valid_corrected.tsv', sep='\t')
 
 # 보정 로그
-log_train = pd.read_csv('3_UnSmile_Correction/correction_log_train.csv')
-log_valid = pd.read_csv('3_UnSmile_Correction/correction_log_valid.csv')
+log_train = pd.read_csv('3_UnSmile_Correction/correction_log/correction_log_train.csv')
+log_valid = pd.read_csv('3_UnSmile_Correction/correction_log/correction_log_valid.csv')
 
 print()
 print('[Train 데이터셋]')

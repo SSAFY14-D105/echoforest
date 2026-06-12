@@ -5,6 +5,8 @@
     {
       "model": "Baseline",
       "lrap": 0.8869,
+      "ap": 91.94,
+      "auroc": 89.37,
       "abuse_precision": 0.9613,
       "abuse_recall": 0.6008,
       "abuse_f1": 0.7395,
@@ -19,6 +21,8 @@
     {
       "model": "LoRA v1 Game",
       "lrap": 0.9238,
+      "ap": 94.59,
+      "auroc": 93.05,
       "abuse_precision": 0.9128,
       "abuse_recall": 0.8024,
       "abuse_f1": 0.8541,
@@ -33,6 +37,8 @@
     {
       "model": "LoRA v1 Tutorial",
       "lrap": 0.9025,
+      "ap": 92.1,
+      "auroc": 89.98,
       "abuse_precision": 0.8852,
       "abuse_recall": 0.746,
       "abuse_f1": 0.8096,
@@ -47,6 +53,8 @@
     {
       "model": "LoRA v2 Game",
       "lrap": 0.9319,
+      "ap": 96.04,
+      "auroc": 94.8,
       "abuse_precision": 0.879,
       "abuse_recall": 0.879,
       "abuse_f1": 0.879,
@@ -61,6 +69,8 @@
     {
       "model": "LoRA v2 Tutorial",
       "lrap": 0.9077,
+      "ap": 93.03,
+      "auroc": 91.45,
       "abuse_precision": 0.8045,
       "abuse_recall": 0.8629,
       "abuse_f1": 0.8327,
@@ -75,6 +85,8 @@
     {
       "model": "Full v1 Game",
       "lrap": 0.9114,
+      "ap": 93.64,
+      "auroc": 91.61,
       "abuse_precision": 0.9239,
       "abuse_recall": 0.7339,
       "abuse_f1": 0.818,
@@ -89,6 +101,8 @@
     {
       "model": "Full v1 Tutorial",
       "lrap": 0.8921,
+      "ap": 91.14,
+      "auroc": 89.7,
       "abuse_precision": 0.9032,
       "abuse_recall": 0.6774,
       "abuse_f1": 0.7742,
@@ -103,6 +117,8 @@
     {
       "model": "Full v2 Game",
       "lrap": 0.9359,
+      "ap": 96.21,
+      "auroc": 95.22,
       "abuse_precision": 0.9021,
       "abuse_recall": 0.8548,
       "abuse_f1": 0.8778,
@@ -117,6 +133,8 @@
     {
       "model": "Full v2 Tutorial",
       "lrap": 0.9154,
+      "ap": 94.8,
+      "auroc": 93.82,
       "abuse_precision": 0.8755,
       "abuse_recall": 0.8226,
       "abuse_f1": 0.8482,

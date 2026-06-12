@@ -4,7 +4,8 @@ threshold_free_selection.py — 1단계 베이스 선정을 '임계값과 무관
 왜: 멀티라벨·불균형 모델을 0.5 한 점의 F1로 '선정'하면 임계값에 휘둘린다.
     선정 기준은 임계값과 무관해야 한다(6단계 LRAP와 같은 원칙).
     → 5종의 '연속 abuse 점수'로 AP(평균정밀도, AUPRC)·AUROC를 재고,
-      F1을 0.1~0.9로 sweep해 'UnSmile이 어느 임계값에서도 1위'임을 증명.
+      F1을 0.1~0.9로 sweep해 UnSmile이 운영 임계값 구간에서 우세하고 AP에서 1위임을 확인
+      (전 구간 1위는 아님: sweep 상세는 threshold_free_sweep.json 참조).
 
 연속 abuse 점수 정의(모델별 출력 차이를 흡수):
   · UnSmile         : max(sigmoid(logits)[:9])         (not-clean, 9개 혐오 라벨 최대)

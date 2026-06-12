@@ -49,6 +49,11 @@ for kw in CORRECTION_KEYWORDS:
 
 print(f'\n총 보정 대상: {len(correction_indices)}건')
 
+# 오탐(키워드엔 걸리나 실제로는 clean)은 제외 → revert를 보정 단계에 통합(재실행 시 최종 5건·로그 재현)
+FALSE_POSITIVE = {226, 3141, 2286}
+correction_indices -= FALSE_POSITIVE
+print(f'오탐 {len(FALSE_POSITIVE)}건 제외 -> 최종 보정 대상: {len(correction_indices)}건')
+
 # 3. 라벨 수정
 print('\n[Step 2] 라벨 수정 중...')
 valid_corrected = valid.copy()
@@ -63,7 +68,7 @@ print(f'  - Clean: {valid_corrected["clean"].sum()}건')
 print(f'  - 악플/욕설: {valid_corrected["악플/욕설"].sum()}건')
 
 # 5. 저장
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(f'{OUTPUT_DIR}/correction_log', exist_ok=True)
 valid_corrected.to_csv(OUTPUT_PATH, sep='\t', index=False, encoding='utf-8')
 print(f'\n저장 완료: {OUTPUT_PATH}')
 
@@ -73,8 +78,8 @@ correction_log['원본_clean'] = 1
 correction_log['원본_악플/욕설'] = 0
 correction_log['보정_clean'] = 0
 correction_log['보정_악플/욕설'] = 1
-correction_log.to_csv(f'{OUTPUT_DIR}/correction_log_valid.csv', index=True, encoding='utf-8-sig')
-print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log_valid.csv')
+correction_log.to_csv(f'{OUTPUT_DIR}/correction_log/correction_log_valid.csv', index=True, encoding='utf-8-sig')
+print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log/correction_log_valid.csv')
 
 print('\n' + '=' * 60)
 print('Valid 데이터셋 보정 완료!')

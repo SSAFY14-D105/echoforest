@@ -25,21 +25,21 @@ Step 6(9모델 비교)의 결론을 확정하는 단계입니다. **abuse 판정
 | **Abuse F1** | 73.95% | **87.78%** | **+13.8%p** |
 | **Abuse Precision** | 96.13% | 90.21% | −5.9%p |
 | **LRAP** | 0.887 | **0.936** | +0.05 |
-| Clean F1 | 81.5% | 88.4% | +6.9%p |
-| Accuracy | 77.6% | 87.3% | +9.7%p |
+| Clean F1 | 81.3% | 87.7% | +6.4%p |
+| Accuracy | 78.2% | 87.8% | +9.6%p |
 
 > **정직한 트레이드오프**: 정밀도를 6%p 내주는 대신(오탐 6→23건) 재현율을 25%p 끌어올렸고, **F1이 +13.8%p** 올라 *순이득*. 게임에선 오탐(=가짜저주)이 치명적이라(Step 1) 정밀도가 중요한데, 선정 모델은 Recall 1위 LoRA v2보다 정밀도가 높습니다(90.21% vs 87.90%).
 
 ## 🎯 선정 이유, Step 1의 "AP·정밀도 기준"과 일관
 
 1. **LRAP 1위 + LoRA v2 대비 낮은 오탐**, LRAP 0.936(1위), FP 23개(Recall 1위 LoRA v2는 30개), F1 87.78(사실상 동률), Precision 90.21.
-2. **Recall 1등만으로 선정하지 않음**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **482문장 중 6문장 차이**입니다. 변별은 Precision과 LRAP에서 나고, 거기서 Full v2 KcELECTRA가 앞섭니다.
+2. **Recall 1등만으로 선정하지 않음**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. 변별은 Precision과 LRAP에서 나고, 거기서 Full v2 KcELECTRA가 앞섭니다.
 3. **게임 안전성**, 가짜저주를 줄이는 정밀도가 Recall 1위 후보보다 높습니다.
 
 ### 대안
 - **LoRA v2 KcELECTRA** (`lora_game_kcelectra_v2`), Recall 1등(87.90%) + LoRA(경량). 학습·배포 효율을 최우선하면 동급 선택. (정밀도 88.0 vs 90.1로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 본 선정)
 
-> ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 game_test 187 기준)는 test_set(482)에선 **4위(Recall 80.24%)** 로 밀렸습니다, 그래서 재선정.
+> ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 game_test 187 기준)는 test_set(482)에선 **4위(Recall 82.26%)** 로 밀렸습니다, 그래서 재선정.
 
 ## 💻 모델 로드
 

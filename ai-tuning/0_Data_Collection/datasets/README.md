@@ -13,13 +13,13 @@
 - 공식 unSmile 보정본(train 14,690 / valid 3,663)과 **0 겹침**
 - `train_collected.tsv`(518)와도 **0 겹침** → 8개 모델(v1·v2) 누구를 평가해도 누수 없음
 - 내부 중복 0 · 라벨 충돌 0 (사람 검수로 확정)
-- 구성: **검증된 게임 STT 181건 중 180건**(깨진 1행 제외) + **사람이 직접 재정제·재라벨한 게임 STT 314건** → **482**
+- 구성: 검증된 게임 STT 180건(181건 중 깨진 1행 제외)과 사람이 직접 재정제·재라벨한 게임 STT를 합쳐, 중복·깨진 행 정리 후 최종 **482건** 으로 확정
 - 분포: abuse 248 / clean 234 (abuse 51%, 구 688판의 31%보다 균형)
 - 구 688판(개인지칭 `[유저]` 행 삭제 기준의 초기 셋, 742→688)과 초기 벤치 원본(187)·사람 라벨 원본(1666)은 모두 현 `test_set`(482)에 흡수·정리돼 현재 미사용(필요 시 git 이력에서 확인)
 
 ## 어느 단계가 무엇을 쓰나
 ```
-1_Model_Selection   → test_set.tsv (6모델 벤치마크·임계값 최적화)
+1_Model_Selection   → test_set.tsv (5모델 벤치마크·임계값 최적화)
 2_Baseline_Test     → (원본 unSmile 약점 측정)
 4_LoRA / 5_Full     → train_collected.tsv (+ 3_UnSmile_Correction의 보정 데이터) 학습
 6_Model_Comparison  → test_set.tsv (8모델 비교)

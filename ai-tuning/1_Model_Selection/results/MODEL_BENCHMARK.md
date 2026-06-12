@@ -101,8 +101,8 @@
 > **결론**: AP 1위(F1@0.5도 1위) = **UnSmile 선정**. 단 선정의 주 지표는 F1 한 점이 아니라 AP입니다.
 
 ### ② 왜 Precision까지 보는가, Precision vs Recall (덤벨)
-![Model Comparison](./6_model_comparison.png)
-한국어판: [`6_model_comparison_ko.png`](./6_model_comparison_ko.png)
+![Model Comparison](./model_comparison.png)
+한국어판: [`model_comparison_ko.png`](./model_comparison_ko.png)
 
 **무엇을 보여주나**: 5개 모델 각각의 **Precision(정밀도)** 과 **Recall(재현율)** 을 한 행에 두 점으로 찍고 선으로 이은 *덤벨* 차트.
 

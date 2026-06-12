@@ -216,5 +216,5 @@ def main():
             print(f"   - Failed to process {filename}: {e}")
 
 if __name__ == "__main__":
-    print("Pre-requisites: pip install faster-whisper kss torch")
+    print("Pre-requisites: pip install faster-whisper kiwipiepy torch")
     main()
