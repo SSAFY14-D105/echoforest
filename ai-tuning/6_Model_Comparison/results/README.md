@@ -92,7 +92,7 @@ Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 �
 
 ## ✅ 선정, Full v2 KcELECTRA (Step 7)
 
-> **상위 3개(LoRA v2 KcELECTRA · LoRA v2 kcbert · Full v2 KcELECTRA)는 Recall이 통계적 동률**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. 즉 "Recall 1등"만으로는 부족하고, 변별은 **Precision·F1·LRAP**에서 납니다.
+> **상위 2개(LoRA v2 KcELECTRA · Full v2 KcELECTRA)는 통계적 동률**(McNemar p=1.000), LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. (Recall 3위 LoRA v2 kcbert 86.29까지 상위권 Recall은 6문장 이내로 근접하나, 통계 검정은 상위 2개에 한합니다.) 즉 "Recall 1등"만으로는 부족하고, 변별은 **Precision·F1·LRAP**에서 납니다.
 
 **Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`), **LRAP 0.936 1위 · LoRA v2 대비 낮은 오탐(FP 23 vs 30) · F1 87.78(사실상 동률) · Precision 90.21**. Step 1에서 정한 *"오탐이 치명적이라 정밀도로 고른다"* 기준과 일관.
 - *대안*: **LoRA v2 KcELECTRA**, Recall 1등 + LoRA(경량). 효율을 최우선하면 이쪽도 동급. (정밀도 88 vs 90으로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 선정)
