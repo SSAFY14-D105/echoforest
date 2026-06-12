@@ -73,8 +73,8 @@ correction_log['원본_clean'] = 1
 correction_log['원본_악플/욕설'] = 0
 correction_log['보정_clean'] = 0
 correction_log['보정_악플/욕설'] = 1
-correction_log.to_csv(f'{OUTPUT_DIR}/correction_log_valid.csv', index=True, encoding='utf-8-sig')
-print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log_valid.csv')
+correction_log.to_csv(f'{OUTPUT_DIR}/correction_log/correction_log_valid.csv', index=True, encoding='utf-8-sig')
+print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log/correction_log_valid.csv')
 
 print('\n' + '=' * 60)
 print('Valid 데이터셋 보정 완료!')

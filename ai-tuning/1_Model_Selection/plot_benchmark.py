@@ -5,7 +5,7 @@ results/benchmark_results.csv 를 읽어 차트를 렌더한다. 모델 추론(b
 분리돼 있어 **재추론 없이** 다시 그릴 수 있다. 영어(기본)·한국어 두 버전을 모두 생성한다.
 
   best_model_selection.png / _ko.png — Abuse F1@0.5 운영점 비교
-  6_model_comparison.png    / _ko.png — 유효 후보 3종의 Precision–Recall 트레이드오프(덤벨)
+  model_comparison.png      / _ko.png — 후보 5종의 Precision–Recall 트레이드오프(덤벨)
 
 디자인: 에디토리얼 좌측정렬 타이틀 · 뮤트 그레이 + 단일 틸 액센트 · 무테/무격자(옅은 격자만).
 폰트: en=Helvetica Neue, ko=Apple SD Gothic Neo.
@@ -228,7 +228,7 @@ def render_charts(csv_path, out_dir, lang="en", suffix=""):
     df["REC"] = df["Abuse_Recall"].map(_pct)
     df["PRE"] = df["Abuse_Precision"].map(_pct)
     chart_selection(df, os.path.join(out_dir, f"best_model_selection{suffix}.png"), t)
-    chart_tradeoff(df, os.path.join(out_dir, f"6_model_comparison{suffix}.png"), t)
+    chart_tradeoff(df, os.path.join(out_dir, f"model_comparison{suffix}.png"), t)
 
 
 if __name__ == "__main__":

@@ -77,8 +77,8 @@ correction_log['원본_clean'] = 1
 correction_log['원본_악플/욕설'] = 0
 correction_log['보정_clean'] = 0
 correction_log['보정_악플/욕설'] = 1
-correction_log.to_csv(f'{OUTPUT_DIR}/correction_log.csv', index=True, encoding='utf-8-sig')
-print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log.csv')
+correction_log.to_csv(f'{OUTPUT_DIR}/correction_log/correction_log_train.csv', index=True, encoding='utf-8-sig')
+print(f'보정 로그 저장: {OUTPUT_DIR}/correction_log/correction_log_train.csv')
 
 print('\n' + '=' * 60)
 print('보정 완료!')

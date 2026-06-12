@@ -25,6 +25,7 @@ from sklearn.metrics import label_ranking_average_precision_score
 from datasets import Dataset
 import warnings
 warnings.filterwarnings('ignore')
+from transformers import set_seed; set_seed(42)  # 재현성 시드 고정(기존 커밋 산출물은 시드 없이 학습됨)
 
 # =============================================================================
 # 설정
@@ -136,7 +137,7 @@ tokenizer.save_pretrained(f"{OUTPUT_DIR}/merged_model")
 
 eval_results = trainer.evaluate()
 with open(f"{OUTPUT_DIR}/results.txt", 'w', encoding='utf-8') as f:
-    f.write(f"=== LoRA Tutorial-based (klue/bert-base) ===\n")
+    f.write(f"=== LoRA Tutorial-based (beomi/kcbert-base) ===\n")
     for k, v in eval_results.items(): f.write(f"{k}: {v:.4f}\n")
 
 print("\n" + "=" * 60)

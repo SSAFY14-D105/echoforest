@@ -74,7 +74,7 @@ base unSmile은 **Precision 96.1%(오탐 6건)** 로 매우 보수적이지만, 
 | `baseline_test.py` | base unSmile을 test_set(482)으로 평가 → CSV·PNG |
 | `baseline_test_results.csv` | 문장별 확률·정답여부 |
 | `baseline_accuracy.png` | 4-panel 진단 시각화 |
-| `keywords_unsmile_format.tsv` | (참고) 초기 진단에 썼던 수집 키워드셋(518). 현재는 `train_collected`로 학습에 쓰임 |
+| `keywords_unsmile_format.tsv` | ⚠️ 초기 진단용 키워드셋(518). 현재 baseline은 `test_set`(482)로 측정 → 미사용이라 `../_archive/2_Baseline_Test/`로 이동 |
 
 ```bash
 cd 2_Baseline_Test

@@ -39,7 +39,7 @@ Step 6(9모델 비교)의 결론을 확정하는 단계입니다. **abuse 판정
 ### 대안
 - **LoRA v2 KcELECTRA** (`lora_game_kcelectra_v2`), Recall 1등(87.90%) + LoRA(경량). 학습·배포 효율을 최우선하면 동급 선택. (정밀도 88.0 vs 90.1로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 본 선정)
 
-> ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 game_test 187 기준)는 test_set(482)에선 **4위(Recall 80.24%)** 로 밀렸습니다, 그래서 재선정.
+> ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 game_test 187 기준)는 test_set(482)에선 **4위(Recall 82.26%)** 로 밀렸습니다, 그래서 재선정.
 
 ## 💻 모델 로드
 

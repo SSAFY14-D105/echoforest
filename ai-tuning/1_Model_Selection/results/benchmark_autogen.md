@@ -46,7 +46,7 @@
 ## 📈 시각화
 
 ### 모델 비교
-![Model Comparison](./6_model_comparison.png)
+![Model Comparison](./model_comparison.png)
 
 ### 베스트 모델 선정
 ![Best Model Selection](./best_model_selection.png)

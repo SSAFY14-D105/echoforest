@@ -24,6 +24,7 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score, lab
 from datasets import Dataset
 import warnings
 warnings.filterwarnings('ignore')
+from transformers import set_seed; set_seed(42)  # 재현성 시드 고정(기존 커밋 산출물은 시드 없이 학습됨)
 
 # =============================================================================
 # 설정

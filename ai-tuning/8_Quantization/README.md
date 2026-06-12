@@ -70,6 +70,8 @@ INT8은 정밀도가 97.21%까지 올라가지만, 그 대가로 실제 abuse 24
 | 라벨별 F1 | `results/per_label_f1_ko.png` | FP16 보존/INT8 하락 확인 |
 | threshold sweep | `results/threshold_sweep_ko.png` | INT8 보정 가능성 설명 |
 
+> 라벨별 F1 그래프의 `악플/욕설` F1(원본 87.32%)은 **단일 라벨 채널** 기준이고, 대시보드·혼동행렬의 Abuse F1(87.78%)은 **not-clean(9개 라벨 max>0.5)** 기준입니다. 같은 모델이라도 판정 정의가 달라 2문장 차이로 값이 다릅니다.
+
 ## 실행 방법
 
 ```bash
