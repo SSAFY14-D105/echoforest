@@ -63,7 +63,7 @@ print(f'  - Clean: {valid_corrected["clean"].sum()}건')
 print(f'  - 악플/욕설: {valid_corrected["악플/욕설"].sum()}건')
 
 # 5. 저장
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(f'{OUTPUT_DIR}/correction_log', exist_ok=True)
 valid_corrected.to_csv(OUTPUT_PATH, sep='\t', index=False, encoding='utf-8')
 print(f'\n저장 완료: {OUTPUT_PATH}')
 

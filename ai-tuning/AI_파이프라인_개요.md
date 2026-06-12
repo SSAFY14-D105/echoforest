@@ -46,7 +46,7 @@ Recall을 올리려고 threshold를 낮추면 정상 게임 오더까지 과탐�
 |------|:---:|------|
 | Step 1 모델 선정 | AP 91.94 | 5개 후보를 고르기 위한 이진 abuse 랭킹 지표. threshold와 무관 |
 | Step 2 baseline | Recall 60.08 / F1 73.95 | 실제 배포 규칙과 같은 `not-clean > 0.5` 고정 판정 결과 |
-| Step 6 모델 비교 | LRAP 0.8869 | 10개 라벨 전체 확률 순위를 보는 다중라벨 랭킹 지표. threshold와 무관 |
+| Step 6 모델 비교 | LRAP 0.8869 | 10개 라벨 확률 순위 지표(이 test_set은 활성 라벨 1개라 사실상 이진, 변별은 AP·AUROC). threshold와 무관 |
 
 즉 Step 1의 AP 91.94와 Step 6의 LRAP 0.8869는 둘 다 threshold-free 지표지만 **같은 계산식이 아닙니다**. Step 2의 Recall/F1은 threshold 0.5를 실제로 잘라서 만든 운영점 성능이고, Step 1 표의 F1@0.5·Step 6 baseline 행과 같은 값입니다.
 

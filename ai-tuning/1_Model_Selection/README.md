@@ -11,7 +11,7 @@
 | `00_STT_Engine_Selection/` | 런타임 STT 엔진 선정(Web Speech API), 근거 `STT_COMPARISON.md` + 실측 `web_speech_api/` |
 | `benchmark_game_stt.py` | 5개 욕설탐지 모델을 `test_set.tsv`(482)로 추론·평가 → `results/` 갱신 |
 | `plot_benchmark.py` | 결과 CSV로 **포트폴리오용 차트**(영어/한국어) 렌더, 추론과 분리(재추론 불필요) |
-| `benchmark_game_stt.ipynb` | 노트북 버전(참고) |
+| `benchmark_game_stt.ipynb` | ⚠️ 옛 버전(6모델·제외된 KcELECTRA 포함) → `../_archive/1_Model_Selection/`로 이동. 정식은 `benchmark_game_stt.py` |
 | `results/` | 산출물: `MODEL_BENCHMARK.md`(상세+그래프 설명)·`benchmark_results.csv`·그래프(en/ko) |
 
 ## 🏆 선정 결과, UnSmile

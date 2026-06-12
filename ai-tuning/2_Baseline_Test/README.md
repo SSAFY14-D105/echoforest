@@ -17,9 +17,9 @@
 
 | 지표 | 부정어(not-clean) | Clean |
 |------|:---:|:---:|
-| Precision | **0.9613** | 0.7028 |
-| **Recall** | **0.6008** | 0.9701 |
-| F1 | 0.7395 | 0.8151 |
+| Precision | **0.9613** | 0.6972 |
+| **Recall** | **0.6008** | 0.9744 |
+| F1 | 0.7395 | 0.8128 |
 
 **Confusion Matrix (부정어, not-clean)**
 
@@ -29,7 +29,7 @@
 | **Actual Abuse** | **99 (FN)** | 149 (TP) |
 
 > Step 1의 UnSmile 행과 **정확히 동일**(R 60.08 / P 96.13 / F1 73.95 / FP 6 / FN 99), 같은 모델·데이터·정의.
-> 단, Step 1의 큰 선정 숫자 **AP 91.94**는 threshold-free 랭킹 지표라 이 표의 Recall/F1과 직접 비교하는 값이 아닙니다. Step 6의 **LRAP 0.8869**도 10개 라벨 전체 순위를 보는 다른 threshold-free 지표입니다.
+> 단, Step 1의 큰 선정 숫자 **AP 91.94**는 threshold-free 랭킹 지표라 이 표의 Recall/F1과 직접 비교하는 값이 아닙니다. Step 6의 **LRAP 0.8869**도 threshold-free 지표지만, 이 test_set은 활성 라벨이 1개라 사실상 이진으로 동작합니다(변별은 AP·AUROC).
 
 ## 🎯 핵심, "before"이자 파인튜닝의 동기
 

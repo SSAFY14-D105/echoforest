@@ -110,7 +110,7 @@ flowchart TD
 
 2. **Full v2 KcELECTRA 선정이 타당**
 
-LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 482문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 abuse 248문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
 
 3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 
