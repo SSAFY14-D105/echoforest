@@ -49,6 +49,11 @@ for kw in CORRECTION_KEYWORDS:
 
 print(f'\n총 보정 대상: {len(correction_indices)}건')
 
+# 오탐(키워드엔 걸리나 실제로는 clean)은 제외 → revert를 보정 단계에 통합(재실행 시 최종 5건·로그 재현)
+FALSE_POSITIVE = {226, 3141, 2286}
+correction_indices -= FALSE_POSITIVE
+print(f'오탐 {len(FALSE_POSITIVE)}건 제외 -> 최종 보정 대상: {len(correction_indices)}건')
+
 # 3. 라벨 수정
 print('\n[Step 2] 라벨 수정 중...')
 valid_corrected = valid.copy()

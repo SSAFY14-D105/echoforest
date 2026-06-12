@@ -5,7 +5,7 @@ Step 7에서 선정한 **Full v2 KcELECTRA**를 배포 관점에서 다시 압�
 - 평가 데이터: `0_Data_Collection/datasets/test_set.tsv` (**482건**, abuse 248 / clean 234)
 - 판정 기준: not-clean(clean이 아니면 부정어, clean 제외 9개 라벨 max sigmoid > **0.5**)
 - 원본 모델: `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model`
-- 실행 스크립트: `python 8_Quantization/quantize_model.py`
+- 실행 스크립트: `quantize_model.py`(크기·속도) → `quant_not_clean.py`(not-clean 최종 지표·conclusion)
 
 ## 결론
 
@@ -76,7 +76,8 @@ INT8은 정밀도가 97.21%까지 올라가지만, 그 대가로 실제 abuse 24
 
 ```bash
 cd /Users/sondahyun/S14P11D105
-python 8_Quantization/quantize_model.py
+python 8_Quantization/quantize_model.py          # 크기·속도 + 초기 지표
+python 8_Quantization/quant_not_clean.py         # not-clean 규칙으로 지표·conclusion 재계산(최종 리포트)
 python 8_Quantization/plot_quantization_figures_ko.py
 ```
 
