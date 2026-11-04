@@ -9,7 +9,7 @@ Step 7에서 선정한 **Full v2 KcELECTRA**를 배포 관점에서 다시 압�
 
 ## 결론
 
-**FP16 압축 모델을 배포 후보로 권장합니다.**
+**FP16 압축 모델을 배포했습니다.** 배포 설정은 임계값 0.5(not-clean), 부정어 1건당 스택 +1입니다(이유: [`../AI_튜닝_최종_보고서.md`](../AI_튜닝_최종_보고서.md)의 배포 설정).
 
 INT8 Dynamic Quantization은 모델 크기와 CPU 지연시간을 줄였지만, 고정 threshold 0.5에서 abuse Recall이 크게 떨어져 바로 배포하기 어렵습니다. FP16은 원본 성능을 그대로 보존하면서 모델 크기를 약 50% 줄이고 CPU 지연시간도 개선했습니다.
 
@@ -52,7 +52,7 @@ INT8은 정밀도가 97.21%까지 올라가지만, 그 대가로 실제 abuse 24
 
 | 경로 | 내용 |
 |------|------|
-| `fp16_model/` | 권장 압축 모델. `AutoModelForSequenceClassification.from_pretrained()`로 로드 가능 |
+| `fp16_model/` | 배포 모델. `AutoModelForSequenceClassification.from_pretrained()`로 로드 가능 |
 | `quantized_model/model_int8.pt` | INT8 Dynamic state dict. 고정 threshold 배포 비권장 |
 | `quantized_model/README.md` | INT8 로드 방법과 현재 상태 |
 | `results/quantization_report.json` | 전체 수치 JSON |

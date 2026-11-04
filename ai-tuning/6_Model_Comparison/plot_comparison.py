@@ -44,7 +44,7 @@ FONT_KO = _font_from_files(
 INK,SUB,GRID,NEUTRAL,MUTED,ACCENT,SLATE = "#1F2933","#9AA5B1","#EBEEF1","#C2CAD2","#E0E4E8","#2F9D91","#4B5A68"
 WARN = "#C2703D"  # 정밀도 하락(작은 비용) 표시용
 
-SELECTED = "Full v2 Game"   # LRAP 1위 + LoRA v2 대비 낮은 오탐(FP 23 vs 30), F1은 사실상 동률
+SELECTED = "Full v2 Game"   # Recall 1위(LoRA v2)와 통계적 동률(McNemar p=1.000), 오탐이 더 적음(FP 23 vs 30), AP·AUROC 근소 1위
 
 def _disp(m):   # 표시명: Game/Tutorial은 base 모델이므로 명시 (Game=KcELECTRA, Tutorial=kcbert)
     return m.replace("Game", "KcELECTRA").replace("Tutorial", "kcbert")
@@ -52,7 +52,7 @@ def _disp(m):   # 표시명: Game/Tutorial은 base 모델이므로 명시 (Game=
 STR = {
  "en": {"h_title":"Recall view — fine-tuning catches more abuse","h_xlabel":"Abuse Recall  (%)",
         "before":"baseline","selected":"final pick","recall_best":"highest recall","h_note":"Recall-only chart",
-        "h_sub":"All 8 fine-tuned models beat baseline 60.1%. Selection by LRAP + precision, not Recall alone (Full v2)",
+        "h_sub":"All 8 fine-tuned models beat baseline 60.1%. Final pick Full v2: tied with the Recall leader, fewer false positives (23 vs 30)",
         "h_foot":"v1 = corrected comments only,  v2 = + 518 collected game lines  (base: KcELECTRA / kcbert)",
         "t_title":"The trade-off — a little precision for a lot of recall",
         "t_sub":"Baseline vs selected (Full v2 Game) · F1 confirms the net win",
@@ -60,7 +60,7 @@ STR = {
         "v_xlabel":"Abuse Recall  (%)","v1":"v1 (correction only)","v2":"v2 (+ game data)"},
  "ko": {"h_title":"파인튜닝할수록 부정어를 더 많이 잡는다","h_xlabel":"Abuse Recall  (%)",
         "before":"baseline","selected":"최종 선정","recall_best":"Recall 최다","h_note":"Recall 전용 그래프",
-        "h_sub":"파인튜닝 8종 모두 baseline 60.1% 초과. 모델 선정은 Recall 단독이 아니라 LRAP과 정밀도 기준(Full v2)",
+        "h_sub":"파인튜닝 8종 모두 baseline 60.1% 초과. 최종 선정은 Recall 1위와 통계적 동률이면서 오탐이 적은 Full v2(23 vs 30)",
         "h_foot":"v1 = 댓글 보정만 학습,  v2 = + 게임채팅 518건 추가 학습   (base: KcELECTRA / kcbert)",
         "t_title":"정밀도 약간 내주고 재현율을 크게 얻는 교환",
         "t_sub":"Baseline vs 선정(Full v2 Game), F1이 순이득을 확인",
@@ -114,7 +114,7 @@ def chart_headline(df, path, t):
     ax.xaxis.grid(True,color=GRID,lw=1.2,zorder=0); ax.set_axisbelow(True); _despine(ax,keep=())
     ax.set_xlabel(t["h_xlabel"], fontsize=10.5)
     _title(ax, t["h_title"], t["h_sub"])
-    ax.text(0, -0.115, t["h_foot"], transform=ax.transAxes, fontsize=8.8, color=SUB, ha="left")
+    ax.text(0, -0.16, t["h_foot"], transform=ax.transAxes, fontsize=8.8, color=SUB, ha="left")
     fig.savefig(path, dpi=220, facecolor="white", bbox_inches="tight"); plt.close(fig); print("saved", path)
 
 # ── ② 트레이드오프 (결정타): baseline vs selected, P/R/F1 ───────────────────

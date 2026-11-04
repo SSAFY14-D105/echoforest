@@ -46,12 +46,24 @@ LORA_DROPOUT = 0.1
 target_modules = ["query", "key", "value"]
 ```
 
+## ⚙️ 학습 설정 (실제 실행한 노트북 기준, 4개 모델 공통)
+
+| 항목 | 값 |
+|------|----|
+| epoch / batch / LR | 10 / 32 / 2e-4 |
+| 조기 종료 | patience 3 (unSmile 검증셋, epoch마다 평가) |
+| 체크포인트 선택 지표 | `abuse_recall` |
+| max_len · fp16 | 128 · 사용 |
+| 시드 | 고정 안 함(1회 실행) |
+
+> 결과 모델은 각 폴더의 `.ipynb`로 학습했습니다(커밋 `63cf9be1` "하이퍼파라미터 통일 후 8개 모델 결과 완성"). 같은 폴더의 `.py`는 설정을 통일하기 전 초안이라 batch·epoch·선택 지표가 다르니, 재현은 노트북 기준으로 하세요.
+
 ## 📈 모델 비교
 
 | 실험 | 모델 | 메트릭 |
 |--------|------|--------|
 | `lora_game_kcelectra` | KcELECTRA-base-v2022 | abuse_recall |
-| `lora_tutorial_kcbert` | kcbert-base | LRAP |
+| `lora_tutorial_kcbert` | kcbert-base | abuse_recall |
 
 > v1 kcbert 실험은 로컬 실행 스크립트명이 `lora_tutorial_bert.py`, 노트북명이 `lora_tutorial_kcbert.ipynb`입니다. 산출물 폴더명은 `lora_tutorial_kcbert/`로 통일되어 Step 6 비교 코드와 연결됩니다.
 

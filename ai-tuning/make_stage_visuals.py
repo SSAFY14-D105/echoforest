@@ -30,33 +30,53 @@ def despine(ax, keep=()):
     for k, s in ax.spines.items(): s.set_visible(k in keep)
     ax.tick_params(length=0)
 def title(ax, t, sub=None):
+    if os.environ.get("NO_STEP_NUM"):  # 포트폴리오용: "7. " 같은 단계 번호 제거
+        import re; t = re.sub(r"^\d+\.\s*", "", t)
     ax.set_title(t, loc="left", pad=28, fontsize=16, fontweight="bold", color=INK)
     if sub: ax.text(0, 1.04, sub, transform=ax.transAxes, fontsize=10.5, color=SUB, va="bottom")
 def save(fig, path):
+    if os.environ.get("SAVE_DIR"):  # 포트폴리오용: 다른 폴더에 저장
+        path = os.path.join(os.environ["SAVE_DIR"], os.path.basename(path))
     os.makedirs(os.path.dirname(path), exist_ok=True)
     fig.savefig(path, dpi=220, facecolor="white", bbox_inches="tight"); plt.close(fig)
     print("saved", path)
 
 # ── Stage 0: 데이터 구성 ───────────────────────────────────────────────
 def stage0():
-    # (라벨: 악플/욕설, clean, 카테고리혐오)
+    # 좌: 전체 데이터(라벨별 누적) / 우: 게임 발화만 확대
     data = [("unSmile 학습\n(댓글, 보정)", 3128, 3700, 7862),
             ("unSmile 검증\n(댓글)", 777, 930, 1956),
             ("게임 학습\n(STT 수집)", 234, 284, 0),
             ("게임 평가\n(STT, 평가용)", 248, 234, 0)]
     labels = [d[0] for d in data]
     abuse = np.array([d[1] for d in data]); clean = np.array([d[2] for d in data]); cat = np.array([d[3] for d in data])
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(12.4, 4.9), gridspec_kw={"width_ratios": [1.45, 1]})
+    fig.subplots_adjust(left=0.115, right=0.985, top=0.80, bottom=0.17, wspace=0.42)
     y = np.arange(len(labels))[::-1]
-    fig, ax = plt.subplots(figsize=(9.6, 4.8)); fig.subplots_adjust(left=0.20, right=0.96, top=0.80, bottom=0.10)
-    ax.barh(y, abuse, color=ACCENT, label="악플/욕설", zorder=3)
-    ax.barh(y, clean, left=abuse, color=PRIMARY, label="clean", zorder=3)
-    ax.barh(y, cat, left=abuse+clean, color=SLATE, label="카테고리 혐오(성별/지역/종교 등)", zorder=3)
+    ax.barh(y, abuse, color=ACCENT, label="악플/욕설", zorder=3, height=0.62)
+    ax.barh(y, clean, left=abuse, color=PRIMARY, label="clean", zorder=3, height=0.62)
+    ax.barh(y, cat, left=abuse+clean, color=SLATE, label="카테고리 혐오(성별/지역/종교 등)", zorder=3, height=0.62)
     for i, tot in enumerate(abuse+clean+cat):
-        ax.text(tot+150, y[i], f"{tot:,}건", va="center", fontsize=10.5, color=INK, fontweight="bold")
-    ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=11)
-    ax.set_xlim(0, 16500); despine(ax); ax.xaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
-    ax.legend(loc="lower right", frameon=False, fontsize=10)
-    title(ax, "0. 데이터 구성", "출처: 유튜브 협동게임 영상 + 싸피생 게임 플레이 STT(faster-whisper), 게임/평가 누수 0")
+        ax.text(tot+250, y[i], f"{tot:,}건", va="center", fontsize=10.5, color=INK, fontweight="bold")
+    ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=10.5)
+    ax.set_xlim(0, 17500); ax.set_xticks([0, 5000, 10000, 15000]); ax.set_xticklabels(["0", "5,000", "10,000", "15,000"])
+    despine(ax); ax.xaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
+    ax.legend(loc="lower right", frameon=False, fontsize=9.5)
+    title(ax, "0. 전체 데이터: 대부분이 댓글", "unSmile 학습 데이터의 54%가 카테고리 혐오, 게임 발화에는 0%")
+    # 우: 게임 발화 확대
+    gy = np.array([1, 0]); ga = abuse[2:]; gc = clean[2:]
+    bx.barh(gy, ga, color=ACCENT, zorder=3, height=0.55)
+    bx.barh(gy, gc, left=ga, color=PRIMARY, zorder=3, height=0.55)
+    for i in range(2):
+        bx.text(ga[i]/2, gy[i], f"욕설 {ga[i]}", ha="center", va="center", color="white", fontsize=10.5, fontweight="bold", zorder=4)
+        bx.text(ga[i]+gc[i]/2, gy[i], f"clean {gc[i]}", ha="center", va="center", color="white", fontsize=10.5, fontweight="bold", zorder=4)
+        bx.text(ga[i]+gc[i]+12, gy[i], f"{ga[i]+gc[i]}건", va="center", fontsize=10.5, color=INK, fontweight="bold")
+    bx.set_yticks(gy); bx.set_yticklabels([labels[2], labels[3]], fontsize=10.5)
+    bx.set_xlim(0, 600); despine(bx); bx.xaxis.grid(True, color=GRID, lw=1.1, zorder=0); bx.set_axisbelow(True)
+    bx.set_ylim(-0.6, 1.6)
+    title(bx, "게임 발화만 확대", "v2 학습에 518건 추가(전체 학습의 3.4%), 평가셋과 문장 겹침 0")
+    fig.text(0.115, 0.035, "게임 발화 출처: 메아리의 숲 플레이 녹화와 유튜브 협동게임 영상을 faster-whisper로 받아쓴 뒤 직접 라벨링",
+             fontsize=9.5, color=SUB)
     save(fig, str(ROOT/"0_Data_Collection/results/data_composition_ko.png"))
 
 # ── Stage 3: unSmile 보정 전후 ─────────────────────────────────────────
@@ -153,24 +173,24 @@ def stage5_models():
 
 # ── Stage 7: 최종 모델 선정 ────────────────────────────────────────────
 def stage7():
-    metrics = ["Recall", "Precision", "F1", "LRAP"]
-    full = [85.48, 90.21, 87.78, 93.59]; lora = [87.90, 87.90, 87.90, 93.19]
+    metrics = ["Recall", "Precision", "F1", "AP", "AUROC"]
+    full = [85.48, 90.21, 87.78, 96.21, 95.22]; lora = [87.90, 87.90, 87.90, 96.04, 94.80]
     x = np.arange(len(metrics)); w = 0.36
-    fig, ax = plt.subplots(figsize=(9.2, 5.2)); fig.subplots_adjust(left=0.08, right=0.96, top=0.74, bottom=0.16)
-    ax.bar(x-w/2, lora, w, color=SECONDARY, label="LoRA v2 (Recall 1위)", zorder=3)
-    ax.bar(x+w/2, full, w, color=PRIMARY, label="Full v2 (최종 선정)", zorder=3)
+    fig, ax = plt.subplots(figsize=(9.6, 5.4)); fig.subplots_adjust(left=0.08, right=0.97, top=0.72, bottom=0.16)
+    ax.bar(x-w/2, lora, w, color=SECONDARY, label="LoRA v2 KcELECTRA (Recall 1위)", zorder=3)
+    ax.bar(x+w/2, full, w, color=PRIMARY, label="Full v2 KcELECTRA (최종 선정)", zorder=3)
     for xi,(l,f) in enumerate(zip(lora, full)):
-        ax.text(xi-w/2, l+0.7, f"{l:.1f}", ha="center", fontsize=10, color=SUB)
-        ax.text(xi+w/2, f+0.7, f"{f:.1f}", ha="center", fontsize=10, color=INK, fontweight="bold")
+        ax.text(xi-w/2, l+0.9, f"{l:.1f}", ha="center", fontsize=10, color=SUB)
+        ax.text(xi+w/2, f+0.9, f"{f:.1f}", ha="center", fontsize=10, color=INK, fontweight="bold")
         win = ACCENT if f>=l else WARN
-        ax.annotate(f"{f-l:+.1f}", xy=(xi, max(l,f)+5), ha="center", color=win, fontsize=11, fontweight="bold")
+        ax.annotate(f"{f-l:+.1f}", xy=(xi, max(l,f)+5.5), ha="center", color=win, fontsize=11, fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(metrics, fontsize=12.5); ax.set_ylim(0, 108)
     ax.set_yticks([0,25,50,75,100]); despine(ax); ax.yaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.16), ncol=2, frameon=False, fontsize=10.5)
-    ax.text(0.5, -0.275, "두 모델 모두 v2 = 게임채팅 518건을 추가 학습한 KcELECTRA",
-            transform=ax.transAxes, ha="center", fontsize=9, color=SUB)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5,-0.17), ncol=2, frameon=False, fontsize=10.5)
     title(ax, "7. 최종 모델 선정: Full v2 KcELECTRA",
-          "Recall은 LoRA가 소폭 높지만, 오탐이 적고(Precision) LRAP가 앞서 Full v2 선정. F1은 0.5에서 사실상 동률")
+          "두 모델은 통계적 동률(McNemar p=1.000). 오탐이 더 적은 쪽(FP 23 vs 30)을 게임 UX 기준으로 선택\n"
+          "AP·AUROC는 임계값과 무관한 지표, 나머지는 임계값 0.5 기준")
+    ax.title.set_position((0, 1.0)); ax.set_title(ax.get_title(loc="left"), loc="left", pad=50, fontsize=16, fontweight="bold", color=INK)
     save(fig, str(ROOT/"7_Best_Model_Selection/results/final_selection_ko.png"))
 
 if __name__ == "__main__":

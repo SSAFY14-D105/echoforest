@@ -44,7 +44,7 @@ flowchart TD
     F --> G
     G --> H["Full v2 KcELECTRA 선정"]
     H --> I["INT8/FP16 압축 평가"]
-    I --> J["FP16 배포 후보 권장"]
+    I --> J["FP16 배포"]
 ```
 
 | 단계 | 산출물 | 상태 |
@@ -56,7 +56,7 @@ flowchart TD
 | Full FT 학습 | 4개 모델 | 완료 |
 | 모델 비교 | baseline + 8개 모델 | 완료 |
 | 최종 모델 선정 | Full v2 KcELECTRA | 완료 |
-| 압축/배포 평가 | FP16 권장, INT8 보정 필요 | 완료 |
+| 압축/배포 | FP16 배포(임계값 0.5, 탐지 1건당 스택 +1), INT8 보정 필요 | 완료 |
 
 ## 4. 데이터 구성과 무결성
 
@@ -110,7 +110,7 @@ flowchart TD
 
 2. **Full v2 KcELECTRA 선정이 타당**
 
-LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적습니다(FP 23 vs 30, F1은 사실상 동률). Recall 차이는 abuse 248문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
+LoRA v2 KcELECTRA가 Recall은 1위지만, Full v2 KcELECTRA와 통계적으로 동률입니다(McNemar p=1.000). 그래서 오탐이 더 적은 Full v2 KcELECTRA를 골랐습니다(FP 23 vs 30, F1은 사실상 동률, AP 96.21 vs 96.04). Recall 차이는 abuse 248문장 중 6문장 수준이라, 게임 UX 관점에서는 오탐이 적은 Full v2가 안전합니다.
 
 3. **Precision 하락은 실패가 아니라 탐지 범위 확장의 비용**
 
@@ -125,7 +125,7 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 6건뿐이었지만, 실�
 | 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
 | 학습 방식 | Full fine-tuning |
 | 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
-| 선정 기준 | LRAP 1위, 상위 v2 후보 중 낮은 오탐(FP 23), F1 사실상 동률 |
+| 선정 기준 | Recall 1위와 통계적 동률, 오탐이 더 적음(FP 23 vs 30), AP·AUROC 근소 1위 |
 
 | 지표 | Baseline | 최종 모델 | 개선 |
 |------|:---:|:---:|:---:|
@@ -145,7 +145,7 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 6건뿐이었지만, 실�
 
 ### 배포 판단
 
-- **FP16 권장**: 2배 압축 + 성능 완전 보존 + 일반 `from_pretrained()` 로드 가능
+- **FP16 배포**: 2배 압축 + 성능 완전 보존 + 일반 `from_pretrained()` 로드 가능. 배포 설정은 임계값 0.5, 부정어 1건당 스택 +1
 - **INT8 fixed 0.5 비권장**: Recall이 85.48% → 70.16%로 하락
 - **INT8 보정 대안**: threshold 0.26 적용 시 F1 88.94%까지 회복(FP는 23→18로 오히려 감소). 단 임계값 재보정이 필요해 drop-in인 FP16 우선
 
@@ -162,4 +162,4 @@ Baseline은 abuse로 예측한 문장이 적어 FP가 6건뿐이었지만, 실�
 
 ## 10. 최종 한 줄
 
-> EchoForest AI 고도화는 **게임 도메인 데이터 518건과 unSmile 라벨 보정**으로 baseline의 낮은 Recall 문제를 해결했고, **Full v2 KcELECTRA**를 최종 모델로 선정했습니다. 배포 압축은 fixed-threshold INT8보다 **FP16 압축 모델**이 안전합니다.
+> EchoForest AI 고도화는 **게임 도메인 데이터 518건과 unSmile 라벨 보정**으로 baseline의 낮은 Recall 문제를 해결했고, **Full v2 KcELECTRA**를 최종 모델로 선정했습니다. 배포는 fixed-threshold INT8 대신 **FP16 압축 모델**로 했습니다.

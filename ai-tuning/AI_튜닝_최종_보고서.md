@@ -36,6 +36,8 @@ Baseline은 오탐은 적지만 실제 abuse 248건 중 99건을 놓쳤습니다
 - base: KcELECTRA vs kcbert
 - 비교 대상: baseline + 파인튜닝 8개 = 총 9개
 
+학습 설정은 같은 방식끼리 통일했습니다. LoRA 4개는 10 epoch · batch 32 · LR 2e-4, Full 4개는 5 epoch · batch 16(gradient accumulation 2) · LR 2e-5이고, 모두 조기 종료 인내값 3, 체크포인트 선택 지표 abuse_recall, max_len 128입니다(실행 노트북 기준).
+
 이 구조 덕분에 "모델을 바꿔서 좋아졌는지", "게임 데이터를 넣어서 좋아졌는지", "LoRA와 Full 중 무엇이 나은지"를 분리해서 설명할 수 있습니다.
 
 ## 3. 전: 모델 비교와 최종 선정
@@ -57,7 +59,7 @@ Baseline은 오탐은 적지만 실제 abuse 248건 중 99건을 놓쳤습니다
 
 Precision이 낮아진 이유는 모델이 더 많은 문장을 abuse로 잡기 시작했기 때문입니다. Baseline은 매우 보수적으로 예측해서 TP 149 / FP 6였고, 최종 모델은 게임식 비난까지 잡으면서 TP가 212로 늘었습니다. 동시에 정상 발화를 abuse로 찍은 FP도 23으로 늘어 Precision은 96.13%에서 90.21%로 내려갔습니다. 즉 "더 잘 잡는다"는 Recall 개선이고, 그 과정에서 false positive가 일부 늘어난 trade-off입니다.
 
-선정 기준은 타당합니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적으며(FP 23 vs 30), F1은 사실상 동률입니다. 게임 저주 시스템에서는 오탐이 UX에 직접 영향을 주므로, Recall 6문장 차이보다 Precision/LRAP 우위가 더 설득력 있습니다.
+선정 기준은 이렇습니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA와는 통계적으로 동률입니다(McNemar p=1.000, F1 차이 95% CI [-2.54, +2.27]%p). 그래서 게임에서 더 치명적인 오탐이 적은 Full v2 KcELECTRA를 골랐습니다(FP 23 vs 30). 임계값과 무관한 AP(96.21 vs 96.04)와 AUROC(95.22 vs 94.80)도 근소하게 앞섭니다. LRAP는 이 test_set에서 사실상 이진 지표라 참고로만 표에 남겼습니다.
 
 ## 4. 결: 압축 최적화와 배포 판단
 
@@ -78,7 +80,15 @@ INT8은 threshold를 0.26으로 보정하면 F1을 88.94%까지 회복합니다(
 | fixed 0.50 | 97.21% | 70.16% | 81.50% | 5 | 74 |
 | INT8 보정 후보 0.26 | 92.21% | 85.89% | 88.94% | 18 | 35 |
 
-다만 INT8은 고정 0.5에서 Recall이 무너지고, 위 회복도 **임계값 재보정**을 거쳐야 가능합니다(FP16은 보정 없이 drop-in). 따라서 운영 우선순위는 **FP16 배포 → 운영 로그 수집 → INT8 threshold 보정 재검토**가 좋습니다.
+다만 INT8은 고정 0.5에서 Recall이 무너지고, 위 회복도 **임계값 재보정**을 거쳐야 가능합니다(FP16은 보정 없이 drop-in). 따라서 FP16 모델을 배포했고, INT8은 운영 로그를 모은 뒤 threshold 보정을 다시 검토합니다.
+
+### 배포 설정
+
+| 항목 | 값 | 이유 |
+|------|----|------|
+| 모델 | FP16 (`8_Quantization/fp16_model/`) | 원본 성능 그대로, 크기 절반 |
+| 임계값 | 0.5 (not-clean) | F1 최대인 ~0.28은 게임 정상 발화의 약 15%를 오탐(0.5에서는 9.8%). 게임에서는 억울한 저주가 더 나쁨 |
+| 스택 규칙 | 부정어 1건당 +1, 스택 5에서 저주 | 튜닝 모델은 탐지 212건 중 186건이 0.8 이상이라 기존 심각도 구간(0.8 이상 +5)을 쓰면 한 문장 만에 저주가 걸림 |
 
 ## 최종 산출물
 
@@ -98,7 +108,9 @@ INT8은 threshold를 0.26으로 보정하면 F1을 88.94%까지 회복합니다(
 
 | 단계 | 그래프 | 경로 |
 |------|--------|------|
-| 모델 비교 | 모델 순위 | `6_Model_Comparison/results/paper_model_ranking.png`, `_ko.png` |
+| 모델 비교 | 모델 순위(AP·AUROC) | `6_Model_Comparison/results/threshold_free_ap_auroc_ko.png` |
+| 모델 비교 | 임계값 sweep | `6_Model_Comparison/results/threshold_robustness_ko.png` |
+| 최종 선정 | Full v2 vs LoRA v2 | `7_Best_Model_Selection/results/final_selection_ko.png` |
 | 모델 비교 | Precision/Recall/F1 trade-off | `6_Model_Comparison/results/paper_selected_tradeoff.png`, `_ko.png` |
 | 모델 비교 | v1→v2 도메인 데이터 효과 | `6_Model_Comparison/results/paper_domain_data_effect.png`, `_ko.png` |
 | 압축 | 대시보드 | `8_Quantization/results/quantization_dashboard_ko.png` |
@@ -120,14 +132,14 @@ INT8은 threshold를 0.26으로 보정하면 F1을 88.94%까지 회복합니다(
 
 이 결과를 정직하게 쓰기 위해 다음 한계를 함께 밝힙니다. (있다고 결론이 흔들리는 것은 아니며, 큰 결론인 Recall 60→85는 이 한계들로 뒤집히지 않습니다.)
 
-- **모델 선정과 최종 평가에 같은 test_set(482)을 사용**했습니다. 따라서 상위 모델 간 소수 문장 차이는 낙관적으로 보일 수 있습니다. 실제로 상위 3개(LoRA v2 KcELECTRA · LoRA v2 kcbert · Full v2 KcELECTRA)는 통계적 동률(McNemar p=1.000, F1 차이 95%CI [-2.54, +2.27]%p로 0 포함)이며, 최종 선택은 측정된 우위가 아니라 게임 UX(낮은 오탐, FP 차이 95%CI [-16, +1])를 우선한 판단입니다.
-- **무작위 시드를 고정하지 않아** 재실행 시 ±1~2%p 변동이 가능합니다. 또한 최종 모델의 v1→v2 쌍은 배치·조기종료 설정도 달라(누적 2·인내값 3), 절대 상승폭을 순수 데이터 효과로만 보긴 어렵습니다(도메인 효과 자체는 설정이 동일한 나머지 3쌍에서 재현). 학습 군별로 체크포인트 선택 지표도 달랐습니다(game=abuse_recall, kcbert=lrap).
+- **모델 선정과 최종 평가에 같은 test_set(482)을 사용**했습니다. 따라서 상위 모델 간 소수 문장 차이는 낙관적으로 보일 수 있습니다. 실제로 상위 2개(LoRA v2 KcELECTRA · Full v2 KcELECTRA)는 통계적 동률(McNemar p=1.000, F1 차이 95%CI [-2.54, +2.27]%p로 0 포함)이며, 최종 선택은 측정된 우위가 아니라 게임 UX(낮은 오탐, FP 차이 95%CI [-16, +1])를 우선한 판단입니다.
+- **무작위 시드를 고정하지 않은 1회 실행**이라 재실행 시 ±1~2%p 변동이 가능합니다. 학습 설정은 같은 방식끼리 통일했으므로 v1→v2 차이는 데이터 차이로 읽을 수 있습니다.
 - **LRAP는 이 test_set에서 활성 라벨이 1개(악플/욕설)뿐**이라 사실상 이진 지표로 동작합니다. 임계값 무관 비교는 AP·AUROC를 함께 사용했습니다(`6_Model_Comparison/threshold_free_significance.py`).
 - **test_set은 482문장·제한된 출처**(메아리의 숲 + 협동게임 STT)라 모든 게임 상황을 대표하지 않을 수 있습니다.
-- **운영 임계값 0.5는 비교 기준점**입니다. test_set 스윕상 0.25~0.35 구간에서 F1이 더 높지만(같은 모델 F1 87.78%@0.5 → 약 89.5%@0.35, `6_Model_Comparison/results/threshold_robustness_f1.csv`), 이 임계값은 test에서 관찰한 값이라 실제 배포 임계값은 검증셋이나 운영 로그로 따로 골라야 합니다(풀 모델엔 검증셋 임계값 보정이 없고, 검증셋 보정은 INT8의 0.26뿐). 입력이 STT(음성인식) 결과라는 점도 운영 재평가가 필요한 이유입니다.
+- **운영 임계값 0.5는 비교 기준점**입니다. test_set 스윕상 0.25~0.35 구간에서 F1이 더 높지만(같은 모델 F1 87.78%@0.5 → 약 89.5%@0.35, `6_Model_Comparison/results/threshold_robustness_f1.csv`), 이 임계값은 test에서 관찰한 값입니다. unSmile 검증셋으로 고르면 0.29가 나오지만(`6_Model_Comparison/threshold_not_clean.py`) 검증셋은 댓글 도메인이라, 배포는 오탐이 적은 0.5로 하고 게임 검증셋을 따로 만들어 다시 정하는 것이 다음 과제입니다. 입력이 STT(음성인식) 결과라는 점도 운영 재평가가 필요한 이유입니다.
 
 ## 전문가 관점 최종 판단
 
 전체 기승전결은 잘 나왔습니다. 특히 "threshold 딜레마"를 문제로 잡고, 그 해결책을 데이터 보정과 게임 도메인 수집으로 연결한 점이 강합니다. 최신 결과 기준으로는 결론을 이렇게 가져가면 가장 정직하고 설득력 있습니다.
 
-> 게임 도메인 fine-tuning으로 baseline의 낮은 Recall 문제를 해결했고, Full v2 KcELECTRA가 LRAP 1위·상위 v2 후보 중 낮은 오탐(FP 23) 기준 최종 모델로 타당하다. 압축 단계에서는 INT8 fixed threshold가 성능을 훼손하므로 즉시 배포하지 않고, FP16 압축 모델을 우선 배포 후보로 삼는 것이 안전하다.
+> 게임 도메인 fine-tuning으로 baseline의 낮은 Recall 문제를 해결했고, Recall 1위 모델과 통계적으로 동률인 가운데 오탐이 더 적은(FP 23 vs 30) Full v2 KcELECTRA를 최종 모델로 골랐다. 압축 단계에서는 INT8 fixed threshold가 성능을 훼손해, 성능을 그대로 보존하는 FP16 모델을 임계값 0.5, 탐지 1건당 스택 +1로 배포했다.

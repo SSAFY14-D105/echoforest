@@ -2,7 +2,7 @@
 
 Step 6(9모델 비교)의 결론을 확정하는 단계입니다. **abuse 판정 = not-clean(clean이 아니면 부정어, 9개 라벨 max > 0.5)** (배포, Step 6, Step 8 동일 정의).
 
-![최종 선정: Recall, Precision, F1, LRAP 비교](results/final_selection_ko.png)
+![최종 선정: Recall, Precision, F1, AP, AUROC 비교](results/final_selection_ko.png)
 
 > 근거·그래프: [`../6_Model_Comparison/results/README.md`](../6_Model_Comparison/results/README.md)
 
@@ -32,12 +32,12 @@ Step 6(9모델 비교)의 결론을 확정하는 단계입니다. **abuse 판정
 
 ## 🎯 선정 이유, Step 1의 "AP·정밀도 기준"과 일관
 
-1. **LRAP 1위 + LoRA v2 대비 낮은 오탐**, LRAP 0.936(1위), FP 23개(Recall 1위 LoRA v2는 30개), F1 87.78(사실상 동률), Precision 90.21.
-2. **Recall 1등만으로 선정하지 않음**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. 변별은 Precision과 LRAP에서 나고, 거기서 Full v2 KcELECTRA가 앞섭니다.
+1. **Recall 1위와 통계적 동률**, LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**이고, 검정해도 구분되지 않습니다(McNemar p=1.000, F1 차이 95% CI [-2.54, +2.27]%p).
+2. **그래서 오탐이 적은 쪽**, FP 23개(LoRA v2는 30개), Precision 90.21 vs 87.90. 임계값과 무관한 AP 96.21 vs 96.04, AUROC 95.22 vs 94.80도 근소하게 앞섭니다. (LRAP는 이 test_set에서 사실상 이진 지표라 참고값)
 3. **게임 안전성**, 가짜저주를 줄이는 정밀도가 Recall 1위 후보보다 높습니다.
 
 ### 대안
-- **LoRA v2 KcELECTRA** (`lora_game_kcelectra_v2`), Recall 1등(87.90%) + LoRA(경량). 학습·배포 효율을 최우선하면 동급 선택. (정밀도 88.0 vs 90.1로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 본 선정)
+- **LoRA v2 KcELECTRA** (`lora_game_kcelectra_v2`), Recall 1등(87.90%) + LoRA(경량). 학습·배포 효율을 최우선하면 동급 선택. (정밀도 87.9 vs 90.2로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 본 선정)
 
 > ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 game_test 187 기준)는 test_set(482)에선 **4위(Recall 82.26%)** 로 밀렸습니다, 그래서 재선정.
 
@@ -56,7 +56,7 @@ model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH).eval()
 ## ▶️ 다음 단계
 [`../8_Quantization`](../8_Quantization), **이 모델(Full v2 KcELECTRA)을 기준으로 압축/배포 최적화 완료**.
 
-최신 결론은 **FP16 압축 모델 권장**입니다. INT8 Dynamic은 크기·속도 개선은 있지만 fixed threshold 0.5에서 Recall이 크게 떨어져, threshold 보정과 운영 false-positive 검토 없이는 배포하지 않는 것이 안전합니다.
+최신 결론은 **FP16 압축 모델 배포**입니다(임계값 0.5, 탐지 1건당 스택 +1). INT8 Dynamic은 크기·속도 개선은 있지만 fixed threshold 0.5에서 Recall이 크게 떨어져, threshold 보정과 운영 false-positive 검토 없이는 배포하지 않는 것이 안전합니다.
 
 ## 📋 한 줄 요약
-> **Full v2 KcELECTRA**(KcELECTRA base · Full FT · 게임데이터) 선정, test_set(482)에서 **LRAP 0.936 1위 · LoRA v2 대비 낮은 오탐(FP 23 vs 30) · F1 87.78%(+13.8%p, 사실상 동률) · Precision 90.21%**. Step 1의 AP·정밀도 기준과 일관.
+> **Full v2 KcELECTRA**(KcELECTRA base · Full FT · 게임데이터) 선정, test_set(482)에서 **Recall 1위 LoRA v2와 통계적 동률 · 오탐이 더 적음(FP 23 vs 30) · AP 96.21 · F1 87.78%(+13.8%p) · Precision 90.21%**. Step 1의 AP·정밀도 기준과 일관.

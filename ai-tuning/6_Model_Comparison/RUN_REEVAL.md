@@ -17,7 +17,7 @@
 | 최종 선정 폴더 | `7_Best_Model_Selection` |
 | 압축 평가 폴더 | `8_Quantization` |
 | 최종 모델 | `full_game_kcelectra_v2` |
-| 권장 압축 산출물 | `8_Quantization/fp16_model/` |
+| 배포 모델(FP16) | `8_Quantization/fp16_model/` |
 
 ## 현재 모델 경로
 

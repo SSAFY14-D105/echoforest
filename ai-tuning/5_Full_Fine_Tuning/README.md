@@ -39,21 +39,25 @@ Full Fine-tuning 기반 모든 파라미터 학습
 
 ## 🔧 학습 설정
 
-```python
-# KcELECTRA(game) 계열 공통
-EPOCHS = 5
-LEARNING_RATE = 2e-5  # Full FT는 LoRA보다 낮은 LR
-BATCH_SIZE = 16       # 메모리 절약
-```
+실제 실행한 노트북 기준, 4개 모델(v1/v2 × KcELECTRA/kcbert) 공통입니다.
 
-> ⚠️ **v1과 v2의 학습 설정이 완전히 같지는 않습니다.** 최종 선정 모델 Full v2 KcELECTRA에는 `gradient_accumulation_steps=2`(실효 배치 32)와 조기 종료 인내값 3이 적용됐지만, v1 Full KcELECTRA에는 누적이 없고(실효 배치 16) 인내값이 2입니다. 따라서 이 한 쌍의 v1→v2 차이에는 게임 데이터 외에 배치·종료 설정 변화가 섞여 있습니다. 도메인 데이터 효과 자체는 설정이 동일한 나머지 세 쌍(LoRA KcELECTRA·LoRA kcbert·Full kcbert)에서 일관되게 재현됩니다.
+| 항목 | 값 |
+|------|----|
+| epoch / batch / LR | 5 / 16 / 2e-5 (Full FT는 LoRA보다 낮은 LR) |
+| gradient accumulation | 2 |
+| 조기 종료 | patience 3 (unSmile 검증셋, epoch마다 평가) |
+| 체크포인트 선택 지표 | `abuse_recall` |
+| max_len · fp16 | 128 · 사용 |
+| 시드 | 고정 안 함(1회 실행) |
+
+> 결과 모델은 각 폴더의 `.ipynb`로 학습했습니다(커밋 `63cf9be1` "하이퍼파라미터 통일 후 8개 모델 결과 완성"). 같은 폴더의 `.py`는 설정을 통일하기 전 초안이라 누적·인내값·선택 지표가 다르니, 재현은 노트북 기준으로 하세요. v1과 v2가 같은 설정이라 v1→v2 차이는 데이터 차이로 읽을 수 있습니다.
 
 ## 📈 모델 비교
 
 | 실험 | 모델 | 메트릭 |
 |--------|------|--------|
 | `full_game_kcelectra` | KcELECTRA-base-v2022 | abuse_recall |
-| `full_tutorial_kcbert` | kcbert-base | LRAP |
+| `full_tutorial_kcbert` | kcbert-base | abuse_recall |
 
 > v1 kcbert 실험은 로컬 실행 스크립트명이 `full_tutorial_bert.py`, 노트북명이 `full_tutorial_kcbert.ipynb`입니다. 산출물 폴더명은 `full_tutorial_kcbert/`로 통일되어 Step 6 비교 코드와 연결됩니다.
 

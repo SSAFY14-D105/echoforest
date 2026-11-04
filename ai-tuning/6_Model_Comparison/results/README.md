@@ -21,12 +21,12 @@ baseline(파인튜닝 전) + 파인튜닝 8개를 **학습에 쓰지 않은 `tes
 > 예: **`Full v2 Game`** = **Full** 파인튜닝 · **게임데이터 포함(v2)** · base **KcELECTRA**.
 > 폴더명(`full_game_kcelectra` 등)에서 온 내부 명칭이라, **차트에는 혼동 방지를 위해 base 모델명을 직접 표기**합니다 → `Full v2 KcELECTRA`, `LoRA v2 kcbert` …
 
-## 🏆 헤드라인, 파인튜닝으로 Abuse Recall 60 → 86%
+## 🏆 헤드라인, 파인튜닝으로 Abuse Recall 60 → 85%
 
 ![before/after](./abuse_recall_before_after.png)
 한국어판: [`abuse_recall_before_after_ko.png`](./abuse_recall_before_after_ko.png)
 
-> 이 그래프는 **Recall만 보는 헤드라인 그래프**입니다. baseline 60.08%에서 파인튜닝 8개가 전부 기준선(점선)을 넘겼고, **Recall 1위는 LoRA v2 KcELECTRA 87.90%**, **최종 선정은 LoRA v2보다 오탐이 적고(FP 23 vs 30) LRAP 1위인 Full v2 KcELECTRA 85.48%**입니다(F1은 사실상 동률).
+> 이 그래프는 **Recall만 보는 헤드라인 그래프**입니다. baseline 60.08%에서 파인튜닝 8개가 전부 기준선(점선)을 넘겼고, **Recall 1위는 LoRA v2 KcELECTRA 87.90%**, **최종 선정은 LoRA v2와 통계적 동률이면서 오탐이 더 적은(FP 23 vs 30) Full v2 KcELECTRA 85.48%**입니다(F1은 사실상 동률).
 
 ## 🎯 결정타, 공짜가 아니다: 정밀도를 내주고 재현율을 얻었다 (F1이 순이득 확인)
 
@@ -85,17 +85,17 @@ Recall만 보면 선정 기준이 헷갈릴 수 있습니다. **같이 봐야 �
 
 **모든 조합**에서 v2 > v1. 단 **518건의 게임 채팅**으로 +11.5%p. (v1도 Step 3 보정으로 게임 키워드 44건이 들어가 있어, 도메인 적응의 *대부분*은 v2의 수집 데이터가 만든 것)
 
-> ⚠️ **학습 설정 한 가지 주의**: 최종 모델인 Full KcELECTRA 한 쌍은 v2에만 `gradient_accumulation_steps=2`(실효 배치 32)와 조기 종료 인내값 3이 적용돼, v1과 학습 설정이 완전히 같지는 않습니다. 평균 +11.5%p 효과는 설정이 동일한 나머지 세 쌍(LoRA KcELECTRA·LoRA kcbert·Full kcbert)에서도 일관되게 재현되므로 결론은 유지되지만, 이 한 쌍의 절대 상승폭은 순수 데이터 효과로만 읽지 않는 것이 정확합니다.
+> 학습 설정은 같은 방식끼리 통일했습니다(LoRA 4개 10 epoch·batch 32·LR 2e-4, Full 4개 5 epoch·batch 16·누적 2·LR 2e-5, 모두 인내값 3·선택 지표 abuse_recall). 그래서 v1→v2 차이는 데이터 차이로 읽을 수 있습니다. 다만 시드를 고정하지 않은 1회 실행입니다.
 
 ### 2. LoRA ≈ Full · Game(KcELECTRA) > Tutorial(kcbert)
 평균 Recall: LoRA 82.3% vs Full 77.2% / Game base 81.8% vs Tutorial 77.7%. **LoRA가 Full에 동등 이상(게다가 가벼움)**, base는 Game(KcELECTRA)이 우세.
 
 ## ✅ 선정, Full v2 KcELECTRA (Step 7)
 
-> **상위 2개(LoRA v2 KcELECTRA · Full v2 KcELECTRA)는 통계적 동률**(McNemar p=1.000), LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. (Recall 3위 LoRA v2 kcbert 86.29까지 상위권 Recall은 6문장 이내로 근접하나, 통계 검정은 상위 2개에 한합니다.) 즉 "Recall 1등"만으로는 부족하고, 변별은 **Precision·F1·LRAP**에서 납니다.
+> **상위 2개(LoRA v2 KcELECTRA · Full v2 KcELECTRA)는 통계적 동률**(McNemar p=1.000), LoRA v2 KcELECTRA 87.90 vs Full v2 KcELECTRA 85.48은 **abuse 248문장 중 6문장 차이**입니다. (Recall 3위 LoRA v2 kcbert 86.29까지 상위권 Recall은 6문장 이내로 근접하나, 통계 검정은 상위 2개에 한합니다.) 즉 "Recall 1등"만으로는 고를 수 없어서, 게임에서 더 치명적인 **오탐**을 기준으로 골랐습니다.
 
-**Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`), **LRAP 0.936 1위 · LoRA v2 대비 낮은 오탐(FP 23 vs 30) · F1 87.78(사실상 동률) · Precision 90.21**. Step 1에서 정한 *"오탐이 치명적이라 정밀도로 고른다"* 기준과 일관.
-- *대안*: **LoRA v2 KcELECTRA**, Recall 1등 + LoRA(경량). 효율을 최우선하면 이쪽도 동급. (정밀도 88 vs 90으로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 선정)
+**Full v2 KcELECTRA 선정** (내부 폴더명 `full_game_kcelectra_v2`), **LoRA v2 대비 낮은 오탐(FP 23 vs 30) · Precision 90.21 · F1 87.78(사실상 동률) · AP 96.21·AUROC 95.22 근소 1위**. Step 1에서 정한 *"오탐이 치명적이라 정밀도로 고른다"* 기준과 일관.
+- *대안*: **LoRA v2 KcELECTRA**, Recall 1등 + LoRA(경량). 효율을 최우선하면 이쪽도 동급. (정밀도 87.9 vs 90.2로 Full v2 KcELECTRA가 가짜저주에 약간 더 안전 → 선정)
 
 ⚠️ 옛 문서의 best **Full v2 kcbert**(`full_tutorial_kcbert_v2`, 구 187 기준)은 482에선 **4위(82.26%)** 로 밀림 → 최신 선정·압축 대상은 **Full v2 KcELECTRA**로 갱신 완료.
 

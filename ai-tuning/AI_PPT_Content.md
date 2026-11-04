@@ -1,6 +1,6 @@
 # EchoForest AI 욕설 탐지 시스템, 발표 자료 초안
 
-최신 실험 기준 발표 흐름입니다. 수치는 `test_set.tsv` 482건 기준이며, 최종 모델은 **Full v2 KcELECTRA**, 압축 배포 후보는 **FP16**입니다.
+최신 실험 기준 발표 흐름입니다. 수치는 `test_set.tsv` 482건 기준이며, 최종 모델은 **Full v2 KcELECTRA**, 배포 모델은 **FP16**(임계값 0.5, 탐지 1건당 스택 +1)입니다.
 
 ## 슬라이드 1. 시스템 개요
 
@@ -84,11 +84,11 @@ Fine-tuning으로 Recall 60.08% → 85.48%
 
 ### 권장 그래프
 - `6_Model_Comparison/results/paper_selected_tradeoff_ko.png`
-- `6_Model_Comparison/results/paper_model_ranking_ko.png`
+- `6_Model_Comparison/results/abuse_recall_before_after_ko.png`
 
 ### 발표 포인트
 - Precision은 일부 낮아졌지만 Recall과 F1이 크게 개선
-- 게임 UX상 오탐이 중요하므로 Recall만 보지 않고 F1·Precision으로 최종 판단
+- 게임 UX상 오탐이 중요하므로 Recall만 보지 않고 오탐(Precision)까지 보고 최종 판단
 
 ## 슬라이드 6. 게임 도메인 데이터 효과
 
@@ -111,15 +111,19 @@ Fine-tuning으로 Recall 60.08% → 85.48%
 ### 제목
 Full v2 KcELECTRA 선정
 
-| 후보 | Recall | F1 | Precision | LRAP |
-|------|:---:|:---:|:---:|:---:|
-| LoRA v2 KcELECTRA | 87.90% | 87.90% | 87.90% | 0.932 |
-| **Full v2 KcELECTRA** | 85.48% | **87.78%** | **90.21%** | **0.936** |
+| 후보 | Recall | F1 | Precision | FP | AP | AUROC |
+|------|:---:|:---:|:---:|:---:|:---:|:---:|
+| LoRA v2 KcELECTRA | **87.90%** | **87.90%** | 87.90% | 30 | 96.04 | 94.80 |
+| **Full v2 KcELECTRA** | 85.48% | 87.78% | **90.21%** | **23** | **96.21** | **95.22** |
+
+### 권장 그래프
+- `7_Best_Model_Selection/results/final_selection_ko.png`
+- `6_Model_Comparison/results/threshold_free_ap_auroc_ko.png`
 
 ### 발표 포인트
 - Recall만 보면 LoRA v2 KcELECTRA가 1위
-- 하지만 차이는 abuse 248문장 중 6문장 수준
-- Full v2 KcELECTRA는 LRAP 1위이고 LoRA v2보다 오탐이 적어(FP 23 vs 30) 게임 UX 관점에서 더 안전(F1은 사실상 동률)
+- 하지만 차이는 abuse 248문장 중 6문장 수준이고, 검정해도 통계적 동률(McNemar p=1.000)
+- 그래서 오탐이 더 적은(FP 23 vs 30) Full v2 KcELECTRA를 선택, 임계값과 무관한 AP 96.21·AUROC 95.22도 근소하게 1위
 
 ## 슬라이드 8. 압축/배포 최적화
 
@@ -140,7 +144,8 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 ### 발표 포인트
 - INT8은 크기/속도는 좋아졌지만 abuse 미탐이 36→74건으로 증가(+38건)
 - threshold 0.26 보정 시 F1 88.94%로 회복(오탐 18건). 단 임계값 재보정이 필요해 drop-in인 FP16 우선
-- FP16은 원본 성능을 그대로 유지하면서 2배 압축되어 배포 후보로 가장 안전
+- FP16은 원본 성능을 그대로 유지하면서 2배 압축되어 FP16으로 배포
+- 배포 설정: 임계값 0.5, 부정어 1건당 스택 +1(스택 5에서 저주). 튜닝 모델 점수가 0.8 이상에 몰려 있어 기존 심각도 구간(+5/+3/+1)을 쓰면 한 문장 만에 저주가 걸리기 때문
 
 ## 슬라이드 9. 최종 요약
 
@@ -152,8 +157,8 @@ INT8은 빠르지만 fixed threshold 성능 손실, FP16이 안전
 | 최종 모델 | Full v2 KcELECTRA |
 | 성능 개선 | Recall 60.08% → 85.48%, F1 73.95% → 87.78% |
 | 핵심 원인 | 게임 도메인 데이터 518건 추가 |
-| 권장 압축 | FP16 |
+| 배포 | FP16, 임계값 0.5, 탐지 1건당 스택 +1 |
 | INT8 판단 | threshold 보정 후 재검토 |
 
 ### 한 줄 스크립트
-> 기본 unSmile은 오탐은 적지만 게임 맥락의 부정 발언을 많이 놓쳤고, 게임 도메인 fine-tuning으로 F1을 73.95%에서 87.78%까지 끌어올렸습니다. 배포 단계에서는 INT8 fixed threshold가 Recall을 훼손해, 현재는 성능을 보존하는 FP16 압축 모델이 가장 안전한 선택입니다.
+> 기본 unSmile은 오탐은 적지만 게임 맥락의 부정 발언을 많이 놓쳤고, 게임 도메인 fine-tuning으로 F1을 73.95%에서 87.78%까지 끌어올렸습니다. 배포 단계에서는 INT8 fixed threshold가 Recall을 훼손해, 성능을 그대로 보존하는 FP16 압축 모델을 임계값 0.5로 배포했습니다.

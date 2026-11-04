@@ -10,8 +10,8 @@
 [Spring] WebSocket
         ↓ HTTP
 [FastAPI] Full v2 KcELECTRA / FP16 압축 모델
-        ↓ abuse score
-[게임] 저주 스택 반영
+        ↓ not-clean 점수 ≥ 0.5 → 부정어 1건당 스택 +1
+[게임] 저주 스택 반영 (스택 5에서 저주 발동)
 ```
 
 ## 핵심 문제: threshold 딜레마
@@ -69,7 +69,7 @@ Recall을 올리려고 threshold를 낮추면 정상 게임 오더까지 과탐�
 | 내부 폴더명 | `full_game_kcelectra_v2` |
 | 모델 경로 | `5_Full_Fine_Tuning/v2_corrected_plus_collected/output/full_game_kcelectra_v2/best_model` |
 | 학습 데이터 | 보정 unSmile 14,690 + 게임 수집 518 |
-| 선정 이유 | LRAP 1위, 상위 v2 후보 중 낮은 오탐(FP 23), F1 사실상 동률 |
+| 선정 이유 | Recall 1위(LoRA v2)와 통계적 동률(McNemar p=1.000), 오탐이 더 적음(FP 23 vs 30), AP·AUROC 근소 1위 |
 
 | 지표 | Baseline | Full v2 KcELECTRA | 변화 |
 |------|:---:|:---:|:---:|
@@ -86,7 +86,7 @@ Recall을 올리려고 threshold를 낮추면 정상 게임 오더까지 과탐�
 | INT8 Dynamic | 242.88 MiB | 14.01 ms | 81.50% | fixed 0.5 배포 비권장 |
 | FP16 | 243.75 MiB | 13.90 ms | 87.78% | **권장 압축 산출물** |
 
-INT8은 속도/크기는 좋아졌지만 fixed threshold에서 Recall이 70.16%로 하락합니다. FP16은 크기를 약 50% 줄이면서 원본 성능을 그대로 보존하므로 배포 후보로 더 안전합니다.
+INT8은 속도/크기는 좋아졌지만 fixed threshold에서 Recall이 70.16%로 하락합니다. FP16은 크기를 약 50% 줄이면서 원본 성능을 그대로 보존해서, FP16 모델을 임계값 0.5, 탐지 1건당 스택 +1로 배포했습니다. 설정 이유는 [`AI_튜닝_최종_보고서.md`](AI_튜닝_최종_보고서.md)의 배포 설정에 있습니다.
 
 ## 주요 문서
 
