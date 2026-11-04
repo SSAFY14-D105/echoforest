@@ -42,7 +42,7 @@ def stage0():
     # (라벨: 악플/욕설, clean, 카테고리혐오)
     data = [("unSmile 학습\n(댓글, 보정)", 3128, 3700, 7862),
             ("unSmile 검증\n(댓글)", 777, 930, 1956),
-            ("게임 학습\n(STT 수집)", 230, 288, 0),
+            ("게임 학습\n(STT 수집)", 234, 284, 0),
             ("게임 평가\n(STT, 평가용)", 248, 234, 0)]
     labels = [d[0] for d in data]
     abuse = np.array([d[1] for d in data]); clean = np.array([d[2] for d in data]); cat = np.array([d[3] for d in data])
