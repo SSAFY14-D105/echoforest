@@ -159,7 +159,7 @@ def plot_model_ranking_ko(df: pd.DataFrame) -> None:
     ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.set_title("학습에 쓰지 않은 평가셋 482개로 측정한 모델별 LRAP", fontweight="bold", pad=30)
     ax.text(0.5, 1.035,
-            "v1 = 댓글 보정 데이터만 학습,  v2 = + 게임채팅 518건 추가 학습   (base: KcELECTRA / kcbert,  방식: Full / LoRA)",
+            "v1 = 댓글 보정 데이터만 학습,  v2 = + 게임 발화 518건 추가 학습   (base: KcELECTRA / kcbert,  방식: Full / LoRA)",
             transform=ax.transAxes, fontsize=9.3, color="#9AA5B1", ha="center")
 
     for idx, row in ordered.iterrows():
@@ -222,7 +222,7 @@ def plot_selected_tradeoff_ko(df: pd.DataFrame) -> None:
     x = np.arange(len(metrics))
     width = 0.36
     ax.bar(x - width / 2, base_values, width, label="Baseline (파인튜닝 전)", color=SECONDARY)
-    ax.bar(x + width / 2, selected_values, width, label="Full v2 KcELECTRA (게임채팅 518건 추가, 선정)", color=PRIMARY)
+    ax.bar(x + width / 2, selected_values, width, label="Full v2 KcELECTRA (게임 발화 518건 추가, 선정)", color=PRIMARY)
     ax.set_xticks(x, metrics)
     ax.set_ylim(0, 112)
     ax.set_ylabel("점수 (%)")
@@ -230,7 +230,7 @@ def plot_selected_tradeoff_ko(df: pd.DataFrame) -> None:
     recall_gain = selected_values[1] - base_values[1]
     f1_gain = selected_values[2] - base_values[2]
     ax.set_title(
-        f"파인튜닝 후 정밀도-재현율 trade-off\n재현율 +{recall_gain:.1f}p | F1 +{f1_gain:.1f}p",
+        f"파인튜닝 후 정밀도-재현율 trade-off\n재현율 +{recall_gain:.1f}%p | F1 +{f1_gain:.1f}%p",
         fontweight="bold",
         pad=12,
     )
@@ -324,7 +324,7 @@ def plot_domain_data_effect_ko(df: pd.DataFrame) -> None:
     ax.set_yticks(y, [label for _, _, label in pairs])
     ax.set_xlabel("부정어 재현율 (%)")
     ax.grid(axis="x", color=GRID, linewidth=0.8)
-    ax.set_title("게임 채팅 518건 추가 학습 효과", fontweight="bold", pad=12)
+    ax.set_title("게임 발화 518건 추가 학습 효과", fontweight="bold", pad=12)
     ax.legend(
         handles=[
             plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=SECONDARY, markersize=9, label="v1 보정 UnSmile"),

@@ -61,11 +61,11 @@ STR = {
  "ko": {"h_title":"파인튜닝할수록 부정어를 더 많이 잡는다","h_xlabel":"Abuse Recall  (%)",
         "before":"baseline","selected":"최종 선정","recall_best":"Recall 최다","h_note":"Recall 전용 그래프",
         "h_sub":"파인튜닝 8종 모두 baseline 60.1% 초과. 최종 선정은 Recall 1위와 통계적 동률이면서 오탐이 적은 Full v2(23 vs 30)",
-        "h_foot":"v1 = 댓글 보정만 학습,  v2 = + 게임채팅 518건 추가 학습   (base: KcELECTRA / kcbert)",
+        "h_foot":"v1 = 댓글 보정만 학습,  v2 = + 게임 발화 518건 추가 학습   (base: KcELECTRA / kcbert)",
         "t_title":"정밀도 약간 내주고 재현율을 크게 얻는 교환",
         "t_sub":"Baseline vs 선정(Full v2 Game), F1이 순이득을 확인",
-        "v_title":"결국 게임 데이터가 핵심 (v1 vs v2)","v_sub":"v1 = 보정 unSmile만,  v2 = 수집 게임채팅 518 추가",
-        "v_xlabel":"Abuse Recall  (%)","v1":"v1: 댓글 보정만","v2":"v2: +게임채팅 518"},
+        "v_title":"결국 게임 데이터가 핵심 (v1 vs v2)","v_sub":"v1 = 보정 unSmile만,  v2 = 수집 게임 발화 518 추가",
+        "v_xlabel":"Abuse Recall  (%)","v1":"v1: 댓글 보정만","v2":"v2: +게임 발화 518"},
 }
 
 def _style(font):

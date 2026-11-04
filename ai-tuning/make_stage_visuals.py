@@ -55,14 +55,14 @@ def stage0():
     y = np.arange(len(labels))[::-1]
     ax.barh(y, abuse, color=ACCENT, label="악플/욕설", zorder=3, height=0.62)
     ax.barh(y, clean, left=abuse, color=PRIMARY, label="clean", zorder=3, height=0.62)
-    ax.barh(y, cat, left=abuse+clean, color=SLATE, label="카테고리 혐오(성별/지역/종교 등)", zorder=3, height=0.62)
+    ax.barh(y, cat, left=abuse+clean, color=SLATE, label="집단 혐오(성별/지역/종교 등)", zorder=3, height=0.62)
     for i, tot in enumerate(abuse+clean+cat):
         ax.text(tot+250, y[i], f"{tot:,}건", va="center", fontsize=10.5, color=INK, fontweight="bold")
     ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=10.5)
     ax.set_xlim(0, 17500); ax.set_xticks([0, 5000, 10000, 15000]); ax.set_xticklabels(["0", "5,000", "10,000", "15,000"])
     despine(ax); ax.xaxis.grid(True, color=GRID, lw=1.1, zorder=0); ax.set_axisbelow(True)
     ax.legend(loc="lower right", frameon=False, fontsize=9.5)
-    title(ax, "0. 전체 데이터: 대부분이 댓글", "unSmile 학습 데이터의 54%가 카테고리 혐오, 게임 발화에는 0%")
+    title(ax, "0. 전체 데이터: 대부분이 댓글", "unSmile 학습 데이터의 54%가 집단 혐오, 게임 발화에는 0%")
     # 우: 게임 발화 확대
     gy = np.array([1, 0]); ga = abuse[2:]; gc = clean[2:]
     bx.barh(gy, ga, color=ACCENT, zorder=3, height=0.55)
@@ -81,7 +81,7 @@ def stage0():
 
 # ── Stage 3: unSmile 보정 전후 ─────────────────────────────────────────
 def stage3():
-    cats = ["악플/욕설", "clean", "카테고리 혐오"]
+    cats = ["악플/욕설", "clean", "집단 혐오"]
     before = [3089, 3739, 7862]; after = [3128, 3700, 7862]
     x = np.arange(len(cats)); w = 0.36
     fig, ax = plt.subplots(figsize=(8.8, 5.0)); fig.subplots_adjust(left=0.10, right=0.96, top=0.78, bottom=0.12)
@@ -104,7 +104,7 @@ def _models_chart(title_t, sub, f1, rec, outname):
     v1r = [rec[b][0] for b in bases]; v2r = [rec[b][1] for b in bases]
     fig, ax = plt.subplots(figsize=(9.0, 5.4)); fig.subplots_adjust(left=0.09, right=0.96, top=0.73, bottom=0.16)
     ax.bar(x-w/2, v1f, w, color=ACCENT, label="v1 (댓글 보정만)", zorder=3)
-    ax.bar(x+w/2, v2f, w, color=PRIMARY, label="v2 (+ 게임채팅 518건)", zorder=3)
+    ax.bar(x+w/2, v2f, w, color=PRIMARY, label="v2 (+ 게임 발화 518건)", zorder=3)
     def lab(xc, fv, rv, bold):
         ax.text(xc, fv+4.2, f"{fv:.1f}", ha="center", fontsize=11, color=INK, fontweight=("bold" if bold else "normal"))
         ax.text(xc, fv+0.9, f"R {rv:.1f}", ha="center", fontsize=8.5, color=SUB)
