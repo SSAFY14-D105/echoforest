@@ -74,11 +74,11 @@ async def analyze_sentiment_batch(request: BatchSentimentRequest):
     
     게임 서버는 응답의 `total_stack_delta` 값을 팀 저주 스택에 더하면 됩니다.
     
-    예시:
-    - "바보야" → severity 3 (mild) → +1 스택
-    - "멍청이다" → severity 3 (mild) → +1 스택  
-    - "씨발" → severity 1 (critical) → +5 스택
-    - **total_stack_delta = 7**
+    예시 (배포 설정: 임계값 0.5, 부정어 1건당 +1):
+    - "야 바보야" → negative → +1 스택
+    - "너 멍청이다" → negative → +1 스택
+    - "씨발" → negative → +1 스택
+    - **total_stack_delta = 3**
     """
     try:
         model = get_model()

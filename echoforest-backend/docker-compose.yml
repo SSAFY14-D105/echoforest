@@ -174,8 +174,14 @@ services:
 #      - "8000:8000" # 테스트시 주석 해제
     volumes:
       - /home/ubuntu/model_cache:/code/model_cache
+      # 튜닝 모델(FP16)을 서버에 올려 두고 읽기 전용으로 연결
+      # (원본: ai-tuning/8_Quantization/fp16_model, git lfs pull로 받은 실제 파일)
+      - /home/ubuntu/models/fp16_model:/code/models/fp16_model:ro
     environment:
       - HF_HOME=/code/model_cache
+      - AI_MODEL_PATH=/code/models/fp16_model
+      - AI_THRESHOLD=0.5
+      - AI_STACK_MODE=per_detection
     deploy:
       resources:
         limits:

@@ -1,18 +1,27 @@
 """
-Smilegate unSmile 모델 래퍼
-- 혐오 발언 탐지 모델 (smilegate-ai/kor_unsmile)
-- 최적 threshold: 10.0% (0.1)
+욕설 탐지 모델 래퍼
+- 배포 모델: 게임 도메인 파인튜닝 모델 Full v2 KcELECTRA (FP16 압축본)
+  (ai-tuning/8_Quantization/fp16_model, 학습 과정은 ai-tuning/AI_튜닝_최종_보고서.md)
+- 판정: clean을 뺀 9개 라벨 점수 중 최댓값(not-clean 점수)이 임계값 0.5 이상이면 부정어
+- 스택: 부정어 1건당 +1 (심각도 구간 없음)
+
+이전 설정(kor_unsmile + 임계값 0.1 + 0.8/0.5/0.1 심각도 구간)은
+AI_MODEL_PATH=smilegate-ai/kor_unsmile, AI_THRESHOLD=0.1, AI_STACK_MODE=severity 로 되돌릴 수 있습니다.
 """
+
+import os
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from typing import Dict, List
 
-# 설정
-MODEL_NAME = "smilegate-ai/kor_unsmile"
-THRESHOLD = 0.1  # 10% - 경미한 부정어(바보, 화나 등) 탐지를 위해 완화
+# 설정 (환경변수로 바꿀 수 있음)
+MODEL_NAME = os.getenv("AI_MODEL_PATH", "/code/models/fp16_model")
+TOKENIZER_FALLBACK = "beomi/KcELECTRA-base-v2022"  # 모델 폴더에 토크나이저가 없을 때 사용하는 베이스 토크나이저
+THRESHOLD = float(os.getenv("AI_THRESHOLD", "0.5"))
+STACK_MODE = os.getenv("AI_STACK_MODE", "per_detection")  # per_detection: 1건당 +1 / severity: 이전 3단계 구간
 
-# 심각도 단계 threshold
+# 이전 설정(AI_STACK_MODE=severity)에서 쓰던 심각도 구간 (kor_unsmile 점수 분포 기준)
 SEVERITY_THRESHOLDS = {
     1: 0.80,  # 80% 이상: 매우 심함 (최강 저주)
     2: 0.50,  # 50~80%: 심함 (강한 저주)
@@ -22,9 +31,10 @@ SEVERITY_THRESHOLDS = {
 # 심각도 설명
 SEVERITY_DESCRIPTIONS = {
     0: "clean",      # 정상 발화
-    1: "critical",   # 매우 심함
-    2: "severe",     # 심함
-    3: "mild",       # 경미
+    1: "critical",   # 매우 심함 (severity 모드)
+    2: "severe",     # 심함 (severity 모드)
+    3: "mild",       # 경미 (severity 모드)
+    4: "negative",   # 부정어 (per_detection 모드, 구간 없음)
 }
 
 # unSmile 레이블 (혐오 카테고리)
@@ -44,7 +54,7 @@ LABELS = [
 
 
 class UnSmileModel:
-    """unSmile 감정 분석 모델"""
+    """욕설 탐지 모델 (unSmile 10개 라벨 형식)"""
     
     def __init__(self, model_name: str = MODEL_NAME, threshold: float = THRESHOLD):
         self.model_name = model_name
@@ -61,12 +71,18 @@ class UnSmileModel:
         
         print(f"📥 모델 로딩 중: {self.model_name}")
         
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        except Exception as e:
+            print(f"⚠️ 모델 폴더 토크나이저 로드 실패({e}) → {TOKENIZER_FALLBACK} 사용")
+            self.tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_FALLBACK)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
         self.model.eval()
         
-        # GPU 사용 가능하면 GPU로
+        # GPU 사용 가능하면 GPU로 (FP16 그대로), CPU면 float32로 올려서 계산
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cpu":
+            self.model = self.model.float()
         self.model = self.model.to(self.device)
         
         self._loaded = True
@@ -116,6 +132,8 @@ class UnSmileModel:
         # 심각도 단계 계산
         if not is_negative:
             severity = 0  # clean
+        elif STACK_MODE != "severity":
+            severity = 4  # 부정어 (구간 없이 1건당 +1)
         elif max_hate_score >= SEVERITY_THRESHOLDS[1]:
             severity = 1  # 매우 심함 (80% 이상)
         elif max_hate_score >= SEVERITY_THRESHOLDS[2]:
@@ -136,8 +154,8 @@ class UnSmileModel:
             'is_negative': is_negative,
             'label': label,
             'confidence': confidence,
-            'severity': severity,           # 심각도 단계 (0=clean, 1=매우심함, 2=심함, 3=경미)
-            'severity_label': severity_label,  # 심각도 라벨 (clean, critical, severe, mild)
+            'severity': severity,           # 심각도 단계 (0=clean, 4=부정어 / severity 모드: 1=매우심함, 2=심함, 3=경미)
+            'severity_label': severity_label,  # 심각도 라벨 (clean, negative / severity 모드: critical, severe, mild)
             'all_scores': all_scores
         }
     

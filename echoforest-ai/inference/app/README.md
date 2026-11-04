@@ -31,8 +31,12 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 #### 주요 상수
 ```python
-MODEL_NAME = "smilegate-ai/kor_unsmile"
-THRESHOLD = 0.1  # 10% - 욕설 판정 기준값
+# 배포 설정 (튜닝 모델) — 환경변수로 변경 가능
+MODEL_NAME = os.getenv("AI_MODEL_PATH", "/code/models/fp16_model")  # Full v2 KcELECTRA FP16
+THRESHOLD = float(os.getenv("AI_THRESHOLD", "0.5"))
+STACK_MODE = os.getenv("AI_STACK_MODE", "per_detection")             # 부정어 1건당 +1
+
+# 아래 구간은 AI_STACK_MODE=severity(초기 kor_unsmile 설정)일 때만 사용
 
 SEVERITY_THRESHOLDS = {
     1: 0.80,  # Critical (80% 이상) → +5 스택

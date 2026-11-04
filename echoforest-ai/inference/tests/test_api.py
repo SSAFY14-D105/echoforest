@@ -33,11 +33,13 @@ def test_single_analyze():
     print("2. 단일 분석 + 스택 증가량 검증 (POST /analyze)")
     print("=" * 60)
     
+    # 배포 설정(튜닝 모델, 임계값 0.5, 부정어 1건당 +1) 기준
     test_cases = [
-        ("씨발", 1, 5, "critical"),       # severity 1 → +5
-        ("짜증나", 2, 3, "severe"),        # severity 2 → +3
-        ("바보", 3, 1, "mild"),            # severity 3 → +1
-        ("안녕하세요", 0, 0, "clean"),     # severity 0 → +0
+        ("씨발", 4, 1, "negative"),        # 부정어 → +1
+        ("짜증나", 4, 1, "negative"),      # 부정어 → +1
+        ("바보", 4, 1, "negative"),        # 부정어 → +1
+        ("안녕하세요", 0, 0, "clean"),     # clean → +0
+        ("같이 가자", 0, 0, "clean"),      # 게임 오더 → +0
     ]
     
     all_passed = True
@@ -71,9 +73,9 @@ def test_batch_analyze():
     print("3. 배치 분석 + 총 스택 증가량 검증 (POST /analyze/batch)")
     print("=" * 60)
     
-    # 테스트 케이스: 바보(+1) + 멍청이(+1) + 씨발(+5) = 7
+    # 테스트 케이스: 부정어 3건 × +1 = 3
     texts = ["야 바보야", "너 멍청이다", "씨발"]
-    expected_total_stack = 7  # 최소 7 이상이어야 함 (mild+mild+critical)
+    expected_total_stack = 3
     
     try:
         r = requests.post(f"{BASE_URL}/analyze/batch", json={"texts": texts})
@@ -90,8 +92,8 @@ def test_batch_analyze():
         print(f"      total_stack_delta: {data['total_stack_delta']}")
         
         # 검증: total_stack_delta가 예상값과 비슷한지
-        if data['total_stack_delta'] >= expected_total_stack - 2:
-            print(f"\n   ✅ 총 스택 증가량 정상 (>= {expected_total_stack - 2})")
+        if data["total_stack_delta"] == expected_total_stack:
+            print(f"\n   ✅ 총 스택 증가량 정상 (== {expected_total_stack})")
             return True
         else:
             print(f"\n   ❌ 총 스택 증가량 부족 (예상: ~{expected_total_stack})")

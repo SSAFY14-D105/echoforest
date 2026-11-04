@@ -4,6 +4,32 @@
 
 > **4인 협동 게임 (피코파크 스타일)** 저주 스택 시스템 지원
 
+## 🚀 배포 설정 (튜닝 모델)
+
+처음에는 `smilegate-ai/kor_unsmile`(임계값 0.1, 심각도 3단계)로 서비스했고, 이후 게임 도메인으로 파인튜닝한 모델로 바꿨습니다. 아래 "핵심 기능"부터는 초기 kor_unsmile 기준 설명입니다.
+
+| 항목 | 값 | 이유 |
+|------|----|------|
+| 모델 | Full v2 KcELECTRA, FP16 (`ai-tuning/8_Quantization/fp16_model`) | 학습에 쓰지 않은 482건에서 Recall 60.08% → 85.48%. FP16은 원본과 성능이 같고 크기는 절반 |
+| 판정 | clean을 뺀 9개 라벨 최댓값 ≥ **0.5** | F1 최적값(~0.28)은 정상 발화의 약 15%를 오탐(0.5에서는 9.8%) |
+| 스택 | 부정어 **1건당 +1** (심각도 구간 없음) | 튜닝 모델 점수는 0.8 이상에 몰려 있어, 이전 구간(+5/+3/+1)을 쓰면 한 문장 만에 저주(스택 상한 5) |
+
+환경변수로 설정합니다(`docker-compose.yml`의 `ai-server` 참고).
+
+| 환경변수 | 기본값 | 설명 |
+|----------|--------|------|
+| `AI_MODEL_PATH` | `/code/models/fp16_model` | 모델 폴더 또는 Hugging Face 모델 이름 |
+| `AI_THRESHOLD` | `0.5` | 부정어 판정 임계값 |
+| `AI_STACK_MODE` | `per_detection` | `per_detection`: 1건당 +1, `severity`: 이전 3단계 구간 |
+
+```bash
+# 서버에 모델 파일 올리기 (저장소에서 git lfs pull 후)
+scp -r ai-tuning/8_Quantization/fp16_model ubuntu@<서버>:/home/ubuntu/models/
+
+# 초기 설정으로 되돌리기
+AI_MODEL_PATH=smilegate-ai/kor_unsmile AI_THRESHOLD=0.1 AI_STACK_MODE=severity
+```
+
 ---
 
 ## 📊 핵심 기능
