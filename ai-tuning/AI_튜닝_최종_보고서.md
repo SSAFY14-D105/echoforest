@@ -55,11 +55,12 @@ Baseline은 오탐은 적지만 실제 abuse 248건 중 99건을 놓쳤습니다
 | Abuse Precision | 96.13% | 90.21% | -5.92%p |
 | Abuse Recall | 60.08% | 85.48% | +25.40%p |
 | Abuse F1 | 73.95% | 87.78% | +13.83%p |
-| LRAP | 0.887 | 0.936 | +0.049 |
+| AP (임계값 무관) | 91.94 | 96.21 | +4.27 |
+| AUROC (임계값 무관) | 89.37 | 95.22 | +5.85 |
 
 Precision이 낮아진 이유는 모델이 더 많은 문장을 abuse로 잡기 시작했기 때문입니다. Baseline은 매우 보수적으로 예측해서 TP 149 / FP 6였고, 최종 모델은 게임식 비난까지 잡으면서 TP가 212로 늘었습니다. 동시에 정상 발화를 abuse로 찍은 FP도 23으로 늘어 Precision은 96.13%에서 90.21%로 내려갔습니다. 즉 "더 잘 잡는다"는 Recall 개선이고, 그 과정에서 false positive가 일부 늘어난 trade-off입니다.
 
-선정 기준은 이렇습니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA와는 통계적으로 동률입니다(McNemar p=1.000, F1 차이 95% CI [-2.54, +2.27]%p). 그래서 게임에서 더 치명적인 오탐이 적은 Full v2 KcELECTRA를 골랐습니다(FP 23 vs 30). 임계값과 무관한 AP(96.21 vs 96.04)와 AUROC(95.22 vs 94.80)도 근소하게 앞섭니다. LRAP는 이 test_set에서 사실상 이진 지표라 참고로만 표에 남겼습니다.
+선정 기준은 이렇습니다. LoRA v2 KcELECTRA가 Recall 87.90%로 1위지만, Full v2 KcELECTRA와는 통계적으로 동률입니다(McNemar p=1.000, F1 차이 95% CI [-2.54, +2.27]%p). 그래서 게임에서 더 치명적인 오탐이 적은 Full v2 KcELECTRA를 골랐습니다(FP 23 vs 30). 임계값과 무관한 AP(96.21 vs 96.04)와 AUROC(95.22 vs 94.80)도 근소하게 앞섭니다. 처음 쓰던 LRAP는 이 test_set에서 문장마다 정답 라벨이 하나라 사실상 이진 지표로 동작해서, 임계값 무관 비교의 주 지표를 AP와 AUROC로 바꿨습니다.
 
 ## 4. 결: 압축 최적화와 배포 판단
 
